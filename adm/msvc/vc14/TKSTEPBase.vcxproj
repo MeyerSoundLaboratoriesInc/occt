@@ -19,24 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D2079DBF-0428-00A6-07DE-AA811D02AA3C}</ProjectGuid>
+    <ProjectGuid>{B9E02032-16E4-0BA6-0ADB-6F6D5A7462B6}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -85,7 +89,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -97,17 +101,18 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc14\bin\TKSTEPBase.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc14\lib;$(CSF_OPT_LIB32);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win32\vc14\bin\TKSTEPBase.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win32\vc14\lib\TKSTEPBase.lib</ImportLibrary>
@@ -129,7 +134,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win32\vc14\objd\TKSTEPBase/</AssemblerListingLocation>
@@ -142,13 +147,14 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc14\bind\TKSTEPBase.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc14\libd;$(CSF_OPT_LIB32D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -174,7 +180,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -186,17 +192,18 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc14\bin\TKSTEPBase.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc14\lib;$(CSF_OPT_LIB64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win64\vc14\bin\TKSTEPBase.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win64\vc14\lib\TKSTEPBase.lib</ImportLibrary>
@@ -218,7 +225,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win64\vc14\objd\TKSTEPBase/</AssemblerListingLocation>
@@ -231,13 +238,14 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__StepBasic_DLL;__RWStepBasic_DLL;__StepRepr_DLL;__RWStepRepr_DLL;__StepGeom_DLL;__RWStepGeom_DLL;__StepShape_DLL;__RWStepShape_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;TKXSBase.lib;TKMath.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc14\bind\TKSTEPBase.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc14\libd;$(CSF_OPT_LIB64D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -455,6 +463,12 @@
     <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionFormationRelationship.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionFormationWithSpecifiedSource.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionOrReference.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionReference.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionReferenceWithLocalRepresentation.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionRelationship.cxx">
     </ClCompile>
@@ -708,6 +722,10 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionFormationWithSpecifiedSource.cxx">
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionReference.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionReferenceWithLocalRepresentation.cxx">
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionRelationship.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionWithAssociatedDocuments.cxx">
@@ -770,6 +788,8 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CharacterizedDefinition.cxx">
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CharacterizedRepresentation.cxx">
+    </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CompShAspAndDatumFeatAndShAsp.cxx">
@@ -787,6 +807,10 @@
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConfigurationEffectivity.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConfigurationItem.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConstructiveGeometryRepresentation.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConstructiveGeometryRepresentationRelationship.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ContinuosShapeAspect.cxx">
     </ClCompile>
@@ -920,6 +944,8 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCentreOfSymmetry.cxx">
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCharacterizedRepresentation.cxx">
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCompShAspAndDatumFeatAndShAsp.cxx">
@@ -935,6 +961,10 @@
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConfigurationEffectivity.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConfigurationItem.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConstructiveGeometryRepresentation.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConstructiveGeometryRepresentationRelationship.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWContinuosShapeAspect.cxx">
     </ClCompile>

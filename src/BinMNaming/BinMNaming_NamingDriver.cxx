@@ -20,7 +20,7 @@
 #include <BinObjMgt_Persistent.hxx>
 #include <BinObjMgt_RRelocationTable.hxx>
 #include <BinObjMgt_SRelocationTable.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
@@ -58,9 +58,8 @@ static Standard_Character NameTypeToChar(const TNaming_NameType theNameType)
     case TNaming_WIREIN       : return 'W';
     case TNaming_SHELLIN      : return 'H';
   default:
-    Standard_DomainError::Raise("TNaming_NameType:: Name Type Unknown");
+    throw Standard_DomainError("TNaming_NameType:: Name Type Unknown");
   }
-  return 'N'; // To avoid compilation error message.
 }
 
 //=======================================================================
@@ -80,9 +79,8 @@ static TNaming_NameType CharTypeToName(const Standard_Character theCharType)
     case 'W'  : return TNaming_WIREIN;
     case 'H'  : return TNaming_SHELLIN;
   default:
-    Standard_DomainError::Raise("TNaming_NameType:: Name Type Unknown");
+    throw Standard_DomainError("TNaming_NameType:: Name Type Unknown");
   }
-  return TNaming_UNKNOWN; // To avoid compilation error message.
 }
 
 //=======================================================================
@@ -125,7 +123,7 @@ static TopAbs_ShapeEnum CharToShapeType(const Standard_Character theCharType)
 //=======================================================================
 
 BinMNaming_NamingDriver::BinMNaming_NamingDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TNaming_Naming)->Name())
 {
 }
@@ -224,19 +222,19 @@ Standard_Boolean BinMNaming_NamingDriver::Paste
           else {
             aMsg = TCollection_ExtendedString("BinMNaming_NamingDriver: "
                                               "Cannot retrieve Index of Name");
-            WriteMessage (aMsg); 
+            myMessageDriver->Send (aMsg, Message_Warning); 
           }
         } else {
           aMsg = TCollection_ExtendedString("BinMNaming_NamingDriver: "
                                             "Cannot retrieve reference on "
                                             "StopNamedShape");
-          WriteMessage (aMsg); 
+          myMessageDriver->Send (aMsg, Message_Warning); 
         }
       } else {
         aMsg = TCollection_ExtendedString("BinMNaming_NamingDriver: "
                                           "Cannot retrieve reference on "
                                           "Arguments of Name");
-	WriteMessage (aMsg);
+	myMessageDriver->Send (aMsg, Message_Warning);
 	  }
 
     if(BinMNaming::DocumentVersion() > 3) {
@@ -287,7 +285,7 @@ Standard_Boolean BinMNaming_NamingDriver::Paste
 	  } else {
           aMsg = TCollection_ExtendedString("BinMNaming_NamingDriver: "
                                             "Cannot retrieve Name Orientation ");
-	  WriteMessage (aMsg);
+	  myMessageDriver->Send (aMsg, Message_Warning);
 	  }
 	}
 	}

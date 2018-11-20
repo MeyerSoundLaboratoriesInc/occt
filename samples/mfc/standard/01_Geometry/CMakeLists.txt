@@ -32,13 +32,11 @@ set (Geometry_ISESSION2D_HEADER_FILES ${Geometry_ISESSION2D_DIR}/ISession_Curve.
                                       ${Geometry_ISESSION2D_DIR}/ISession_Direction.h
                                       ${Geometry_ISESSION2D_DIR}/ISession_Point.h
                                       ${Geometry_ISESSION2D_DIR}/ISession_Surface.h
-                                      ${Geometry_ISESSION2D_DIR}/ISession_Text.h
                                       ${Geometry_ISESSION2D_DIR}/ISession2D_Curve.h)
 set (Geometry_ISESSION2D_SOURCE_FILES ${Geometry_ISESSION2D_DIR}/ISession_Curve.cpp
                                       ${Geometry_ISESSION2D_DIR}/ISession_Direction.cpp
                                       ${Geometry_ISESSION2D_DIR}/ISession_Point.cpp
                                       ${Geometry_ISESSION2D_DIR}/ISession_Surface.cpp
-                                      ${Geometry_ISESSION2D_DIR}/ISession_Text.cpp
                                       ${Geometry_ISESSION2D_DIR}/ISession2D_Curve.cpp)
 
 set (Geometry_RESOURCE_DIR            ${MFC_STANDARD_SAMPLES_DIR}/01_Geometry/res)
@@ -67,17 +65,17 @@ add_executable (Geometry WIN32 ${Geometry_SOURCE_FILES}
                                ${Geometry_RESOURCE_FILES}
                                ${Geometry_RESOURCE_HEADER})
 
-set_property(TARGET Geometry PROPERTY FOLDER Samples)
+set_property(TARGET Geometry PROPERTY FOLDER "Samples/mfc")
 
 if (SINGLE_GENERATOR)
-  install (TARGETS Geometry DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}")
+  install (TARGETS Geometry DESTINATION "${INSTALL_DIR_BIN}")
 else()
   install (TARGETS Geometry
            CONFIGURATIONS Release RelWithDebInfo
-           DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}")
+           DESTINATION "${INSTALL_DIR_BIN}")
   install (TARGETS Geometry
            CONFIGURATIONS Debug
-           DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}d")
+           DESTINATION "${INSTALL_DIR_BIN}d")
 endif()
 
 include_directories (${CMAKE_BINARY_DIR}/inc

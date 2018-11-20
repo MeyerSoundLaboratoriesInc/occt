@@ -9,7 +9,6 @@
 #include "OCCDemoView.h"
 
 #include <Standard_ErrorHandler.hxx>
-#include <V3d_Coordinate.hxx>
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -46,7 +45,7 @@ COCCDemoDoc::COCCDemoDoc()
 	Handle(Graphic3d_WNTGraphicDevice) theGraphicDevice = 
 		((COCCDemoApp*)AfxGetApp())->GetGraphicDevice();
 
-	myViewer = new V3d_Viewer(theGraphicDevice,(short *) "Visu3D");
+	myViewer = new V3d_Viewer(theGraphicDevice);
 	myViewer->SetDefaultLights();
 	myViewer->SetLightOn();
   myViewer->SetDefaultBackgroundColor(Quantity_TOC_RGB, 0.,0.,0.);

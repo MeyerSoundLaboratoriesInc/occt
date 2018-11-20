@@ -312,11 +312,12 @@ void CDialogMaterial::OnMaterial(UINT nID)
 void CDialogMaterial::SetMaterial(Graphic3d_NameOfMaterial Material) 
 {
   Standard_Real aTransparency;
-  for (myCurrentIC->InitCurrent();myCurrentIC->MoreCurrent ();myCurrentIC->NextCurrent ()){
-	aTransparency = myCurrentIC->Current()->Transparency();
-	myCurrentIC->SetMaterial (myCurrentIC->Current(),(Graphic3d_NameOfMaterial)(Material));
-	myCurrentIC->SetTransparency (myCurrentIC->Current(),aTransparency);
+  for (myCurrentIC->InitSelected();myCurrentIC->MoreSelected ();myCurrentIC->NextSelected ()){
+    aTransparency = myCurrentIC->SelectedInteractive()->Transparency();
+    myCurrentIC->SetMaterial (myCurrentIC->SelectedInteractive(), (Graphic3d_NameOfMaterial)(Material), Standard_False);
+    myCurrentIC->SetTransparency (myCurrentIC->SelectedInteractive(), aTransparency, Standard_False);
   }
+  myCurrentIC->UpdateCurrentViewer();
 }
 
 void CDialogMaterial::OnObjectMaterialAluminium     () { SetMaterial ( Graphic3d_NOM_ALUMINIUM     ) ; }
@@ -358,11 +359,11 @@ CDialogTransparency::CDialogTransparency(Handle(AIS_InteractiveContext) CurrentI
 	Standard_Real temp = 10;
 	Standard_Real t;
 
-	for (myCurrentIC->InitCurrent(); 
-	     myCurrentIC->MoreCurrent ();
-		 myCurrentIC->NextCurrent ())
+	for (myCurrentIC->InitSelected();
+	     myCurrentIC->MoreSelected ();
+		 myCurrentIC->NextSelected ())
 	{	
-		t = CurrentIC->Current()->Transparency();
+		t = CurrentIC->SelectedInteractive()->Transparency();
 		if (temp > t)
 			temp = t;
 	    //myCurrentIC->SetTransparency (myCurrentIC->Current(), m_TransValue);
@@ -372,14 +373,14 @@ CDialogTransparency::CDialogTransparency(Handle(AIS_InteractiveContext) CurrentI
 	if (Abs(m_TransValue - temp * 10) > 0.01)
 		m_TransValue = int (temp * 10) + 1;
 
-	for (myCurrentIC->InitCurrent(); 
-	     myCurrentIC->MoreCurrent ();
-		 myCurrentIC->NextCurrent ())
-	{	
-	    myCurrentIC->SetTransparency (myCurrentIC->Current(), temp);
-    }	
+	for (myCurrentIC->InitSelected();
+	     myCurrentIC->MoreSelected ();
+		 myCurrentIC->NextSelected ())
+	{
+	    myCurrentIC->SetTransparency (myCurrentIC->SelectedInteractive(), temp, Standard_False);
+    }
 
-
+  myCurrentIC->UpdateCurrentViewer();
 }
 
 
@@ -414,13 +415,13 @@ void CDialogTransparency::OnDeltaposSpinaistransp(NMHDR* pNMHDR, LRESULT* pResul
 
     UpdateData (false);
 
-	for (myCurrentIC->InitCurrent(); 
-	     myCurrentIC->MoreCurrent ();
-		 myCurrentIC->NextCurrent())
-	{	
-	    myCurrentIC->SetTransparency (myCurrentIC->Current(), m_TransValue/10.0);
-    }	
-
+	for (myCurrentIC->InitSelected();
+	     myCurrentIC->MoreSelected ();
+		 myCurrentIC->NextSelected())
+	{
+	    myCurrentIC->SetTransparency (myCurrentIC->SelectedInteractive(), m_TransValue/10.0, Standard_False);
+    }
+  myCurrentIC->UpdateCurrentViewer();
 	*pResult = 0;
 
 }
@@ -431,12 +432,13 @@ void CDialogTransparency::OnChangeEditaistransp()
 	// TODO: Add your control notification handler code here
 	int temp = m_TransValue;
     if (UpdateData (true)){
-		for (myCurrentIC->InitCurrent(); 
-			 myCurrentIC->MoreCurrent ();
-			 myCurrentIC->NextCurrent())
-		{	
-			myCurrentIC->SetTransparency (myCurrentIC->Current(), m_TransValue/10.0);
-		}	
+		for (myCurrentIC->InitSelected();
+			 myCurrentIC->MoreSelected ();
+			 myCurrentIC->NextSelected())
+		{
+			myCurrentIC->SetTransparency (myCurrentIC->SelectedInteractive(), m_TransValue/10.0, Standard_False);
+		}
+    myCurrentIC->UpdateCurrentViewer();
 	}
 	else{
 		m_TransValue = temp;

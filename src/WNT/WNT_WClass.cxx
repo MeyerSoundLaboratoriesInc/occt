@@ -14,69 +14,64 @@
 
 #include <windows.h>
 
-
-#include <InterfaceGraphic.hxx>
-#include <Standard_PCharacter.hxx>
-#include <Standard_Type.hxx>
-#include <WNT_ClassDefinitionError.hxx>
 #include <WNT_WClass.hxx>
+
+#include <TCollection_ExtendedString.hxx>
+#include <WNT_ClassDefinitionError.hxx>
 #include <WNT_Window.hxx>
 
-#include <string.h>
-IMPLEMENT_STANDARD_RTTIEXT(WNT_WClass,MMgt_TShared)
+#if defined(_WIN32) && !defined(OCCT_UWP)
+
+IMPLEMENT_STANDARD_RTTIEXT(WNT_WClass, Standard_Transient)
 
 //=======================================================================
 //function : WNT_WClass
-//purpose  : 
+//purpose  :
 //=======================================================================
-WNT_WClass::WNT_WClass (
-               const Standard_CString aClassName,
-               const Standard_Address aWndProc,
-               const WNT_Uint&        aStyle,
-               const Standard_Integer aClassExtra,
-               const Standard_Integer aWindowExtra,
-               const Aspect_Handle    aCursor,
-               const Aspect_Handle    anIcon,
-               const Standard_CString aMenuName
-              ) {
-
-  WNDCLASS wc;
-
-  hInstance = GetModuleHandle ( NULL );
-
-  wc.style         = aStyle;
-  wc.lpfnWndProc   = ( aWndProc ) ? ( WNDPROC )aWndProc : DefWindowProc;
-  wc.cbClsExtra    = aClassExtra;
-  wc.cbWndExtra    = aWindowExtra;
-  wc.hInstance     = ( HINSTANCE )hInstance;
-  wc.hIcon         = ( anIcon )  ? ( HICON )anIcon    :
-                                  LoadIcon ( NULL, IDI_APPLICATION );
-  wc.hCursor       = ( aCursor ) ? ( HCURSOR )aCursor :
-                                  LoadCursor ( NULL, IDC_NO );
-  wc.hbrBackground = 0;
-  wc.lpszMenuName  = aMenuName;
-  wc.lpszClassName = aClassName;
-
-  if (  !RegisterClass ( &wc )  )
-
-    WNT_ClassDefinitionError :: Raise ( "Unable to register window class" );
-
-  lpszName = new char[ strlen ( aClassName ) + 1 ];
-  strcpy ( (Standard_PCharacter)lpszName, aClassName );
-  lpfnWndProc = (void* )wc.lpfnWndProc;
-
-}  // end constructor
+WNT_WClass::WNT_WClass (const TCollection_AsciiString& theClassName,
+                        const Standard_Address theWndProc,
+                        const unsigned int theStyle,
+                        const Standard_Integer theClassExtra,
+                        const Standard_Integer theWindowExtra,
+                        const Aspect_Handle theCursor,
+                        const Aspect_Handle theIcon,
+                        const TCollection_AsciiString& theMenuName)
+: myClassName (theClassName),
+  myAppInstance (GetModuleHandleW (NULL)),
+  myWndProc (NULL)
+{
+  const TCollection_ExtendedString aClassNameW (theClassName);
+  const TCollection_ExtendedString aMenuNameW  (theMenuName);
+  WNDCLASSW aWinClass;
+  aWinClass.style         = (UINT)theStyle;
+  aWinClass.lpfnWndProc   = theWndProc != NULL ? (WNDPROC )theWndProc : DefWindowProcW;
+  aWinClass.cbClsExtra    = theClassExtra;
+  aWinClass.cbWndExtra    = theWindowExtra;
+  aWinClass.hInstance     = (HINSTANCE )myAppInstance;
+  aWinClass.hIcon         = theIcon   != NULL ? (HICON   )theIcon   : LoadIcon   (NULL, IDI_APPLICATION);
+  aWinClass.hCursor       = theCursor != NULL ? (HCURSOR )theCursor : LoadCursor (NULL, IDC_NO);
+  aWinClass.hbrBackground = 0;
+  aWinClass.lpszMenuName  = !aMenuNameW.IsEmpty() ? aMenuNameW.ToWideString() : NULL;
+  aWinClass.lpszClassName = aClassNameW.ToWideString();
+  if (!RegisterClassW (&aWinClass))
+  {
+    myClassName.Clear();
+    throw WNT_ClassDefinitionError("Unable to register window class");
+  }
+  myWndProc = (Standard_Address )aWinClass.lpfnWndProc;
+}
 
 //=======================================================================
 //function : ~WNT_WClass
-//purpose  : 
+//purpose  :
 //=======================================================================
-
-WNT_WClass::~WNT_WClass ()
+WNT_WClass::~WNT_WClass()
 {
+  if (!myClassName.IsEmpty())
+  {
+    const TCollection_ExtendedString aClassNameW (myClassName);
+    UnregisterClassW (aClassNameW.ToWideString(), (HINSTANCE )myAppInstance);
+  }
+}
 
- UnregisterClass (  lpszName, ( HINSTANCE )hInstance  );
- delete [] (Standard_PCharacter)lpszName;
-
-}  // end WNT_WClass :: Destroy
-
+#endif // _WIN32

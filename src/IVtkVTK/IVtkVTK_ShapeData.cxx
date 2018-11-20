@@ -14,21 +14,22 @@
 // commercial license or contractual agreement.
 
 #include <IVtkVTK_ShapeData.hxx>
-#include <vtkCellArray.h>
+
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#endif
 #include <vtkCellData.h>
 #include <vtkDoubleArray.h>
+#include <vtkIdList.h>
 #include <vtkIdTypeArray.h>
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 IMPLEMENT_STANDARD_RTTIEXT(IVtkVTK_ShapeData,IVtk_IShapeData)
-
-const char* const IVtkVTK_ShapeData::ARRNAME_SUBSHAPE_IDS = "SUBSHAPE_IDS";
-
-const char* const IVtkVTK_ShapeData::ARRNAME_MESH_TYPES   = "MESH_TYPES";
-
-//! Handle implementation
-
 
 //================================================================
 // Function : Constructor
@@ -38,15 +39,15 @@ IVtkVTK_ShapeData::IVtkVTK_ShapeData()
 {
   myPolyData = vtkSmartPointer<vtkPolyData>::New();
   myPolyData->Allocate();
-  myPolyData->SetPoints (vtkPoints::New());
+  myPolyData->SetPoints (vtkSmartPointer<vtkPoints>::New());
 
   mySubShapeIDs = vtkSmartPointer<vtkIdTypeArray>::New();
-  mySubShapeIDs->SetName (IVtkVTK_ShapeData::ARRNAME_SUBSHAPE_IDS);
+  mySubShapeIDs->SetName (IVtkVTK_ShapeData::ARRNAME_SUBSHAPE_IDS());
   mySubShapeIDs->SetNumberOfComponents (1);
   myPolyData->GetCellData()->AddArray (mySubShapeIDs);
 
   myMeshTypes = vtkSmartPointer<vtkIdTypeArray>::New();
-  myMeshTypes->SetName (IVtkVTK_ShapeData::ARRNAME_MESH_TYPES);
+  myMeshTypes->SetName (IVtkVTK_ShapeData::ARRNAME_MESH_TYPES());
   myMeshTypes->SetNumberOfComponents (1);
   myPolyData->GetCellData()->AddArray (myMeshTypes);
 }
@@ -112,7 +113,7 @@ void IVtkVTK_ShapeData::InsertLine (const IVtk_IdType       theShapeID,
 {
   if (!thePointIds->IsEmpty())
   {
-    vtkIdList* anIdList = vtkIdList::New();
+    vtkSmartPointer<vtkIdList> anIdList = vtkSmartPointer<vtkIdList>::New();
     // Fill the vtk id list by ids from IVtk_PointIdList.
     IVtk_PointIdList::Iterator anIterOfIds = 
         IVtk_PointIdList::Iterator(*thePointIds);
@@ -127,7 +128,6 @@ void IVtkVTK_ShapeData::InsertLine (const IVtk_IdType       theShapeID,
     mySubShapeIDs->InsertNextTupleValue (&aShapeIDVTK);
     const vtkIdType aType = theMeshType;
     myMeshTypes->InsertNextTupleValue (&aType);
-    anIdList->Delete();
   }
 }
 

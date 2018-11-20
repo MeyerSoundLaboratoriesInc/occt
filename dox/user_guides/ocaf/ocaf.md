@@ -55,7 +55,7 @@ OCAF uses other modules of Open CASCADE Technology — the Shape  is implemented
 
 The relationship between OCAF and the Open CASCADE Technology (**OCCT**) Object Libraries can be seen in the image below. 
 
-@figure{/user_guides/ocaf/images/ocaf_image003.svg, "OCCT Architecture"}
+@figure{/user_guides/ocaf/images/ocaf_image003.svg,"OCCT Architecture",360}
 
 In the image, the OCAF (Open CASCADE Application Framework) is shown with black rectangles and OCCT Object Libraries required by OCAF are shown with white rectangles. 
  
@@ -65,8 +65,7 @@ The subsequent chapters of this document explain the concepts and show how to us
 
 OCAF provides you with an object-oriented Application-Document-Attribute model consisting of C++ class libraries. 
 
-@image html ocaf_wp_image003.png "The Application-Document-Attribute model"
-@image latex ocaf_wp_image003.png "The Application-Document-Attribute model"
+@figure{ocaf_wp_image003.png,"The Application-Document-Attribute model",420}
 
 @subsubsection occt_ocaf_1_2_1 Application
 
@@ -134,8 +133,7 @@ In addition,  application-specific data can be added by defining new attribute c
   For example, to associate a texture to a face in a geometric model, 
   both the face and the texture are attached to the same reference-key.  
  
-@image html ocaf_image004.png "Topology driven versus reference-key driven approaches" 
-@image latex ocaf_image004.png "Topology driven versus reference-key driven approaches" 
+@figure{ocaf_image004.png,"Topology driven versus reference-key driven approaches",360}
 
  Reference-keys can be created in two ways:   
  
@@ -215,8 +213,7 @@ The sub-labels of a label are called its children. Conversely, each label, which
 
 The most important property is that a label’s entry is its persistent address in the data framework. 
   
-@image html /user_guides/ocaf/images/ocaf_image005.png "A simple framework model"
-@image latex /user_guides/ocaf/images/ocaf_image005.png "A simple framework model"
+@figure{/user_guides/ocaf/images/ocaf_image005.png,"A simple framework model",216}
 
 In this image the circles contain tags of the corresponding labels.  The lists of tags are located under the circles. The root label always has a zero tag. 
 
@@ -228,8 +225,7 @@ List of tags of the right-bottom label is "0:3:4": this label has tag 4, its fat
 
 Let's have a look at the example:
   
-@image html ocaf_wp_image007.png "The coffee machine"  
-@image latex ocaf_wp_image007.png "The coffee machine"    
+@figure{ocaf_wp_image007.png,"The coffee machine",200}
   
    In the image the application for designing coffee  machines first allocates 
   a label for the machine unit. It then adds sub-labels  for the main features 
@@ -241,8 +237,7 @@ Let's have a look at the example:
   Later on, you can  modify the handle's geometry without changing its color — 
   both remain attached  to the same label.  
   
-@image html ocaf_wp_image005.png "The data structure of the coffee machine"  
-@image latex ocaf_wp_image005.png "The data structure of the coffee machine"  
+@figure{ocaf_wp_image005.png,"The data structure of the coffee machine",361}
  
   The nesting of labels is key to OCAF. This allows a  label to have its own structure 
   with its local addressing scheme which can be  reused in a more complex structure. 
@@ -256,8 +251,7 @@ Let's have a look at the example:
 
 Another example is the application for designing table lamps. The first label is allocated to the lamp unit. 
 
-@image html /user_guides/ocaf/images/ocaf_image006.png
-@image latex /user_guides/ocaf/images/ocaf_image006.png
+@figure{/user_guides/ocaf/images/ocaf_image006.png,"",200}
 
 The root label cannot have brother labels. Consequently, various lamps in the framework allocation correspond to the sub-labels of the root label. This allows avoiding any confusion between table lamps in the data framework. Different lamp parts have different material, color and other attributes, so a child label of the lamp with the specified tags is allocated for each sub-unit of the lamp: 
 
@@ -271,8 +265,7 @@ Remember that tags are private addresses without any meaning outside the data fr
 
 So, after the user changes the lamp design, only corresponding attributes are changed, but the label structure is maintained. The lamp shape must be recreated by new attribute values and attributes of the lamp shape must refer to a new shape. 
 
-@image html /user_guides/ocaf/images/ocaf_image007.png
-@image latex /user_guides/ocaf/images/ocaf_image007.png
+@figure{/user_guides/ocaf/images/ocaf_image007.png,"",360}
 
 
 The previous figure shows the table-lamps document structure: each child of the root label contains a lamp shape attribute and refers to the sub-labels, which contain some design information about corresponding sub-units. 
@@ -447,6 +440,9 @@ current.Add (INT); // INT is now attached to current
 current.Add (INT); // causes failure 
 TDF_Label attach = INT->Label(); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Note. There is an exception from this rule for some sub-set of Standard attributes. See for details chapter 6.Standard Attributes.
+
 @subsubsection occt_ocaf_3_5_4 Testing the attachment to a label
 
 You can test whether an attribute is attached to a label or not by using *TDF_Attribute::IsA* with the GUID of the attribute as an argument. In the example below, you test whether the current label has an integer attribute, and then, if that is so, how many attributes are attached to it. *TDataStd_Integer::GetID* provides the GUID argument needed by the method IsAttribute. 
@@ -523,8 +519,7 @@ Let’s study the implementation of the same data type in both ways by the examp
   * First point as *TDataStd_RealArray* (three values: X1, Y1 and Z1);
   * Second point as *TDataStd_RealArray* (three values: X2, Y2 and Z2).
 
-@image html /user_guides/ocaf/images/ocaf_image010.png "Data tree for translation"
-@image latex /user_guides/ocaf/images/ocaf_image010.png "Data tree for translation"
+@figure{/user_guides/ocaf/images/ocaf_image010.png,"Data tree for translation",240}
 
 If the type of transformation is changed to rotation, the data tree looks like this: 
   * Type of transformation <i>(gp_Rotation)</i> as *TDataStd_Integer*;
@@ -532,8 +527,7 @@ If the type of transformation is changed to rotation, the data tree looks like t
   * Axis of rotation as *TDataStd_RealArray* (three values: DX, DY and DZ);
   * Angle of rotation as *TDataStd_Real*.
 
-@image html /user_guides/ocaf/images/ocaf_image011.png "Data tree for rotation"
-@image latex /user_guides/ocaf/images/ocaf_image011.png "Data tree for rotation"
+@figure{/user_guides/ocaf/images/ocaf_image011.png,"Data tree for rotation",240}
 
 The attribute *TDataStd_UAttribute* with the chosen unique GUID identifies the data type. The interface class initialized by the label of this attribute allows access to the data container (type of transformation and the data of transformation according to the type). 
   
@@ -548,8 +542,7 @@ The attribute *TDataStd_UAttribute* with the chosen unique GUID identifies the d
   which references the coffee pot of the first document 
   (the XLink contains the relative path of the coffee pot document and the entry of the coffee pot data [0:1] ).  
 
-@image html ocaf_wp_image006.png "The coffee machine compound document"
-@image latex ocaf_wp_image006.png "The coffee machine compound document"
+@figure{ocaf_wp_image006.png,"The coffee machine compound document",360}
  
   In this context, the end-user of the coffee machine application can open the coffee pot document, 
   modify the geometry of, for  example, the reservoir, and overwrite the document without worrying 
@@ -592,7 +585,7 @@ The attribute *TDataStd_UAttribute* with the chosen unique GUID identifies the d
 
 Standard documents offer ready-to-use documents containing a TDF-based data framework. Each document can contain only one framework. 
 
-The documents themselves are contained in the instantiation of a class inheriting from *TDocStd_Application*. This application manages the creation, storage and retrieval of documents. 
+The documents themselves are contained in the instantiation of a class *TDocStd_Application* (or its descendant). This application manages the creation, storage and retrieval of documents. 
 
 You can implement undo and redo in your document, and refer from the data framework of one document to that of another one. This is done by means of external link attributes, which store the path and the entry of external links. 
 
@@ -605,17 +598,15 @@ To sum up, standard documents alone provide access to the data framework. They a
 
 @subsection occt_ocaf_4_2 The Application
 
-As a container for your data framework, you need a document, and your document must be contained in your application. This application will be a class inheriting from *TDocStd_Application*. 
+As a container for your data framework, you need a document, and your document must be contained in your application. This application will be a class *TDocStd_Application* or a class inheriting from it. 
 
 @subsubsection occt_ocaf_4_2_1 Creating an application
 
 To create an application, use the following syntax. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
-Handle(TDocStd_Application) app 
-= new MyApplication_Application (); 
+Handle(TDocStd_Application) app = new TDocStd_Application (); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Note that *MyApplication_Application* is a class, which you have to create and which will inherit from *TDocStd_Application*. 
 
 @subsubsection occt_ocaf_4_2_2 Creating a new document
 
@@ -626,13 +617,16 @@ Handle(TDocStd_Document) doc;
 app->NewDocument("NewDocumentFormat", doc); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Here "NewDocumentFormat" is identifier of the format of your document.
+OCCT defines several standard formats, distinguishing by a set of supported OCAF attributes, and method of encoding (e.g. binary data or XML), described below.
+If your application defines specific OCAF attributes, you need to define your own format for it.
+
 @subsubsection occt_ocaf_4_2_3 Retrieving the application to which the document belongs
 
 To retrieve the application containing your document, you use the syntax below. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
-app = Handle(TDocStd_Application)::DownCast 
-(doc->Application()); 
+app = Handle(TDocStd_Application)::DownCast (doc->Application()); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 @subsection occt_ocaf_4_3 The Document
 
@@ -652,36 +646,97 @@ To retrieve the document from a label in its data framework, you use *TDocStd_Do
 doc = TDocStd_Document::Get(label); 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@subsubsection occt_ocaf_4_3_3 Saving the document
+@subsubsection occt_ocaf_4_3_format Defining storage format
 
-If in your document you use only standard attributes (from the packages *TDF, TDataStd, TNaming, TFunction, TPrsStd* and *TDocStd*), you just do the following steps: 
+OCAF uses a customizable mechanism for storage of the documents.
+In order to use OCAF persistence to save and read your documents to / from the file, you need to define one or several formats in your application.
 
-* In your application class (which inherits class *TDocStd_Application*) implement two methods:
-	+ Formats (TColStd_SequenceOfExtendedString& theFormats), which append to a given sequence <i>\<theFormats\></i> your document format string, for example, "NewDocumentFormat" -- this string is also set in the document creation command 
-	+ ResourcesName(), which returns a string with a name of resources file (this file contains a description about the extension of the document, storage/retrieval drivers GUIDs...), for example, "NewFormat" 
-* Create the resource file (with name, for example, "NewFormat") with the following strings:
+For that, use method TDocStd_Application::DefineFormat(), for instance:
+~~~~~
+app->DefineFormat ("NewDocumentFormat", "New format for OCAF documents", "ndf",
+                   new NewDocumentFormat_RetrievalDriver(),
+                   new NewDocumentFormat_StorageDriver());
+~~~~~
+
+This example defines format "NewDocumentFormat" with a default file extension "ndf", and instantiates drivers for reading and storing documents from and to that format.
+Either of the drivers can be null, in this case the corresponding action will not be supported for that format.
+
+OCAF provides several standard formats, each covering some set of OCAF attributes:
+
+<table>
+<tr><th>Format</th><th>Persistent toolkit</th><th>OCAF attributes covered</th></tr>
+<tr><td colspan=3>Legacy formats (read only)</td></tr>
+<tr><td>OCC-StdLite    </td><td> TKStdL             </td><td> TKLCAF </td></tr>
+<tr><td>MDTV-Standard  </td><td> TKStd              </td><td> TKLCAF + TKCAF </td></tr>
+<tr><td colspan=3>Binary formats</td></tr>
+<tr><td>BinLOcaf       </td><td> TKBinL             </td><td> TKLCAF </td></tr>
+<tr><td>BinOcaf        </td><td> TKBin              </td><td> TKLCAF + TKCAF </td></tr>
+<tr><td>BinXCAF        </td><td> TKBinXCAF          </td><td> TKLCAF + TKCAF + TKXCAF </td></tr>
+<tr><td>TObjBin        </td><td> TKBinTObj          </td><td> TKLCAF + TKTObj </td></tr>
+<tr><td colspan=3>XML formats</td></tr>
+<tr><td>XmlLOcaf       </td><td> TKXmlL             </td><td> TKLCAF </td></tr>
+<tr><td>XmlOcaf        </td><td> TKXml              </td><td> TKLCAF + TKCAF </td></tr>
+<tr><td>XmlXCAF        </td><td> TKXmlXCAF          </td><td> TKLCAF + TKCAF + TKXCAF </td></tr>
+<tr><td>TObjXml        </td><td> TKXmlTObj          </td><td> TKLCAF + TKTObj </td></tr>
+</table>
+
+For convenience, these toolkits provide static methods *DefineFormat()* accepting handle to application.
+These methods allow defining corresponding formats easily, e.g.:
 
 ~~~~~
-formatlist:NewDocumentFormat 
-NewDocumentFormat: New Document Format Version 1.0 
+BinDrivers::DefineFormat (app); // define format "BinOcaf"
+~~~~~
+
+Use these toolkits as an example for implementation of persistence drivers for custom attributes, or new persistence formats.
+
+The application can define several storage formats.
+On save, the format specified in the document (see *TDocStd_Document::StorageFormat()*) will be used (save will fail if that format is not defined in the application).
+On reading, the format identifier stored in the file is used and recorded in the document.
+
+@subsubsection occt_ocaf_4_3_plugins Defining storage format by resource files 
+
+The alternative  method to define formats is via usage of resource files. 
+This  method was  used in earlier versions of OCCT and is considered as deprecated since version 7.1.0.
+This method allows loading persistence drivers on demand, using plugin mechanism.
+
+To use this method, create your own application class inheriting from *TDocStd_Application*, and override method *ResourcesName()*.
+That method should return a string with a name of resource file, e.g. "NewDocumentFormat", which will contain a description of the format.
+
+Then create that resource file and define the parameters of your format:
+
+~~~~~
+ndf.FileFormat: NewDocumentFormat
+NewDocumentFormat.Description: New Document Format Version 1.0 
 NewDocumentFormat.FileExtension: ndf 
-NewDocumentFormat.StoragePlugin: bd696000-5b34-11d1-b5ba-00a0c9064368 
-NewDocumentFormat.RetrievalPlugin: bd696001-5b34-11d1-b5ba-00a0c9064368 
-NewDocumentFormatSchema: bd696002-5b34-11d1-b5ba-00a0c9064368 
-NewDocumentFormat.AttributeStoragePlugin:57b0b826-d931-11d1-b5da-00a0c9064368 
-NewDocumentFormat.AttributeRetrievalPlugin:57b0b827-d931-11d1-b5da-00a0c9064368 
+NewDocumentFormat.StoragePlugin: bb5aa176-c65c-4c84-862e-6b7c1fe16921
+NewDocumentFormat.RetrievalPlugin: 76fb4c04-ea9a-46aa-88a2-25f6a228d902 
 ~~~~~
 
-* Copy the resource file "Plugin" from $CASROOT/src/StdResource
+The GUIDs should be unique and correspond to the GUIDs supported by relevant plugin.
+You can use an existing plugins (see the table above) or create your own.
 
-In order to set the paths for these files it is necessary to set the environments: *CSF_PluginDefaults* and *CSF_NewFormatDefaults*. For example, set the files in the directory *MyApplicationPath/MyResources*: 
+Finally, make a copy of the resource file "Plugin" from *$CASROOT/src/StdResource* and, if necessary, add the definition of your plugin in it, for instance:
+
+~~~~~
+bb5aa176-c65c-4c84-862e-6b7c1fe16921.Location: TKNewFormat
+76fb4c04-ea9a-46aa-88a2-25f6a228d902.Location: TKNewFormat
+~~~~~
+
+In order to have these resource files loaded during the program execution, it is necessary to set two environment variables: *CSF_PluginDefaults* and *CSF_NewFormatDefaults*.
+For example, set the files in the directory *MyApplicationPath/MyResources*: 
 
 ~~~~~
 setenv CSF_PluginDefaults MyApplicationPath/MyResources 
 setenv CSF_NewFormatDefaults MyApplicationPath/MyResources 
 ~~~~~
 
-Once these steps are taken you may run your application, create documents and Save/Open them.
+@subsubsection occt_ocaf_4_3_3 Saving a document
+
+To save the document, make sure that its parameter *StorageFormat()* corresponds to one of the formats defined in the application, and use method *TDocStd_Application::SaveAs*, for instance: 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+app->SaveAs(doc, "/tmp/example.caf"); 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 @subsubsection occt_ocaf_4_3_4 Opening the document from a file
 
@@ -732,8 +787,7 @@ You can also have a look at the class *TDF_Closure*, which can be useful to dete
 
 External links refer from one document to another. They allow you to update the copy of data  framework later on. 
 
-@image html /user_guides/ocaf/images/ocaf_image012.png  "External links between documents"
-@image latex /user_guides/ocaf/images/ocaf_image012.png  "External links between documents"
+@figure{/user_guides/ocaf/images/ocaf_image012.png,"External links between documents",360}
 
 Note that documents can be copied with or without a possibility of updating an external link. 
 
@@ -783,8 +837,7 @@ The user can add the *TNaming_NamedShape* attribute to other labels. This attrib
 
 If a shape is newly created, then the old shape of a corresponding named shape is an empty shape. If a shape is deleted, then the new shape in this named shape is empty. 
 
-@image html /user_guides/ocaf/images/ocaf_image013.png
-@image latex /user_guides/ocaf/images/ocaf_image013.png
+@figure{/user_guides/ocaf/images/ocaf_image013.png,"",455}
 
 @subsection occt_ocaf_5_2 Shape attributes in data framework. 
 
@@ -797,8 +850,7 @@ Different algorithms may dispose sub-shapes of the result shape at the individua
 
 Consider the following example. Two boxes (solids) are fused into one solid (the result one). Initially each box was placed to the result label as a named shape, which has evolution PRIMITIVE and refers to the corresponding shape of the *TNaming_UsedShapes* map. The box result label has a material attribute and six child labels containing named shapes of Box faces. 
 
-@image html /user_guides/ocaf/images/ocaf_image014.png "Resulting box"
-@image latex /user_guides/ocaf/images/ocaf_image014.png "Resulting box"
+@figure{/user_guides/ocaf/images/ocaf_image014.png,"Resulting box",200}
 
 After the fuse operation a modified result is placed to a separate label as a named shape, which refers to the old shape (one of the boxes) and to the new shape resulting from the fuse operation, and has evolution MODIFY (see the following figure). 
 
@@ -806,8 +858,7 @@ Named shapes, which contain information about modified faces, belong to the fuse
 * sub-label with tag 1 -- modified faces from box 1, 
 * sub-label with tag 2 -- modified faces from box 2. 
 
-@image html /user_guides/ocaf/images/ocaf_image015.png
-@image latex /user_guides/ocaf/images/ocaf_image015.png
+@figure{/user_guides/ocaf/images/ocaf_image015.png,"",360}
 
 This is necessary and sufficient information for the functionality of the right naming mechanism: any sub-shape of the result can be identified unambiguously by name type and set of labels, which contain named shapes: 
 
@@ -950,7 +1001,7 @@ Standard_Boolean CafTest_MyClass::SameEdge (const Handle(CafTest_Line)& L1, cons
 
 Let us consider an example: imagine a wooden plate. The job is to drive several nails in it:
 
-@figure{/user_guides/ocaf/images/ocaf_image020.png, "A nail driven in a wooden plate"}
+@figure{/user_guides/ocaf/images/ocaf_image020.png,"A nail driven in a wooden plate",360}
 
 There may be several nails with different size and position. A **Hammer** should push each **Nail** exactly in the center point of the top surface. For this the user does the following:
 *	Makes several Nails of different height and diameter (according to the need),
@@ -972,11 +1023,11 @@ The application contains 3 functions:
 Each function gives the topological naming some hints how to “re-solve” the selected sub-shapes:
 * The Nail constructs a solid shape and puts each face of the shape into sub-labels: 
 
-@figure{/user_guides/ocaf/images/ocaf_image021.png, "Distribution of faces through sub-labels of the Nail"}
+@figure{/user_guides/ocaf/images/ocaf_image021.png,"Distribution of faces through sub-labels of the Nail",185}
 
 * The **Translator** moves a shape and registers modification for each face: it puts a pair: “old” shape -- “new” shape at a sub-label of each moving Nail. The “old” shape represents a face of the Nail at the initial position. The “new” shape -- is the same face, but at a new position:
 
-@figure{/user_guides/ocaf/images/ocaf_image022.png, "Registration of relocation of faces of a Nail"}
+@figure{/user_guides/ocaf/images/ocaf_image022.png,"Registration of relocation of faces of a Nail",240}
 
 How does it work?
 * The Hammer selects a face of a Nail calling *TNaming_Selector::Select()*. This call makes a unique name for the selected shape. In our example, it will be a direct reference to the label of the top face of the Nail (Face 1).
@@ -1054,6 +1105,30 @@ Standard attributes are ready-to-use attributes, which allow creating and modify
 
 All attributes inherit class *TDF_Attribute*, so, each attribute has its own GUID and standard methods for attribute creation, manipulation, getting access to the data framework. 
 
+### Attributes supporting several attributes of the same type on the same label
+
+By default only one attribute of the same type on the same lable is supported. For example, you can set only one TDataStd_Real attribute
+on the same label.  This limitation was removed for some predefined sub-set of standard attributes by adding so called 'user defined ID' 
+feature to the attribute. 
+The listed below attributes received this new feature:
+
+  * **TDataStd_AsciiString**
+  * **TDataStd_Integer**
+  * **TDataStd_Name**
+  * **TDataStd_Real**
+  * **TDataStd_BooleanArray**
+  * **TDataStd_BooleanList**
+  * **TDataStd_ByteArray**
+  * **TDataStd_ExtStringArray**
+  * **TDataStd_ExtStringList**
+  * **TDataStd_IntegerArray**
+  * **TDataStd_IntegerList**
+  * **TDataStd_RealArray**
+  * **TDataStd_RealList**
+  * **TDataStd_ReferenceArray**
+  * **TDataStd_ReferenceList**
+
+See for details paragraph 6.4.
 
 @subsection occt_ocaf_6_2 Services common to all attributes
 
@@ -1116,8 +1191,7 @@ It is possible to describe any model by means of standard OCAF attributes.
   
   Certainly, other variants are also  possible.   
  
-@image html ocaf_tree_wp_image003.png "Allocation of all data as one  array of double values"
-@image latex ocaf_tree_wp_image003.png "Allocation of all data as one  array of double values"
+@figure{ocaf_tree_wp_image003.png,"Allocation of all data as one  array of double values",350}
  
   The first approach to allocation of all  data represented as one array of double values 
   saves initial memory and is easy to implement. 
@@ -1134,8 +1208,7 @@ It is possible to describe any model by means of standard OCAF attributes.
   In this case we create 100  000 labels -- one label for each measurement point 
   and attach an array of double  values to these labels:  
  
-@image html ocaf_tree_wp_image004.png "Allocation of data of each  measurement point as arrays of double values"
-@image latex ocaf_tree_wp_image004.png "Allocation of data of each  measurement point as arrays of double values"
+@figure{ocaf_tree_wp_image004.png,"Allocation of data of each  measurement point as arrays of double values",288}
  
   Now edition of data is safer as far as  memory usage is concerned. 
   Change of value for one measurement point (any  value: point co-ordinates, load, and so on) 
@@ -1147,8 +1220,7 @@ It is possible to describe any model by means of standard OCAF attributes.
    
   The third case of allocation of data  through OCAF tree is represented below:  
 
-@image html ocaf_tree_wp_image005.png "Allocation of data into separate arrays of double values"
-@image latex ocaf_tree_wp_image005.png "Allocation of data into separate arrays of double values"
+@figure{ocaf_tree_wp_image005.png,"Allocation of data into separate arrays of double values",354}
 
   In this case sub-labels are involved and we  can easily access the values of each measurement point, 
   load or matrix. We don’t need an interface class with methods of access to the data 
@@ -1165,8 +1237,7 @@ It is possible to describe any model by means of standard OCAF attributes.
   In this case we  implement the third variant of using the standard attributes (see picture 3), 
   but we use less memory (because we use only one attribute instead of three):  
  
-@image html ocaf_tree_wp_image006.png "Allocation of data into newly  created OCAF attribute"
-@image latex ocaf_tree_wp_image006.png "Allocation of data into newly  created OCAF attribute"
+@figure{ocaf_tree_wp_image006.png,"Allocation of data into newly  created OCAF attribute",383}
 
   The second variant of using standard OCAF attributes still has drawbacks: 
   when data is edited, OCAF backs-up all values  of the measurement point.   
@@ -1183,6 +1254,60 @@ It is possible to describe any model by means of standard OCAF attributes.
    
   Most of the models may be implemented using only standard OCAF attributes. 
   Some other models need special treatment and require implementation of new OCAF attributes.
+
+
+ @subsection occt_ocaf_6_4 Standard Attributes with User Defined GUID
+
+ The listed above attributes allow to set at the same Label as many attributes of the same type as you want thanks to specific user's ID.
+ Let's consider it on the example of the TDataStd_Real attribute. The previous version of the attribute allowed to set the attribute using 
+ static method Set in next way:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+static Handle(TDataStd_Real) Set (const TDF_Label& label, const Standard_Real value);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ This is a default form which is kept by the attribute. It uses the default GUID for the attribute identification - TDataStd_Real::GetID(). 
+ In case if you want to use the new feature (user defined Real attribute), for example to define several attributes which should keep a value 
+ of the same type - Standard_Real, but to be associated with different user's notions (or objects) the new static method Set should be used. 
+ In our example we will define two Real attributes which presents two customer's objects - Density and Volume and will be put on the same Label.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+#define DENSITY Standard_GUID("12e9454b-6dbc-11d4-b9c8-0060b0ee2810")
+#define VOLUME  Standard_GUID("161595c0-3628-4737-915a-c160ce94c6f7")
+
+TDF_Label aLabel = ...;
+
+// Real attribute type with user defined GUID associated with user's object "Density"
+TDataStd_Real::Set(aLabel, DENSITY, 1.2);
+
+// Real attribute type with user defined GUID associated with user's object "Volume"
+TDataStd_Real::Set(aLabel, VOLUME, 185.5);
+
+ To find an user defined Real attribute just use a corresponding GUID:
+Handle (TDataStd_Real) anAtt;
+aLabel.FindAttribute (DENSITY, anAtt);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  @subsection occt_ocaf_6_4_1  Creation Attributes with User Defined GUID.
+
+ You can create a new instance of an attribute with user define GUID and add it to label in two ways.
+ 1. Using static method Set(). For example:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+    TDF_Label aLabel = ...;
+    Standard_Integer aValue = ...;
+    Standard_GUID aGuid = TDataStd_Integer::GetID();
+    TDataStd_Integer::Set(aLabel, aGuid, aValue);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ 2. Using the default constructor
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+    Handle(TDataStd_Integer) anInt = new TDataStd_Integer();
+    anInt->SetID(aGuid);
+    aLabel.Add(anInt);
+    anInt->Set(aValue);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     
 @section occt_ocaf_7 Visualization Attributes
@@ -1213,8 +1338,7 @@ The class *TPrsStd_AISPresentation* allows you to define the visual presentation
 The abstract class TPrsStd_Driver allows you to define your own driver classes. Simply redefine the Update method in your new class, which will rebuild the presentation. 
 
 If your driver is placed to the driver table with the unique driver GUID, then every time the viewer updates presentations with a GUID identical to your driver’s GUID, the *Update* method of your driver for these presentations must be called: 
-@image html /user_guides/ocaf/images/ocaf_image016.png
-@image latex /user_guides/ocaf/images/ocaf_image016.png
+@figure{/user_guides/ocaf/images/ocaf_image016.png,"",420}
 
 As usual, the GUID of a driver and the GUID of a displayed attribute are the same. 
 
@@ -1239,8 +1363,7 @@ Function services aggregate data necessary for regeneration of a model. The func
 
 When you edit any application model, you have to regenerate the model by propagating the modifications. Each propagation step calls various algorithms. To make these algorithms independent of your application model, you need to use function services. 
 
-@image html /user_guides/ocaf/images/ocaf_image008.png "Document structure"
-@image latex /user_guides/ocaf/images/ocaf_image008.png "Document structure"
+@figure{/user_guides/ocaf/images/ocaf_image008.png,"Document structure",360}
 
 Take, for example, the case of a modeling sequence made up of a box with the application of a fillet on one of its edges. If you change the height of the box, the fillet will need to be regenerated as well. 
 
@@ -1260,8 +1383,7 @@ For updating algorithm optimization, each function driver has access to the *TFu
 
 An application must implement its functions, function drivers and the common solver for parametric model creation. For example, check the following model: 
 
-@image html /user_guides/ocaf/images/ocaf_image017.png
-@image latex /user_guides/ocaf/images/ocaf_image017.png
+@figure{/user_guides/ocaf/images/ocaf_image017.png,"",360}
 
 The procedure of its creation is as follows:
   * create a rectangular planar face *F* with height 100 and width 200;
@@ -1287,8 +1409,7 @@ The procedure of its creation is as follows:
   Let us describe the usage of the Function Mechanism of Open CASCADE Application Framework on a simple example.  
   This example represents a "nail" composed by a cone and two cylinders of different radius and height:  
 
-@image html ocaf_functionmechanism_wp_image003.png "A nail"
-@image latex ocaf_functionmechanism_wp_image003.png " A nail"
+@figure{ocaf_functionmechanism_wp_image003.png,"A nail",160}
 
   These three objects (a cone and two cylinders) are  independent, 
   but the Function Mechanism makes them connected to each other and representing one object -- a nail.  
@@ -1397,8 +1518,7 @@ To automatically erase the nail from the viewer and the data  tree it is enough 
   The function of the cone is independent. The functions of the cylinders depend on the cone function. 
   The nail function depends on the  results of all functions:  
 
-@image html ocaf_functionmechanism_wp_image005.png "A graph of dependencies between functions"
-@image latex ocaf_functionmechanism_wp_image005.png "A graph of dependencies between functions"
+@figure{ocaf_functionmechanism_wp_image005.png,"A graph of dependencies between functions",232}
 
   Computation of the model starts with the cone function, then the long cylinder, 
   after that the header cylinder and, finally, the result is generated  by the nail function at the end of function chain.  
@@ -1700,37 +1820,6 @@ Both the XML format and the XML OCAF persistence code are extensible in the sens
 * Add (in the new *DocumentStorageDriver*) the *targetNamespace* accompanied with its prefix, using method *XmlDrivers_DocumentStorageDriver::AddNamespace*. The same is done for all namespaces objects which are used by the new persistence, with the exception of the "ocaf" namespace. 
 * Pass (in every OCAF attribute driver) the namespace prefix of the *targetNamespace* to the constructor of *XmlMDF_ADriver*. 
 
-@section occt_ocaf_9a Persistent  Data Storage
-
-@subsection occt_ocaf_9a_1 Introduction
-
-In OCAF, persistence, that is, the mechanism used to  save a document in a file, is based on an explicit formal description of the  data saved.  
- 
-When you open a document, the application reads the corresponding file and first creates a memory representation of it. This representation is then converted to the application data model —  the OCAF-based data structure the application operates on. The file's memory representation  consists of objects defined by classes known as persistent. 
-   
-OCAF includes a ready-to-use schema suitable for most  applications. 
-However, it can be extended if needed. 
-  
-Applications using compound documents extensively (saving data in many files linked together) should implement data management services. It is out the scope of OCAF to provide functions such as:
-* Version and configuration management of compound documents;
-* Querying a referenced document for its referencing documents.
-
-In order to ease the delegation of document management to a data management application, OCAF encapsulates the file management functions in a driver (the meta-data driver). You have to implement this driver for your application to communicate with the data management system of your choice.
-
- 
-@subsection occt_ocaf_9a_2 Schemes of Persistence
-
-There are three schemes of persistence, which you can use to store and retrieve OCAF data (documents):
-
-  * <i> Standard</i> persistence schema, compatible with previous OCAF applications. This schema is deprecated and supports only reading of standard attributes (no writing).
-  * <i> XmlOcaf</i> persistence, allowing the storage of all OCAF data in XML form
-  * <i> BinOcaf</i> persistence, allowing the storage of all OCAF data in binary format form
-
-
-In an OCAF application you can use any persistence schema or
-even all three of them. The choice is made depending on the *Format* string of stored OCAF documents
-or automatically by the file header data -- on retrieval.
-  
 @section occt_ocaf_10 GLOSSARY
 
 * **Application** -- a document container holding all documents containing all application data. 
@@ -1815,116 +1904,21 @@ In C++, the application behavior is implemented in virtual functions redefined i
   You can also implement the user interface in the Java language using 
   the Swing-based Java Application Desktop component (JAD)  provided with OCAF.  
   
-@subsection occt_ocaf_11_b An example of OCAF usage
-
-To create a useful OCAF-based application, it is necessary to redefine two deferred methods: <i> Formats</i> and <i> ResourcesName</i>
-
-In the <i> Formats </i> method, add the format of the documents, which need to be read by the application and may have been built in other applications.
-
-For example:
-
-~~~~
-    void myApplication::Formats(TColStd_SequenceOfExtendedString& Formats)
-    {
-      Formats.Append(TCollection_ExtendedString ("OCAF-myApplication"));
-    }
-~~~~
-
-In the <i> ResourcesName</i> method, you only define the name of the resource file. This
-file contains several definitions for the saving and opening mechanisms associated
-with each format and calling of the plug-in file.
-
-~~~~
-    Standard_CString myApplication::ResourcesName()
-    {
-      return Standard_CString ("Resources");
-    }
-~~~~
-
-To obtain the saving and opening mechanisms, it is necessary to set two environment variables: <i> CSF_PluginDefaults</i>, which defines the path of the plug-in file, and <i> CSF_ResourcesDefault</i>, which defines the resource file:
-
-~~~~
-    SetEnvironmentVariable ( "CSF_ResourcesDefaults",myDirectory);
-    SetEnvironmentVariable ( "CSF_PluginDefaults",myDirectory);
-~~~~
-
-The plugin and the resource files of the application will be located in <i> myDirector</i>.
-The name of the plugin file must be <i>Plugin</i>.
-
-### Resource File
-
-The resource file describes the documents (type and extension) and 
-the type of data that the application can manipulate 
-by identifying the storage and retrieval drivers appropriate for this data.
-
-Each driver is unique and identified by a GUID generated, for example, with the <i> uuidgen </i> tool in Windows.
-
-Five drivers are required to use all standard attributes provided within OCAF:
-
-  * the schema driver (ad696002-5b34-11d1-b5ba-00a0c9064368)
-  * the document storage driver (ad696000-5b34-11d1-b5ba-00a0c9064368)
-  * the document retrieval driver (ad696001-5b34-11d1-b5ba-00a0c9064368)
-  * the attribute storage driver (47b0b826-d931-11d1-b5da-00a0c9064368)
-  * the attribute retrieval driver (47b0b827-d931-11d1-b5da-00a0c9064368)
-
-These drivers are provided as plug-ins and are located in the <i> PappStdPlugin</i> library.
-
-
-For example, this is a resource file, which declares a new model document OCAF-MyApplication:
-
-~~~~
-formatlist:OCAF-MyApplication
-OCAF-MyApplication.Description: MyApplication Document Version 1.0
-OCAF-MyApplication.FileExtension: sta
-OCAF-MyApplication.StoragePlugin: ad696000-5b34-11d1-b5ba-00a0c9064368
-OCAF-MyApplication.RetrievalPlugin: ad696001-5b34-11d1-b5ba-00a0c9064368
-OCAF-MyApplicationSchema: ad696002-5b34-11d1-b5ba-00a0c9064368
-OCAF-MyApplication.AttributeStoragePlugin: 47b0b826-d931-11d1-b5da-00a0c9064368
-OCAF-MyApplication.AttributeRetrievalPlugin: 47b0b827-d931-11d1-b5da-00a0c9064368
-~~~~
- 
-  
-### Plugin File
-
-The plugin file describes the list of required plug-ins to run the application and the
-libraries in which plug-ins are located.
-
-You need at least the <i> FWOSPlugin</i> and the plug-in drivers to run an OCAF application.
-
-The syntax of each item is <i> Identification.Location Library_Name, </i> where:
-* Identification is GUID.
-* Location defines the location of the Identification (where its definition is found).
-* Library_Name is the name (and path to) the library, where the plug-in is located.
-
-For example, this is a Plugin file:
-
-~~~~
-a148e300-5740-11d1-a904-080036aaa103.Location: FWOSPlugin
-! base document drivers plugin
-ad696000-5b34-11d1-b5ba-00a0c9064368.Location: PAppStdPlugin
-ad696001-5b34-11d1-b5ba-00a0c9064368.Location: PAppStdPlugin
-ad696002-5b34-11d1-b5ba-00a0c9064368.Location: PAppStdPlugin
-47b0b826-d931-11d1-b5da-00a0c9064368.Location: PAppStdPlugin
-47b0b827-d931-11d1-b5da-00a0c9064368.Location: PAppStdPlugin
-~~~~
- 
-
-
 @subsection occt_ocaf_11_1 Implementation of Attribute Transformation in a HXX file
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
-\#include <TDF_Attribute.hxx>
+#include <TDF_Attribute.hxx>
 
-\#include <gp_Ax3.hxx>
-\#include <gp_Pnt.hxx>
-\#include <gp_Vec.hxx>
-\#include <gp_Trsf.hxx>
+#include <gp_Ax3.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Vec.hxx>
+#include <gp_Trsf.hxx>
 
-//! This attribute implements a transformation data container
+// This attribute implements a transformation data container
 class MyPackage_Transformation : public TDF_Attribute
 {
 public:
-  //!@name Static methods 
+  //!@ name Static methods 
 
   //! The method returns a unique GUID of this attribute. 
   //! By means of this GUID this attribute may be identified   
@@ -1935,12 +1929,12 @@ public:
   //! The found or created attribute is returned. 
   Standard_EXPORT static Handle(MyPackage_Transformation) Set (const TDF_Label theLabel);
 
-  //!@name Methods for access to the attribute data 
+  //!@ name Methods for access to the attribute data 
       
   //! The method returns the transformation. 
   Standard_EXPORT gp_Trsf Get () const; 
 
-  //!@name Methods for setting the data of transformation 
+  //!@ name Methods for setting the data of transformation 
 
   //! The method defines a rotation type of transformation. 
   Standard_EXPORT void SetRotation (const gp_Ax1& theAxis, Standard_Real theAngle); 
@@ -1963,7 +1957,7 @@ public:
   //! The method defines a complex type of transformation from one co-ordinate system to another. 
   Standard_EXPORT void SetTransformation (const gp_Ax3& theCoordinateSystem1, const gp_Ax3& theCoordinateSystem2); 
 
-  //!@name Overridden methods from TDF_Attribute 
+  //!@ name Overridden methods from TDF_Attribute 
       
   //! The method returns a unique GUID of the attribute. 
   //! By means of this GUID this attribute may be identified among other attributes attached to the same label. 
@@ -1984,7 +1978,7 @@ public:
   //! Prints the content of this attribute into the stream. 
   Standard_EXPORT Standard_OStream& Dump(Standard_OStream& theOS);
 
-  //!@name Constructor 
+  //!@ name Constructor 
 
   //! The C++ constructor of this atribute class. 
   //! Usually it is never called outside this class. 
@@ -2012,7 +2006,7 @@ private:
 @subsection occt_ocaf_11_2 Implementation of Attribute Transformation in a CPP file
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
-\#include <MyPackage_Transformation.hxx> 
+#include <MyPackage_Transformation.hxx> 
 
 //======================================================================= 
 //function : GetID 
@@ -2375,4 +2369,5 @@ The following scenario is used:
 - creating a Fillet (using the selected edges) and pushing the result as a modification of Box1;
 - creating a Cut (Box1, Box2) as a modification of Box1 and push it in DF;
 - recovering the result from DF.
+
 

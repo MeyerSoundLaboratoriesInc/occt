@@ -29,7 +29,26 @@ public:
   Standard_EXPORT XCAFPrs_AISObject (const TDF_Label& theLabel);
 
   //! Returns the label which was visualised by this presentation
-  Standard_EXPORT inline TDF_Label GetLabel() const { return myLabel; }
+  const TDF_Label& GetLabel() const { return myLabel; }
+
+  //! Assign the label to this presentation
+  //! (but does not mark it outdated with SetToUpdate()).
+  void SetLabel (const TDF_Label& theLabel)
+  {
+    myLabel = theLabel;
+  }
+
+  //! Fetch the Shape from associated Label and fill the map of sub-shapes styles.
+  //! By default, this method is called implicitly within first ::Compute().
+  //! Application might call this method explicitly to manipulate styles afterwards.
+  //! @param theToSyncStyles flag indicating if method ::Compute() should call this method again
+  //!                        on first compute or re-compute
+  Standard_EXPORT virtual void DispatchStyles (const Standard_Boolean theToSyncStyles = Standard_False);
+
+  //! Sets the material aspect.
+  //! This method assigns the new default material without overriding XDE styles.
+  //! Re-computation of existing presentation is not required after calling this method.
+  Standard_EXPORT virtual void SetMaterial (const Graphic3d_MaterialAspect& theMaterial) Standard_OVERRIDE;
 
 protected:
 
@@ -41,16 +60,22 @@ protected:
   //! Set colors to drawer
   Standard_EXPORT void SetColors (const Handle(Prs3d_Drawer)& theDrawer,
                                   const Quantity_Color&       theColorCurv,
-                                  const Quantity_Color&       theColorSurf);
+                                  const Quantity_ColorRGBA&   theColorSurf);
+
+  //! Set colors to drawer
+  void SetColors (const Handle(Prs3d_Drawer)& theDrawer,
+                  const Quantity_Color& theColorCurv,
+                  const Quantity_Color& theColorSurf) { SetColors (theDrawer, theColorCurv, Quantity_ColorRGBA (theColorSurf)); }
 
   //! Fills out a default style object which is used when styles are
   //! not explicitly defined in the document.
   //! By default, the style uses white color for curves and surfaces.
   Standard_EXPORT virtual  void DefaultStyle (XCAFPrs_Style& theStyle) const;
 
-private:
+protected:
 
-  TDF_Label myLabel;
+  TDF_Label        myLabel;        //!< label pointing onto the shape
+  Standard_Boolean myToSyncStyles; //!< flag indicating that shape and sub-shapes should be updates within Compute()
 
 public:
 

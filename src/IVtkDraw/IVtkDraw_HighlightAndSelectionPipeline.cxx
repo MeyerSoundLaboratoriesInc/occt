@@ -15,12 +15,20 @@
 
 #include <IVtkDraw_HighlightAndSelectionPipeline.hxx>
 
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#endif
 #include <vtkRenderer.h>
 #include <vtkActor.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkPolyData.h>
 #include <vtkAppendPolyData.h>
 #include <vtkProperty.h>
+#include <vtkRenderWindow.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include <IVtkOCC_Shape.hxx>
 #include <IVtkTools_DisplayModeFilter.hxx>
@@ -66,8 +74,8 @@ IVtkDraw_HighlightAndSelectionPipeline::IVtkDraw_HighlightAndSelectionPipeline (
   aDMFilter->SetDisplayMode (DM_Wireframe);
 
   myMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-  myMapper->AddInputConnection (aDMFilter->GetOutputPort());
-  myActor->SetMapper (myMapper);
+  myMapper->AddInputConnection(aDMFilter->GetOutputPort());
+  myActor->SetMapper(myMapper);
   IVtkTools_ShapeObject::SetShapeSource (aDataSource, myActor);
 
   myMapper->ScalarVisibilityOn();
@@ -86,7 +94,7 @@ IVtkDraw_HighlightAndSelectionPipeline::IVtkDraw_HighlightAndSelectionPipeline (
 
   // No highligthing exists initially
   aSUBFilterH->SetInputConnection (aDataSource->GetOutputPort() );
-  aDMFilterH->SetInputConnection (aSUBFilterH->GetOutputPort() );
+  aDMFilterH->SetInputConnection(aSUBFilterH->GetOutputPort());
 
   myHiliMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   myHiliMapper->SetInputConnection (aDMFilterH->GetOutputPort() );
@@ -115,7 +123,7 @@ IVtkDraw_HighlightAndSelectionPipeline::IVtkDraw_HighlightAndSelectionPipeline (
 
   // No highligthing exists initially
   aSUBFilterS->SetInputConnection (aDataSource->GetOutputPort() );
-  aDMFilterS->SetInputConnection (aSUBFilterS->GetOutputPort() );
+  aDMFilterS->SetInputConnection(aSUBFilterS->GetOutputPort());
 
   mySelMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
   mySelMapper->SetInputConnection (aDMFilterS->GetOutputPort() );
@@ -154,6 +162,14 @@ void IVtkDraw_HighlightAndSelectionPipeline::RemoveFromRenderer (vtkRenderer* th
   theRenderer->RemoveActor (myActor);
   theRenderer->RemoveActor (myHiliActor);
   theRenderer->RemoveActor (mySelActor);
+
+  vtkSmartPointer<vtkRenderWindow> aWin = theRenderer->GetRenderWindow();
+  if (aWin != NULL)
+  {
+    myActor->ReleaseGraphicsResources(aWin);
+    myHiliActor->ReleaseGraphicsResources(aWin);
+    mySelActor->ReleaseGraphicsResources(aWin);
+  }
 }
 
 //===========================================================
@@ -184,7 +200,7 @@ void IVtkDraw_HighlightAndSelectionPipeline::ClearSelectionFilters()
 //===========================================================
 IVtkTools_DisplayModeFilter* IVtkDraw_HighlightAndSelectionPipeline::GetDisplayModeFilter()
 {
-  return IVtkTools_DisplayModeFilter::SafeDownCast (myFilterMap.Find(Filter_DM_Shape) );
+  return IVtkTools_DisplayModeFilter::SafeDownCast(myFilterMap.Find(Filter_DM_Shape));
 }
 
 //===========================================================
@@ -193,7 +209,7 @@ IVtkTools_DisplayModeFilter* IVtkDraw_HighlightAndSelectionPipeline::GetDisplayM
 //===========================================================
 IVtkTools_SubPolyDataFilter* IVtkDraw_HighlightAndSelectionPipeline::GetHighlightFilter()
 {
-  return IVtkTools_SubPolyDataFilter::SafeDownCast (myFilterMap.Find (Filter_SUB_Hili) );
+  return IVtkTools_SubPolyDataFilter::SafeDownCast(myFilterMap.Find(Filter_SUB_Hili));
 }
 
 //===========================================================
@@ -202,7 +218,7 @@ IVtkTools_SubPolyDataFilter* IVtkDraw_HighlightAndSelectionPipeline::GetHighligh
 //===========================================================
 IVtkTools_SubPolyDataFilter* IVtkDraw_HighlightAndSelectionPipeline::GetSelectionFilter()
 {
-  return IVtkTools_SubPolyDataFilter::SafeDownCast (myFilterMap.Find (Filter_SUB_Sel) );
+  return IVtkTools_SubPolyDataFilter::SafeDownCast(myFilterMap.Find(Filter_SUB_Sel));
 }
 
 //===========================================================
@@ -211,7 +227,7 @@ IVtkTools_SubPolyDataFilter* IVtkDraw_HighlightAndSelectionPipeline::GetSelectio
 //===========================================================
 IVtkTools_DisplayModeFilter* IVtkDraw_HighlightAndSelectionPipeline::GetHighlightDMFilter()
 {
-  return IVtkTools_DisplayModeFilter::SafeDownCast (myFilterMap.Find (Filter_DM_Hili) );
+  return IVtkTools_DisplayModeFilter::SafeDownCast(myFilterMap.Find(Filter_DM_Hili));
 }
 
 //===========================================================
@@ -220,7 +236,7 @@ IVtkTools_DisplayModeFilter* IVtkDraw_HighlightAndSelectionPipeline::GetHighligh
 //===========================================================
 IVtkTools_DisplayModeFilter* IVtkDraw_HighlightAndSelectionPipeline::GetSelectionDMFilter()
 {
-  return IVtkTools_DisplayModeFilter::SafeDownCast (myFilterMap.Find(Filter_DM_Sel));
+  return IVtkTools_DisplayModeFilter::SafeDownCast(myFilterMap.Find(Filter_DM_Sel));
 }
 
 //===========================================================

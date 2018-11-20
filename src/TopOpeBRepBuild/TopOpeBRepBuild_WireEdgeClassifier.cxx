@@ -53,13 +53,9 @@
 #include <TopOpeBRepBuild_define.hxx>
 
 #ifdef OCCT_DEBUG
-#define TSTRA TopOpeBRepDS_GettraceSTRANGE()
 static TCollection_AsciiString PRODINS("dins ");
-extern Standard_Boolean TopOpeBRepDS_GettraceSTRANGE();
 #endif
 
-//Standard_IMPORT extern TopOpeBRepBuild_Builder* GLOBAL_PBUILDER;
-Standard_IMPORT TopOpeBRepBuild_Builder* GLOBAL_PBUILDER;
 #define MYBB ((TopOpeBRepBuild_BlockBuilder*)myBlockBuilder)
 
 
@@ -148,12 +144,6 @@ TopAbs_State TopOpeBRepBuild_WireEdgeClassifier::Compare
 	}
       }
     } //UNKNOWN
-
-    if (state == TopAbs_UNKNOWN) {
-#ifdef OCCT_DEBUG
-      if (TSTRA) cout<<"TopOpeBRepBuild_Builder::WES::Compare UNKNOWN -> ShapeClassifier "<<endl;
-#endif
-    }
 
     if (state == TopAbs_UNKNOWN) {
       TopoDS_Shape s1 = LoopToShape(L1); if (s1.IsNull()) return state;
@@ -401,7 +391,7 @@ void  TopOpeBRepBuild_WireEdgeClassifier::ResetElement(const TopoDS_Shape& EE)
   } //jyl980406+
   
   C2D = FC2D_CurveOnSurface(E,F,f2,l2,tolpc);
-  if (C2D.IsNull()) Standard_ProgramError::Raise("WEC : ResetElement");
+  if (C2D.IsNull()) throw Standard_ProgramError("WEC : ResetElement");
 
   Standard_Real t = 0.397891143689; Standard_Real par = ((1-t)*f2 + t*l2);
   myPoint2d = C2D->Value(par);

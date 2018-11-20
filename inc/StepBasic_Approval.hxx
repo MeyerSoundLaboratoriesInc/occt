@@ -20,16 +20,20 @@
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 class StepBasic_ApprovalStatus;
 class TCollection_HAsciiString;
 
+// resolve name collisions with X11 headers
+#ifdef Status
+  #undef Status
+#endif
 
 class StepBasic_Approval;
-DEFINE_STANDARD_HANDLE(StepBasic_Approval, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(StepBasic_Approval, Standard_Transient)
 
 
-class StepBasic_Approval : public MMgt_TShared
+class StepBasic_Approval : public Standard_Transient
 {
 
 public:
@@ -51,7 +55,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(StepBasic_Approval,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(StepBasic_Approval,Standard_Transient)
 
 protected:
 

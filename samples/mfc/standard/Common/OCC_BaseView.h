@@ -14,7 +14,7 @@
 #include "OCC_BaseDoc.h"
 #include "AIS_RubberBand.hxx"
 
-class AFX_EXT_CLASS OCC_BaseView  : public CView
+class Standard_EXPORT OCC_BaseView  : public CView
 {
   
 public:
@@ -36,7 +36,7 @@ protected:
 
 protected:
 
-  Quantity_Factor  myCurZoom;
+  Standard_Real    myCurZoom;
   Standard_Integer myXmin;
   Standard_Integer myYmin;
   Standard_Integer myXmax;

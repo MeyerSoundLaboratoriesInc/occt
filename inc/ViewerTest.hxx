@@ -15,30 +15,28 @@
 #ifndef _ViewerTest_HeaderFile
 #define _ViewerTest_HeaderFile
 
-#include <Standard.hxx>
-#include <Standard_DefineAlloc.hxx>
-#include <Standard_Macro.hxx>
-
+#include <AIS_KindOfInteractive.hxx>
+#include <Aspect_TypeOfLine.hxx>
+#include <Aspect_TypeOfMarker.hxx>
 #include <Draw_Interpretor.hxx>
+#include <Graphic3d_TypeOfShadingModel.hxx>
 #include <Standard_Integer.hxx>
 #include <Standard_CString.hxx>
-#include <Standard_Boolean.hxx>
-#include <TopAbs_ShapeEnum.hxx>
-#include <TopTools_HArray1OfShape.hxx>
-#include <AIS_KindOfInteractive.hxx>
+#include <Standard_DefineAlloc.hxx>
+#include <Standard_Macro.hxx>
+#include <TCollection_AsciiString.hxx>
 #include <TColStd_HArray1OfTransient.hxx>
-#include <Quantity_NameOfColor.hxx>
+#include <TopTools_ListOfShape.hxx>
+#include <TopTools_HArray1OfShape.hxx>
+#include <Quantity_Color.hxx>
 
-class TCollection_AsciiString;
-class V3d_View;
-class MMgt_TShared;
-class TopoDS_Shape;
-class AIS_InteractiveObject;
-class V3d_Viewer;
 class AIS_InteractiveContext;
+class AIS_InteractiveObject;
+class Image_PixMap;
+class V3d_View;
+class V3d_Viewer;
 class ViewerTest_EventManager;
-class ViewerTest_EventManager;
-class Quantity_Color;
+class TopoDS_Shape;
 
 class ViewerTest
 {
@@ -50,14 +48,22 @@ public:
   Standard_EXPORT static void Factory (Draw_Interpretor& theDI);
 
   //! Creates view with default or custom name
-  //! and add this name in map to manage muliple views
-  //! implemented in ViewerTest_ViewerCommands.cxx
+  //! and adds this name in map to manage multiple views.
+  //! Implemented in ViewerTest_ViewerCommands.cxx.
+  //! @param thePxLeft      left position of newly created window
+  //! @param thePxTop       top  position of newly created window
+  //! @param thePxWidth     width of newly created window
+  //! @param thePxHeight    height of newly created window
+  //! @param theViewName    name of newly created View
+  //! @oaram theDisplayName display name
+  //! @param theViewToClone when specified, the new View will copy properties of existing one
   Standard_EXPORT static TCollection_AsciiString ViewerInit (const Standard_Integer thePxLeft   = 0,
                                                              const Standard_Integer thePxTop    = 0,
                                                              const Standard_Integer thePxWidth  = 0,
                                                              const Standard_Integer thePxHeight = 0,
-                                                             const Standard_CString theViewName = "",
-                                                             const Standard_CString theDisplayName = "");
+                                                             const TCollection_AsciiString& theViewName = "",
+                                                             const TCollection_AsciiString& theDisplayName = "",
+                                                             const Handle(V3d_View)& theViewToClone = Handle(V3d_View)());
 
   Standard_EXPORT static void RemoveViewName (const TCollection_AsciiString& theName);
 
@@ -100,25 +106,7 @@ public:
                                                       Handle(TopTools_HArray1OfShape)& thepicked,
                                                       const Standard_Integer           MaxPick = 5);
 
-  //! waits until an interactive object of a given Type
-  //! and signature is picked (default values authorize
-  //! selection of any Interactive Object)
-  //! exit if number of unsuccessful picks =  <MaxPick>
-  Standard_EXPORT static Handle(AIS_InteractiveObject) PickObject (const AIS_KindOfInteractive Type      = AIS_KOI_None,
-                                                                   const Standard_Integer      Signature = -1,
-                                                                   const Standard_Integer      MaxPick   = 5);
-
-  //! selection of several interactive objects.
-  //! Number is given by the size of <thepicked>
-  //! exit if number of unsuccesfull picks =  <MaxPick>
-  Standard_EXPORT static Standard_Boolean PickObjects (Handle(TColStd_HArray1OfTransient)& thepicked,
-                                                       const AIS_KindOfInteractive         Type = AIS_KOI_None,
-                                                       const Standard_Integer              Signature = -1,
-                                                       const Standard_Integer              MaxPick = 5);
-
   Standard_EXPORT static void Commands (Draw_Interpretor& theCommands);
-
-  Standard_EXPORT static void AviCommands (Draw_Interpretor& theCommands);
 
   Standard_EXPORT static void ViewerCommands (Draw_Interpretor& theCommands);
 
@@ -162,8 +150,6 @@ public:
 
   Standard_EXPORT static void RemoveSelected();
 
-  Standard_EXPORT static void StandardModeActivation (const Standard_Integer Mode);
-
   Standard_EXPORT static Quantity_NameOfColor GetColorFromName (const Standard_CString name);
 
   //! Parses color argument(s) specified within theArgVec[0], theArgVec[1] and theArgVec[2].
@@ -189,6 +175,26 @@ public:
   //! Handles either flag specified by 0|1 or on|off.
   Standard_EXPORT static Standard_Boolean ParseOnOff (Standard_CString  theArg,
                                                       Standard_Boolean& theIsOn);
+
+  //! Returns list of selected shapes.
+  Standard_EXPORT static void GetSelectedShapes (TopTools_ListOfShape& theShapes);
+
+  //! Parses line type argument.
+  //! Handles either enumeration (integer) value or string constant.
+  Standard_EXPORT static Standard_Boolean ParseLineType (Standard_CString   theArg,
+                                                         Aspect_TypeOfLine& theType);
+
+  //! Parses marker type argument.
+  //! Handles either enumeration (integer) value or string constant.
+  Standard_EXPORT static Standard_Boolean ParseMarkerType (Standard_CString theArg,
+                                                           Aspect_TypeOfMarker& theType,
+                                                           Handle(Image_PixMap)& theImage);
+
+  //! Parses shading model argument.
+  //! Handles either enumeration (integer) value or string constant.
+  Standard_EXPORT static Standard_Boolean ParseShadingModel (Standard_CString              theArg,
+                                                             Graphic3d_TypeOfShadingModel& theModel);
+
 private:
 
   //! Returns a window class that implements standard behavior of
@@ -197,7 +203,7 @@ private:
   //! Ctrl+MB2 for pan, etc) and keyboard shortcuts.
   //! This method is relevant for MS Windows only and respectively
   //! returns WNT_WClass handle.
-  Standard_EXPORT static const Handle(MMgt_TShared)& WClass();
+  static const Handle(Standard_Transient)& WClass();
 };
 
 #endif // _ViewerTest_HeaderFile

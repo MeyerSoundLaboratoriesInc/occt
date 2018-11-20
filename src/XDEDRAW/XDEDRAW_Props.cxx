@@ -652,7 +652,7 @@ static Standard_Integer CheckProps (Draw_Interpretor& di, Standard_Integer argc,
 	  di << string8;
 	}
       }
-      catch (Standard_Failure) {
+      catch (Standard_Failure const& anException) {
 	//printf ( "%40.40s", "exception" );
 	char string9[260];
 	Sprintf (string9, "%40.40s", "exception" );
@@ -660,9 +660,10 @@ static Standard_Integer CheckProps (Draw_Interpretor& di, Standard_Integer argc,
 #ifdef OCCT_DEBUG
 	//fflush ( stdout );
 	di << ": ";
-	di << Standard_Failure::Caught()->GetMessageString();
+	di << anException.GetMessageString();
 	di<<" ** Skip\n";
 #endif
+	(void)anException;
       }
     }
     else if ( wholeDoc ) {
@@ -905,9 +906,12 @@ static Standard_Integer SetMaterial (Draw_Interpretor& di, Standard_Integer argc
 
 void XDEDRAW_Props::InitCommands(Draw_Interpretor& di) 
 {
-
   static Standard_Boolean initactor = Standard_False;
-  if (initactor) return;  initactor = Standard_True;
+  if (initactor)
+  {
+    return;
+  }
+  initactor = Standard_True;
 
   Standard_CString g = "XDE property's commands";
   

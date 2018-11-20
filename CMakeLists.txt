@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 2.8.12 FATAL_ERROR)
 
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/adm/cmake")
+
 set (CMAKE_SUPPRESS_REGENERATION TRUE)
 
 set (CMAKE_CONFIGURATION_TYPES Release Debug RelWithDebInfo CACHE INTERNAL "" FORCE)
@@ -24,12 +26,22 @@ endif()
 
 if ("${BUILD_LIBRARY_TYPE}" STREQUAL "Shared")
   set (BUILD_SHARED_LIBS ON)
+
+  if (NOT DEFINED BUILD_SHARED_LIBRARY_NAME_POSTFIX)
+    set (BUILD_SHARED_LIBRARY_NAME_POSTFIX "" CACHE STRING "${BUILD_SHARED_LIBRARY_NAME_POSTFIX_DESCR}" FORCE)
+  endif()
 else()
   unset (BUILD_SHARED_LIBS)
+  unset (BUILD_SHARED_LIBRARY_NAME_POSTFIX)
 endif()
 
 # the name of the project
 project (OCCT)
+
+if (WIN32)
+  add_definitions(-DUNICODE)
+  add_definitions(-D_UNICODE)
+endif()
 
 # include occt macros
 OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_macros")
@@ -46,6 +58,9 @@ set_property (GLOBAL PROPERTY OCC_VERSION_MAINTENANCE ${OCC_VERSION_MAINTENANCE}
 
 set (INSTALL_TEST_CASES OFF CACHE BOOL "${INSTALL_TEST_CASES_DESCR}")
 
+# Regeneration of OCCT resource files
+set (BUILD_RESOURCES OFF CACHE BOOL "${BUILD_RESOURCES_DESCR}")
+
 # single-configuration generator
 set (SINGLE_GENERATOR OFF)
 if (CMAKE_BUILD_TYPE)
@@ -59,9 +74,41 @@ if (DEFINED CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE) # single-configuration ge
 endif()
 
 # enable extended messages of many OCCT algorithms
-set (BUILD_WITH_DEBUG OFF CACHE BOOL "${BUILD_WITH_DEBUG_DESCR}")
+if (((SINGLE_GENERATOR AND "${CMAKE_BUILD_TYPE}" STREQUAL "Debug") OR NOT SINGLE_GENERATOR) AND (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore"))
+  if (NOT BUILD_WITH_DEBUG)
+    set (BUILD_WITH_DEBUG OFF CACHE BOOL "${BUILD_WITH_DEBUG_DESCR}")
+  endif()
+else()
+  OCCT_CHECK_AND_UNSET (BUILD_WITH_DEBUG)
+endif()
+
 if (BUILD_WITH_DEBUG)
-  add_definitions (-DOCCT_DEBUG)
+  set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DEBUG>:OCCT_DEBUG>)
+endif()
+
+# option to enable or disable use of precompiled headers
+if (NOT DEFINED BUILD_USE_PCH)
+  set (BUILD_USE_PCH OFF CACHE BOOL "${BUILD_USE_PCH_DESCR}")
+endif()
+
+if (BUILD_USE_PCH)
+
+  # Load Cotire tool for accelerating build procedure
+  include(cotire)
+
+  # Set Cotire to ignore lxx, pxx, gxx 
+  set (COTIRE_ADDITIONAL_PREFIX_HEADER_IGNORE_EXTENSIONS "lxx;pxx;gxx" CACHE STRING "Set Cotire to ignore OCCT specific files that can be #included" FORCE)
+
+  # Set priority for inclusion of system headers in PCH to reduce problems
+  # due to incomplete inclusion or wrong order.
+  if (WIN32)
+    # on Windows, assume that SDK (windows.h) is in default location
+    set(ProgramFilesX86 "ProgramFiles(x86)")
+    file(TO_CMAKE_PATH "$ENV{${ProgramFilesX86}}" ProgramFilesX86)
+    set_property (DIRECTORY PROPERTY COTIRE_PREFIX_HEADER_INCLUDE_PRIORITY_PATH "${ProgramFilesX86}")
+    unset(ProgramFilesX86)
+  endif()
+
 endif()
 
 # copy samples to install directory
@@ -272,13 +319,20 @@ if (NOT DEFINED INSTALL_DIR_CMAKE)
   endif()
 endif()
 
+# include occt macros
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_resources")
+
 # install LICENSE_LGPL_21.txt and OCCT_LGPL_EXCEPTION.txt files
 if ("${INSTALL_DIR_LAYOUT}" STREQUAL "Unix")
-  OCCT_INSTALL_FILE_OR_DIR ("LICENSE_LGPL_21.txt" "${INSTALL_DIR}/${INSTALL_DIR_DOC}")
-  OCCT_INSTALL_FILE_OR_DIR ("OCCT_LGPL_EXCEPTION.txt" "${INSTALL_DIR}/${INSTALL_DIR_DOC}")
+  OCCT_INSTALL_FILE_OR_DIR ("LICENSE_LGPL_21.txt" "${INSTALL_DIR_DOC}")
+  OCCT_INSTALL_FILE_OR_DIR ("OCCT_LGPL_EXCEPTION.txt" "${INSTALL_DIR_DOC}")
 else()
-  OCCT_INSTALL_FILE_OR_DIR ("LICENSE_LGPL_21.txt" "${INSTALL_DIR}")
-  OCCT_INSTALL_FILE_OR_DIR ("OCCT_LGPL_EXCEPTION.txt" "${INSTALL_DIR}")
+  OCCT_INSTALL_FILE_OR_DIR ("LICENSE_LGPL_21.txt" ".")
+  OCCT_INSTALL_FILE_OR_DIR ("OCCT_LGPL_EXCEPTION.txt" ".")
+endif()
+
+if(APPLE)
+  set (INSTALL_NAME_DIR "" CACHE STRING "install_name library suffix on OS X (e.g. @executable_path/../Frameworks)")
 endif()
 
 # a directory recognized as a 'patch' for OCCT
@@ -289,7 +343,19 @@ set (BUILD_ADDITIONAL_TOOLKITS "" CACHE STRING "${BUILD_ADDITIONAL_TOOLKITS_DESC
 separate_arguments (BUILD_ADDITIONAL_TOOLKITS)
 
 if (MSVC)
-  set (BUILD_MODULE_MfcSamples OFF CACHE BOOL "${BUILD_MODULE_MfcSamples_DESCR}")
+  set (BUILD_SAMPLES_MFC OFF CACHE BOOL "${BUILD_SAMPLES_MFC_DESCR}")
+endif()
+set (BUILD_SAMPLES_QT OFF CACHE BOOL "${BUILD_SAMPLES_QT_DESCR}")
+
+set (BUILD_Inspector OFF CACHE BOOL "${BUILD_Inspector_DESCR}")
+
+# uwp sample
+if (MSVC)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+    set (BUILD_MODULE_UwpSample OFF CACHE BOOL "${BUILD_MODULE_UwpSample_DESCR}")
+  else()
+    unset (BUILD_MODULE_UwpSample)
+  endif()
 endif()
 
 # whether use optional 3rdparty or not
@@ -301,10 +367,21 @@ if (WIN32)
   set (USE_D3D OFF CACHE BOOL "${USE_D3D_DESCR}")
 endif()
 
+# Enable/Disable the floating point exceptions (FPE) during runtime.
+if (NOT BUILD_ENABLE_FPE_SIGNAL_HANDLER)
+  set (BUILD_ENABLE_FPE_SIGNAL_HANDLER OFF CACHE BOOL "${BUILD_ENABLE_FPE_SIGNAL_HANDLER_DESCR}" FORCE)
+endif()
+
+if (BUILD_ENABLE_FPE_SIGNAL_HANDLER)
+  set (BUILD_ENABLE_FPE_SIGNAL_HANDLER 1)
+else()
+  set (BUILD_ENABLE_FPE_SIGNAL_HANDLER 0)
+endif()
+
 # include the patched or original list of modules
 # list <MODULENAME>_TOOLKITS is created foreach module and contains its toolkits
 # list <OCCT_MODULES> will contain all modules
-OCCT_MODULES_AND_TOOLKITS (OCCT_MODULES)
+OCCT_MODULES_AND_TOOLKITS (MODULES "TOOLKITS" OCCT_MODULES)
 
 foreach (OCCT_MODULE ${OCCT_MODULES})
   BUILD_MODULE (${OCCT_MODULE})
@@ -314,9 +391,23 @@ if (ANDROID AND BUILD_MODULE_Draw)
   message (STATUS "Info. Draw module is turned off due to it is not supported on Android")
   set (BUILD_MODULE_Draw OFF CACHE BOOL "${BUILD_MODULE_Draw_DESCR}" FORCE)
 endif()
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore" AND BUILD_MODULE_Draw)
+  message (STATUS "Info. Draw module is turned off due to it is not supported on UWP")
+  set (BUILD_MODULE_Draw OFF CACHE BOOL "${BUILD_MODULE_Draw_DESCR}" FORCE)
+endif()
 
 # Overview
-set (BUILD_DOC_Overview OFF CACHE BOOL "${BUILD_DOC_Overview_DESCR}")
+if (NOT DEFINED BUILD_DOC_Overview)
+  set (DO_ONLY_CHECK_FOR_DOXYGEN ON)
+  OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/doxygen")
+  set (DO_ONLY_CHECK_FOR_DOXYGEN OFF)
+  
+  if (CAN_DOXYGEN_BE_USED)
+    message (STATUS "Info. Overview building is turned on")
+  endif()
+
+  set (BUILD_DOC_Overview ${CAN_DOXYGEN_BE_USED} CACHE BOOL "${BUILD_DOC_Overview_DESCR}")
+endif()
 
 if (NOT USE_D3D)
   list (REMOVE_ITEM Visualization_TOOLKITS TKD3DHost)
@@ -385,8 +476,17 @@ else()
   set (3RDPARTY_DIR "${3RDPARTY_DIR}" CACHE PATH "${3RDPARTY_DIR_DESCR}" FORCE)
 endif()
 
-# search for CSF_TclLibs variable in EXTERNLIB of each being used toolkit
+# search for CSF variable in EXTERNLIB of each being used toolkit
+OCCT_IS_PRODUCT_REQUIRED (CSF_FreeImagePlus CAN_USE_FREEIMAGE)
 OCCT_IS_PRODUCT_REQUIRED (CSF_TclLibs USE_TCL)
+OCCT_IS_PRODUCT_REQUIRED (CSF_FREETYPE USE_FREETYPE)
+OCCT_IS_PRODUCT_REQUIRED (CSF_OpenGlLibs CAN_USE_GLES2)
+OCCT_IS_PRODUCT_REQUIRED (CSF_GL2PS CAN_USE_GL2PS)
+OCCT_IS_PRODUCT_REQUIRED (CSF_TBB CAN_USE_TBB)
+OCCT_IS_PRODUCT_REQUIRED (CSF_EIGEN CAN_USE_EIGEN)
+
+# define CSF variable
+OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_csf")
 
 if (USE_TCL)
   message (STATUS "Info: TCL is used by OCCT")
@@ -402,9 +502,6 @@ else()
   OCCT_CHECK_AND_UNSET ("INSTALL_TK")
 endif()
 
-# search for CSF_FREETYPE variable in EXTERNLIB of each being used toolkit
-OCCT_IS_PRODUCT_REQUIRED (CSF_FREETYPE USE_FREETYPE)
-
 if (USE_FREETYPE)
   message (STATUS "Info: Freetype is used by OCCT")
   OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/freetype")
@@ -418,6 +515,7 @@ endif()
 # VTK
 if (USE_VTK)
   add_definitions (-DHAVE_VTK)
+  set (OCCT_VTK_USED_TARGETS "" CACHE INTERNAL "" FORCE)
   OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/vtk")
 else()
   OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_VTK")
@@ -445,36 +543,73 @@ if (USE_GLX)
 endif()
 
 # FREEIMAGE
-# search for CSF_FREEIMAGE variable in EXTERNLIB of each being used toolkit
-OCCT_IS_PRODUCT_REQUIRED (CSF_FREEIMAGE     CAN_USE_FREEIMAGE)
-OCCT_IS_PRODUCT_REQUIRED (CSF_FreeImagePlus CAN_USE_FREEIMAGEPLUS)
 
-if (CAN_USE_FREEIMAGE OR CAN_USE_FREEIMAGEPLUS)
+if (CAN_USE_FREEIMAGE)
   set (USE_FREEIMAGE OFF CACHE BOOL "${USE_FREEIMAGE_DESCR}")
 
   if (USE_FREEIMAGE)
     add_definitions (-DHAVE_FREEIMAGE)
     OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/freeimage")
-    OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/freeimageplus")
   else()
     OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FREEIMAGE")
-    OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FREEIMAGEPLUS")
     OCCT_CHECK_AND_UNSET ("INSTALL_FREEIMAGE")
-    OCCT_CHECK_AND_UNSET ("INSTALL_FREEIMAGEPLUS")
   endif()
 else()
   OCCT_CHECK_AND_UNSET ("USE_FREEIMAGE")
 
   OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FREEIMAGE")
-  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FREEIMAGEPLUS")
   OCCT_CHECK_AND_UNSET ("INSTALL_FREEIMAGE")
-  OCCT_CHECK_AND_UNSET ("INSTALL_FREEIMAGEPLUS")
+endif()
+
+# FFmpeg
+# search for CSF_FFmpeg variable in EXTERNLIB of each being used toolkit
+OCCT_IS_PRODUCT_REQUIRED (CSF_FFmpeg CAN_USE_FFMPEG)
+
+if (CAN_USE_FFMPEG)
+  set (USE_FFMPEG OFF CACHE BOOL "${USE_FFMPEG_DESCR}")
+
+  if (USE_FFMPEG)
+    add_definitions (-DHAVE_FFMPEG)
+    OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/ffmpeg")
+  else()
+    OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FFMPEG")
+    OCCT_CHECK_AND_UNSET ("INSTALL_FFMPEG")
+  endif()
+else()
+  OCCT_CHECK_AND_UNSET ("USE_FFMPEG")
+
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_FFMPEG")
+  OCCT_CHECK_AND_UNSET ("INSTALL_FFMPEG")
+endif()
+
+# OpenGL ES 2.0
+if (CAN_USE_GLES2)
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+    set (USE_GLES2 ON)
+  else()
+    set (USE_GLES2 OFF CACHE BOOL "${USE_GLES2_DESCR}")
+  endif()
+
+  if (USE_GLES2)
+    add_definitions (-DHAVE_GLES2)
+    OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/egl")
+	OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/gles2")
+  else()
+    OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EGL")
+    OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_GLES2")
+    OCCT_CHECK_AND_UNSET ("INSTALL_EGL")
+    OCCT_CHECK_AND_UNSET ("INSTALL_GLES2")
+  endif()
+else()
+  OCCT_CHECK_AND_UNSET ("USE_GLES2")
+
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EGL")
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_GLES2")
+  OCCT_CHECK_AND_UNSET ("INSTALL_EGL")
+  OCCT_CHECK_AND_UNSET ("INSTALL_GLES2")
 endif()
 
 # GL2PS
-# search for CSF_GL2PS variable in EXTERNLIB of each being used toolkit
-OCCT_IS_PRODUCT_REQUIRED (CSF_GL2PS CAN_USE_GL2PS)
-
 if (NOT DEFINED ANDROID AND CAN_USE_GL2PS)
   set (USE_GL2PS OFF CACHE BOOL "${USE_GL2PS_DESCR}")
 
@@ -493,9 +628,6 @@ else()
 endif()
 
 # TBB
-# search for CSF_TBB variable in EXTERNLIB of each being used toolkit
-OCCT_IS_PRODUCT_REQUIRED (CSF_TBB CAN_USE_TBB)
-
 if (NOT DEFINED ANDROID AND CAN_USE_TBB)
   set (USE_TBB OFF CACHE BOOL "${USE_TBB_DESCR}")
 
@@ -515,6 +647,24 @@ else()
   OCCT_CHECK_AND_UNSET ("INSTALL_TBB")
 endif()
 
+# EIGEN
+if (CAN_USE_EIGEN)
+  set (USE_EIGEN OFF CACHE BOOL "${USE_EIGEN_DESCR}")
+
+  if (USE_EIGEN)
+    add_definitions (-DHAVE_EIGEN)
+    OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/eigen")
+  else()
+    OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EIGEN")
+    OCCT_CHECK_AND_UNSET ("INSTALL_EIGEN")
+  endif()
+else()
+  OCCT_CHECK_AND_UNSET ("USE_EIGEN")
+
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_EIGEN")
+  OCCT_CHECK_AND_UNSET ("INSTALL_EIGEN")
+endif()
+
 # Doxygen
 if (BUILD_DOC_Overview)
   if (NOT DEFINED INSTALL_DOC_Overview)
@@ -522,11 +672,11 @@ if (BUILD_DOC_Overview)
   endif()
 
   if (INSTALL_DOC_Overview)
-    install (DIRECTORY "${CMAKE_BINARY_DIR}/doc/overview" DESTINATION  "${INSTALL_DIR}/${INSTALL_DIR_DOC}")
+    install (DIRECTORY "${CMAKE_BINARY_DIR}/doc/overview" DESTINATION  "${INSTALL_DIR_DOC}")
 
     # create overview.html only for windows
     if (WIN32 AND "${INSTALL_DIR_LAYOUT}" STREQUAL "Windows")
-      OCCT_INSTALL_FILE_OR_DIR ("dox/resources/overview.html" "${INSTALL_DIR}/${INSTALL_DIR_DOC}/..")
+      OCCT_INSTALL_FILE_OR_DIR ("dox/resources/overview.html" "${INSTALL_DIR_DOC}/..")
     endif()
   endif()
 
@@ -552,11 +702,10 @@ else()
   OCCT_CHECK_AND_UNSET ("3RDPARTY_FLEX_EXECUTABLE")
 endif()
 
+# check all 3rdparty include paths
 string (REGEX REPLACE ";" " " 3RDPARTY_NOT_INCLUDED "${3RDPARTY_NOT_INCLUDED}")
-
-# check all 3rdparty paths
 if (3RDPARTY_NOT_INCLUDED)
-  message (FATAL_ERROR "NOT FOUND: ${3RDPARTY_NOT_INCLUDED}" )
+  message (FATAL_ERROR "Could not find headers of used third-party products: ${3RDPARTY_NOT_INCLUDED}" )
 endif()
 
 if (3RDPARTY_INCLUDE_DIRS)
@@ -567,13 +716,28 @@ if (3RDPARTY_INCLUDE_DIRS)
 endif()
 
 # include <cmake binary folder>/inc
-include_directories (${CMAKE_BINARY_DIR}/inc)
+include_directories (${CMAKE_BINARY_DIR}/${INSTALL_DIR_INCLUDE})
 
+# check all 3rdparty library paths
+string (REGEX REPLACE ";" " " 3RDPARTY_NO_LIBS "${3RDPARTY_NO_LIBS}")
+if (3RDPARTY_NO_LIBS)
+  if (BUILD_SHARED_LIBS)
+    message (SEND_ERROR "Could not find libraries of used third-party products: ${3RDPARTY_NO_LIBS}" )
+  else()
+    message (WARNING "Could not find libraries of used third-party products: ${3RDPARTY_NO_LIBS}" )
+  endif()
+endif()
 if (3RDPARTY_LIBRARY_DIRS)
   list (REMOVE_DUPLICATES 3RDPARTY_LIBRARY_DIRS)
   string (REGEX REPLACE ";" "\n\t" 3RDPARTY_LIBRARY_DIRS_WITH_ENDS "${3RDPARTY_LIBRARY_DIRS}")
   message (STATUS "Info: The directories of 3rdparty libraries: \n\t${3RDPARTY_LIBRARY_DIRS_WITH_ENDS}")
   link_directories (${3RDPARTY_LIBRARY_DIRS})
+endif()
+
+# report not found 3rdparty dll paths
+string (REGEX REPLACE ";" " " 3RDPARTY_NO_DLLS "${3RDPARTY_NO_DLLS}")
+if (3RDPARTY_NO_DLLS)
+  message (WARNING "Could not find DLLs of used third-party products: ${3RDPARTY_NO_DLLS}" )
 endif()
 
 # build directories
@@ -608,12 +772,16 @@ string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
 message (STATUS "\nInfo: \(${CURRENT_TIME}\) Start collecting all OCCT header files into ${CMAKE_BINARY_DIR}/inc ...")
 
 # collect all the headers to <binary dir>/inc folder
-COLLECT_AND_INSTALL_OCCT_HEADER_FILES ("${CMAKE_BINARY_DIR}" "${BUILD_TOOLKITS}")
+COLLECT_AND_INSTALL_OCCT_HEADER_FILES ("${CMAKE_BINARY_DIR}" "${BUILD_TOOLKITS}" "${CMAKE_SOURCE_DIR}/src" "${INSTALL_DIR_INCLUDE}")
 
 string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
 message (STATUS "Info: \(${CURRENT_TIME}\) End the collecting")
 
-OCCT_INSTALL_FILE_OR_DIR ("data/" "${INSTALL_DIR}/${INSTALL_DIR_DATA}")
+list (FIND BUILD_TOOLKITS DRAWEXE DRAWEXE_INDEX)
+if (${DRAWEXE_INDEX} GREATER -1)
+  OCCT_INSTALL_FILE_OR_DIR ("data/" "${INSTALL_DIR_DATA}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/tcl" "${INSTALL_DIR_SAMPLES}")
+endif()
 
 if (WIN32)
   set (SCRIPT_EXT bat)
@@ -621,43 +789,87 @@ else()
   set (SCRIPT_EXT sh)
 endif()
 
+if (BUILD_Inspector OR BUILD_SAMPLES_QT)
+  # check qt 3rdparty path
+  add_definitions (-DHAVE_QT)
+  OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/qt")
+  message (STATUS "Info: Qt is used by OCCT")
+else()
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_QT")
+  OCCT_CHECK_AND_UNSET_GROUP ("3RDPARTY_TQTMALLOC")
+  OCCT_CHECK_AND_UNSET ("INSTALL_QT")
+endif()
+
+# OCCT tools
+# include the patched or original list of tools
+# list <TOOLNAME>_TOOLKITS is created foreach tool and contains its toolkits
+# list <OCCT_TOOLS> will contain all tools
+if (BUILD_Inspector)
+  add_definitions (-DHAVE_Inspector)
+
+  OCCT_MODULES_AND_TOOLKITS (TOOLS "TOOL_TOOLKITS" OCCT_TOOLS)
+  foreach (OCCT_TOOL ${OCCT_TOOLS})
+    list (APPEND BUILD_TOOL_TOOLKITS ${${OCCT_TOOL}_TOOL_TOOLKITS})
+  endforeach()
+
+  # collect all the headers to <binary dir>/inc/inspector folder
+  string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
+  message (STATUS "\nInfo: \(${CURRENT_TIME}\) Start collecting all OCCT tool header files into ${CMAKE_BINARY_DIR}/inc/inspector ...")
+  COLLECT_AND_INSTALL_OCCT_HEADER_FILES ("${CMAKE_BINARY_DIR}" "${BUILD_TOOL_TOOLKITS}" "${CMAKE_SOURCE_DIR}/tools" "${INSTALL_DIR_INCLUDE}/inspector")
+endif()
+
 # OCCT samples
+# get absolute path from INSTALL_DIR
+set (INSTALL_DIR_ABSOLUTE "${INSTALL_DIR}")
+if(NOT IS_ABSOLUTE "${INSTALL_DIR_ABSOLUTE}")
+  get_filename_component(INSTALL_DIR_ABSOLUTE "${CMAKE_BINARY_DIR}/${INSTALL_DIR}" ABSOLUTE)
+endif()
+
 if (INSTALL_SAMPLES)
   OCCT_CONFIGURE ("adm/templates/env.samples.${SCRIPT_EXT}.in" "env.samples.${SCRIPT_EXT}")
   if (WIN32)
-    OCCT_INSTALL_FILE_OR_DIR ("samples/CSharp" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
-    OCCT_INSTALL_FILE_OR_DIR ("samples/mfc" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
+    OCCT_INSTALL_FILE_OR_DIR ("samples/CSharp" "${INSTALL_DIR_SAMPLES}")
+    OCCT_INSTALL_FILE_OR_DIR ("samples/mfc" "${INSTALL_DIR_SAMPLES}")
 
-    install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}/CSharp" RENAME "env.${SCRIPT_EXT}")
-    install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}/mfc/standard" RENAME "env.${SCRIPT_EXT}")
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+      OCCT_INSTALL_FILE_OR_DIR ("samples/xaml" "${INSTALL_DIR_SAMPLES}")
+    endif()
+
+    install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SAMPLES}/CSharp" RENAME "env.${SCRIPT_EXT}")
+    install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SAMPLES}/mfc/standard" RENAME "env.${SCRIPT_EXT}")
   endif()
 
-  OCCT_INSTALL_FILE_OR_DIR ("samples/java" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
-  OCCT_INSTALL_FILE_OR_DIR ("samples/ocafsamples" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
-  OCCT_INSTALL_FILE_OR_DIR ("samples/qt" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/java" "${INSTALL_DIR_SAMPLES}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/ocafsamples" "${INSTALL_DIR_SAMPLES}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/qt" "${INSTALL_DIR_SAMPLES}")
 
-  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}/qt/FuncDemo" RENAME "env.${SCRIPT_EXT}")
-  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}/qt/IESample" RENAME "env.${SCRIPT_EXT}")
-  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}/qt/Tutorial" RENAME "env.${SCRIPT_EXT}")
+  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SAMPLES}/qt/FuncDemo" RENAME "env.${SCRIPT_EXT}")
+  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SAMPLES}/qt/IESample" RENAME "env.${SCRIPT_EXT}")
+  install (FILES "${CMAKE_BINARY_DIR}/env.samples.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SAMPLES}/qt/Tutorial" RENAME "env.${SCRIPT_EXT}")
 endif()
-
-OCCT_INSTALL_FILE_OR_DIR ("samples/tcl" "${INSTALL_DIR}/${INSTALL_DIR_SAMPLES}")
 
 if (INSTALL_TEST_CASES)
-  OCCT_INSTALL_FILE_OR_DIR ("tests/" "${INSTALL_DIR}/${INSTALL_DIR_TESTS}")
+  OCCT_INSTALL_FILE_OR_DIR ("tests/" "${INSTALL_DIR_TESTS}")
 endif()
 
-# copy draw script to install script folder
-if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/adm/templates/draw.${SCRIPT_EXT}")
-  install (FILES "${BUILD_PATCH}/adm/templates/draw.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
-else()
-  install (FILES "${CMAKE_SOURCE_DIR}/adm/templates/draw.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}"
-          PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
-endif()
+list (FIND BUILD_TOOLKITS DRAWEXE DRAWEXE_INDEX)
+if (${DRAWEXE_INDEX} GREATER -1)
+  # copy data and samples/tcl folders to install script folder
+  OCCT_INSTALL_FILE_OR_DIR ("data/" "${INSTALL_DIR_DATA}")
+  OCCT_INSTALL_FILE_OR_DIR ("samples/tcl" "${INSTALL_DIR_SAMPLES}")
 
-# copy draw script to CMake binary folder
-OCCT_COPY_FILE_OR_DIR ("adm/templates/draw.${SCRIPT_EXT}" "${CMAKE_BINARY_DIR}")
+  # copy draw script to install script folder
+  if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/adm/templates/draw.${SCRIPT_EXT}")
+    install (FILES "${BUILD_PATCH}/adm/templates/draw.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR_SCRIPT}"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+  else()
+    install (FILES "${CMAKE_SOURCE_DIR}/adm/templates/draw.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR_SCRIPT}"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+  endif()
+
+  # copy draw script to CMake binary folder
+  OCCT_COPY_FILE_OR_DIR ("adm/templates/draw.${SCRIPT_EXT}" "${CMAKE_BINARY_DIR}")
+endif()
 
 set (SUB_CUSTOM_NAME "custom_${COMPILER}_${COMPILER_BITNESS}.${SCRIPT_EXT}")
 
@@ -675,26 +887,42 @@ if (EXISTS "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}/custom.${SCRIPT_EXT}")
 
   file (WRITE "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}/custom.${SCRIPT_EXT}" "${CUSTOM_CONTENT}")
 else()
-  OCCT_CONFIGURE_AND_INSTALL ("adm/templates/custom.${SCRIPT_EXT}.main" "custom.${SCRIPT_EXT}" "custom.${SCRIPT_EXT}" "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}")
+  OCCT_CONFIGURE_AND_INSTALL ("adm/templates/custom.${SCRIPT_EXT}.main" "custom.${SCRIPT_EXT}" "custom.${SCRIPT_EXT}" "${INSTALL_DIR_SCRIPT}")
 endif()
+
+if (WIN32)
+  set (THIRDPARTY_DIR_REPLACE "%THIRDPARTY_DIR%")
+else()
+  set (THIRDPARTY_DIR_REPLACE "\${THIRDPARTY_DIR}")
+endif()
+get_cmake_property(USED_3RDPARTY_CACHE_VARIABLES VARIABLES)
+string (REGEX MATCHALL "(^|;)USED_3RDPARTY_[^;]+_DIR[^;]*" USED_3RDPARTY_CACHE_VARIABLES "${USED_3RDPARTY_CACHE_VARIABLES}")
+file (TO_CMAKE_PATH "${3RDPARTY_DIR}" 3RDPARTY_DIR)
+foreach (USED_3RDPARTY_CACHE_VARIABLE ${USED_3RDPARTY_CACHE_VARIABLES})
+   file (TO_CMAKE_PATH "${${USED_3RDPARTY_CACHE_VARIABLE}}" ${USED_3RDPARTY_CACHE_VARIABLE})
+   string (REPLACE "${3RDPARTY_DIR}" "${THIRDPARTY_DIR_REPLACE}" ${USED_3RDPARTY_CACHE_VARIABLE} "${${USED_3RDPARTY_CACHE_VARIABLE}}")
+   if (NOT WIN32)
+     string (REGEX REPLACE ";" ":" ${USED_3RDPARTY_CACHE_VARIABLE} "${${USED_3RDPARTY_CACHE_VARIABLE}}")
+   endif()
+endforeach()
 
 # write current custom.bat/sh (for install directory)
 set (SUB_CUSTOM_BUILD_NAME "custom_${COMPILER}_${COMPILER_BITNESS}.install.${SCRIPT_EXT}")
-OCCT_CONFIGURE_AND_INSTALL ("adm/templates/custom.install.${SCRIPT_EXT}.in" "${SUB_CUSTOM_BUILD_NAME}" "${SUB_CUSTOM_NAME}" "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}")
+OCCT_CONFIGURE_AND_INSTALL ("adm/templates/custom.install.${SCRIPT_EXT}.in" "${SUB_CUSTOM_BUILD_NAME}" "${SUB_CUSTOM_NAME}" "${INSTALL_DIR_SCRIPT}")
 
 # write current custom.bat/sh (for build directory)
 OCCT_CONFIGURE ("adm/templates/custom.build.${SCRIPT_EXT}.in" "${SUB_CUSTOM_NAME}")
 
-if (BUILD_MODULE_MfcSamples)
-  OCCT_INSTALL_FILE_OR_DIR ("adm/templates/sample.bat" "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}")
-  OCCT_COPY_FILE_OR_DIR    ("adm/templates/sample.bat" "${CMAKE_BINARY_DIR}")
+if (BUILD_SAMPLES_MFC OR BUILD_SAMPLES_QT)
+  OCCT_INSTALL_FILE_OR_DIR ("adm/templates/sample.${SCRIPT_EXT}" "${INSTALL_DIR_SCRIPT}")
+  OCCT_COPY_FILE_OR_DIR    ("adm/templates/sample.${SCRIPT_EXT}" "${CMAKE_BINARY_DIR}")
 endif()
 
 # env script for draw in building environment
 OCCT_CONFIGURE ("adm/templates/env.${SCRIPT_EXT}.in" "env.${SCRIPT_EXT}")
 
 # install env script
-install (FILES "${CMAKE_BINARY_DIR}/env.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_SCRIPT}")
+install (FILES "${CMAKE_BINARY_DIR}/env.${SCRIPT_EXT}" DESTINATION "${INSTALL_DIR_SCRIPT}")
 
 # copy DrawAppliInit from OCCT source to build directory
 if (NOT EXISTS "${CMAKE_BINARY_DIR}/DrawAppliInit")
@@ -707,14 +935,25 @@ foreach(RESOURCE ${RESOURCES})
   get_filename_component(RESOURCE_FOLDER ${RESOURCE} DIRECTORY)
   if(NOT "${RESOURCE_FOLDER}" STREQUAL "")
     get_filename_component(RESOURCE_FOLDER ${RESOURCE_FOLDER} NAME)
-    OCCT_INSTALL_FILE_OR_DIR ("src/${RESOURCE}" "${INSTALL_DIR}/${INSTALL_DIR_RESOURCE}/${RESOURCE_FOLDER}")
+    OCCT_INSTALL_FILE_OR_DIR ("src/${RESOURCE}" "${INSTALL_DIR_RESOURCE}/${RESOURCE_FOLDER}")
   else()
-    OCCT_INSTALL_FILE_OR_DIR ("src/${RESOURCE}" "${INSTALL_DIR}/${INSTALL_DIR_RESOURCE}")
+    OCCT_INSTALL_FILE_OR_DIR ("src/${RESOURCE}" "${INSTALL_DIR_RESOURCE}")
   endif()
 endforeach()
 
-# define CSF variable
-OCCT_INCLUDE_CMAKE_FILE ("adm/cmake/occt_csf")
+if (BUILD_SAMPLES_QT)
+  FILE_TO_LIST ("adm/SAMPLES_RESOURCES" SAMPLES_RESOURCES)
+  foreach(RESOURCE ${SAMPLES_RESOURCES})
+    OCCT_INSTALL_FILE_OR_DIR ("samples/${RESOURCE}" "${INSTALL_DIR_RESOURCE}/samples")
+    #message("Copy Sample resources: samples/${RESOURCE} into ${INSTALL_DIR_RESOURCE}/samples")
+  endforeach()
+endif()
+
+
+# patch installed DrawDefault file if BUILD_SHARED_LIBRARY_NAME_POSTFIX is changed
+if (NOT "${BUILD_SHARED_LIBRARY_NAME_POSTFIX}" STREQUAL "")
+  OCCT_UPDATE_DRAW_DEFAULT_FILE()
+endif()
 
 # include patched toolkit projects or original ones
 foreach (BUILD_TOOLKIT ${BUILD_TOOLKITS})
@@ -746,10 +985,20 @@ if (MSVC AND 3RDPARTY_DLL_DIRS)
   endif()
 endif()
 
-# samples do not support patch usage
-if (BUILD_MODULE_MfcSamples)
-  set (OCCT_ROOT ${CMAKE_SOURCE_DIR})
+# include patched toolkit projects or original ones
+if (BUILD_TOOL_TOOLKITS)
+  foreach (BUILD_TOOL_TOOLKIT ${BUILD_TOOL_TOOLKITS})
+    OCCT_ADD_SUBDIRECTORY ("tools/${BUILD_TOOL_TOOLKIT}")
+  endforeach()
+endif()
 
+message (STATUS "Info: \(${CURRENT_TIME}\) OCCT toolkits processed")
+# samples do not support patch usage
+if (BUILD_SAMPLES_MFC OR BUILD_SAMPLES_QT)
+  set (OCCT_ROOT ${CMAKE_SOURCE_DIR})
+endif()
+
+if (BUILD_SAMPLES_MFC)
   set (MFC_STANDARD_SAMPLES_DIR ${OCCT_ROOT}/samples/mfc/standard)
   set (COMMON_WINMAIN_FILE      ${MFC_STANDARD_SAMPLES_DIR}/Common/Winmain.cpp)
 
@@ -764,12 +1013,62 @@ if (BUILD_MODULE_MfcSamples)
   add_subdirectory(samples/mfc/standard/08_HLR)
   add_subdirectory(samples/mfc/standard/09_Animation)
   add_subdirectory(samples/mfc/standard/10_Convert)
+
+  message (STATUS "Info: \(${CURRENT_TIME}\) MFC Sample projects added")
+endif()
+
+OCCT_MODULES_AND_TOOLKITS (SAMPLES "SAMPLES_TOOLKITS" OCCT_SAMPLES)
+
+if (BUILD_Inspector OR BUILD_SAMPLES_QT)
+  if (BUILD_SAMPLES_QT)
+    if (NOT Qt5_FOUND OR "${Qt5Gui_EGL_INCLUDE_DIRS}" STREQUAL "" OR NOT WIN32)
+      list (REMOVE_ITEM qt_SAMPLES_TOOLKITS AndroidQt)
+      message (STATUS "Info: AndroidQt sample excluded due to OS is not Windows or Qt is configured without ANGLE")
+    endif()
+  else()
+    list (REMOVE_ITEM OCCT_SAMPLES qt)
+    message (STATUS "Info: qt samples excluded due to BUILD_SAMPLES_QT is disabled")
+  endif()
+
+  foreach (OCCT_SAMPLE ${OCCT_SAMPLES})
+    list (APPEND BUILD_SAMPLE_TOOLKITS ${${OCCT_SAMPLE}_SAMPLES_TOOLKITS})
+
+    # collect all the headers to <binary dir>/inc/samples folder
+    string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
+    message (STATUS "Info: \(${CURRENT_TIME}\) ${OCCT_SAMPLE} Sample projects added")
+
+    # include patched toolkit projects or original ones
+    foreach (BUILD_SAMPLE_TOOLKIT ${${OCCT_SAMPLE}_SAMPLES_TOOLKITS})
+      OCCT_ADD_SUBDIRECTORY ("samples/${OCCT_SAMPLE}/${BUILD_SAMPLE_TOOLKIT}")
+    endforeach()
+  endforeach()
+endif()
+
+if (BUILD_MODULE_UwpSample)
+  add_subdirectory(samples/xaml)
+endif()
+
+if (BUILD_TOOL_TOOLKITS)
+  # copy tinspector script to install script folder
+  if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/adm/templates/inspector.${SCRIPT_EXT}")
+    install (FILES "${BUILD_PATCH}/adm/templates/inspector.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR_SCRIPT}"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+  else()
+    install (FILES "${CMAKE_SOURCE_DIR}/adm/templates/inspector.${SCRIPT_EXT}" DESTINATION  "${INSTALL_DIR_SCRIPT}"
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_WRITE GROUP_EXECUTE WORLD_READ WORLD_WRITE WORLD_EXECUTE)
+  endif()
+
+  set (OpenCASCADE_BINARY_DIR "${INSTALL_DIR}/${INSTALL_DIR_BIN}")
+  # patch TInspectorEXE
+  OCCT_CONFIGURE ("adm/templates/TInspectorEXE.vcxproj.user.in" "${CMAKE_BINARY_DIR}/tools/TInspectorEXE/TInspectorEXE.vcxproj.user")
 endif()
 
 # Prepare variables for configuration of OpenCASCADE cmake config file
 set (OCCT_MODULES_ENABLED)
 set (OCCT_LIBRARIES)
 set (SET_OpenCASCADE_MODULES_TOOLKITS "\n# List of available OpenCASCADE libraries for each module\n")
+set (OCCT_COMPILE_DEFINITIONS)
+
 foreach (OCCT_TOOLKIT ${BUILD_TOOLKITS})
   if (TARGET ${OCCT_TOOLKIT})
 
@@ -782,16 +1081,46 @@ foreach (OCCT_TOOLKIT ${BUILD_TOOLKITS})
       get_target_property (${OCCT_TOOLKIT}_MODULE ${OCCT_TOOLKIT} "MODULE")
       list (APPEND OCCT_MODULES_ENABLED ${${OCCT_TOOLKIT}_MODULE})
       list (APPEND OpenCASCADE_${${OCCT_TOOLKIT}_MODULE}_TOOLKITS ${OCCT_TOOLKIT})
+
+      # get compile definitions of target directory
+      get_directory_property (COMPILE_DEFINITIONS DIRECTORY "${${OCCT_TOOLKIT}_SOURCE_DIR}" "COMPILE_DEFINITIONS")
+      list (APPEND OCCT_COMPILE_DEFINITIONS ${COMPILE_DEFINITIONS})
     endif()
   endif()
 endforeach()
 list (REMOVE_DUPLICATES OCCT_MODULES_ENABLED)
+list (REMOVE_DUPLICATES OCCT_COMPILE_DEFINITIONS)
+
+# export compile definitions and C/C++ flags for each configuration to OpenCASCADE config files
+foreach (OCCT_CONFIGURATION ${CMAKE_CONFIGURATION_TYPES})
+  set (SET_OpenCASCADE_COMPILE_DEFINITIONS)
+  string (TOUPPER "${OCCT_CONFIGURATION}" OCCT_CONFIGURATION_UPPER)
+  string (TOLOWER "${OCCT_CONFIGURATION}" OCCT_CONFIGURATION_LOWER)
+  foreach(COMPILE_DEFINITION ${OCCT_COMPILE_DEFINITIONS})
+    string(REPLACE "(" "\\(" COMPILE_DEFINITION "${COMPILE_DEFINITION}")
+    string(REPLACE ")" "\\)" COMPILE_DEFINITION "${COMPILE_DEFINITION}")
+    set (SET_OpenCASCADE_COMPILE_DEFINITIONS "${SET_OpenCASCADE_COMPILE_DEFINITIONS}set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:${OCCT_CONFIGURATION}>:${COMPILE_DEFINITION}>)\n")
+  endforeach()
+  set (SET_OpenCASCADE_CMAKE_C_FLAGS "${CMAKE_C_FLAGS_${OCCT_CONFIGURATION_UPPER}}")
+  set (SET_OpenCASCADE_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_${OCCT_CONFIGURATION_UPPER}}")
+  configure_file("${CMAKE_SOURCE_DIR}/adm/templates/OpenCASCADECompileDefinitionsAndFlags.cmake.in" "OpenCASCADECompileDefinitionsAndFlags-${OCCT_CONFIGURATION_LOWER}.cmake" @ONLY)
+endforeach()
+# install OpenCASCADE config file with compile definitions and C/C++ flags ONLY for current configuration
+install (CODE "string (TOLOWER \"\${CMAKE_INSTALL_CONFIG_NAME}\" CMAKE_INSTALL_CONFIG_NAME_LOWER)")
+install (CODE "configure_file(\"${CMAKE_BINARY_DIR}/OpenCASCADECompileDefinitionsAndFlags-\${CMAKE_INSTALL_CONFIG_NAME_LOWER}.cmake\" \"${INSTALL_DIR}/${INSTALL_DIR_CMAKE}/OpenCASCADECompileDefinitionsAndFlags-\${CMAKE_INSTALL_CONFIG_NAME_LOWER}.cmake\" COPYONLY)")
 
 foreach (OCCT_MODULE ${OCCT_MODULES})
   if (BUILD_MODULE_${OCCT_MODULE})
     set (SET_OpenCASCADE_MODULES_TOOLKITS "${SET_OpenCASCADE_MODULES_TOOLKITS}set (OpenCASCADE_${OCCT_MODULE}_LIBRARIES ${OpenCASCADE_${OCCT_MODULE}_TOOLKITS})\n")
   endif()
+
+  # sort enabled modules for correct work of OpenCASCADE config file
+  list(FIND OCCT_MODULES_ENABLED "${OCCT_MODULE}" OCCT_MODULE_INDEX)
+  if (NOT ${OCCT_MODULE_INDEX} EQUAL -1)
+    list (APPEND OCCT_MODULES_ENABLED_SORTED ${OCCT_MODULE})
+  endif()
 endforeach()
+set (OCCT_MODULES_ENABLED ${OCCT_MODULES_ENABLED_SORTED})
 
 # Add all targets to the build-tree export set
 export (TARGETS ${OCCT_LIBRARIES} FILE "${CMAKE_BINARY_DIR}/OpenCASCADETargets.cmake")
@@ -817,13 +1146,9 @@ if (APPLE)
   set (SET_OpenCASCADE_WITH_GLX "set (OpenCASCADE_WITH_GLX       ${USE_GLX})")
 endif()
 
-if (NOT SINGLE_GENERATOR)
-  OCCT_INSERT_CODE_FOR_TARGET()
-endif()
-
 # Configure and install cmake config file
 configure_file("${CMAKE_SOURCE_DIR}/adm/templates/OpenCASCADEConfig.cmake.in" "OpenCASCADEConfig.cmake" @ONLY)
-install(FILES "${CMAKE_BINARY_DIR}/OpenCASCADEConfig.cmake" DESTINATION  "${INSTALL_DIR}/${INSTALL_DIR_CMAKE}")
+install(FILES "${CMAKE_BINARY_DIR}/OpenCASCADEConfig.cmake" DESTINATION  "${INSTALL_DIR_CMAKE}")
 
 # Configure cmake version file
 include(CMakePackageConfigHelpers)
@@ -832,15 +1157,15 @@ write_basic_package_version_file( ${CMAKE_BINARY_DIR}/OpenCASCADEConfigVersion.c
                                   COMPATIBILITY ExactVersion )
 
 # Install cmake version file
-install (FILES "${CMAKE_BINARY_DIR}/OpenCASCADEConfigVersion.cmake" DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_CMAKE}")
+install (FILES "${CMAKE_BINARY_DIR}/OpenCASCADEConfigVersion.cmake" DESTINATION "${INSTALL_DIR_CMAKE}")
 
 # Install the export set for use with the install-tree for each configuration
-foreach (OCCT_MODULE ${OCCT_MODULES})
-  if (BUILD_MODULE_${OCCT_MODULE})
-    install(EXPORT OpenCASCADE${OCCT_MODULE}Targets DESTINATION "${INSTALL_DIR_CMAKE}")
-  endif()
+foreach (OCCT_MODULE ${OCCT_MODULES_ENABLED})
+  install(EXPORT OpenCASCADE${OCCT_MODULE}Targets DESTINATION "${INSTALL_DIR_CMAKE}")
 endforeach()
 
 # Update generated OpenCASCADETargets-*.cmake files 
 # to have correct paths to libraries depending on the configuration
 OCCT_UPDATE_TARGET_FILE ()
+
+message (STATUS "Info: \(${CURRENT_TIME}\) OCCT configuration files prepared")

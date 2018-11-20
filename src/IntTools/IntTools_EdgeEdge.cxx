@@ -15,15 +15,17 @@
 
 #include <Bnd_Box.hxx>
 #include <BndLib_Add3dCurve.hxx>
-#include <BOPCol_MapOfInteger.hxx>
+#include <TColStd_MapOfInteger.hxx>
 #include <BRep_Tool.hxx>
 #include <BRepAdaptor_Curve.hxx>
 #include <ElCLib.hxx>
 #include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineCurve.hxx>
+#include <Geom_Line.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_Curve.hxx>
 #include <Geom_Ellipse.hxx>
+#include <Geom_OffsetCurve.hxx>
 #include <GeomAPI_ProjectPointOnCurve.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Lin.hxx>
@@ -91,7 +93,7 @@ static
   Standard_Real CurveDeflection(const BRepAdaptor_Curve& theBAC,
                                 const IntTools_Range& theRange);
 static 
-  Standard_Integer IsClosed(const Handle(Geom_Curve)& theCurve,
+  Standard_Boolean IsClosed(const Handle(Geom_Curve)& theCurve,
                             const Standard_Real aT1,
                             const Standard_Real aT2,
                             const Standard_Real theTol,
@@ -158,7 +160,7 @@ void IntTools_EdgeEdge::Prepare()
     mySwap = Standard_True;
   }
   //
-  Standard_Real aTolAdd = Precision::Confusion() / 2.;
+  Standard_Real aTolAdd = myFuzzyValue / 2.;
   myTol1 = myCurve1.Tolerance() + aTolAdd;
   myTol2 = myCurve2.Tolerance() + aTolAdd;
   myTol = myTol1 + myTol2;
@@ -503,39 +505,48 @@ Standard_Boolean IntTools_EdgeEdge::FindParameters(const BRepAdaptor_Curve& theB
                                                    Standard_Real& aTB2)
 {
   Standard_Boolean bRet;
-  Standard_Integer aC, i, k;
+  Standard_Integer aC, i;
   Standard_Real aCf, aDiff, aDt, aT, aTB, aTOut, aTIn;
-  Standard_Real aDist, aDistP, aDistTol;
+  Standard_Real aDist, aDistP;
   gp_Pnt aP;
   Bnd_Box aCBx;
   //
   bRet = Standard_False;
   aCf = 0.6180339887498948482045868343656;// =0.5*(1.+sqrt(5.))/2.;
-  aDt = theRes;
-  aDistP = 0.;
-  aDistTol = 1e-9;
   aCBx = theCBox;
-  aCBx.Enlarge(theTol);
+  aCBx.SetGap(aCBx.GetGap() + theTol);
   //
   const Handle(Geom_Curve)& aCurve = theBAC.Curve().Curve();
   const GeomAbs_CurveType aCurveType = theBAC.GetType();
+  Standard_Real aMaxDt = (aT2 - aT1) * 0.01;
   //
   for (i = 0; i < 2; ++i) {
     aTB = !i ? aT1 : aT2;
     aT = !i ? aT2 : aTB1;
     aC = !i ? 1 : -1;
+    aDt = theRes;
+    aDistP = 0.;
     bRet = Standard_False;
-    k = 0;
+    Standard_Real k = 1;
     //looking for the point on the edge which is in the box;
     while (aC*(aT-aTB) >= 0) {
       theBAC.D0(aTB, aP);
       aDist = PointBoxDistance(theCBox, aP);
       if (aDist > theTol) {
-        if (fabs(aDist - aDistP) < aDistTol) {
-          aDt = Resolution(aCurve, aCurveType, theResCoeff, (++k)*aDist);
-        } else {
-          k = 0;
-          aDt = Resolution(aCurve, aCurveType, theResCoeff, aDist);
+        if (aDistP > 0.) {
+          Standard_Boolean toGrow = Standard_False;
+          if (Abs(aDistP - aDist) / aDistP < 0.1) {
+            aDt = Resolution(aCurve, aCurveType, theResCoeff, k*aDist);
+            if (aDt < aMaxDt)
+            {
+              toGrow = Standard_True;
+              k *= 2;
+            }
+          }
+          if (!toGrow) {
+            k = 1;
+            aDt = Resolution(aCurve, aCurveType, theResCoeff, aDist);
+          }
         }
         aTB += aC*aDt;
       } else {
@@ -603,7 +614,7 @@ void IntTools_EdgeEdge::MergeSolutions(const IntTools_SequenceOfRanges& theRange
   Standard_Real aTi11, aTi12, aTi21, aTi22;
   Standard_Real aTj11, aTj12, aTj21, aTj22;
   Standard_Real aRes1, aRes2, dTR1, dTR2;
-  BOPCol_MapOfInteger aMI;
+  TColStd_MapOfInteger aMI;
   //
   aRes1 = Resolution(myCurve1.Curve().Curve(), 
                      myCurve1.GetType(), myResCoeff1, myTol);
@@ -733,16 +744,14 @@ void IntTools_EdgeEdge::FindBestSolution(const Standard_Real aT11,
   Standard_Integer i, aNbS, iErr;
   Standard_Real aDMin, aD, aRes1, aSolCriteria, aTouchCriteria;
   Standard_Real aT1A, aT1B, aT1Min, aT2Min;
-  Standard_Real aT1Im, aT2Im, aT1Touch;
   GeomAPI_ProjectPointOnCurve aProjPC;
   IntTools_SequenceOfRanges aRanges;
-  Standard_Boolean bTouch;
   //
   aDMin = Precision::Infinite();
   aSolCriteria   = 5.e-16;
   aTouchCriteria = 5.e-13;
-  bTouch = Standard_False;
-  aT1Touch = aT11;
+  Standard_Boolean bTouch = Standard_False;
+  Standard_Boolean bTouchConfirm = Standard_False;
   //
   aRes1 = Resolution(myCurve1.Curve().Curve(), 
                      myCurve1.GetType(), myResCoeff1, myTol);
@@ -751,15 +760,9 @@ void IntTools_EdgeEdge::FindBestSolution(const Standard_Real aT11,
   //
   aProjPC.Init(myGeom2, aT21, aT22);
   //
-  aT1 = (aT11 + aT12) * 0.5;
-  iErr = DistPC(aT1, myGeom1, aSolCriteria, aProjPC, aD, aT2, -1);
-  if (iErr == 1) {
-    aT2 = (aT21 + aT22) * 0.5;
-  }
-  //
-  aT1Im = aT1;
-  aT2Im = aT2;
-  //
+  Standard_Real aT11Touch = aT11, aT12Touch = aT12;
+  Standard_Real aT21Touch = aT21, aT22Touch = aT22;
+  Standard_Boolean isSolFound = Standard_False;
   for (i = 1; i <= aNbS; ++i) {
     const IntTools_Range& aR1 = aRanges(i);
     aR1.Range(aT1A, aT1B);
@@ -772,24 +775,29 @@ void IntTools_EdgeEdge::FindBestSolution(const Standard_Real aT11,
         aT1 = aT1Min;
         aT2 = aT2Min;
         aDMin = aD;
+        isSolFound = Standard_True;
       }
       //
       if (aD < aTouchCriteria) {
         if (bTouch) {
-          aT1A = (aT1Touch + aT1Min) * 0.5;
-          iErr = DistPC(aT1A, myGeom1, aTouchCriteria, 
-                        aProjPC, aD, aT2Min, -1);
-          if (aD > aTouchCriteria) {
-            aT1 = aT1Im;
-            aT2 = aT2Im;
-            break;
-          }
+          aT12Touch = aT1Min;
+          aT22Touch = aT2Min;
+          bTouchConfirm = Standard_True;
         }
         else {
-          aT1Touch = aT1Min;
+          aT11Touch = aT1Min;
+          aT21Touch = aT2Min;
           bTouch = Standard_True;
         }
       }
+    }
+  }
+  if (!isSolFound || bTouchConfirm)
+  {
+    aT1 = (aT11Touch + aT12Touch) * 0.5;
+    iErr = DistPC(aT1, myGeom1, aSolCriteria, aProjPC, aD, aT2, -1);
+    if (iErr == 1) {
+      aT2 = (aT21Touch + aT22Touch) * 0.5;
     }
   }
 }
@@ -988,15 +996,22 @@ Standard_Boolean IntTools_EdgeEdge::IsIntersection(const Standard_Real aT11,
     }
     //
     Standard_Real anAngleCriteria;
-    Standard_Real anAngle1, anAngle2;
+    Standard_Real anAngle1 = 0.0,
+                  anAngle2 = 0.0;
     //
     anAngleCriteria = 5.e-3;
-    if (bSmall_11_21 && bSmall_12_22) {
-      anAngle1 = aV11.Angle(aV21);
-      anAngle2 = aV12.Angle(aV22);
-    } else {
-      anAngle1 = aV11.Angle(aV22);
-      anAngle2 = aV12.Angle(aV21);
+    if (aV11.SquareMagnitude() > Precision::SquareConfusion() &&
+        aV12.SquareMagnitude() > Precision::SquareConfusion() &&
+        aV21.SquareMagnitude() > Precision::SquareConfusion() &&
+        aV22.SquareMagnitude() > Precision::SquareConfusion() )
+    {
+      if (bSmall_11_21 && bSmall_12_22) {
+        anAngle1 = aV11.Angle(aV21);
+        anAngle2 = aV12.Angle(aV22);
+      } else {
+        anAngle1 = aV11.Angle(aV22);
+        anAngle2 = aV12.Angle(aV21);
+      }
     }
     //
     if (((anAngle1 < anAngleCriteria) || ((M_PI - anAngle1) < anAngleCriteria)) ||
@@ -1126,6 +1141,7 @@ Standard_Integer FindDistPC(const Standard_Real aT1A,
     return iErr;
   }
   //
+  Standard_Real anEps = Max(theEps, Epsilon(Max(Abs(aA), Abs(aB))) * 10.);
   for (;;) {
     if (iC*(aYP - aYL) > 0) {
       aA = aXL;
@@ -1153,7 +1169,7 @@ Standard_Integer FindDistPC(const Standard_Real aT1A,
       return iErr;
     }
     //
-    if ((aB - aA) < theEps) {
+    if ((aB - aA) < anEps) {
       break;
     }
   }// for (;;) {
@@ -1354,7 +1370,7 @@ Standard_Integer TypeToInteger(const GeomAbs_CurveType theCType)
 Standard_Real ResolutionCoeff(const BRepAdaptor_Curve& theBAC,
                               const IntTools_Range& theRange)
 {
-  Standard_Real aResCoeff;
+  Standard_Real aResCoeff = 0.;
   //
   const Handle(Geom_Curve)& aCurve = theBAC.Curve().Curve();
   const GeomAbs_CurveType aCurveType = theBAC.GetType();
@@ -1366,9 +1382,26 @@ Standard_Real ResolutionCoeff(const BRepAdaptor_Curve& theBAC,
   case GeomAbs_Ellipse :
     aResCoeff =  1. / Handle(Geom_Ellipse)::DownCast (aCurve)->MajorRadius();
     break;
+  case GeomAbs_OffsetCurve : {
+    const Handle(Geom_OffsetCurve)& anOffsetCurve = Handle(Geom_OffsetCurve)::DownCast(aCurve);
+    const Handle(Geom_Curve)& aBasisCurve = anOffsetCurve->BasisCurve();
+    GeomAdaptor_Curve aGBasisCurve(aBasisCurve);
+    const GeomAbs_CurveType aBCType = aGBasisCurve.GetType();
+    if (aBCType == GeomAbs_Line) {
+      break;
+    }
+    else if (aBCType == GeomAbs_Circle) {
+      aResCoeff = 1. / (2 * (anOffsetCurve->Offset() + aGBasisCurve.Circle().Radius()));
+      break;
+    }
+    else if (aBCType == GeomAbs_Ellipse) {
+      aResCoeff = 1. / (anOffsetCurve->Offset() + aGBasisCurve.Ellipse().MajorRadius());
+      break;
+    }
+  }
+  Standard_FALLTHROUGH
   case GeomAbs_Hyperbola :
   case GeomAbs_Parabola : 
-  case GeomAbs_OffsetCurve :
   case GeomAbs_OtherCurve :{
     Standard_Real k, kMin, aDist, aDt, aT1, aT2, aT;
     Standard_Integer aNbP, i;
@@ -1396,7 +1429,6 @@ Standard_Real ResolutionCoeff(const BRepAdaptor_Curve& theBAC,
     break;
   }
   default:
-    aResCoeff = 0.;
     break;
   }
   //
@@ -1429,6 +1461,21 @@ Standard_Real Resolution(const Handle(Geom_Curve)& theCurve,
   case GeomAbs_BSplineCurve:
     Handle(Geom_BSplineCurve)::DownCast (theCurve)->Resolution(theR3D, aRes);
     break;
+  case GeomAbs_OffsetCurve: {
+    const Handle(Geom_Curve)& aBasisCurve = 
+      Handle(Geom_OffsetCurve)::DownCast(theCurve)->BasisCurve();
+    const GeomAbs_CurveType aBCType = GeomAdaptor_Curve(aBasisCurve).GetType();
+    if (aBCType == GeomAbs_Line) {
+      aRes = theR3D;
+      break;
+    }
+    else if (aBCType == GeomAbs_Circle) {
+      Standard_Real aDt = theResCoeff * theR3D;
+      aRes = (aDt <= 1.) ? 2*ASin(aDt) : 2*M_PI;
+      break;
+    }
+  }
+  Standard_FALLTHROUGH
   default:
     aRes = theResCoeff * theR3D;
     break;
@@ -1474,26 +1521,21 @@ Standard_Real CurveDeflection(const BRepAdaptor_Curve& theBAC,
 //function : IsClosed
 //purpose  : 
 //=======================================================================
-Standard_Integer IsClosed(const Handle(Geom_Curve)& theCurve,
+Standard_Boolean IsClosed(const Handle(Geom_Curve)& theCurve,
                           const Standard_Real aT1,
                           const Standard_Real aT2,
                           const Standard_Real theTol,
                           const Standard_Real theRes)
 {
-  Standard_Boolean bClosed;
-  Standard_Real aD;
-  gp_Pnt aP1, aP2;
-  //
-  bClosed = Standard_False;
-  if (Abs(aT1 - aT2) < theRes) {
-    return bClosed;
+  if (Abs(aT1 - aT2) < theRes)
+  {
+    return Standard_False;
   }
-  //
+
+  gp_Pnt aP1, aP2;
   theCurve->D0(aT1, aP1);
   theCurve->D0(aT2, aP2);
   //
-  aD = aP1.Distance(aP2);
-  bClosed = aD < theTol;
-  //
-  return bClosed;
+  Standard_Real aD = aP1.Distance(aP2);
+  return aD < theTol;
 }

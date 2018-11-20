@@ -53,6 +53,13 @@ public:
     DM_BndBox = 2  //!< display as bounding box,  default for highlighting
   };
 
+  //! Selection modes supported by this Point Cloud object
+  enum SelectionMode
+  {
+    SM_Points = 0, //!< detected by points
+    SM_BndBox = 2  //!< detected by bounding box
+  };
+
 public:
 
   //! Constructor.
@@ -87,16 +94,10 @@ public:
 public:
 
   //! Setup custom color. Affects presentation only when no per-point color attribute has been assigned.
-  Standard_EXPORT virtual void SetColor (const Quantity_NameOfColor theColor) Standard_OVERRIDE;
-
-  //! Setup custom color. Affects presentation only when no per-point color attribute has been assigned.
   Standard_EXPORT virtual void SetColor (const Quantity_Color& theColor) Standard_OVERRIDE;
 
   //! Restore default color.
   Standard_EXPORT virtual void UnsetColor() Standard_OVERRIDE;
-
-  //! Setup custom material. Affects presentation only when normals are defined.
-  Standard_EXPORT virtual void SetMaterial (const Graphic3d_NameOfMaterial theMatName) Standard_OVERRIDE;
 
   //! Setup custom material. Affects presentation only when normals are defined.
   Standard_EXPORT virtual void SetMaterial (const Graphic3d_MaterialAspect& theMat) Standard_OVERRIDE;

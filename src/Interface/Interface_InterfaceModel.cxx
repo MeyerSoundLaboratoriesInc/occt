@@ -16,8 +16,6 @@
 //svv#2 21.02.00 : porting on SIL
 //smh#14 17.03.2000 : FRA62479 Clearing of gtool.
 
-#include <Dico_DictionaryOfTransient.hxx>
-#include <Dico_IteratorOfDictionaryOfTransient.hxx>
 #include <Interface_Check.hxx>
 #include <Interface_CheckIterator.hxx>
 #include <Interface_EntityIterator.hxx>
@@ -39,7 +37,7 @@
 #include <TColStd_Array1OfTransient.hxx>
 #include <TColStd_DataMapIteratorOfDataMapOfIntegerTransient.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(Interface_InterfaceModel,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(Interface_InterfaceModel, Standard_Transient)
 
 // Un Modele d`Interface est un ensemble ferme d`Entites d`interface : chacune
 // est dans un seul modele a la fois; elle y a un numero (Number) qui permet de
@@ -47,13 +45,7 @@ IMPLEMENT_STANDARD_RTTIEXT(Interface_InterfaceModel,MMgt_TShared)
 // performantes, de fournir un identifieur numerique
 // Il est a meme d`etre utilise dans des traitements de Graphe
 // STATICS : les TEMPLATES
-static const Handle(Dico_DictionaryOfTransient)& templates()
-{
-  static  Handle(Dico_DictionaryOfTransient) atemp;
-  if (atemp.IsNull()) atemp = new Dico_DictionaryOfTransient;
-  return atemp;
-}
-
+static NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)> atemp;
 
 static const Handle(Standard_Type)& typerep()
 {
@@ -439,18 +431,15 @@ Standard_Boolean Interface_InterfaceModel::SetReportEntity
   Handle(Standard_Transient) ent;
   if (num > 0) {
     ent = Value(nm);
-    if (! (ent == rep->Concerned()) ) Interface_InterfaceMismatch::Raise
-      ("InterfaceModel : SetReportEntity");
+    if (! (ent == rep->Concerned()) ) throw Interface_InterfaceMismatch("InterfaceModel : SetReportEntity");
   } else if (num < 0) {
     nm = -num;
     ent = Value(nm);
-    if (! (ent == rep->Concerned()) ) Interface_InterfaceMismatch::Raise
-      ("InterfaceModel : SetReportEntity");
+    if (! (ent == rep->Concerned()) ) throw Interface_InterfaceMismatch("InterfaceModel : SetReportEntity");
   } else {
     ent = rep->Concerned();
     nm = Number (ent);
-    if (nm == 0)  Interface_InterfaceMismatch::Raise
-      ("InterfaceModel : SetReportEntity");
+    if (nm == 0)  throw Interface_InterfaceMismatch("InterfaceModel : SetReportEntity");
   }
   if (!thereports.IsBound(nm)) {
     Standard_Integer maxrep = thereports.NbBuckets();
@@ -632,8 +621,7 @@ void Interface_InterfaceModel::AddWithRefs(const Handle(Standard_Transient)& ane
                                            const Standard_Boolean listall)
 {
   Handle(Interface_Protocol) proto = Protocol();
-  if (proto.IsNull()) Interface_InterfaceMismatch::Raise
-    ("InterfaceModel : AddWithRefs");
+  if (proto.IsNull()) throw Interface_InterfaceMismatch("InterfaceModel : AddWithRefs");
   AddWithRefs (anent,proto,level,listall);
 }
 
@@ -734,8 +722,7 @@ void Interface_InterfaceModel::ChangeOrder(const Standard_Integer oldnum,
   Standard_Integer minum  = (oldnum > newnum ? newnum : oldnum);
   Standard_Integer mxnum  = (oldnum < newnum ? newnum : oldnum);
   Standard_Integer kount  = (oldnum > newnum ? cnt  : -cnt);
-  if (cnt <= 0 || cnt > mxnum - minum) Interface_InterfaceMismatch::Raise
-    ("InterfaceModel : ChangeOrder, Overlap");
+  if (cnt <= 0 || cnt > mxnum - minum) throw Interface_InterfaceMismatch("InterfaceModel : ChangeOrder, Overlap");
   for (i = 1; i < minum; i ++)  ents.SetValue (i,theentities.FindKey(i));
   for (i = mxnum+cnt; i <= nb; i ++) ents.SetValue (i,theentities.FindKey(i));
   for (i = minum; i < mxnum; i ++)
@@ -1004,7 +991,7 @@ Standard_Integer Interface_InterfaceModel::NextNumberForLabel
 Standard_Boolean Interface_InterfaceModel::HasTemplate
   (const Standard_CString name)
 {
-  return templates()->HasItem(name);
+  return atemp.IsBound(name);
 }
 
 
@@ -1018,7 +1005,7 @@ Handle(Interface_InterfaceModel) Interface_InterfaceModel::Template
 {
   Handle(Interface_InterfaceModel) model,newmod;
   if (!HasTemplate(name)) return model;
-  model = Handle(Interface_InterfaceModel)::DownCast(templates()->Item(name));
+  model = Handle(Interface_InterfaceModel)::DownCast(atemp.ChangeFind(name));
   newmod = model->NewEmptyModel();
   newmod->GetFromAnother (model);
   return newmod;
@@ -1033,10 +1020,7 @@ Handle(Interface_InterfaceModel) Interface_InterfaceModel::Template
 Standard_Boolean Interface_InterfaceModel::SetTemplate
   (const Standard_CString name, const Handle(Interface_InterfaceModel)& model)
 {
-  Standard_Boolean deja;
-  Handle(Standard_Transient)& newmod = templates()->NewItem(name,deja);
-  newmod = model;
-  return deja;
+  return atemp.Bind(name, model);
 }
 
 
@@ -1049,10 +1033,10 @@ Handle(TColStd_HSequenceOfHAsciiString) Interface_InterfaceModel::ListTemplates 
 {
   Handle(TColStd_HSequenceOfHAsciiString) list = new
     TColStd_HSequenceOfHAsciiString();
-  if (templates().IsNull()) return list;
-  for (Dico_IteratorOfDictionaryOfTransient iter(templates());
-       iter.More(); iter.Next()) {
-    list->Append (new TCollection_HAsciiString (iter.Name()) );
+  if (atemp.IsEmpty()) return list;
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>::Iterator iter(atemp);
+  for (; iter.More(); iter.Next()) {
+    list->Append (new TCollection_HAsciiString (iter.Key()) );
   }
   return list;
 }

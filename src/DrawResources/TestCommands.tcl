@@ -631,6 +631,12 @@ help testdiff {
   Use: testdiff dir1 dir2 [groupname [gridname]] [options...]
   Where dir1 and dir2 are directories containing logs of two test runs.
   Allowed options are:
+  -image [filename]: compare only images and save its in specified file (default 
+                   name is <dir1>/diffimage-<dir2>.log)
+  -cpu [filename]: compare only CPU and save it in specified file (default 
+                   name is <dir1>/diffcpu-<dir2>.log)
+  -memory [filename]: compare only memory and save it in specified file (default 
+                   name is <dir1>/diffmemory-<dir2>.log)
   -save filename: save resulting log in specified file (default name is
                   <dir1>/diff-<dir2>.log); HTML log is saved with same name
                   and extension .html
@@ -656,13 +662,19 @@ proc testdiff {dir1 dir2 args} {
 
     # treat options
     set logfile [file join $dir1 "diff-[file tail $dir2].log"]
+    set logfile_image ""
+    set logfile_cpu ""
+    set logfile_memory ""
+    set image false
+    set cpu false
+    set memory false
     set basename ""
+    set save false
     set status "same"
     set verbose 3
     set highlight_percent 5
     for {set narg 0} {$narg < [llength $args]} {incr narg} {
         set arg [lindex $args $narg]
-
         # log file name
         if { $arg == "-save" } {
             incr narg
@@ -671,9 +683,49 @@ proc testdiff {dir1 dir2 args} {
             } else {
                 error "Error: Option -save must be followed by log file name"
             } 
+            set save true
             continue
         }
-
+        
+        # image compared log
+        if { $arg == "-image" } {
+            incr narg
+            if { $narg < [llength $args] && ! [regexp {^-} [lindex $args $narg]] } { 
+                set logfile_image [lindex $args $narg]
+            } else {
+                set logfile_image [file join $dir1 "diffimage-[file tail $dir2].log"]
+                incr narg -1
+            }
+            set image true
+            continue
+        }
+        
+        # CPU compared log
+        if { $arg == "-cpu" } {
+            incr narg
+            if { $narg < [llength $args] && ! [regexp {^-} [lindex $args $narg]] } { 
+                set logfile_cpu [lindex $args $narg]
+            } else {
+                set logfile_cpu [file join $dir1 "diffcpu-[file tail $dir2].log"]
+                incr narg -1
+            }
+            set cpu true
+            continue
+        }
+        
+        # memory compared log
+        if { $arg == "-memory" } {
+            incr narg
+            if { $narg < [llength $args] && ! [regexp {^-} [lindex $args $narg]] } { 
+                set logfile_memory [lindex $args $narg]
+            } else {
+                set logfile_memory [file join $dir1 "diffmemory-[file tail $dir2].log"]
+                incr narg -1
+            }
+            set memory true
+            continue
+        }
+        
         # status filter
         if { $arg == "-status" } {
             incr narg
@@ -717,36 +769,60 @@ proc testdiff {dir1 dir2 args} {
         # non-option arguments form a subdirectory path
         set basename [file join $basename $arg]
     }
-
-    # run diff procedure (recursive)
-    _test_diff $dir1 $dir2 $basename $status $verbose log
-
-    # save result to log file
-    if { "$logfile" != "" } {
-        _log_save $logfile [join $log "\n"]
-        _log_html_diff "[file rootname $logfile].html" $log $dir1 $dir2 ${highlight_percent}
-        puts "Log is saved to $logfile (and .html)"
+    
+    if {$image != false || $cpu != false || $memory != false} {
+        if {$save != false} {
+            error "Error: Option -save can not be used with image/cpu/memory options"
+        }
     }
 
+    # run diff procedure (recursive)
+    _test_diff $dir1 $dir2 $basename $image $cpu $memory $status $verbose log log_image log_cpu log_memory
+    
+    # save result to log file
+    if {$image == false && $cpu == false && $memory == false} {
+        if { "$logfile" != "" } {
+            _log_save $logfile [join $log "\n"]
+            _log_html_diff "[file rootname $logfile].html" $log $dir1 $dir2 ${highlight_percent}
+            puts "Log is saved to $logfile (and .html)"
+        }
+    } else {
+        foreach mode {image cpu memory} {
+            if {"[set logfile_${mode}]" != ""} {
+                _log_save "[set logfile_${mode}]" [join "[set log_${mode}]" "\n"]
+                _log_html_diff "[file rootname [set logfile_${mode}]].html" "[set log_${mode}]" $dir1 $dir2 ${highlight_percent}
+                puts "Log (${mode}) is saved to [set logfile_${mode}] (and .html)"
+            }
+        }
+    }
     return
 }
 
 # Procedure to check data file before adding it to repository
 help testfile {
-  Check data file and prepare it for putting to test data files repository.
-  Use: testfile [filelist]
+  Checks specified data files for putting them into the test data files repository.
+
+  Use: testfile filelist
 
   Will report if:
   - data file (non-binary) is in DOS encoding (CR/LF)
   - same data file (with same or another name) already exists in the repository
   - another file with the same name already exists 
-  Note that names are assumed to be case-insensitive (for Windows).
+  Note that names are considered to be case-insensitive (for compatibility 
+  with Windows).
 
   Unless the file is already in the repository, tries to load it, reports
   the recognized file format, file size, number of faces and edges in the 
-  loaded shape (if any), and makes snapshot (in the temporary directory).
+  loaded shape (if any), information contained its triangulation, and makes 
+  snapshot (in the temporary directory).
+
   Finally it advises whether the file should be put to public section of the 
   repository.
+
+  Use: testfile -check
+
+  If "-check" is given as an argument, then procedure will check files already 
+  located in the repository (for possible duplicates and for DOS encoding).
 }
 proc testfile {filelist} {
     global env
@@ -756,8 +832,11 @@ proc testfile {filelist} {
         error "Environment variable CSF_TestDataPath must be defined!"
     }
 
+    set checkrepo f
+    if { "$filelist" == "-check" } { set checkrepo t }
+
     # build registry of existing data files (name -> path) and (size -> path)
-    puts "Checking available test data files..."
+    puts "Collecting info on test data files repository..."
     foreach dir [_split_path $env(CSF_TestDataPath)] {
         while {[llength $dir] != 0} {
             set curr [lindex $dir 0]
@@ -766,87 +845,141 @@ proc testfile {filelist} {
             foreach file [glob -nocomplain -directory $curr -type f *] {
                 set name [file tail $file]
                 set name_lower [string tolower $name]
+                set size [file size $file]
 
                 # check that the file is not in DOS encoding
-                if { [_check_dos_encoding $file] } {
-                    puts "Warning: file $file is in DOS encoding; was this intended?"
-                }
-                _check_file_format $file
-
-                # check if file with the same name is present twice or more
-                if { [info exists names($name_lower)] } {
-                    puts "Error: more than one file with name $name is present in the repository:"
-                    if { [_diff_files $file $names($name_lower)] } {
-                        puts "(files are different by content)"
-                    } else {
-                        puts "(files are same by content)"
+                if { $checkrepo } {
+                    if { [_check_dos_encoding $file] } {
+                        puts "Warning: file $file is in DOS encoding; was this intended?"
                     }
-                    puts "--> $file"
-                    puts "--> $names($name_lower)"
-                    continue
-                } 
+                    _check_file_format $file
+
+                    # check if file with the same name is present twice or more
+                    if { [info exists names($name_lower)] } {
+                        puts "Error: more than one file with name $name is present in the repository:"
+                        if { [_diff_files $file $names($name_lower)] } {
+                            puts "(files are different by content)"
+                        } else {
+                            puts "(files are same by content)"
+                        }
+                        puts "--> $file"
+                        puts "--> $names($name_lower)"
+                        continue
+                    } 
                 
-                # check if file with the same content exists
-                set size [file size $file]
-                if { [info exists sizes($size)] } {
-                    foreach other $sizes($size) {
-                        if { ! [_diff_files $file $other] } {
-                            puts "Warning: two files with the same content found:"
-                            puts "--> $file"
-                            puts "--> $other"
+                    # check if file with the same content exists
+                    if { [info exists sizes($size)] } {
+                        foreach other $sizes($size) {
+                            if { ! [_diff_files $file $other] } {
+                                puts "Warning: two files with the same content found:"
+                                puts "--> $file"
+                                puts "--> $other"
+                            }
                         }
                     }
                 }
 
                 # add the file to the registry
-                set names($name_lower) $file
+                lappend names($name_lower) $file
                 lappend sizes($size) $file
             }
         }
     }
-    if { [llength $filelist] <= 0 } { return }
+    if { $checkrepo || [llength $filelist] <= 0 } { return }
 
     # check the new files
     set has_images f
     puts "Checking new file(s)..."
     foreach file $filelist {
-        # check for DOS encoding
-        if { [_check_dos_encoding $file] } {
-            puts "$file: Warning: DOS encoding detected"
-        }
-
         set name [file tail $file]
         set name_lower [string tolower $name]
+        set found f
 
         # check for presence of the file with same name
         if { [info exists names($name_lower)] } {
-            if { [_diff_files $file $names($name_lower)] } {
-                puts "$file: Error: name is already used by existing file\n--> $names($name_lower)"
-            } else {
-                puts "$file: OK: already in the repository \n--> $names($name_lower)"
-                continue
+            set found f
+            foreach other $names($name_lower) {
+                # avoid comparing the file with itself
+                if { [file normalize $file] == [file normalize $other] } {
+                    continue
+                }
+                # compare content
+                if { [_diff_files $file $other] } {
+                    puts "\n* $file: error\n  name is already used by existing file\n  --> $other"
+                } else {
+                    puts "\n* $file: already present \n  --> $other"
+                }
+                set found t
+                break
             }
+            if { $found } { continue }
+        }
+
+        # get size of the file; if it is in DOS encoding and less than 1 MB,
+        # estimate also its size in UNIX encoding to be able to find same 
+        # file if already present but in UNIX encoding
+        set sizeact [file size $file]
+        set sizeunx ""
+        set isdos [_check_dos_encoding $file]
+        if { $isdos && $sizeact < 10000000 } {
+            set fd [open $file r]
+            fconfigure $fd -translation crlf
+            set sizeunx [string length [read $fd]]
+            close $fd
         }
                 
         # check if file with the same content exists
-        set size [file size $file]
-        if { [info exists sizes($size)] } {
-            set found f
+        foreach size "$sizeact $sizeunx" {
+          if { [info exists sizes($size)] } {
             foreach other $sizes($size) {
+                # avoid comparing the file with itself
+                if { [file normalize $file] == [file normalize $other] } {
+                    continue
+                }
+                # compare content
                 if { ! [_diff_files $file $other] } {
-                    puts "$file: OK: the same file is already present under name [file tail $other]\n--> $other"
+                    puts "\n* $file: duplicate \n  already present under name [file tail $other]\n  --> $other"
                     set found t
                     break
                 }
             }
-            if { $found } { continue }
+            if { $found } { break }
+          }
+        }
+        if { $found } { continue }
+
+        # file is not present yet, so to be analyzed
+        puts "\n* $file: new file"
+
+        # add the file to the registry as if it were added to the repository,
+        # to report possible duplicates among the currently processed files
+        lappend names($name_lower) $file
+        if { "$sizeunx" != "" } {
+            lappend sizes($sizeunx) $file
+        } else {
+            lappend sizes($sizeact) $file
+        }
+
+        # first of all, complain if it is in DOS encoding
+        if { $isdos } {
+            puts "  Warning: DOS encoding detected, consider converting to"
+            puts "           UNIX unless DOS line ends are needed for the test"
         }
 
         # try to read the file
         set format [_check_file_format $file]
         if { [catch {uplevel load_data_file $file $format a}] } {
-            puts "$file: Error: Cannot read as $format file"
+            puts "  Warning: Cannot read as $format file"
             continue
+        }
+
+        # warn if shape contains triangulation
+        pload MODELING
+        if { "$format" != "STL" &&
+             [regexp {contains\s+([0-9]+)\s+triangles} [uplevel trinfo a] res nbtriangles] &&
+             $nbtriangles != 0 } {
+            puts "  Warning: shape contains triangulation ($nbtriangles triangles),"
+            puts "           consider removing them unless they are needed for the test!"
         }
 
         # get number of faces and edges
@@ -861,16 +994,10 @@ proc testfile {filelist} {
             set dir public
         } else {
             set dir private
-            # check if one of names of that file corresponds to typical name for 
-            # MDTV bugs or has extension .rle, this should be old model
-            if { [regexp -nocase {.*(cts|ats|pro|buc|ger|fra|usa|uki)[0-9]+.*} $name] ||
-                 [regexp -nocase {[.]rle\y} $name] } {
-                set dir old
-            }
         }
 
         # add stats
-        puts "$file: $format size=[expr $size / 1024] KiB, nbfaces=$faces, nbedges=$edges -> $dir"
+        puts "  $format size=[expr $size / 1024] KiB, nbfaces=$faces, nbedges=$edges -> $dir"
 
         set tmpdir [_get_temp_dir]
         file mkdir $tmpdir/$dir
@@ -878,6 +1005,7 @@ proc testfile {filelist} {
         # make snapshot
         pload AISV
         uplevel vdisplay a
+        uplevel vsetdispmode 1
         uplevel vfit
         uplevel vzfit
         uplevel vdump $tmpdir/$dir/[file rootname [file tail $file]].png
@@ -1182,7 +1310,7 @@ proc _check_log {dir group gridname casename errors log {_summary {}} {_html_log
             # check if line defines specific treatment of some messages
             if [regexp -nocase {^[ \s]*TODO ([^:]*):(.*)$} $line res platforms pattern] {
                 if { ! [regexp -nocase {\mAll\M} $platforms] && 
-                     ! [regexp -nocase "\\m$env(os_type)\\M" $platforms] } {
+                     ! [regexp -nocase "\\m[checkplatform]\\M" $platforms] } {
                     lappend html_log [_html_highlight IGNORE $line]
                     continue ;# TODO statement is for another platform
                 }
@@ -1206,7 +1334,7 @@ proc _check_log {dir group gridname casename errors log {_summary {}} {_html_log
             }
             if [regexp -nocase {^[ \s]*REQUIRED ([^:]*):[ \s]*(.*)$} $line res platforms pattern] {
                 if { ! [regexp -nocase {\mAll\M} $platforms] && 
-                     ! [regexp -nocase "\\m$env(os_type)\\M" $platforms] } {
+                     ! [regexp -nocase "\\m[checkplatform]\\M" $platforms] } {
                     lappend html_log [_html_highlight IGNORE $line]
                     continue ;# REQUIRED statement is for another platform
                 }
@@ -1428,7 +1556,7 @@ proc _html_color {status} {
     if { $status == "OK" } { 
         return lightgreen
     } elseif { [regexp -nocase {^FAIL} $status] } { 
-        return red
+        return ff8080
     } elseif { [regexp -nocase {^BAD} $status] } { 
         return yellow
     } elseif { [regexp -nocase {^IMP} $status] } { 
@@ -1450,7 +1578,7 @@ proc _html_highlight {status line} {
 
 # Internal procedure to generate HTML page presenting log of the tests
 # execution in tabular form, with links to reports on individual cases
-proc _log_html_summary {logdir log totals regressions improvements total_time} {
+proc _log_html_summary {logdir log totals regressions improvements skipped total_time} {
     global _test_case_regexp
 
     # create missing directories as needed
@@ -1497,7 +1625,7 @@ proc _log_html_summary {logdir log totals regressions improvements total_time} {
     }
    
     # print regressions and improvements
-    foreach featured [list $regressions $improvements] {
+    foreach featured [list $regressions $improvements $skipped] {
         if { [llength $featured] <= 1 } { continue }
         set status [string trim [lindex $featured 0] { :}]
         puts $fd "<h2>$status</h2>"
@@ -1604,13 +1732,16 @@ proc _log_summarize {logdir log {total_time {}}} {
     set totals {}
     set improvements {Improvements:}
     set regressions {Failed:}
+    set skipped {Skipped:}
     if { [info exists stat] } {
         foreach status [lsort [array names stat]] {
             lappend totals [list [llength $stat($status)] $status]
 
-            # separately count improvements (status starting with IMP) and regressions (all except IMP, OK, BAD, and SKIP)
+            # separately count improvements (status starting with IMP), skipped (status starting with SKIP) and regressions (all except IMP, OK, BAD, and SKIP)
             if { [regexp -nocase {^IMP} $status] } {
                 eval lappend improvements $stat($status)
+            } elseif { [regexp -nocase {^SKIP} $status] } {
+                eval lappend skipped $stat($status)
             } elseif { $status != "OK" && ! [regexp -nocase {^BAD} $status] && ! [regexp -nocase {^SKIP} $status] } {
                 eval lappend regressions $stat($status)
             }
@@ -1625,6 +1756,9 @@ proc _log_summarize {logdir log {total_time {}}} {
         if { [llength $regressions] > 1 } {
             _log_and_puts log [join $regressions "\n  "]
         }
+        if { [llength $skipped] > 1 } {
+            _log_and_puts log [join $skipped "\n  "]
+        }
         if { [llength $improvements] == 1 && [llength $regressions] == 1 } {
             _log_and_puts log "No regressions"
         }
@@ -1634,7 +1768,7 @@ proc _log_summarize {logdir log {total_time {}}} {
 
     # save log to files
     if { $logdir != "" } {
-        _log_html_summary $logdir $log $totals $regressions $improvements $total_time
+        _log_html_summary $logdir $log $totals $regressions $improvements $skipped $total_time
         _log_save $logdir/tests.log [join $log "\n"] "Tests summary"
     }
 
@@ -1742,21 +1876,6 @@ proc _log_xml_summary {logdir filename log include_cout} {
     return
 }
 
-# define custom platform name 
-proc _tests_platform_def {} {
-    global env tcl_platform
-
-    if [info exists env(os_type)] { return }
-    set env(os_type) $tcl_platform(platform)
-    if { $tcl_platform(os) == "Linux" } {
-        set env(os_type) Linux
-    }
-    if { $tcl_platform(os) == "Darwin" } {
-        set env(os_type) MacOS
-    } 
-}
-_tests_platform_def
-
 # Auxiliary procedure to split path specification (usually defined by
 # environment variable) into list of directories or files
 proc _split_path {pathspec} {
@@ -1821,12 +1940,63 @@ proc _diff_img_name {dir1 dir2 casepath imgfile} {
 
 # auxiliary procedure to produce string comparing two values
 proc _diff_show_ratio {value1 value2} {
-    return "$value1 / $value2 \[[format "%+5.2f%%" [expr 100 * ($value1 - $value2) / double($value2)]]\]"
+    if {[expr double ($value2)] == 0.} {
+        return "$value1 / $value2"
+    } else {
+        return "$value1 / $value2 \[[format "%+5.2f%%" [expr 100 * ($value1 - $value2) / double($value2)]]\]"
+    }
+}
+
+# procedure to check cpu user time
+proc _check_time {regexp_msg} {
+    upvar log log
+    upvar log1 log1
+    upvar log2 log2
+    upvar log_cpu log_cpu
+    upvar cpu cpu
+    upvar basename basename
+    upvar casename casename
+    set time1_list [dict create]
+    set time2_list [dict create]
+    set cpu_find UNDEFINED
+
+    foreach line1 [split $log1 "\n"] {
+        if { [regexp "${regexp_msg}" $line1 dump chronometer_name cpu_find] } {
+            dict set time1_list "${chronometer_name}" "${cpu_find}"
+        }
+    }
+
+    foreach line2 [split $log2 "\n"] {
+        if { [regexp "${regexp_msg}" $line2 dump chronometer_name cpu_find] } {
+            dict set time2_list "${chronometer_name}" "${cpu_find}"
+        }
+    }
+
+    if { [llength [dict keys $time1_list]] != [llength [dict keys $time2_list]] } {
+        puts "Error: number of dchrono/chrono COUNTER are different in the same test cases"
+    } else {
+        foreach key [dict keys $time1_list] {
+            set time1 [dict get $time1_list $key]
+            set time2 [dict get $time2_list $key]
+
+            # compare CPU user time with 10% precision (but not less 0.5 sec)
+            if { [expr abs ($time1 - $time2) > 0.5 + 0.05 * abs ($time1 + $time2)] } {
+                if {$cpu != false} {
+                    _log_and_puts log_cpu "COUNTER $key: [split $basename /] $casename: [_diff_show_ratio $time1 $time2]"
+                } else {
+                    _log_and_puts log "COUNTER $key: [split $basename /] $casename: [_diff_show_ratio $time1 $time2]"
+                }
+            }
+        }
+    }
 }
 
 # Procedure to compare results of two runs of test cases
-proc _test_diff {dir1 dir2 basename status verbose _logvar {_statvar ""}} {
+proc _test_diff {dir1 dir2 basename image cpu memory status verbose _logvar _logimage _logcpu _logmemory {_statvar ""}} {
     upvar $_logvar log
+    upvar $_logimage log_image
+    upvar $_logcpu log_cpu
+    upvar $_logmemory log_memory
 
     # make sure to load diffimage command
     uplevel pload VISUALIZATION
@@ -1840,6 +2010,9 @@ proc _test_diff {dir1 dir2 basename status verbose _logvar {_statvar ""}} {
         set stat(mem1) 0
         set stat(mem2) 0
         set log {}
+        set log_image {}
+        set log_cpu {}
+        set log_memory {}
     }
 
     # first check subdirectories
@@ -1857,7 +2030,7 @@ proc _test_diff {dir1 dir2 basename status verbose _logvar {_statvar ""}} {
             if { "$verbose" > 2 } {
                 _log_and_puts log "Checking [file join $basename $subdir]"
             }
-            _test_diff $dir1 $dir2 [file join $basename $subdir] $status $verbose log stat
+            _test_diff $dir1 $dir2 [file join $basename $subdir] $image $cpu $memory $status $verbose log log_image log_cpu log_memory stat
         }
     } else {
         # check log files (only if directory has no subdirs)
@@ -1877,93 +2050,161 @@ proc _test_diff {dir1 dir2 basename status verbose _logvar {_statvar ""}} {
             set log1 [_read_file [file join $dir1 $basename $logfile]]
             set log2 [_read_file [file join $dir2 $basename $logfile]]
             set casename [file rootname $logfile]
-
+            
             # check execution statuses
-            set status1 UNDEFINED
-            set status2 UNDEFINED
-            if { ! [regexp {CASE [^:]*:\s*([\w]+)} $log1 res1 status1] ||
-                 ! [regexp {CASE [^:]*:\s*([\w]+)} $log2 res2 status2] ||
-                 "$status1" != "$status2" } {
-                _log_and_puts log "STATUS [split $basename /] $casename: $status1 / $status2"
-
-                # if test statuses are different, further comparison makes 
-                # no sense unless explicitly requested
-                if { "$status" != "all" } {
+            if {$image == false && $cpu == false && $memory == false} {
+                set status1 UNDEFINED
+                set status2 UNDEFINED
+                if { ! [regexp {CASE [^:]*:\s*([\w]+)} $log1 res1 status1] ||
+                    ! [regexp {CASE [^:]*:\s*([\w]+)} $log2 res2 status2] ||
+                    "$status1" != "$status2" } {
+                    _log_and_puts log "STATUS [split $basename /] $casename: $status1 / $status2"
+                    # if test statuses are different, further comparison makes 
+                    # no sense unless explicitly requested
+                    if { "$status" != "all" } {
+                        continue
+                    }
+                }
+                if { "$status" == "ok" && "$status1" != "OK" } { 
                     continue
                 }
             }
-            if { "$status" == "ok" && "$status1" != "OK" } { 
-                continue
+
+            if { ! $image } {
+                # check CPU user time in test cases
+                set checkCPURegexp "COUNTER (.+): (\[-0-9.+eE\]+)"
+                if { [regexp "${checkCPURegexp}" $log1] &&
+                     [regexp "${checkCPURegexp}" $log2] } {
+                  _check_time "${checkCPURegexp}"
+                }
             }
-
+            
             # check CPU times
-            set cpu1 UNDEFINED
-            set cpu2 UNDEFINED
-            if { [regexp {TOTAL CPU TIME:\s*([\d.]+)} $log1 res1 cpu1] &&
-                 [regexp {TOTAL CPU TIME:\s*([\d.]+)} $log2 res1 cpu2] } {
-                set stat(cpu1) [expr $stat(cpu1) + $cpu1]
-                set stat(cpu2) [expr $stat(cpu2) + $cpu2]
-                set gcpu1 [expr $gcpu1 + $cpu1]
-                set gcpu2 [expr $gcpu2 + $cpu2]
+            if {$cpu != false || ($image == false && $cpu == false && $memory == false)} {
+                set cpu1 UNDEFINED
+                set cpu2 UNDEFINED
+                if { [regexp {TOTAL CPU TIME:\s*([\d.]+)} $log1 res1 cpu1] &&
+                     [regexp {TOTAL CPU TIME:\s*([\d.]+)} $log2 res1 cpu2] } {
+                    set stat(cpu1) [expr $stat(cpu1) + $cpu1]
+                    set stat(cpu2) [expr $stat(cpu2) + $cpu2]
+                    set gcpu1 [expr $gcpu1 + $cpu1]
+                    set gcpu2 [expr $gcpu2 + $cpu2]
 
-                # compare CPU times with 10% precision (but not less 0.5 sec)
-                if { [expr abs ($cpu1 - $cpu2) > 0.5 + 0.05 * abs ($cpu1 + $cpu2)] } {
-                    _log_and_puts log "CPU [split $basename /] $casename: [_diff_show_ratio $cpu1 $cpu2]"
+                    # compare CPU times with 10% precision (but not less 0.5 sec)
+                    if { [expr abs ($cpu1 - $cpu2) > 0.5 + 0.05 * abs ($cpu1 + $cpu2)] } {
+                        if {$cpu != false} {
+                            _log_and_puts log_cpu "CPU [split $basename /] $casename: [_diff_show_ratio $cpu1 $cpu2]"
+                        } else {
+                            _log_and_puts log "CPU [split $basename /] $casename: [_diff_show_ratio $cpu1 $cpu2]"
+                        }
+                    }
                 }
             }
 
             # check memory delta
-            set mem1 UNDEFINED
-            set mem2 UNDEFINED
-            if { [regexp {MEMORY DELTA:\s*([\d.]+)} $log1 res1 mem1] &&
-                 [regexp {MEMORY DELTA:\s*([\d.]+)} $log2 res1 mem2] } {
-                set stat(mem1) [expr $stat(mem1) + $mem1]
-                set stat(mem2) [expr $stat(mem2) + $mem2]
-                set gmem1 [expr $gmem1 + $mem1]
-                set gmem2 [expr $gmem2 + $mem2]
+            if {$memory != false || ($image == false && $cpu == false && $memory == false)} {
+                set mem1 UNDEFINED
+                set mem2 UNDEFINED
+                if { [regexp {MEMORY DELTA:\s*([\d.]+)} $log1 res1 mem1] &&
+                     [regexp {MEMORY DELTA:\s*([\d.]+)} $log2 res1 mem2] } {
+                    set stat(mem1) [expr $stat(mem1) + $mem1]
+                    set stat(mem2) [expr $stat(mem2) + $mem2]
+                    set gmem1 [expr $gmem1 + $mem1]
+                    set gmem2 [expr $gmem2 + $mem2]
 
-                # compare memory usage with 10% precision (but not less 16 KiB)
-                if { [expr abs ($mem1 - $mem2) > 16 + 0.05 * abs ($mem1 + $mem2)] } {
-                    _log_and_puts log "MEMORY [split $basename /] $casename: [_diff_show_ratio $mem1 $mem2]"
+                    # compare memory usage with 10% precision (but not less 16 KiB)
+                    if { [expr abs ($mem1 - $mem2) > 16 + 0.05 * abs ($mem1 + $mem2)] } {
+                        if {$memory != false} {
+                            _log_and_puts log_memory "MEMORY [split $basename /] $casename: [_diff_show_ratio $mem1 $mem2]"
+                        } else {
+                            _log_and_puts log "MEMORY [split $basename /] $casename: [_diff_show_ratio $mem1 $mem2]"
+                        }
+                    }
                 }
             }
 
             # check images
-            set imglist1 [glob -directory $path1 -types f -tails -nocomplain ${casename}.{png,gif} ${casename}-*.{png,gif} ${casename}_*.{png,gif}]
-            set imglist2 [glob -directory $path2 -types f -tails -nocomplain ${casename}.{png,gif} ${casename}-*.{png,gif} ${casename}_*.{png,gif}]
-            _list_diff $imglist1 $imglist2 imgin1 imgin2 imgcommon
-            if { "$verbose" > 1 } {
-                if { [llength $imgin1] > 0 } { _log_and_puts log "Only in $path1: $imgin1" }
-                if { [llength $imgin2] > 0 } { _log_and_puts log "Only in $path2: $imgin2" }
-            }
-            foreach imgfile $imgcommon {
-                # if { $verbose > 1 } { _log_and_puts log "Checking [split basename /] $casename: $imgfile" }
-                set diffile [_diff_img_name $dir1 $dir2 $basename $imgfile]
-                if { [catch {diffimage [file join $dir1 $basename $imgfile] \
-                                       [file join $dir2 $basename $imgfile] \
-                                       0 0 0 $diffile} diff] } {
-                    _log_and_puts log "IMAGE [split $basename /] $casename: $imgfile cannot be compared"
-                    file delete -force $diffile ;# clean possible previous result of diffimage
-                } elseif { $diff != 0 } {
-                    _log_and_puts log "IMAGE [split $basename /] $casename: $imgfile differs"
-                } else {
-                    file delete -force $diffile ;# clean useless artifact of diffimage
+            if {$image != false || ($image == false && $cpu == false && $memory == false)} {
+                set imglist1 [glob -directory $path1 -types f -tails -nocomplain ${casename}.{png,gif} ${casename}-*.{png,gif} ${casename}_*.{png,gif}]
+                set imglist2 [glob -directory $path2 -types f -tails -nocomplain ${casename}.{png,gif} ${casename}-*.{png,gif} ${casename}_*.{png,gif}]
+                _list_diff $imglist1 $imglist2 imgin1 imgin2 imgcommon
+                if { "$verbose" > 1 } {
+                    if { [llength $imgin1] > 0 } {
+                        if {$image != false} {
+                            _log_and_puts log_image "Only in $path1: $imgin1"
+                        } else {
+                            _log_and_puts log "Only in $path1: $imgin1"
+                        }
+                    }
+                    if { [llength $imgin2] > 0 } {
+                        if {$image != false} {
+                            _log_and_puts log_image "Only in $path2: $imgin2"
+                        } else {
+                            _log_and_puts log "Only in $path2: $imgin2"
+                        }
+                    }
+                }
+                foreach imgfile $imgcommon {
+                    # if { $verbose > 1 } { _log_and_puts log "Checking [split basename /] $casename: $imgfile" }
+                    set diffile [_diff_img_name $dir1 $dir2 $basename $imgfile]
+                    if { [catch {diffimage [file join $dir1 $basename $imgfile] \
+                                           [file join $dir2 $basename $imgfile] \
+                                           0 0 0 $diffile} diff] } {
+                        if {$image != false} {
+                            _log_and_puts log_image "IMAGE [split $basename /] $casename: $imgfile cannot be compared"
+                        } else {
+                            _log_and_puts log "IMAGE [split $basename /] $casename: $imgfile cannot be compared"
+                        }
+                        file delete -force $diffile ;# clean possible previous result of diffimage
+                    } elseif { $diff != 0 } {
+                        if {$image != false} {
+                            _log_and_puts log_image "IMAGE [split $basename /] $casename: $imgfile differs"
+                        } else {
+                            _log_and_puts log "IMAGE [split $basename /] $casename: $imgfile differs"
+                        }
+                    } else {
+                        file delete -force $diffile ;# clean useless artifact of diffimage
+                    }
                 }
             }
         }
         
         # report CPU and memory difference in group if it is greater than 10%
-        if { [expr abs ($gcpu1 - $gcpu2) > 0.5 + 0.005 * abs ($gcpu1 + $gcpu2)] } {
-            _log_and_puts log "CPU [split $basename /]: [_diff_show_ratio $gcpu1 $gcpu2]"
+        if {$cpu != false || ($image == false && $cpu == false && $memory == false)} {
+            if { [expr abs ($gcpu1 - $gcpu2) > 0.5 + 0.005 * abs ($gcpu1 + $gcpu2)] } {
+                if {$cpu != false} {
+                    _log_and_puts log_cpu "CPU [split $basename /]: [_diff_show_ratio $gcpu1 $gcpu2]"
+                } else {
+                    _log_and_puts log "CPU [split $basename /]: [_diff_show_ratio $gcpu1 $gcpu2]"
+                }
+            }
         }
-        if { [expr abs ($gmem1 - $gmem2) > 16 + 0.005 * abs ($gmem1 + $gmem2)] } {
-            _log_and_puts log "MEMORY [split $basename /]: [_diff_show_ratio $gmem1 $gmem2]"
+        if {$memory != false || ($image == false && $cpu == false && $memory == false)} {
+            if { [expr abs ($gmem1 - $gmem2) > 16 + 0.005 * abs ($gmem1 + $gmem2)] } {
+                if {$memory != false} {
+                    _log_and_puts log_memory "MEMORY [split $basename /]: [_diff_show_ratio $gmem1 $gmem2]"
+                } else {
+                    _log_and_puts log "MEMORY [split $basename /]: [_diff_show_ratio $gmem1 $gmem2]"
+                }
+            }
         }
     }
 
     if { "$_statvar" == "" } {
-        _log_and_puts log "Total MEMORY difference: [_diff_show_ratio $stat(mem1) $stat(mem2)]"
-        _log_and_puts log "Total CPU difference: [_diff_show_ratio $stat(cpu1) $stat(cpu2)]"
+        if {$memory != false || ($image == false && $cpu == false && $memory == false)} {
+            if {$memory != false} {
+                _log_and_puts log_memory "Total MEMORY difference: [_diff_show_ratio $stat(mem1) $stat(mem2)]"
+            } else {
+                _log_and_puts log "Total MEMORY difference: [_diff_show_ratio $stat(mem1) $stat(mem2)]"
+            }
+        }
+        if {$cpu != false || ($image == false && $cpu == false && $memory == false)} {
+            if {$cpu != false} {
+                _log_and_puts log_cpu "Total CPU difference: [_diff_show_ratio $stat(cpu1) $stat(cpu2)]"
+            } else {
+                _log_and_puts log "Total CPU difference: [_diff_show_ratio $stat(cpu1) $stat(cpu2)]"
+            }
+        }
     }
 }
 
@@ -1983,15 +2224,26 @@ proc _log_html_diff {file log dir1 dir2 highlight_percent} {
     puts $fd "<h2>Version A - $dir1</h2>"
     puts $fd "<h2>Version B - $dir2</h2>"
 
-    # print log body, trying to add HTML links to script files on lines like
-    # "Executing <filename>..."
+    # add script for switching between images on click
+    puts $fd ""
+    puts $fd "<script type=\"text/javascript\">"
+    puts $fd "  function diffimage_toggle(img,url1,url2)"
+    puts $fd "  {"
+    puts $fd "    if (img.show2nd) { img.src = url1; img.show2nd = false; }"
+    puts $fd "    else { img.src = url2; img.show2nd = true; }"
+    puts $fd "  }"
+    puts $fd "  function diffimage_reset(img,url) { img.src = url; img.show2nd = true; }"
+    puts $fd "</script>"
+    puts $fd ""
+
+    # print log body
     puts $fd "<pre>"
     set logpath [file split [file normalize $file]]
     foreach line $log {
         # put a line; highlight considerable (> ${highlight_percent}%) deviations of CPU and memory
         if { [regexp "\[\\\[](\[0-9.e+-]+)%\[\]]" $line res value] && 
              [expr abs($value)] > ${highlight_percent} } {
-            puts $fd "<table><tr><td bgcolor=\"[expr $value > 0 ? \"red\" : \"lightgreen\"]\">$line</td></tr></table>"
+            puts $fd "<table><tr><td bgcolor=\"[expr $value > 0 ? \"ff8080\" : \"lightgreen\"]\">$line</td></tr></table>"
         } else {
             puts $fd $line
         }
@@ -2002,17 +2254,21 @@ proc _log_html_diff {file log dir1 dir2 highlight_percent} {
                 # note: special handler for the case if test grid directoried are compared directly
                 set gridpath ""
             }
-            set img1 "<img src=\"[_make_url $file [file join $dir1 $gridpath $img]]\">"
-            set img2 "<img src=\"[_make_url $file [file join $dir2 $gridpath $img]]\">"
+            set aCaseName [lindex $case end]
+            set img1url [_make_url $file [file join $dir1 $gridpath $img]]
+            set img2url [_make_url $file [file join $dir2 $gridpath $img]]
+            set img1 "<a href=\"[_make_url $file [file join $dir1 $gridpath $aCaseName.html]]\"><img src=\"$img1url\"></a>"
+            set img2 "<a href=\"[_make_url $file [file join $dir2 $gridpath $aCaseName.html]]\"><img src=\"$img2url\"></a>"
 
             set difffile [_diff_img_name $dir1 $dir2 $gridpath $img]
+            set imgdurl [_make_url $file $difffile]
             if { [file exists $difffile] } {
-                set imgd "<img src=\"[_make_url $file $difffile]\">"
+                set imgd "<img src=\"$imgdurl\" onmouseout=diffimage_reset(this,\"$imgdurl\") onclick=diffimage_toggle(this,\"$img1url\",\"$img2url\")>"
             } else {
                 set imgd "N/A"
             }
 
-            puts $fd "<table><tr><th><abbr title=\"$dir1\">Version A</abbr></th><th><abbr title=\"$dir2\">Version B</abbr></th><th>Different pixels</th></tr>"
+            puts $fd "<table><tr><th><abbr title=\"$dir1\">Version A</abbr></th><th><abbr title=\"$dir2\">Version B</abbr></th><th>Diff (click to toggle)</th></tr>"
             puts $fd "<tr><td>$img1</td><td>$img2</td><td>$imgd</td></tr></table>"
         }
     }
@@ -2151,7 +2407,7 @@ proc load_data_file {file format shape} {
         DRAW { uplevel restore $file $shape }
         IGES { pload XSDRAW; uplevel igesbrep $file $shape * }
         STEP { pload XSDRAW; uplevel stepread $file __a *; uplevel renamevar __a_1 $shape }
-        STL  { pload XSDRAW; uplevel readstl $shape $file }
+        STL  { pload XSDRAW; uplevel readstl $shape $file triangulation }
         default { error "Cannot read $format file $file" }
     }
 }
@@ -2371,4 +2627,57 @@ proc _checkpoint {coord_x coord_y rd_ch gr_ch bl_ch} {
         incr i
     }
     return $mistake
+}
+
+# Procedure to check if sequence of values in listval follows linear trend
+# adding the same delta on each step.
+#
+# The function does statistical estimation of the mean variation of the
+# values of the sequence, and dispersion, and returns true only if both 
+# dispersion and deviation of the mean from expected delta are within 
+# specified tolerance.
+#
+# If mean variation differs from expected delta on more than two dispersions,
+# the check fails and procedure raises error with specified message.
+#
+# Otherwise the procedure returns false meaning that more iterations are needed.
+# Note that false is returned in any case if length of listval is less than 3.
+#
+# See example of use to check memory leaks in bugs/caf/bug23489
+#
+proc checktrend {listval delta tolerance message} {
+    set nbval [llength $listval]
+    if { $nbval < 3} {
+        return 0
+    }
+
+    # calculate mean value
+    set mean 0.
+    set prev [lindex $listval 0]
+    foreach val [lrange $listval 1 end] {
+        set mean [expr $mean + ($val - $prev)]
+        set prev $val
+    }
+    set mean [expr $mean / ($nbval - 1)]
+
+    # calculate dispersion
+    set sigma 0.
+    set prev [lindex $listval 0]
+    foreach val [lrange $listval 1 end] {
+        set d [expr ($val - $prev) - $mean]
+        set sigma [expr $sigma + $d * $d]
+        set prev $val
+    }
+    set sigma [expr sqrt ($sigma / ($nbval - 2))]
+
+    puts "Checking trend: nb = $nbval, mean delta = $mean, sigma = $sigma"
+
+    # check if deviation is definitely too big
+    if { abs ($mean - $delta) > $tolerance + 2. * $sigma } {
+        puts "Checking trend failed: mean delta per step = $mean, sigma = $sigma, expected delta = $delta"
+        error "$message"
+    }
+
+    # check if deviation is clearly within a range
+    return [expr abs ($mean - $delta) <= $sigma && $sigma <= $tolerance]
 }

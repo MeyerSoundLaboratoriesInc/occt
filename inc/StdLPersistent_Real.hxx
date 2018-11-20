@@ -26,12 +26,22 @@ public:
   //! Read persistent data from a file.
   inline void Read (StdObjMgt_ReadData& theReadData)
     { theReadData >> myValue >> myDimension; }
+  //! Write persistent data from a file.
+  inline void Write (StdObjMgt_WriteData& theWriteData) const
+    { theWriteData << myValue << myDimension; }
+  //! Gets persistent child objects
+  void PChildren(StdObjMgt_Persistent::SequenceOfPersistent&) const {}
+  //! Returns persistent type name
+  Standard_CString PName() const { return "PDataStd_Real"; }
 
   //! Import transient attribuite from the persistent data.
   void Import (const Handle(TDataStd_Real)& theAttribute) const
   {
-    theAttribute->Set          (myValue);
+    theAttribute->Set (myValue);
+    Standard_DISABLE_DEPRECATION_WARNINGS
     theAttribute->SetDimension (static_cast<TDataStd_RealEnum> (myDimension));
+    Standard_ENABLE_DEPRECATION_WARNINGS
+    theAttribute->SetID (TDataStd_Real::GetID());
   }
 
 private:

@@ -12,24 +12,24 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <PrsMgr_Presentation.hxx>
 
 #include <Geom_Transformation.hxx>
 #include <Graphic3d_DataStructureManager.hxx>
 #include <Graphic3d_Structure.hxx>
 #include <Precision.hxx>
+#include <Prs3d_Drawer.hxx>
 #include <Prs3d_Presentation.hxx>
 #include <Prs3d_Projector.hxx>
-#include <Prs3d_ShadingAspect.hxx>
 #include <PrsMgr_ModedPresentation.hxx>
 #include <PrsMgr_PresentableObject.hxx>
-#include <PrsMgr_Presentation.hxx>
 #include <PrsMgr_PresentationManager.hxx>
 #include <PrsMgr_Prs.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_Type.hxx>
 #include <Graphic3d_CView.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_Presentation,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_Presentation, Standard_Transient)
 
 namespace
 {
@@ -126,8 +126,7 @@ void PrsMgr_Presentation::SetVisible (const Standard_Boolean theValue)
 //function : Highlight
 //purpose  :
 //=======================================================================
-void PrsMgr_Presentation::Highlight (const Aspect_TypeOfHighlightMethod theMethod,
-                                     const Quantity_Color&              theColor)
+void PrsMgr_Presentation::Highlight (const Handle(Prs3d_Drawer)& theStyle)
 {
   if (!IsHighlighted())
   {
@@ -135,7 +134,7 @@ void PrsMgr_Presentation::Highlight (const Aspect_TypeOfHighlightMethod theMetho
   }
 
   display (Standard_True);
-  myStructure->Highlight (theMethod, theColor);
+  myStructure->Highlight (theStyle);
 }
 
 //=======================================================================
@@ -227,52 +226,12 @@ void PrsMgr_Presentation::Connect (const Handle(PrsMgr_Presentation)& theOther) 
 }
 
 //=======================================================================
-//function : Transform
+//function : SetTransformation
 //purpose  :
 //=======================================================================
-void PrsMgr_Presentation::Transform (const Handle(Geom_Transformation)& theTrsf) const
+void PrsMgr_Presentation::SetTransformation (const Handle(Geom_Transformation)& theTrsf) const
 {
-  myStructure->Transform (theTrsf);
-}
-
-//=======================================================================
-//function : Place
-//purpose  :
-//=======================================================================
-void PrsMgr_Presentation::Place (const Quantity_Length theX,
-                                 const Quantity_Length theY,
-                                 const Quantity_Length theZ) const
-{
-  myStructure->Place (theX, theY, theZ);
-}
-
-//=======================================================================
-//function : Multiply
-//purpose  :
-//=======================================================================
-void PrsMgr_Presentation::Multiply (const Handle(Geom_Transformation)& theTrsf) const
-{
-  myStructure->Multiply (theTrsf);
-}
-
-//=======================================================================
-//function : Move
-//purpose  :
-//=======================================================================
-void PrsMgr_Presentation::Move (const Quantity_Length theX,
-                                const Quantity_Length theY,
-                                const Quantity_Length theZ) const
-{
-  myStructure->Move (theX, theY, theZ);
-}
-
-//=======================================================================
-//function : SetShadingAspect
-//purpose  :
-//=======================================================================
-void PrsMgr_Presentation::SetShadingAspect (const Handle(Prs3d_ShadingAspect)& theShadingAspect) const
-{
-  myStructure->SetShadingAspect (theShadingAspect);
+  myStructure->SetTransformation (theTrsf);
 }
 
 //=======================================================================
@@ -328,31 +287,7 @@ Handle(Graphic3d_Structure) PrsMgr_Presentation::Compute (const Handle(Graphic3d
                                                           const Handle(Geom_Transformation)&            theTrsf)
 {
   Handle(Prs3d_Presentation) aPrs3d = new Prs3d_Presentation (myPresentationManager->StructureManager());
-  if (theTrsf->Form() == gp_Translation)
-  {
-    myPresentableObject->Compute (Projector (theProjector), aPrs3d);
-    aPrs3d->Transform (theTrsf);
-    return aPrs3d;
-  }
-
-  // waiting that something is done in gp_Trsf...rob
-  for (Standard_Integer i = 1; i <= 3; ++i)
-  {
-    for (Standard_Integer j = 1; j <= 3; ++j)
-    {
-      if (i != j)
-      {
-        if (Abs (theTrsf->Value (i, j)) > Precision::Confusion())
-        {
-          myPresentableObject->Compute (Projector (theProjector), theTrsf, aPrs3d);
-          return aPrs3d;
-        }
-      }
-    }
-  }
-
-  myPresentableObject->Compute (Projector (theProjector), aPrs3d);
-  aPrs3d->Transform (theTrsf);
+  myPresentableObject->Compute (Projector (theProjector), theTrsf, aPrs3d);
   return aPrs3d;
 }
 
@@ -401,7 +336,7 @@ PrsMgr_Presentation::~PrsMgr_Presentation()
 //function : SetZLayer
 //purpose  :
 //=======================================================================
-void PrsMgr_Presentation::SetZLayer (Standard_Integer theLayerId)
+void PrsMgr_Presentation::SetZLayer (Graphic3d_ZLayerId theLayerId)
 {
   myStructure->SetZLayer (theLayerId);
 }
@@ -410,7 +345,7 @@ void PrsMgr_Presentation::SetZLayer (Standard_Integer theLayerId)
 //function : GetZLayer
 //purpose  :
 //=======================================================================
-Standard_Integer PrsMgr_Presentation::GetZLayer() const
+Graphic3d_ZLayerId PrsMgr_Presentation::GetZLayer() const
 {
   return myStructure->GetZLayer();
 }

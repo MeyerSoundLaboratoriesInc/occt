@@ -65,7 +65,7 @@
 #include <XSAlgo_ToolContainer.hxx>
 #include <TopExp_Explorer.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(XSAlgo_AlgoContainer,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(XSAlgo_AlgoContainer,Standard_Transient)
 
 //=======================================================================
 //function : XSAlgo_AlgoContainer
@@ -97,7 +97,8 @@ TopoDS_Shape XSAlgo_AlgoContainer::ProcessShape (const TopoDS_Shape& shape,
                                                  const Standard_CString prscfile,
                                                  const Standard_CString pseq,
                                                  Handle(Standard_Transient)& info,
-                                                 const Handle(Message_ProgressIndicator)& progress) const
+                                                 const Handle(Message_ProgressIndicator)& progress,
+                                                 const Standard_Boolean NonManifold) const
 {
   if ( shape.IsNull() ) return shape;
   
@@ -112,6 +113,7 @@ TopoDS_Shape XSAlgo_AlgoContainer::ProcessShape (const TopoDS_Shape& shape,
     if ( !progress.IsNull() )
       context->SetProgress(progress);
   }
+  context->SetNonManifold(NonManifold);
   info = context;
   
   Standard_CString seq = Interface_Static::CVal ( pseq );
@@ -152,12 +154,13 @@ TopoDS_Shape XSAlgo_AlgoContainer::ProcessShape (const TopoDS_Shape& shape,
 	  context->SetResult ( S );
 	}
       }
-      catch (Standard_Failure) {
+      catch (Standard_Failure const& anException) {
 #ifdef OCCT_DEBUG
 	cout << "Error: XSAlgo_AlgoContainer::ProcessShape(): Exception in ShapeFix::Shape" << endl;
-        Standard_Failure::Caught()->Print(cout); cout << endl;
+        anException.Print(cout); cout << endl;
 #endif
-      }  
+	(void)anException;
+      }
       return context->Result();
     }
     // for writing, define default sequence of DirectFaces

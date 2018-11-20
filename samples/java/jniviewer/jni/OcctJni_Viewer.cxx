@@ -110,9 +110,6 @@ OcctJni_Viewer::OcctJni_Viewer()
   // prepare necessary environment
   TCollection_AsciiString aResRoot = "/data/data/com.opencascade.jnisample/files";
 
-  setResourceEnv ("CSF_TObjMessage",      aResRoot + "/TObj",      "TObj.msg",          Standard_False);
-  setResourceEnv ("CSF_UnitsLexicon",     aResRoot + "/UnitsAPI",  "Lexi_Expr.dat",     Standard_True);
-  setResourceEnv ("CSF_UnitsDefinition",  aResRoot + "/UnitsAPI",  "Units.dat",         Standard_True);
   setResourceEnv ("CSF_ShadersDirectory", aResRoot + "/Shaders",   "Declarations.glsl", Standard_False);
   setResourceEnv ("CSF_XSMessage",        aResRoot + "/XSMessage", "XSTEP.us",          Standard_False);
   setResourceEnv ("CSF_SHMessage",        aResRoot + "/XSMessage", "SHAPE.us",          Standard_False);
@@ -120,9 +117,6 @@ OcctJni_Viewer::OcctJni_Viewer()
 
   // make sure OCCT loads the dictionary
   //UnitsAPI::SetLocalSystem (UnitsAPI_SI);
-
-  // load messages for TObj
-  Message_MsgFile::LoadFromEnv ("CSF_TObjMessage", "TObj", "msg");
 }
 
 // =======================================================================
@@ -194,16 +188,15 @@ bool OcctJni_Viewer::init()
   }
 
   // create viewer
-  myViewer = new V3d_Viewer (aDriver, TCollection_ExtendedString("Viewer").ToExtString(), "", 1000.0,
-                             V3d_XposYnegZpos, Quantity_NOC_BLACK, V3d_ZBUFFER, V3d_GOURAUD, V3d_WAIT,
-                             Standard_True, Standard_False);
+  myViewer = new V3d_Viewer (aDriver);
+  myViewer->SetDefaultBackgroundColor (Quantity_NOC_BLACK);
   myViewer->SetDefaultLights();
   myViewer->SetLightOn();
 
   // create AIS context
   myContext = new AIS_InteractiveContext (myViewer);
-  //myContext->SetDisplayMode (AIS_WireFrame);
-  myContext->SetDisplayMode (AIS_Shaded);
+  //myContext->SetDisplayMode (AIS_WireFrame, false);
+  myContext->SetDisplayMode (AIS_Shaded, false);
 
   Handle(OcctJni_Window) aWindow = new OcctJni_Window (aWidth, aHeight);
   myView = myViewer->CreateView();

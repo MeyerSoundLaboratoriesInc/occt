@@ -69,15 +69,13 @@
 			<Add library="TKG3d" />
 			<Add library="TKXCAF" />
 			<Add library="TKSTEP" />
+			<Add library="TKShHealing" />
 		</Linker>
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_ActorWrite.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Controller.cxx" />
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_DictionaryOfExternFile_0.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_ExternFile.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_GDTProperty.cxx" />
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_IteratorOfDictionaryOfExternFile_0.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Reader.cxx" />
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_StackItemOfDictionaryOfExternFile_0.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Writer.cxx" />
 	</Project>
 </CodeBlocks_project_file>

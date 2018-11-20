@@ -15,8 +15,9 @@
 #ifndef _Graphic3d_CStructure_HeaderFile
 #define _Graphic3d_CStructure_HeaderFile
 
-#include <Graphic3d_BndBox4f.hxx>
+#include <Graphic3d_BndBox3d.hxx>
 #include <Graphic3d_Group.hxx>
+#include <Graphic3d_PresentationAttributes.hxx>
 #include <Graphic3d_SequenceOfGroup.hxx>
 #include <Graphic3d_SequenceOfHClipPlane.hxx>
 #include <Graphic3d_TypeOfComposition.hxx>
@@ -24,7 +25,7 @@
 #include <Graphic3d_TransformPers.hxx>
 #include <Graphic3d_Vec3.hxx>
 #include <Graphic3d_ZLayerId.hxx>
-#include <InterfaceGraphic_Graphic3d.hxx>
+#include <Geom_Transformation.hxx>
 
 class Graphic3d_GraphicDriver;
 class Graphic3d_StructureManager;
@@ -47,24 +48,36 @@ public:
     return myGroups;
   }
 
+  //! Return transformation.
+  const Handle(Geom_Transformation)& Transformation() const { return myTrsf; }
+
+  //! Assign transformation.
+  virtual void SetTransformation (const Handle(Geom_Transformation)& theTrsf) { myTrsf = theTrsf; }
+
+  //! Return transformation persistence.
+  const Handle(Graphic3d_TransformPers)& TransformPersistence() const { return myTrsfPers; }
+
+  //! Set transformation persistence.
+  virtual void SetTransformPersistence (const Handle(Graphic3d_TransformPers)& theTrsfPers) { myTrsfPers = theTrsfPers; }
+
   //! @return associated clip planes
-  const Graphic3d_SequenceOfHClipPlane& ClipPlanes() const
+  const Handle(Graphic3d_SequenceOfHClipPlane)& ClipPlanes() const
   {
     return myClipPlanes;
   }
 
   //! Pass clip planes to the associated graphic driver structure
-  void SetClipPlanes (const Graphic3d_SequenceOfHClipPlane& thePlanes) { myClipPlanes = thePlanes; }
+  void SetClipPlanes (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes) { myClipPlanes = thePlanes; }
 
   //! @return bounding box of this presentation
-  const Graphic3d_BndBox4f& BoundingBox() const
+  const Graphic3d_BndBox3d& BoundingBox() const
   {
     return myBndBox;
   }
 
   //! @return bounding box of this presentation
   //! without transformation matrix applied
-  Graphic3d_BndBox4f& ChangeBoundingBox()
+  Graphic3d_BndBox3d& ChangeBoundingBox()
   {
     return myBndBox;
   }
@@ -72,11 +85,23 @@ public:
   //! Return structure visibility flag
   bool IsVisible() const { return visible != 0; }
 
+  //! Return structure visibility considering both View Affinity and global visibility state.
+  bool IsVisible (const Standard_Integer theViewId) const
+  {
+    return visible != 0
+        && (ViewAffinity.IsNull()
+         || ViewAffinity->IsVisible (theViewId));
+  }
+
   //! Set z layer ID to display the structure in specified layer
-  void SetZLayer (const Graphic3d_ZLayerId theLayerIndex) { myZLayer = theLayerIndex; }
+  virtual void SetZLayer (const Graphic3d_ZLayerId theLayerIndex) { myZLayer = theLayerIndex; }
 
   //! Get z layer ID
   Graphic3d_ZLayerId ZLayer() const { return myZLayer; }
+
+  //! Returns valid handle to highlight style of the structure in case if
+  //! highlight flag is set to true
+  const Handle(Graphic3d_PresentationAttributes)& HighlightStyle() const { return myHighlightStyle; }
 
 public:
 
@@ -92,19 +117,13 @@ public:
   //! Disconnect other structure to this one
   virtual void Disconnect (Graphic3d_CStructure& theStructure) = 0;
 
-  //! Synchronize structure aspects
-  virtual void UpdateAspects() = 0;
+  //! Highlights structure with the given style
+  virtual void GraphicHighlight (const Handle(Graphic3d_PresentationAttributes)& theStyle,
+                                 const Handle(Graphic3d_Structure)& theStruct) = 0;
 
-  //! Synchronize structure transformation
-  virtual void UpdateTransformation() = 0;
-
-  //! Highlight entire structure with color
-  virtual void HighlightWithColor  (const Graphic3d_Vec3&  theColor,
-                                    const Standard_Boolean theToCreate) = 0;
-
-  //! Highlight structure using boundary box
-  virtual void HighlightWithBndBox (const Handle(Graphic3d_Structure)& theStruct,
-                                    const Standard_Boolean             theToCreate) = 0;
+  //! Unhighlights the structure and invalidates pointer to structure's highlight
+  //! style
+  virtual void GraphicUnhighlight() = 0;
 
   //! Create shadow link to this structure
   virtual Handle(Graphic3d_CStructure) ShadowLink (const Handle(Graphic3d_StructureManager)& theManager) const = 0;
@@ -122,15 +141,6 @@ public:
   int                      Priority;
   int                      PreviousPriority;
 
-  CALL_DEF_CONTEXTLINE     ContextLine;
-  CALL_DEF_CONTEXTFILLAREA ContextFillArea;
-  CALL_DEF_CONTEXTMARKER   ContextMarker;
-  CALL_DEF_CONTEXTTEXT     ContextText;
-
-  CALL_DEF_COLOR HighlightColor;
-
-  Graphic3d_Mat4           Transformation;
-
   int   ContainsFacet;
 
   Handle(Graphic3d_ViewAffinity) ViewAffinity; //!< view affinity mask
@@ -144,8 +154,6 @@ public:
   unsigned IsMutable      : 1;
   unsigned Is2dText       : 1;
 
-  Graphic3d_TransformPers TransformPersistence;
-
 protected:
 
   //! Create empty structure.
@@ -155,8 +163,11 @@ protected:
 
   Handle(Graphic3d_GraphicDriver) myGraphicDriver;
   Graphic3d_SequenceOfGroup       myGroups;
-  Graphic3d_BndBox4f              myBndBox;
-  Graphic3d_SequenceOfHClipPlane  myClipPlanes;
+  Graphic3d_BndBox3d              myBndBox;
+  Handle(Geom_Transformation)     myTrsf;
+  Handle(Graphic3d_TransformPers) myTrsfPers;
+  Handle(Graphic3d_SequenceOfHClipPlane) myClipPlanes;
+  Handle(Graphic3d_PresentationAttributes) myHighlightStyle; //! Current highlight style; is set only if highlight flag is true
 
 public:
 

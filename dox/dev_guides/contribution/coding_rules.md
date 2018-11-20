@@ -70,23 +70,34 @@ The following extensions should be used for source files, depending on their typ
 * <i>.hxx</i> -- C++ header files
 * <i>.lxx</i> -- additional headers containing definitions of inline methods and auxiliary code
 
+Note that .lxx files should be avoided in most cases - inline method should be placed in header file instead.
+
 ### Prefix for toolkit names [MANDATORY]
 
 Toolkit names are prefixed by *TK*, followed by a meaningful part of the name explaining the domain of functionality covered by the toolkit (e.g. *TKOpenGl*).
 
-### Names of classes
+### Names of public types
 
-Usually the names of source files located in a unit start from the unit name separated from the other part of the file name by underscore "_".
-
-Thus, the names of files containing sources of C++ classes that belong to a package are constructed according to the following template:
+Names of public classes and other types (structures, enums, typedefs) should match the common pattern: name of the package followed by underscore and suffix (the own name of the type):
 
 ~~~~~
-    <package-name>_<class-name>.cxx (or .hxx)
+    <package-name>_<class-name>
 ~~~~~
 
-For example, file *Adaptor2d_Curve2d.cxx* belongs to the package *Adaptor2d*
+Static methods related to the whole package are defined in the class with the same name as package (without suffix).
 
-Files that contain sources related to the whole unit are called by the unit name with appropriate extension.
+Each type should be defined in its own header file with the name of the type and extension ".hxx".
+Implementation should be placed in the file with the same name and extension ".cxx"; for large classes it is possible to split implementation into multiple source files with additional suffixes in the names (usually numerical, e.g. *BSplCLib_1.cxx*).
+
+For example, class *Adaptor2d_Curve2d* belongs to the package *Adaptor2d*; it is defined in header file *Adaptor2d_Curve2d.hxx* and implemented in source file *Adaptor2d_Curve2d.cxx*.
+
+This rule also applies to complex types constructed by instantiation of templates.
+Such types should be given own names using *typedef* statement, located in same-named header file.
+
+For example, see definition in the file *TColStd_IndexedDataMapOfStringString.hxx*:
+~~~~~
+typedef NCollection_IndexedDataMap<TCollection_AsciiString,TCollection_AsciiString,TCollection_AsciiString> TColStd_IndexedDataMapOfStringString;
+~~~~~
 
 ### Names of functions
 
@@ -248,7 +259,8 @@ Use of tabulation characters for indentation is disallowed.
 Punctuation rules follow the rules of the English language.
 * C/C++ reserved words, commas, colons and semicolons should be followed by a space character if they are not at the end of a line.
 * There should be no space characters after '(' and before ')'. Closing and opening brackets should be separated by a space character.
-* For better readability it is also recommended to surround conventional operators by a space character. See the following examples:
+* For better readability it is also recommended to surround conventional operators by a space character. 
+Examples:
 
 ~~~~~{.cpp}
 while (true)                            // NOT: while( true ) ...
@@ -259,6 +271,30 @@ for (anIter = 0; anIter < 10; ++anIter) // NOT: for (anIter=0;anIter<10;++anIter
 {
   theA = (theB + theC) * theD;          // NOT: theA=(theB+theC)*theD
 }
+~~~~~
+
+### Declaration of pointers and references
+
+In declarations of simple pointers and references put asterisk (*) or ampersand (&) right after the type without extra space.
+
+Since declaration of several variables with mixed pointer types contrudicts this rule, it should be avoided. Instead, declare each variable independently with fully qualified type.
+
+Examples:
+
+~~~~~{.cpp}
+Standard_Integer   *theVariable;      // not recommended
+Standard_Integer *  theVariable;      // not recommended
+Standard_Integer*   theVariable;      // this is OK
+
+Standard_Integer  *&theVariable;      // not recommended
+Standard_Integer *& theVariable;      // not recommended
+Standard_Integer*&  theVariable;      // this is OK
+
+Standard_Integer  **theVariable;      // not recommended
+Standard_Integer ** theVariable;      // not recommended
+Standard_Integer**  theVariable;      // this is OK
+
+Standard_Integer *theA, theB, **theC; // not recommended (declare each variable independently)
 ~~~~~
 
 ### Separate logical blocks
@@ -345,6 +381,25 @@ if (!theAlgo.IsNull())                // preferred
 
 Having all code in the same line is less convenient for debugging.
 
+### Comparison expressions with constants
+
+In comparisons, put the variable (in the current context) on the left side and constant on the right side of expression.
+That is, the so called "Yoda style" is to be avoided.
+
+~~~~~{.cpp}
+if (NULL != thePointer)    // Yoda style, not recommended
+if (thePointer != NULL)    // OK
+
+if (34 < anIter)           // Yoda style, not recommended
+if (anIter > 34)           // OK
+
+if (theNbValues >= anIter) // bad style (constant function argument vs. local variable)
+if (anIter <= theNbValues) // OK
+
+if (THE_LIMIT == theValue) // bad style (global constant vs. variable)
+if (theValue == THE_LIMIT) // OK
+~~~~~
+
 ### Alignment
 
 Use alignment wherever it enhances the readability. See the following example:
@@ -426,22 +481,31 @@ Spaces at the end of a line are useless and do not affect functionality.
 ### Headers order
 
 Split headers into groups: system headers, headers per each framework, project headers; sort the list of includes alphabetically.
+Within the class source file, the class header file should be included first.
 
 This rule improves readability, allows detecting useless multiple header inclusions and makes 3rd-party dependencies clearly visible.
+Inclusion of class header on top verifies consistency of the header (e.g. that header file does not use any undefined declarations due to missing includes of dependencies).
+
+An exception to the rule is ordering system headers generating a macros declaration conflicts (like "windows.h" or "X11/Xlib.h") - these headers should be placed in the way solving the conflict.
+
+The source or header file should include only minimal set of headers necessary for compilation, without duplicates (considering nested includes).
 
 ~~~~~{.cpp}
-// system headers
-#include <iostream>
-#include <windows.h>
-
-// Qt headers
-#include <QDataStream>
-#include <QString>
+// the header file of implemented class
+#include <PackageName_ClassName.hxx>
 
 // OCCT headers
 #include <gp_Pnt.hxx>
 #include <gp_Vec.hxx>
 #include <NCollection_List.hxx>
+
+// Qt headers
+#include <QDataStream>
+#include <QString>
+
+// system headers
+#include <iostream>
+#include <windows.h>
 ~~~~~
 
 @section occt_coding_rules_4 Documentation rules
@@ -569,7 +633,6 @@ public:
 
 };
 
-~~~~~{.cpp}
 class MyPackage_MyClass : public MyPackage_BaseClass
 {
 

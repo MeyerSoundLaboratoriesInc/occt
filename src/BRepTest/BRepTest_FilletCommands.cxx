@@ -15,14 +15,12 @@
 // commercial license or contractual agreement.
 
 #include <BRepTest.hxx>
+#include <BRepTest_Objects.hxx>
 #include <TColgp_Array1OfPnt2d.hxx>
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Draw_Appli.hxx>
 #include <BRepFilletAPI_MakeFillet.hxx>
-#include <BRepAlgo_BooleanOperation.hxx>
-#include <BRepAlgo_Fuse.hxx>
-#include <BRepAlgo_Cut.hxx>
 #include <BiTgte_Blend.hxx>
 #include <TopOpeBRepBuild_HBuilder.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
@@ -35,7 +33,6 @@
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 
-//#include <BOPTools_DSFiller.hxx>
 #include <BOPAlgo_PaveFiller.hxx>
 
 #include <BRepAlgoAPI_BooleanOperation.hxx>
@@ -180,6 +177,12 @@ static Standard_Integer BLEND(Draw_Interpretor& di, Standard_Integer narg, const
   if(!nbedge) return 1;
   Rakk->Build();
   if(!Rakk->IsDone()) return 1;
+
+  // Save history for fillet
+  TopTools_ListOfShape anArg;
+  anArg.Append(V);
+  BRepTest_Objects::SetHistory(anArg, *Rakk);
+
   TopoDS_Shape res = Rakk->Shape();
   DBRep::Set(a[1],res);
   return 0;
@@ -319,62 +322,6 @@ static Standard_Integer BUILDEVOL(Draw_Interpretor& di,
 
 
 //**********************************************
-// command fuse and cut with fillets *
-//**********************************************
-
-Standard_Integer topoblend(Draw_Interpretor& di, Standard_Integer narg, const char** a)
-{
-  printtolblend(di);
-  if(narg != 5) return 1;
-  Standard_Boolean fuse  = !strcmp(a[0],"fubl");
-  TopoDS_Shape S1 = DBRep::Get(a[2]);
-  TopoDS_Shape S2 = DBRep::Get(a[3]);
-  Standard_Real Rad = Draw::Atof(a[4]);
-  BRepAlgo_BooleanOperation* BC;
-  if(fuse){
-    BC = new BRepAlgo_Fuse(S1,S2);
-  }
-  else{
-    BC = new BRepAlgo_Cut(S1,S2);
-  }
-  TopoDS_Shape ShapeCut = BC->Shape();
-  
-  Handle(TopOpeBRepBuild_HBuilder) build = BC->Builder();
-  TopTools_ListIteratorOfListOfShape its;
-  
-  TopoDS_Compound result;
-  BRep_Builder B; 
-  B.MakeCompound(result);
-  
-  TopExp_Explorer ex;
-  for (ex.Init(ShapeCut,TopAbs_SOLID); ex.More(); ex.Next()) {
-    const TopoDS_Shape& cutsol = ex.Current();  
-    
-    BRepFilletAPI_MakeFillet fill(cutsol);
-    fill.SetParams(ta,t3d,t2d,t3d,t2d,fl);
-    fill.SetContinuity(blend_cont, tapp_angle);
-    its = build->Section();
-    while (its.More()) {
-      TopoDS_Edge E = TopoDS::Edge(its.Value());
-      fill.Add(Rad,E);
-      its.Next();
-    }
-    
-    fill.Build();
-    if(fill.IsDone()){
-      B.Add(result,fill.Shape());
-    }
-    else {
-      B.Add(result,cutsol);
-    }
-  }
-  
-  delete BC;
-  DBRep::Set(a[1],result);
-  return 0;
-}
-
-//**********************************************
 // bfuse or bcut and then blend the section
 //**********************************************
 
@@ -406,13 +353,13 @@ Standard_Integer boptopoblend(Draw_Interpretor& di, Standard_Integer narg, const
   }
 
   BOPAlgo_PaveFiller theDSFiller;
-  BOPCol_ListOfShape aLS;
+  TopTools_ListOfShape aLS;
   aLS.Append(S1); 
   aLS.Append(S2); 
   theDSFiller.SetArguments(aLS);
   //
   theDSFiller.Perform();
-  if (theDSFiller.ErrorStatus()) {
+  if (theDSFiller.HasErrors()) {
     printf("Check types of the arguments, please\n");
     return 1;
   }
@@ -427,7 +374,7 @@ Standard_Integer boptopoblend(Draw_Interpretor& di, Standard_Integer narg, const
   Standard_Boolean anIsDone = pBuilder->IsDone();
   if (!anIsDone)
   {
-    printf("boolean operation not done ErrorStatus()=%d\n", pBuilder->ErrorStatus());
+    printf("boolean operation not done HasErrors()=%d\n", pBuilder->HasErrors());
     return 1;
   }
 
@@ -788,14 +735,6 @@ void  BRepTest::FilletCommands(Draw_Interpretor& theCommands)
   theCommands.Add("buildevol",
 		  "buildevol end of the evol fillet computation",__FILE__,
 		  BUILDEVOL,g);
-
-  theCommands.Add("fubl",
-		  "fubl result shape1 shape2 radius",__FILE__,
-		  topoblend,g);
-  
-  theCommands.Add("cubl",
-		  "cubl result shape tool radius",__FILE__,
-		  topoblend,g);
 
   theCommands.Add("bfuseblend",
 		  "bfuseblend result shape1 shape2 radius [-d]",__FILE__,

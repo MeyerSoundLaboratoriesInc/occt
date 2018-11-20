@@ -30,8 +30,6 @@
 
 #include <gp_Ax2.hxx>
 
-class OpenGl_PrinterContext;
-
 //! Text rendering
 class OpenGl_Text : public OpenGl_Element
 {
@@ -46,7 +44,8 @@ public:
   //! Creates new text in 3D space.
   Standard_EXPORT OpenGl_Text (const Standard_Utf8Char* theText,
                                const gp_Ax2&            theOrientation,
-                               const OpenGl_TextParam&  theParams);
+                               const OpenGl_TextParam&  theParams,
+                               const bool               theHasOwnAnchor = true);
 
   //! Setup new string and position
   Standard_EXPORT void Init (const Handle(OpenGl_Context)& theCtx,
@@ -103,10 +102,9 @@ public: //! @name methods for compatibility with layers
                              const OpenGl_TextParam&           theParams);
 
   //! Perform rendering
-  Standard_EXPORT void Render (const Handle(OpenGl_PrinterContext)& thePrintCtx,
-                               const Handle(OpenGl_Context)&        theCtx,
-                               const OpenGl_AspectText&             theTextAspect,
-                               const unsigned int                   theResolution = Graphic3d_RenderingParams::THE_DEFAULT_RESOLUTION) const;
+  Standard_EXPORT void Render (const Handle(OpenGl_Context)& theCtx,
+                               const OpenGl_AspectText&      theTextAspect,
+                               const unsigned int            theResolution = Graphic3d_RenderingParams::THE_DEFAULT_RESOLUTION) const;
 
 protected:
 
@@ -116,29 +114,31 @@ protected:
   friend class OpenGl_Trihedron;
   friend class OpenGl_GraduatedTrihedron;
 
+  //! Release cached VBO resources
+  Standard_EXPORT void releaseVbos (OpenGl_Context* theCtx);
+
 private:
 
-  //! Release cached VBO resources
-  void releaseVbos (OpenGl_Context* theCtx);
-
   //! Setup matrix.
-  void setupMatrix (const Handle(OpenGl_PrinterContext)& thePrintCtx,
-                    const Handle(OpenGl_Context)&        theCtx,
-                    const OpenGl_AspectText&             theTextAspect,
-                    const OpenGl_Vec3                    theDVec) const;
+  void setupMatrix (const Handle(OpenGl_Context)& theCtx,
+                    const OpenGl_AspectText&      theTextAspect,
+                    const OpenGl_Vec3             theDVec) const;
 
   //! Draw arrays of vertices.
-  void drawText (const Handle(OpenGl_PrinterContext)& thePrintCtx,
-                 const Handle(OpenGl_Context)&        theCtx,
-                 const OpenGl_AspectText&             theTextAspect) const;
+  void drawText (const Handle(OpenGl_Context)& theCtx,
+                 const OpenGl_AspectText&      theTextAspect) const;
+
+  //! Draw rectangle from bounding text box.
+  void drawRect (const Handle(OpenGl_Context)& theCtx,
+                 const OpenGl_AspectText&      theTextAspect,
+                 const OpenGl_Vec4&            theColorSubs) const;
 
   //! Main rendering code
-  void render (const Handle(OpenGl_PrinterContext)& thePrintCtx,
-               const Handle(OpenGl_Context)&        theCtx,
-               const OpenGl_AspectText&             theTextAspect,
-               const TEL_COLOUR&                    theColorText,
-               const TEL_COLOUR&                    theColorSubs,
-               const unsigned int                   theResolution) const;
+  void render (const Handle(OpenGl_Context)& theCtx,
+               const OpenGl_AspectText&      theTextAspect,
+               const OpenGl_Vec4&            theColorText,
+               const OpenGl_Vec4&            theColorSubs,
+               const unsigned int            theResolution) const;
 
 protected:
 
@@ -146,6 +146,7 @@ protected:
   mutable NCollection_Vector<GLuint>                      myTextures;   //!< textures' IDs
   mutable NCollection_Vector<Handle(OpenGl_VertexBuffer)> myVertsVbo;   //!< VBOs of vertices
   mutable NCollection_Vector<Handle(OpenGl_VertexBuffer)> myTCrdsVbo;   //!< VBOs of texture coordinates
+  mutable Handle(OpenGl_VertexBuffer)                     myBndVertsVbo;//!< VBOs of vertices for bounding box
   mutable Font_Rect                                       myBndBox;
 
 protected:
@@ -153,7 +154,6 @@ protected:
   mutable OpenGl_Mat4d myProjMatrix;
   mutable OpenGl_Mat4d myModelMatrix;
   mutable OpenGl_Mat4d myOrientationMatrix;
-  mutable GLint    myViewport[4];
   mutable GLdouble myWinX;
   mutable GLdouble myWinY;
   mutable GLdouble myWinZ;
@@ -168,6 +168,7 @@ protected:
   bool               myIs2d;
   gp_Ax2             myOrientation; //!< Text orientation in 3D space.
   bool               myHasPlane;    //!< Check if text have orientation in 3D space.
+  bool               myHasAnchorPoint; //!< Shows if it has own attach point
 
 public:
 

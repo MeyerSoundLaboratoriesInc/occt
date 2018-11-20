@@ -5,7 +5,6 @@ n Bnd
 n BVH
 n CSLib
 n Convert
-n Dico
 n ElCLib
 n ElSLib
 n Expr
@@ -241,7 +240,6 @@ n BinObjMgt
 n BinTools
 n CDF
 n CDM
-n FWOSDriver
 n PCDM
 n StdLDrivers
 n StdLPersistent
@@ -249,6 +247,7 @@ n StdObjMgt
 n StdDrivers
 n StdObject
 n StdPersistent
+n StdStorage
 n ShapePersistent
 n TDF
 n TDataStd
@@ -269,7 +268,6 @@ n XmlMNaming
 n XmlObjMgt
 r StdResource
 r XmlOcafResource
-t FWOSPlugin
 
 t TKBin
 t TKBinL
@@ -349,8 +347,6 @@ n StepToGeom
 n StepToTopoDS
 n StepVisual
 n StlAPI
-n StlMesh
-n StlTransfer
 n TopoDSToStep
 n Transfer
 n TransferBRep
@@ -401,9 +397,6 @@ n HLRTest
 n MeshTest
 n SWDRAW
 n TObjDRAW
-n TestTopOpe
-n TestTopOpeDraw
-n TestTopOpeTools
 n ViewerTest
 n XDEDRAW
 n XSDRAW
@@ -440,3 +433,5 @@ n IVtkDraw
 t TKIVtkDraw
 n Geom2dEvaluator
 t TKVCAF
+n XCAFView
+n XCAFNoteObjects

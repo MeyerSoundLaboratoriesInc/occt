@@ -24,7 +24,7 @@
 #include <Standard_Boolean.hxx>
 #include <TColStd_ListOfInteger.hxx>
 #include <TDF_HAllocator.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <TDF_Label.hxx>
 #include <Standard_OStream.hxx>
 class Standard_NoMoreObject;
@@ -35,7 +35,7 @@ class TDF_Label;
 
 
 class TDF_Data;
-DEFINE_STANDARD_HANDLE(TDF_Data, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(TDF_Data, Standard_Transient)
 
 //! This class is used to manipulate a complete
 //! independant, self sufficient data structure and
@@ -50,7 +50,7 @@ DEFINE_STANDARD_HANDLE(TDF_Data, MMgt_TShared)
 //! (see LabelNodeAllocator() method)
 //! for more efficient allocation of
 //! objects in memory.
-class TDF_Data : public MMgt_TShared
+class TDF_Data : public Standard_Transient
 {
 
 public:
@@ -63,7 +63,7 @@ public:
     const TDF_Label Root() const;
   
   //! Returns the current transaction number.
-  Standard_EXPORT Standard_Integer Transaction() const;
+  Standard_Integer Transaction() const;
   
   //! Returns the current tick. It is incremented each Commit.
     Standard_Integer Time() const;
@@ -88,7 +88,7 @@ public:
     Standard_Boolean NotUndoMode() const;
   
   //! Dumps the Data on <aStream>.
-  Standard_EXPORT Standard_OStream& Dump (Standard_OStream& anOS) const;
+    Standard_EXPORT Standard_OStream& Dump (Standard_OStream& anOS) const;
 Standard_OStream& operator<< (Standard_OStream& anOS) const
 {
   return Dump(anOS);
@@ -138,7 +138,7 @@ friend class TDF_Transaction;
 friend class TDF_LabelNode;
 
 
-  DEFINE_STANDARD_RTTIEXT(TDF_Data,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(TDF_Data,Standard_Transient)
 
 protected:
 
@@ -147,6 +147,9 @@ protected:
 
 private:
 
+  //! Fixes order of Attributes' Deltas to perform undo/redo without exceptions:
+  //! puts OnRemoval deltas to the end of the list.
+  void FixOrder(const Handle(TDF_Delta)& theDelta);
   
   //! Increments the transaction number and returns it.
   Standard_EXPORT Standard_Integer OpenTransaction();

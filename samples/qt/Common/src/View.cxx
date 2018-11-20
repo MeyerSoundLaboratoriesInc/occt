@@ -5,6 +5,7 @@
 #include "View.h"
 #include "ApplicationCommon.h"
 
+#include <Standard_WarningsDisable.hxx>
 #include <QApplication>
 #include <QPainter>
 #include <QMenu>
@@ -19,6 +20,7 @@
 #if !defined(_WIN32) && (!defined(__APPLE__) || defined(MACOSX_USE_GLX)) && QT_VERSION < 0x050000
   #include <QX11Info>
 #endif
+#include <Standard_WarningsRestore.hxx>
 
 
 #include <Graphic3d_ExportFormat.hxx>
@@ -204,6 +206,7 @@ void View::hlrOff()
   QApplication::setOverrideCursor( Qt::WaitCursor );
   myHlrModeIsOn = Standard_False;
   myView->SetComputedMode (myHlrModeIsOn);
+  myView->Redraw();
   QApplication::restoreOverrideCursor();
 }
 
@@ -212,6 +215,7 @@ void View::hlrOn()
   QApplication::setOverrideCursor( Qt::WaitCursor );
   myHlrModeIsOn = Standard_True;
   myView->SetComputedMode (myHlrModeIsOn);
+  myView->Redraw();
   QApplication::restoreOverrideCursor();
 }
 
@@ -517,7 +521,7 @@ void View::initRaytraceActions()
   a->setStatusTip( QObject::tr("TBR_TOOL_RAYTRACING") );
   a->setCheckable( true );
   a->setChecked( false );
-  connect( a, SIGNAL( activated() ) , this, SLOT( onRaytraceAction() ) );
+  connect( a, SIGNAL( triggered() ) , this, SLOT( onRaytraceAction() ) );
   myRaytraceActions->insert( ToolRaytracingId, a );
 
   a = new QAction( QPixmap( dir+QObject::tr("ICON_TOOL_SHADOWS") ), QObject::tr("MNU_TOOL_SHADOWS"), this );
@@ -525,7 +529,7 @@ void View::initRaytraceActions()
   a->setStatusTip( QObject::tr("TBR_TOOL_SHADOWS") );
   a->setCheckable( true );
   a->setChecked( true );
-  connect( a, SIGNAL( activated() ) , this, SLOT( onRaytraceAction() ) );
+  connect( a, SIGNAL( triggered() ) , this, SLOT( onRaytraceAction() ) );
   myRaytraceActions->insert( ToolShadowsId, a );
 
   a = new QAction( QPixmap( dir+QObject::tr("ICON_TOOL_REFLECTIONS") ), QObject::tr("MNU_TOOL_REFLECTIONS"), this );
@@ -533,7 +537,7 @@ void View::initRaytraceActions()
   a->setStatusTip( QObject::tr("TBR_TOOL_REFLECTIONS") );
   a->setCheckable( true );
   a->setChecked( false );
-  connect( a, SIGNAL( activated() ) , this, SLOT( onRaytraceAction() ) );
+  connect( a, SIGNAL( triggered() ) , this, SLOT( onRaytraceAction() ) );
   myRaytraceActions->insert( ToolReflectionsId, a );
 
   a = new QAction( QPixmap( dir+QObject::tr("ICON_TOOL_ANTIALIASING") ), QObject::tr("MNU_TOOL_ANTIALIASING"), this );
@@ -541,7 +545,7 @@ void View::initRaytraceActions()
   a->setStatusTip( QObject::tr("TBR_TOOL_ANTIALIASING") );
   a->setCheckable( true );
   a->setChecked( false );
-  connect( a, SIGNAL( activated() ) , this, SLOT( onRaytraceAction() ) );
+  connect( a, SIGNAL( triggered() ) , this, SLOT( onRaytraceAction() ) );
   myRaytraceActions->insert( ToolAntialiasingId, a );
 }
 
@@ -634,7 +638,7 @@ void View::onLButtonDown( const int/*Qt::MouseButtons*/ nFlags, const QPoint poi
            myView->StartRotation( point.x(), point.y() );
            break;
       default:
-           Standard_Failure::Raise( "incompatible Current Mode" );
+           throw Standard_Failure( "incompatible Current Mode" );
            break;
     }
   }
@@ -720,7 +724,7 @@ void View::onLButtonUp( Qt::MouseButtons nFlags, const QPoint point )
             noActiveActions();
             break;
         default:
-          Standard_Failure::Raise(" incompatible Current Mode ");
+            throw Standard_Failure(" incompatible Current Mode ");
             break;
     }
     activateCursor( myCurrentMode );
@@ -742,7 +746,11 @@ void View::onRButtonUp( Qt::MouseButtons /*nFlags*/, const QPoint point )
         QApplication::setOverrideCursor( Qt::WaitCursor );
         // reset tyhe good Degenerated mode according to the strored one
         //   --> dynamic rotation may have change it
-        myView->SetComputedMode (myHlrModeIsOn);
+        if (myHlrModeIsOn)
+        {
+          myView->SetComputedMode (myHlrModeIsOn);
+          myView->Redraw();
+        }
         QApplication::restoreOverrideCursor();
         myCurrentMode = CurAction3d_Nothing;
     }
@@ -788,7 +796,7 @@ void View::onMouseMove( Qt::MouseButtons nFlags, const QPoint point )
           myView->Redraw();
           break;
         default:
-          Standard_Failure::Raise( "incompatible Current Mode" );
+          throw Standard_Failure( "incompatible Current Mode" );
           break;
     }
     }
@@ -820,25 +828,25 @@ void View::DragEvent( const int x, const int y, const int TheState )
 
     if ( TheState == 1 )
     {
-        myContext->Select( theButtonDownX, theButtonDownY, x, y, myView );
+        myContext->Select( theButtonDownX, theButtonDownY, x, y, myView, Standard_True );
         emit selectionChanged();
     }
 }
 
 void View::InputEvent( const int /*x*/, const int /*y*/ )
 {
-  myContext->Select();
+  myContext->Select (Standard_True);
   emit selectionChanged();
 }
 
 void View::MoveEvent( const int x, const int y )
 {
-  myContext->MoveTo( x, y, myView );
+  myContext->MoveTo( x, y, myView, Standard_True );
 }
 
 void View::MultiMoveEvent( const int x, const int y )
 {
-  myContext->MoveTo( x, y, myView );
+  myContext->MoveTo( x, y, myView, Standard_True );
 }
 
 void View::MultiDragEvent( const int x, const int y, const int TheState )
@@ -853,14 +861,14 @@ void View::MultiDragEvent( const int x, const int y, const int TheState )
     }
     if ( TheState == 0 )
     {
-        myContext->ShiftSelect( theButtonDownX, theButtonDownY, x, y, myView );
+        myContext->ShiftSelect( theButtonDownX, theButtonDownY, x, y, myView, Standard_True );
         emit selectionChanged();
     }
 }
 
 void View::MultiInputEvent( const int /*x*/, const int /*y*/ )
 {
-  myContext->ShiftSelect();
+  myContext->ShiftSelect (Standard_True);
   emit selectionChanged();
 }
 
@@ -900,13 +908,13 @@ void View::Popup( const int /*x*/, const int /*y*/ )
 
       QAction* a = new QAction( QObject::tr("MNU_CH_BACK"), this );
       a->setToolTip( QObject::tr("TBR_CH_BACK") );
-      connect( a, SIGNAL( activated() ), this, SLOT( onBackground() ) );
+      connect( a, SIGNAL( triggered() ), this, SLOT( onBackground() ) );
       myBackMenu->addAction( a );  
       addItemInPopup(myBackMenu);
 
       a = new QAction( QObject::tr("MNU_CH_ENV_MAP"), this );
       a->setToolTip( QObject::tr("TBR_CH_ENV_MAP") );
-      connect( a, SIGNAL( activated() ), this, SLOT( onEnvironmentMap() ) );
+      connect( a, SIGNAL( triggered() ), this, SLOT( onEnvironmentMap() ) );
       a->setCheckable( true );
       a->setChecked( false );
       myBackMenu->addAction( a );  
@@ -991,7 +999,7 @@ void View::onBackground()
     Standard_Real G1;
     Standard_Real B1;
     myView->BackgroundColor(Quantity_TOC_RGB,R1,G1,B1);
-    aColor.setRgb(R1*255,G1*255,B1*255);
+    aColor.setRgb((Standard_Integer)(R1 * 255), (Standard_Integer)(G1 * 255), (Standard_Integer)(B1 * 255));
 
     QColor aRetColor = QColorDialog::getColor(aColor);
 
@@ -1011,15 +1019,16 @@ void View::onEnvironmentMap()
   {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), "",
                            tr("All Image Files (*.bmp *.gif *.jpg *.jpeg *.png *.tga)"));
-
-    Handle(Graphic3d_TextureEnv) aTexture = new Graphic3d_TextureEnv( fileName.toLatin1().data() );
+    
+    const TCollection_AsciiString anUtf8Path (fileName.toUtf8().data());
+    
+    Handle(Graphic3d_TextureEnv) aTexture = new Graphic3d_TextureEnv( anUtf8Path );
 
     myView->SetTextureEnv (aTexture);
-    myView->SetSurfaceDetail (V3d_TEX_ENVIRONMENT);
   }
   else
   {
-    myView->SetSurfaceDetail (V3d_TEX_NONE);
+    myView->SetTextureEnv (Handle(Graphic3d_TextureEnv)());
   }
   
   myView->Redraw();
@@ -1027,33 +1036,6 @@ void View::onEnvironmentMap()
 
 bool View::dump(Standard_CString theFile)
 {
-  myView->Redraw();
-  QString ext = QFileInfo( QString( theFile ) ).completeSuffix();
-  if ( !ext.compare("ps") || !ext.compare("eps") || !ext.compare("tex") || !ext.compare("pdf") || !ext.compare("svg") || !ext.compare("pgf") )
-  {
-    Graphic3d_ExportFormat exFormat;
-    if ( !ext.compare("ps") )
-      exFormat = Graphic3d_EF_PostScript;
-    if ( !ext.compare("eps") )
-      exFormat = Graphic3d_EF_EnhPostScript;
-    if ( !ext.compare("tex") )
-      exFormat = Graphic3d_EF_TEX;
-    if ( !ext.compare("pdf") )
-      exFormat = Graphic3d_EF_PDF;
-    if ( !ext.compare("svg") )
-      exFormat = Graphic3d_EF_SVG;
-    if ( !ext.compare("pgf") )
-      exFormat = Graphic3d_EF_PGF;
-    try
-    {
-      myView->Export( theFile, exFormat );
-    }
-    catch(...)
-    {
-      return false;
-    }
-    return true;
-  }
   return myView->Dump(theFile);
 }
 

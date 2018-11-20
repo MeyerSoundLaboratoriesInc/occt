@@ -114,6 +114,7 @@
 			<Depends filename="TKBO.cbp" />
 			<Depends filename="TKG3d.cbp" />
 			<Depends filename="TKBool.cbp" />
+			<Depends filename="TKShHealing.cbp" />
 		</Project>
 		<Project filename="TKOffset.cbp" >
 			<Depends filename="TKFillet.cbp" />

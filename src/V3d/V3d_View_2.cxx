@@ -35,7 +35,6 @@
 #include <Graphic3d_GraphicDriver.hxx>
 #include <Graphic3d_Structure.hxx>
 #include <Graphic3d_TextureEnv.hxx>
-#include <Graphic3d_Vector.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_MultiplyDefined.hxx>
 #include <Standard_TypeMismatch.hxx>
@@ -52,12 +51,9 @@
 //=============================================================================
 void V3d_View::SetLightOn (const Handle(V3d_Light)& theLight)
 {
-  if (!MyActiveLights.Contains (theLight))
+  if (!myActiveLights.Contains (theLight))
   {
-    V3d_BadValue_Raise_if (MyActiveLights.Extent() >= LightLimit(),
-                           "V3d_View::SetLightOn, "
-                           "too many lights");
-    MyActiveLights.Append (theLight);
+    myActiveLights.Append (theLight);
     UpdateLights();
   }
 }
@@ -68,10 +64,9 @@ void V3d_View::SetLightOn (const Handle(V3d_Light)& theLight)
 //=============================================================================
 void V3d_View::SetLightOff (const Handle(V3d_Light)& theLight)
 {
-  Standard_TypeMismatch_Raise_if (MyViewer->IsGlobalLight (theLight),
-                                  "V3d_View::SetLightOff, "
-                                  "the light is global");
-  MyActiveLights.Remove (theLight);
+  if (MyViewer->IsGlobalLight (theLight))
+    throw Standard_TypeMismatch("V3d_View::SetLightOff, the light is global");
+  myActiveLights.Remove (theLight);
   UpdateLights();
 }
 
@@ -81,11 +76,8 @@ void V3d_View::SetLightOff (const Handle(V3d_Light)& theLight)
 //=============================================================================
 Standard_Boolean V3d_View::IsActiveLight (const Handle(V3d_Light)& theLight) const
 {
-  if (theLight.IsNull())
-  {
-    return Standard_False;
-  }
-  return MyActiveLights.Contains(theLight);
+  return !theLight.IsNull()
+       && myActiveLights.Contains (theLight);
 }
 
 //=============================================================================
@@ -94,11 +86,11 @@ Standard_Boolean V3d_View::IsActiveLight (const Handle(V3d_Light)& theLight) con
 //=============================================================================
 void V3d_View::SetLightOn()
 {
-  for (MyViewer->InitDefinedLights(); MyViewer->MoreDefinedLights(); MyViewer->NextDefinedLights())
+  for (V3d_ListOfLightIterator aDefLightIter (MyViewer->DefinedLightIterator()); aDefLightIter.More(); aDefLightIter.Next())
   {
-    if (!MyActiveLights.Contains (MyViewer->DefinedLight()))
+    if (!myActiveLights.Contains (aDefLightIter.Value()))
     {
-      MyActiveLights.Append (MyViewer->DefinedLight());
+      myActiveLights.Append (aDefLightIter.Value());
     }
   }
   UpdateLights();
@@ -110,55 +102,18 @@ void V3d_View::SetLightOn()
 //=============================================================================
 void V3d_View::SetLightOff()
 {
-  InitActiveLights();
-  while(MoreActiveLights())
+  for (V3d_ListOfLight::Iterator anActiveLightIter (myActiveLights); anActiveLightIter.More();)
   {
-    if (!MyViewer->IsGlobalLight (ActiveLight()))
+    if (!MyViewer->IsGlobalLight (anActiveLightIter.Value()))
     {
-      MyActiveLights.Remove (ActiveLight());
+      myActiveLights.Remove (anActiveLightIter);
     }
     else
     {
-      NextActiveLights();
+      anActiveLightIter.Next();
     }
   }
   UpdateLights();
-}
-
-//=============================================================================
-//function : InitActiveLights
-//purpose  :
-//=============================================================================
-void V3d_View::InitActiveLights()
-{
-  myActiveLightsIterator.Initialize(MyActiveLights);
-}
-
-//=============================================================================
-//function : MoreActiveLights
-//purpose  :
-//=============================================================================
-Standard_Boolean V3d_View::MoreActiveLights() const
-{
-  return myActiveLightsIterator.More();
-}
-
-//=============================================================================
-//function : NextActiveLights
-//purpose  :
-//=============================================================================
-void V3d_View::NextActiveLights()
-{
-  myActiveLightsIterator.Next();
-}
-
-//=============================================================================
-//function : ActiveLight
-//purpose  :
-//=============================================================================
-Handle(V3d_Light) V3d_View::ActiveLight() const
-{
-  return (Handle(V3d_Light)&)(myActiveLightsIterator.Value());
 }
 
 //=============================================================================
@@ -167,7 +122,7 @@ Handle(V3d_Light) V3d_View::ActiveLight() const
 //=============================================================================
 Standard_Boolean V3d_View::IfMoreLights() const
 {
-  return MyActiveLights.Extent() < LightLimit();
+  return myActiveLights.Extent() < LightLimit();
 }
 
 //=======================================================================
@@ -185,8 +140,25 @@ Standard_Integer V3d_View::LightLimit() const
 //=======================================================================
 void V3d_View::AddClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 {
-  Graphic3d_SequenceOfHClipPlane aSeqOfPlanes = GetClipPlanes();
-  aSeqOfPlanes.Append (thePlane);
+  Handle(Graphic3d_SequenceOfHClipPlane) aSeqOfPlanes = ClipPlanes();
+  if (aSeqOfPlanes.IsNull())
+  {
+    aSeqOfPlanes = new Graphic3d_SequenceOfHClipPlane();
+  }
+  else
+  {
+    for (Graphic3d_SequenceOfHClipPlane::Iterator aPlaneIt (*aSeqOfPlanes); aPlaneIt.More(); aPlaneIt.Next())
+    {
+      const Handle(Graphic3d_ClipPlane)& aPlane = aPlaneIt.Value();
+      if (aPlane == thePlane)
+      {
+        // plane is already defined in view
+        return;
+      }
+    }
+  }
+
+  aSeqOfPlanes->Append (thePlane);
   SetClipPlanes (aSeqOfPlanes);
 }
 
@@ -196,15 +168,19 @@ void V3d_View::AddClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 //=======================================================================
 void V3d_View::RemoveClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 {
-  Graphic3d_SequenceOfHClipPlane aSeqOfPlanes = GetClipPlanes();
-  Graphic3d_SequenceOfHClipPlane::Iterator aPlaneIt (aSeqOfPlanes);
-  for (; aPlaneIt.More(); aPlaneIt.Next())
+  Handle(Graphic3d_SequenceOfHClipPlane) aSeqOfPlanes = ClipPlanes();
+  if (aSeqOfPlanes.IsNull())
+  {
+    return;
+  }
+
+  for (Graphic3d_SequenceOfHClipPlane::Iterator aPlaneIt(*aSeqOfPlanes); aPlaneIt.More(); aPlaneIt.Next())
   {
     const Handle(Graphic3d_ClipPlane)& aPlane = aPlaneIt.Value();
     if (aPlane != thePlane)
       continue;
 
-    aSeqOfPlanes.Remove (aPlaneIt);
+    aSeqOfPlanes->Remove (aPlaneIt);
     SetClipPlanes (aSeqOfPlanes);
     return;
   }
@@ -214,16 +190,16 @@ void V3d_View::RemoveClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 //function : SetClipPlanes
 //purpose  :
 //=======================================================================
-void V3d_View::SetClipPlanes (const Graphic3d_SequenceOfHClipPlane& thePlanes)
+void V3d_View::SetClipPlanes (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes)
 {
   myView->SetClipPlanes (thePlanes);
 }
 
 //=======================================================================
-//function : GetClipPlanes
+//function : ClipPlanes
 //purpose  :
 //=======================================================================
-const Graphic3d_SequenceOfHClipPlane& V3d_View::GetClipPlanes() const
+const Handle(Graphic3d_SequenceOfHClipPlane)& V3d_View::ClipPlanes() const
 {
   return myView->ClipPlanes();
 }

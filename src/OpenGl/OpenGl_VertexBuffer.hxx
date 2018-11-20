@@ -225,6 +225,14 @@ public:
 
 public: //! @name advanced methods
 
+  //! Returns estimated GPU memory usage for holding data without considering overheads and allocation alignment rules.
+  virtual Standard_Size EstimatedDataSize() const Standard_OVERRIDE
+  {
+    return IsValid()
+         ? sizeOfGlType (myDataType) * myComponentsNb * myElemsNb
+         : 0;
+  }
+
   //! @return size of specified GL type
   static size_t sizeOfGlType (const GLenum theType)
   {
@@ -298,6 +306,10 @@ private:
   //! Disable FFP array pointer.
   static void unbindFixed (const Handle(OpenGl_Context)&   theGlCtx,
                            const Graphic3d_TypeOfAttribute theMode);
+
+  //! Disable FFP color array pointer.
+  Standard_EXPORT static void unbindFixedColor (const Handle(OpenGl_Context)& theCtx);
+
 #endif
 public: //! @name methods for interleaved attributes array
 

@@ -16,202 +16,54 @@
 #ifndef _OpenGl_AspectFace_Header
 #define _OpenGl_AspectFace_Header
 
-#include <InterfaceGraphic_telem.hxx>
-#include <Aspect_InteriorStyle.hxx>
-#include <Aspect_PolygonOffsetMode.hxx>
-#include <TCollection_AsciiString.hxx>
-
 #include <OpenGl_AspectLine.hxx>
-#include <OpenGl_Element.hxx>
-
+#include <OpenGl_TextureSet.hxx>
 #include <Graphic3d_AspectFillArea3d.hxx>
-#include <Graphic3d_CAspectFillArea.hxx>
 #include <Graphic3d_ShaderProgram.hxx>
 #include <Graphic3d_TextureMap.hxx>
 #include <Graphic3d_BSDF.hxx>
 
 class OpenGl_Texture;
 
-#define OPENGL_AMBIENT_MASK  (1<<0)
-#define OPENGL_DIFFUSE_MASK  (1<<1)
-#define OPENGL_SPECULAR_MASK (1<<2)
-#define OPENGL_EMISSIVE_MASK (1<<3)
-
-static const TEL_POFFSET_PARAM THE_DEFAULT_POFFSET = { Aspect_POM_Fill, 1.0F, 0.0F };
-
-struct OPENGL_SURF_PROP
-{
-  Standard_ShortReal amb;
-  Standard_ShortReal diff;
-  Standard_ShortReal spec;
-  Standard_ShortReal emsv;
-
-  Standard_ShortReal trans;
-  Standard_ShortReal shine;
-  Standard_ShortReal index;
-
-  Standard_ShortReal env_reflexion;
-  Standard_Integer   isphysic;
-
-  unsigned int color_mask;
-
-  TEL_COLOUR speccol;
-  TEL_COLOUR difcol;
-  TEL_COLOUR ambcol;
-  TEL_COLOUR emscol;
-  TEL_COLOUR matcol;
-
-  Graphic3d_BSDF BSDF;
-
-  DEFINE_STANDARD_ALLOC
-};
-
+//! The element holding Graphic3d_AspectFillArea3d.
 class OpenGl_AspectFace : public OpenGl_Element
 {
 
 public:
 
+  //! Empty constructor.
   Standard_EXPORT OpenGl_AspectFace();
 
-  //! Copy parameters
-  Standard_EXPORT void SetAspect (const CALL_DEF_CONTEXTFILLAREA& theAspect);
+  //! Create and assign parameters.
+  Standard_EXPORT OpenGl_AspectFace (const Handle(Graphic3d_AspectFillArea3d)& theAspect);
+
+  //! Return aspect.
+  const Handle(Graphic3d_AspectFillArea3d)& Aspect() const { return myAspect; }
+
+  //! Assign parameters.
   Standard_EXPORT void SetAspect (const Handle(Graphic3d_AspectFillArea3d)& theAspect);
 
   //! Set edge aspect.
-  void SetAspectEdge (const OpenGl_AspectLine* theAspectEdge)
-  {
-    myAspectEdge = *theAspectEdge;
-  }
+  void SetAspectEdge (const OpenGl_AspectLine* theAspectEdge) { myAspectEdge = *theAspectEdge; }
 
   //! @return edge aspect.
-  const OpenGl_AspectLine* AspectEdge() const 
-  {
-    return &myAspectEdge;
-  }
+  const OpenGl_AspectLine* AspectEdge() const  { return &myAspectEdge; }
 
-  //! @return interior style
-  Aspect_InteriorStyle InteriorStyle() const
-  {
-    return myInteriorStyle;
-  }
+  //! Returns Shading Model.
+  Graphic3d_TypeOfShadingModel ShadingModel() const { return myShadingModel; }
 
-  Aspect_InteriorStyle& ChangeInteriorStyle()
-  {
-    return myInteriorStyle;
-  }
+  //! Set if lighting should be disabled or not.
+  void SetNoLighting() { myShadingModel = Graphic3d_TOSM_UNLIT; }
 
-  //! @return edge on flag.
-  int Edge() const
-  {
-    return myEdge;
-  }
-
-  //! @return edge on flag.
-  int& ChangeEdge()
-  {
-    return myEdge;
-  }
-
-  //! @return hatch type.
-  int Hatch() const
-  {
-    return myHatch;
-  }
-
-  //! @return hatch type variable.
-  int& ChangeHatch()
-  {
-    return myHatch;
-  }
-
-  //! @return distinguishing mode.
-  int DistinguishingMode() const
-  {
-    return myDistinguishingMode;
-  }
-
-  //! @return distinguishing mode.
-  int& ChangeDistinguishingMode()
-  {
-    return myDistinguishingMode;
-  }
-
-  //! @return culling mode.
-  int CullingMode() const
-  {
-    return myCullingMode;
-  }
-
-  //! @return culling mode.
-  int& ChangeCullingMode()
-  {
-    return myCullingMode;
-  }
-
-  //! @return front material properties.
-  const OPENGL_SURF_PROP& IntFront() const
-  {
-    return myIntFront;
-  }
-
-  //! @return front material properties.
-  OPENGL_SURF_PROP& ChangeIntFront()
-  {
-    return myIntFront;
-  }
-
-  //! @return back material properties.
-  const OPENGL_SURF_PROP& IntBack() const
-  {
-    return myIntBack;
-  }
-
-  //! @return back material properties.
-  OPENGL_SURF_PROP& ChangeIntBack()
-  {
-    return myIntBack;
-  }
-
-  //! @return polygon offset parameters.
-  const TEL_POFFSET_PARAM& PolygonOffset() const
-  {
-    return myPolygonOffset;
-  }
-
-  //! @return polygon offset parameters.
-  TEL_POFFSET_PARAM& ChangePolygonOffset()
-  {
-    return myPolygonOffset;
-  }
-
-  //! @return texture mapping flag.
-  bool DoTextureMap() const
-  {
-    return myDoTextureMap;
-  }
-
-  //! @return texture mapping flag.
-  bool& ChangeDoTextureMap()
-  {
-    return myDoTextureMap;
-  }
-
-  //! @return texture mapping parameters.
-  const Handle(Graphic3d_TextureParams)& TextureParams() const
-  {
-    return myTexture->GetParams();
-  }
-
-  //! @return texture map.
-  const Handle(OpenGl_Texture)& TextureRes (const Handle(OpenGl_Context)& theCtx) const
+  //! Returns textures map.
+  const Handle(OpenGl_TextureSet)& TextureSet (const Handle(OpenGl_Context)& theCtx) const
   {
     if (!myResources.IsTextureReady())
     {
-      myResources.BuildTexture (theCtx, myTexture);
+      myResources.BuildTextures (theCtx, myAspect->TextureSet());
       myResources.SetTextureReady();
     }
-
-    return myResources.Texture;
+    return myResources.TextureSet();
   }
 
   //! Init and return OpenGl shader program resource.
@@ -220,7 +72,7 @@ public:
   {
     if (!myResources.IsShaderReady())
     {
-      myResources.BuildShader (theCtx, myShaderProgram);
+      myResources.BuildShader (theCtx, myAspect->ShaderProgram());
       myResources.SetShaderReady();
     }
 
@@ -232,60 +84,61 @@ public:
 
 protected:
 
-  Standard_EXPORT void convertMaterial (const CALL_DEF_MATERIAL& theMat,
-                                        OPENGL_SURF_PROP&        theSurf);
-
-protected: //! @name ordinary aspect properties
-
-  Aspect_InteriorStyle            myInteriorStyle;
-  int                             myEdge;
-  int                             myHatch;
-  int                             myDistinguishingMode;
-  int                             myCullingMode;
-  OPENGL_SURF_PROP                myIntFront;
-  OPENGL_SURF_PROP                myIntBack;
-  TEL_POFFSET_PARAM               myPolygonOffset;
-  bool                            myDoTextureMap;
-  Handle(Graphic3d_TextureMap)    myTexture;
-  Handle(Graphic3d_ShaderProgram) myShaderProgram;
-
-protected:
-
   //! OpenGl resources
   mutable struct Resources
   {
   public:
+    //! Empty constructor.
     Resources()
-      : myIsTextureReady (Standard_False),
-        myIsShaderReady  (Standard_False) {}
+    : myIsTextureReady (Standard_False),
+      myIsShaderReady  (Standard_False) {}
 
+    //! Return TRUE if texture resource is up-to-date.
     Standard_Boolean IsTextureReady() const { return myIsTextureReady; }
+
+    //! Return TRUE if shader resource is up-to-date.
     Standard_Boolean IsShaderReady () const { return myIsShaderReady;  }
+
+    //! Set texture resource up-to-date state.
     void SetTextureReady() { myIsTextureReady = Standard_True; }
+
+    //! Set shader resource up-to-date state.
     void SetShaderReady () { myIsShaderReady  = Standard_True; }
-    void ResetTextureReadiness() { myIsTextureReady = Standard_False; }
+
+    //! Reset shader resource up-to-date state.
     void ResetShaderReadiness () { myIsShaderReady  = Standard_False; }
 
-    Standard_EXPORT void BuildTexture (const Handle(OpenGl_Context)&          theCtx,
-                                       const Handle(Graphic3d_TextureMap)&    theTexture);
+    //! Return textures array.
+    const Handle(OpenGl_TextureSet)& TextureSet() const { return myTextures; }
+
+    //! Update texture resource up-to-date state.
+    Standard_EXPORT void UpdateTexturesRediness (const Handle(Graphic3d_TextureSet)& theTextures);
+
+    //! Build texture resource.
+    Standard_EXPORT void BuildTextures (const Handle(OpenGl_Context)& theCtx,
+                                        const Handle(Graphic3d_TextureSet)& theTextures);
+
+    //! Build shader resource.
     Standard_EXPORT void BuildShader  (const Handle(OpenGl_Context)&          theCtx,
                                        const Handle(Graphic3d_ShaderProgram)& theShader);
 
-    Handle(OpenGl_Texture)       Texture;
-    TCollection_AsciiString      TextureId;
+    //! Release texture resource.
+    Standard_EXPORT void ReleaseTextures (OpenGl_Context* theCtx);
+
     Handle(OpenGl_ShaderProgram) ShaderProgram;
     TCollection_AsciiString      ShaderProgramId;
 
   private:
 
+    Handle(OpenGl_TextureSet) myTextures;
     Standard_Boolean myIsTextureReady;
     Standard_Boolean myIsShaderReady;
 
   } myResources;
 
-protected:
-
-  OpenGl_AspectLine               myAspectEdge;
+  Handle(Graphic3d_AspectFillArea3d) myAspect;
+  OpenGl_AspectLine                  myAspectEdge;
+  Graphic3d_TypeOfShadingModel       myShadingModel;
 
 public:
 

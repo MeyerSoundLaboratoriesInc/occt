@@ -3,7 +3,10 @@
 
 #include <Aspect_Window.hxx>
 
+#include <Standard_WarningsDisable.hxx>
 #include <QWidget>
+#include <Standard_WarningsRestore.hxx>
+
 class OcctWindow;
 
 /*
@@ -69,7 +72,7 @@ public:
 
   //! Returns The Window RATIO equal to the physical
   //! WIDTH/HEIGHT dimensions.
-  virtual Quantity_Ratio Ratio() const;
+  virtual Standard_Real Ratio() const;
 
   virtual void Size( Standard_Integer& theWidth, Standard_Integer& theHeight ) const;
   

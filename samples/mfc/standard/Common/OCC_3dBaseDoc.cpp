@@ -11,7 +11,6 @@
 #include <res\OCC_Resource.h>
 #include "ImportExport/ImportExport.h"
 #include "AISDialogs.h"
-#include <AIS_LocalContext.hxx>
 #include <AIS_ListOfInteractive.hxx>
 #include <AIS_ListIteratorOfListOfInteractive.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
@@ -67,7 +66,7 @@ OCC_3dBaseDoc::OCC_3dBaseDoc()
 
   Handle(Graphic3d_GraphicDriver) aGraphicDriver = ((OCC_App*)AfxGetApp())->GetGraphicDriver();
 
-  myViewer = new V3d_Viewer (aGraphicDriver, Standard_ExtString("Visu3D") );
+  myViewer = new V3d_Viewer (aGraphicDriver);
   myViewer->SetDefaultLights();
   myViewer->SetLightOn();
   myAISContext = new AIS_InteractiveContext (myViewer);
@@ -114,7 +113,7 @@ void OCC_3dBaseDoc::DragEvent (const Standard_Integer theMouseX,
     {
       myAISContext->Select (aStartDragX, aStartDragY,
                             theMouseX, theMouseY,
-                            theView);
+                            theView, Standard_True);
       break;
     }
   };
@@ -127,8 +126,8 @@ void OCC_3dBaseDoc::InputEvent (const Standard_Integer theMouseX,
                                 const Standard_Integer theMouseY,
                                 const Handle(V3d_View)& theView)
 {
-  myAISContext->MoveTo (theMouseX, theMouseY, theView);
-  myAISContext->Select();
+  myAISContext->MoveTo (theMouseX, theMouseY, theView, Standard_False);
+  myAISContext->Select (Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -138,7 +137,7 @@ void OCC_3dBaseDoc::MoveEvent (const Standard_Integer theMouseX,
                                const Standard_Integer theMouseY,
                                const Handle(V3d_View)& theView)
 {
-  myAISContext->MoveTo (theMouseX, theMouseY, theView);
+  myAISContext->MoveTo (theMouseX, theMouseY, theView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -148,7 +147,7 @@ void OCC_3dBaseDoc::ShiftMoveEvent (const Standard_Integer theMouseX,
                                     const Standard_Integer theMouseY,
                                     const Handle(V3d_View)& theView)
 {
-  myAISContext->MoveTo (theMouseX, theMouseY, theView);
+  myAISContext->MoveTo (theMouseX, theMouseY, theView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -178,7 +177,7 @@ void OCC_3dBaseDoc::ShiftDragEvent (const Standard_Integer theMouseX,
     // button up
     myAISContext->ShiftSelect (aStartDragX, aStartDragY,
                                theMouseX, theMouseY,
-                               theView);
+                               theView, Standard_True);
   }
 }
 
@@ -189,7 +188,7 @@ void OCC_3dBaseDoc::ShiftInputEvent (const Standard_Integer /*theMouseX*/,
                                      const Standard_Integer /*theMouseY*/,
                                      const Handle(V3d_View)& /*theView*/)
 {
-  myAISContext->ShiftSelect();
+  myAISContext->ShiftSelect (Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -202,8 +201,8 @@ void  OCC_3dBaseDoc::Popup (const Standard_Integer theMouseX,
   // Base check which context menu to call
   if (!myPopupMenuNumber)
   {
-    myAISContext->InitCurrent();
-    if (myAISContext->MoreCurrent())
+    myAISContext->InitSelected();
+    if (myAISContext->MoreSelected())
       myPopupMenuNumber=1;
   }
 
@@ -215,8 +214,8 @@ void  OCC_3dBaseDoc::Popup (const Standard_Integer theMouseX,
    if (myPopupMenuNumber == 1) // more than 1 object.
   {
     bool OneOrMoreInShading = false;
-	for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+	for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	if(!OneOrMoreInShading)
    	pPopup->EnableMenuItem(5, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
    }
@@ -259,12 +258,12 @@ void OCC_3dBaseDoc::OnObjectColor()
 {
 	Handle(AIS_InteractiveObject) Current ;
 	COLORREF MSColor ;
-	Quantity_Color CSFColor ;
 
-	myAISContext->InitCurrent();
-    Current = myAISContext->Current();
+	myAISContext->InitSelected();
+    Current = myAISContext->SelectedInteractive();
 	if ( Current->HasColor () ) {
-      CSFColor = myAISContext->Color(myAISContext->Current());
+      Quantity_Color CSFColor;
+      myAISContext->Color (Current, CSFColor);
       MSColor = RGB (CSFColor.Red()*255.,CSFColor.Green()*255.,CSFColor.Blue()*255.);
 	}
 	else {
@@ -275,33 +274,32 @@ void OCC_3dBaseDoc::OnObjectColor()
 	if (dlgColor.DoModal() == IDOK)
 	{
 	  MSColor = dlgColor.GetColor();
-	  CSFColor = Quantity_Color (GetRValue(MSColor)/255.,GetGValue(MSColor)/255.,
-						         GetBValue(MSColor)/255.,Quantity_TOC_RGB); 
-	  for (;myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-	  myAISContext->SetColor (myAISContext->Current(),CSFColor.Name());
+	  Quantity_Color CSFColor (GetRValue(MSColor)/255., GetGValue(MSColor)/255., GetBValue(MSColor)/255., Quantity_TOC_RGB);
+	  for (;myAISContext->MoreSelected ();myAISContext->NextSelected ())
+      myAISContext->SetColor (myAISContext->SelectedInteractive(), CSFColor, Standard_False);
+    myAISContext->UpdateCurrentViewer();
 	}
 }
 void OCC_3dBaseDoc::OnUpdateObjectColor(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreIsShadingOrWireframe = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),0)
-		||myAISContext->IsDisplayed(myAISContext->Current(),1)) 
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),0)
+		||myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1))
 		OneOrMoreIsShadingOrWireframe=true;
   pCmdUI->Enable (OneOrMoreIsShadingOrWireframe);
 }
 
 void OCC_3dBaseDoc::OnObjectErase() 
 {
-  myAISContext->EraseSelected();
-  myAISContext->ClearCurrents();
+  myAISContext->EraseSelected (Standard_True);
 }
 void OCC_3dBaseDoc::OnUpdateObjectErase(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreIsDisplayed = false;
-  for (myAISContext->InitCurrent(); myAISContext->MoreCurrent(); myAISContext->NextCurrent())
+  for (myAISContext->InitSelected(); myAISContext->MoreSelected(); myAISContext->NextSelected())
   {
-    if (myAISContext->IsDisplayed (myAISContext->Current()))
+    if (myAISContext->IsDisplayed (myAISContext->SelectedInteractive()))
       OneOrMoreIsDisplayed = true;
   }
   pCmdUI->Enable (OneOrMoreIsDisplayed);
@@ -309,28 +307,30 @@ void OCC_3dBaseDoc::OnUpdateObjectErase(CCmdUI* pCmdUI)
 
 void OCC_3dBaseDoc::OnObjectWireframe() 
 {
-  for(myAISContext->InitCurrent();myAISContext->MoreCurrent();myAISContext->NextCurrent())
-        myAISContext->SetDisplayMode(myAISContext->Current(),0);
+  for(myAISContext->InitSelected();myAISContext->MoreSelected();myAISContext->NextSelected())
+        myAISContext->SetDisplayMode (myAISContext->SelectedInteractive(), 0, Standard_False);
+  myAISContext->UpdateCurrentViewer();
 }
 void OCC_3dBaseDoc::OnUpdateObjectWireframe(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreInShading = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	pCmdUI->Enable (OneOrMoreInShading);	
 }
 
 void OCC_3dBaseDoc::OnObjectShading() 
 {
-  for(myAISContext->InitCurrent();myAISContext->MoreCurrent();myAISContext->NextCurrent())
-      myAISContext->SetDisplayMode(myAISContext->Current(),1);
+  for(myAISContext->InitSelected();myAISContext->MoreSelected();myAISContext->NextSelected())
+      myAISContext->SetDisplayMode (myAISContext->SelectedInteractive(), 1, Standard_False);
+  myAISContext->UpdateCurrentViewer();
 }
 
 void OCC_3dBaseDoc::OnUpdateObjectShading(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreInWireframe = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),0)) OneOrMoreInWireframe=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),0)) OneOrMoreInWireframe=true;
 	pCmdUI->Enable (OneOrMoreInWireframe);	
 }
 
@@ -346,8 +346,8 @@ void OCC_3dBaseDoc::OnObjectMaterial()
 void OCC_3dBaseDoc::OnUpdateObjectMaterial(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreInShading = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	pCmdUI->Enable (OneOrMoreInShading);	
 }
 
@@ -357,11 +357,12 @@ BOOL OCC_3dBaseDoc::OnObjectMaterialRange(UINT nID)
   // continue with the same values as enumeration Type Of Material
   Standard_Real aTransparency;
 
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ()){
-	aTransparency = myAISContext->Current()->Transparency();
-	myAISContext->SetMaterial (myAISContext->Current(),(Graphic3d_NameOfMaterial)(nID-ID_OBJECT_MATERIAL_BRASS));
-	myAISContext->SetTransparency (myAISContext->Current(),aTransparency);
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ()){
+    aTransparency = myAISContext->SelectedInteractive()->Transparency();
+    myAISContext->SetMaterial (myAISContext->SelectedInteractive(),(Graphic3d_NameOfMaterial)(nID-ID_OBJECT_MATERIAL_BRASS), Standard_False);
+    myAISContext->SetTransparency (myAISContext->SelectedInteractive(),aTransparency, Standard_False);
   }
+  myAISContext->UpdateCurrentViewer();
   return true;
 
 }
@@ -369,11 +370,11 @@ BOOL OCC_3dBaseDoc::OnObjectMaterialRange(UINT nID)
 void OCC_3dBaseDoc::OnUpdateObjectMaterialRange(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreInShading = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	pCmdUI->Enable (OneOrMoreInShading);
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->Current()->Material() - (pCmdUI->m_nID - ID_OBJECT_MATERIAL_BRASS) == 0) 
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->SelectedInteractive()->Material() - (pCmdUI->m_nID - ID_OBJECT_MATERIAL_BRASS) == 0)
 		pCmdUI->SetCheck(1);	
 }
 
@@ -391,51 +392,52 @@ void OCC_3dBaseDoc::OnObjectTransparency()
 void OCC_3dBaseDoc::OnUpdateObjectTransparency(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreInShading = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	pCmdUI->Enable (OneOrMoreInShading);	
 }
 
 
 void OCC_3dBaseDoc::OnObjectDisplayall() 
 {
-	myAISContext->DisplayAll();
+	myAISContext->DisplayAll (Standard_True);
 }
 
 void OCC_3dBaseDoc::OnUpdateObjectDisplayall(CCmdUI* pCmdUI) 
 {
-	
-	AIS_ListOfInteractive aList;
-	myAISContext->ObjectsInside(aList,AIS_KOI_Shape);
-	AIS_ListIteratorOfListOfInteractive aLI;
-	Standard_Boolean IS_ANY_OBJECT_ERASED=FALSE;
-	for (aLI.Initialize(aList);aLI.More();aLI.Next()){
-		if(!myAISContext->IsDisplayed(aLI.Value()))
-		IS_ANY_OBJECT_ERASED=TRUE;
-	}
-	pCmdUI->Enable (IS_ANY_OBJECT_ERASED);
-
+  AIS_ListOfInteractive aList;
+  myAISContext->ObjectsInside (aList);
+  for (AIS_ListIteratorOfListOfInteractive aLI (aList);aLI.More();aLI.Next())
+  {
+    if (!myAISContext->IsDisplayed (aLI.Value()))
+    {
+      pCmdUI->Enable (true);
+      return;
+    }
+  }
+  pCmdUI->Enable (false);
 }
 
 void OCC_3dBaseDoc::OnObjectRemove() 
 {
-	for(myAISContext->InitCurrent();myAISContext->MoreCurrent();myAISContext->InitCurrent())
-        myAISContext->Remove(myAISContext->Current(),Standard_True);
+	for(myAISContext->InitSelected();myAISContext->MoreSelected();myAISContext->InitSelected())
+        myAISContext->Remove(myAISContext->SelectedInteractive(),Standard_True);
 }
 
 void OCC_3dBaseDoc::OnUpdateObjectRemove(CCmdUI* pCmdUI) 
 {
   bool OneOrMoreIsDisplayed = false;
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current())) OneOrMoreIsDisplayed=true;
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive())) OneOrMoreIsDisplayed=true;
   pCmdUI->Enable (OneOrMoreIsDisplayed);
 }
 
 void OCC_3dBaseDoc::SetMaterial(Graphic3d_NameOfMaterial Material) 
 {
-  for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    myAISContext->SetMaterial (myAISContext->Current(),
-    (Graphic3d_NameOfMaterial)(Material));
+  for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    myAISContext->SetMaterial (myAISContext->SelectedInteractive(),
+    (Graphic3d_NameOfMaterial)(Material), Standard_False);
+  myAISContext->UpdateCurrentViewer();
 }
 
 

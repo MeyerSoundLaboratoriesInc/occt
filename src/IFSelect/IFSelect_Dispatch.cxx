@@ -24,7 +24,7 @@
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_HAsciiString.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(IFSelect_Dispatch,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(IFSelect_Dispatch,Standard_Transient)
 
 void  IFSelect_Dispatch::SetRootName
   (const Handle(TCollection_HAsciiString)& name)
@@ -66,10 +66,6 @@ void  IFSelect_Dispatch::SetRootName
     Interface_EntityIterator  IFSelect_Dispatch::GetEntities
   (const Interface_Graph& G) const
       {  return thefinal->UniqueResult(G);  }
-
-    Standard_Boolean  IFSelect_Dispatch::PacketsCount
-  (const Interface_Graph& , Standard_Integer& pcount) const 
-      {  pcount = 0;  return Standard_False;  }    // par defaut 0
 
     Interface_EntityIterator  IFSelect_Dispatch::Packeted
   (const Interface_Graph& G) const

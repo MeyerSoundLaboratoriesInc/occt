@@ -14,6 +14,7 @@
 //gka 06.01.99 S3767 new function TPSTAT (first version)
 //pdn 11.01.99 putting "return" statement for compilation on NT
 
+#include <BRepTools.hxx>
 #include <DBRep.hxx>
 #include <Draw_Appli.hxx>
 #include <Draw_ProgressIndicator.hxx>
@@ -59,18 +60,42 @@
 #include <Transfer_TransientProcess.hxx>
 #include <XSControl.hxx>
 #include <XSControl_WorkSession.hxx>
+#include <XSControl_TransferReader.hxx>
 #include <XSDRAW.hxx>
-#include <XSDRAW_Commands.hxx>
 #include <XSDRAWIGES.hxx>
 
 #include <stdio.h>
-// #include <IGESData_IGESWriter.hxx>
-// pour igeslist
-//#include <GeometryTest.hxx>  essai CKY 4-AUT-1998
-//#include <BRepTest.hxx>      essai CKY 4-AUT-1998
-//#include <MeshTest.hxx>      essai CKY 4-AUT-1998
-// Init functions
-// + tplosttrim
+
+namespace {
+
+  //=======================================================================
+//function : WriteShape
+//purpose  : Creates a file Shape_'number'
+//=======================================================================
+void WriteShape(const TopoDS_Shape& shape, const Standard_Integer number)
+{
+  char fname[110];
+  sprintf(fname, "Shape_%d",number);
+  ofstream f(fname,ios::out);
+  cout << "Output file name : " << fname << endl;
+  f << "DBRep_DrawableShape\n";
+  
+  BRepTools::Write(shape, f);
+  f.close();
+}
+
+TCollection_AsciiString XSDRAW_CommandPart
+  (Standard_Integer argc, const char** argv, const Standard_Integer argf)
+{
+  TCollection_AsciiString res;
+  for (Standard_Integer i = argf; i < argc; i ++) {
+    if (i > argf) res.AssignCat(" ");
+    res.AssignCat (argv[i]);
+  }
+  return res;
+}
+}
+
 //--------------------------------------------------------------
 // Function : igesbrep
 //--------------------------------------------------------------
@@ -150,15 +175,15 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
       di<<"  To modify : command  param read.iges.bspline.continuity\n";
       Handle(XSControl_WorkSession) thesession = Reader.WS();
       thesession->ClearContext();
-      XSDRAW::SetTransferProcess (thesession->MapReader());
+      XSDRAW::SetTransferProcess (thesession->TransferReader()->TransientProcess());
       progress->NewScope ( 80, "Translation" );
       progress->Show();
-      thesession->MapReader()->SetProgress ( progress );
+      thesession->TransferReader()->TransientProcess()->SetProgress ( progress );
       
       if (modepri == 1) Reader.SetReadVisible (Standard_True);
       Reader.TransferRoots();
       
-      thesession->MapReader()->SetProgress ( 0 );
+      thesession->TransferReader()->TransientProcess()->SetProgress ( 0 );
       progress->EndScope();
       progress->Show();
       // result in only one shape for all the roots
@@ -181,17 +206,17 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
 	char fname[110];
 	Sprintf(fname, "%s", rnom.ToCString());
 	di << "Saving shape in variable Draw : " << fname << "\n";
-	if (answer == 3) IGESToBRep::WriteShape (shape,1);
+	if (answer == 3) WriteShape (shape,1);
 	try {
 	  OCC_CATCH_SIGNALS
 	  DBRep::Set(fname,shape);
 	}
-	catch(Standard_Failure) {
+	catch(Standard_Failure const& anException) {
 	  di << "** Exception : ";
-	  di << Standard_Failure::Caught()->GetMessageString();
+	  di << anException.GetMessageString();
 	  di<<" ** Skip\n";
 	  di << "Saving shape in variable Draw : " << fname << "\n";
-	  IGESToBRep::WriteShape (shape,1);
+	  WriteShape (shape,1);
 	}
       }
 	
@@ -204,14 +229,14 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
 	  char fname[110];
 	  Sprintf(fname, "%s_%d", rnom.ToCString(),inum);
 	  di << "Saving shape in variable Draw : " << fname << "\n";
-	  if (answer == 4) IGESToBRep::WriteShape (shape,inum);
+	  if (answer == 4) WriteShape (shape,inum);
 	  try {
 	    OCC_CATCH_SIGNALS
 	    DBRep::Set(fname,shape);
 	  }
-	  catch(Standard_Failure) {
+	  catch(Standard_Failure const& anException) {
 	    di << "** Exception : ";
-	    di << Standard_Failure::Caught()->GetMessageString();
+	    di << anException.GetMessageString();
 	    di<<" ** Skip\n";
 	  }
 	}
@@ -251,15 +276,15 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
         di<<"  To modify : command  param read.iges.bspline.continuity\n";
         Handle(XSControl_WorkSession) thesession = Reader.WS();
         thesession->ClearContext();
-        XSDRAW::SetTransferProcess (thesession->MapReader());
+        XSDRAW::SetTransferProcess (thesession->TransferReader()->TransientProcess());
         progress->NewScope ( 80, "Translation" );
         progress->Show();
-        thesession->MapReader()->SetProgress ( progress );
+        thesession->TransferReader()->TransientProcess()->SetProgress ( progress );
       
         Reader.SetReadVisible (Standard_True);
         Reader.TransferRoots();
       
-        thesession->MapReader()->SetProgress ( 0 );
+        thesession->TransferReader()->TransientProcess()->SetProgress ( 0 );
         progress->EndScope();
         progress->Show();
         
@@ -273,12 +298,12 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
           OCC_CATCH_SIGNALS
           DBRep::Set(fname,shape);
         }
-        catch(Standard_Failure) {
+        catch(Standard_Failure const& anException) {
           di << "** Exception : ";
-	  di << Standard_Failure::Caught()->GetMessageString();
+	  di << anException.GetMessageString();
 	  di<<" ** Skip\n";
           di << "Saving shape in variable Draw : " << fname << "\n";
-          IGESToBRep::WriteShape (shape,1);
+          WriteShape (shape,1);
         }                                                                             
         return 0;
       }
@@ -329,10 +354,10 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
 	  Standard_Integer nbt = 0;
 	  Handle(XSControl_WorkSession) thesession = Reader.WS();
 	
-	  XSDRAW::SetTransferProcess (thesession->MapReader());
+	  XSDRAW::SetTransferProcess (thesession->TransferReader()->TransientProcess());
           progress->NewScope ( 80, "Translation" );
           progress->Show();
-          thesession->MapReader()->SetProgress ( progress );
+          thesession->TransferReader()->TransientProcess()->SetProgress ( progress );
 
           Message_ProgressSentry PSentry ( progress, "Root", 0, nbl, 1 );
 	  for (Standard_Integer ill = 1; ill <= nbl && PSentry.More(); ill ++, PSentry.Next()) {
@@ -350,7 +375,7 @@ static Standard_Integer igesbrep (Draw_Interpretor& di, Standard_Integer argc, c
               nbt++;
 	    }
 	  }
-	  thesession->MapReader()->SetProgress ( 0 );
+	  thesession->TransferReader()->TransientProcess()->SetProgress ( 0 );
           progress->EndScope();
           progress->Show();
 	  di<<"Nb Shapes successfully produced : "<<nbt<<"\n";
@@ -520,7 +545,7 @@ static Standard_Integer XSDRAWIGES_tplosttrim (Draw_Interpretor& di, Standard_In
 //  Standard_Integer narg = pilot->NbWords();
   Standard_Integer narg = n;
 
-  Handle(Transfer_TransientProcess) TP = XSControl::Session(pilot)->MapReader();
+  const Handle(Transfer_TransientProcess) &TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
   TColStd_Array1OfAsciiString strarg(1, 3);
   TColStd_Array1OfAsciiString typarg(1, 3);
   strarg.SetValue(1,"xst-type(CurveOnSurface)");
@@ -602,20 +627,13 @@ static Standard_Integer XSDRAWIGES_TPSTAT(Draw_Interpretor& di,Standard_Integer 
   Handle(IFSelect_SessionPilot) pilot = XSDRAW::Pilot();
   Standard_Integer argc = n;//= pilot->NbWords();
   const Standard_CString arg1 = a[1];//pilot->Arg(1);
-  //IGESControl_Reader read; //(XSControl::Session(pilot),Standard_False);
-  Handle(Transfer_TransientProcess) TP= XSControl::Session(pilot)->MapReader();
-   IGESControl_Reader read; //(XSControl::Session(pilot),Standard_False);
-  //read.SetTransientProcess(TP);
+  const Handle(Transfer_TransientProcess) &TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
+  IGESControl_Reader read; //(XSControl::Session(pilot),Standard_False);
 //        ****    tpent        ****
-//  if (TP.IsNull()) { di<<"No Transfer Read\n"; return IFSelect_RetError;}
   Handle(Interface_InterfaceModel) model = TP->Model();
-  //Handle(Interface_InterfaceModel) model = read.Model();
   if (model.IsNull()) {di<<"No Transfer Read\n"; return -1;}
- //DeclareAndCast(IGESData_IGESModel,modelig,model);
- // read.SetModel(modelig);
   Handle(XSControl_WorkSession) thesession = read.WS();
   thesession->SetMapReader(TP);
-  //read.SetModel(model);
   Standard_Integer mod1 = 0;
   if (argc > 1) {
     char a2 = arg1[1]; if (a2 == '\0') a2 = '!';

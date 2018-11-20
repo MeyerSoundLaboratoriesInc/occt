@@ -14,38 +14,44 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <PrsMgr_PresentableObject.hxx>
 
-#include <Geom_Transformation.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Trsf.hxx>
-#include <Graphic3d_DataStructureManager.hxx>
-#include <Graphic3d_Structure.hxx>
-#include <Graphic3d_TypeOfStructure.hxx>
+#include <Prs3d_Drawer.hxx>
 #include <Prs3d_Presentation.hxx>
 #include <Prs3d_Projector.hxx>
 #include <PrsMgr_ModedPresentation.hxx>
-#include <PrsMgr_PresentableObject.hxx>
-#include <PrsMgr_Presentation.hxx>
-#include <PrsMgr_PresentationManager.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <Standard_Type.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
 #include <TColStd_MapOfInteger.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_PresentableObject,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_PresentableObject, Standard_Transient)
+
+namespace
+{
+  static const gp_Trsf THE_IDENTITY_TRSF;
+}
+
+//=======================================================================
+//function : getIdentityTrsf
+//purpose  :
+//=======================================================================
+const gp_Trsf& PrsMgr_PresentableObject::getIdentityTrsf()
+{
+  return THE_IDENTITY_TRSF;
+}
 
 //=======================================================================
 //function : PrsMgr_PresentableObject
 //purpose  :
 //=======================================================================
 PrsMgr_PresentableObject::PrsMgr_PresentableObject (const PrsMgr_TypeOfPresentation3d theType)
-: myTypeOfPresentation3d (theType),
+: myDrawer (new Prs3d_Drawer()),
+  myTypeOfPresentation3d (theType),
   myIsMutable (Standard_False),
-  myZLayer (Graphic3d_ZLayerId_Default),
   myHasOwnPresentations (Standard_True),
   myParent (NULL)
 {
-  //
+  myDrawer->SetDisplayMode (-1);
 }
 
 //=======================================================================
@@ -54,10 +60,9 @@ PrsMgr_PresentableObject::PrsMgr_PresentableObject (const PrsMgr_TypeOfPresentat
 //=======================================================================
 PrsMgr_PresentableObject::~PrsMgr_PresentableObject()
 {
-  gp_Trsf anIdentity;
   for (PrsMgr_ListOfPresentableObjectsIter anIter (myChildren); anIter.More(); anIter.Next())
   {
-    anIter.Value()->SetCombinedParentTransform (anIdentity);
+    anIter.Value()->SetCombinedParentTransform (Handle(Geom_Transformation)());
     anIter.Value()->myParent = NULL;
   }
 }
@@ -74,7 +79,7 @@ void PrsMgr_PresentableObject::Fill (const Handle(PrsMgr_PresentationManager)& t
   Compute (thePrsMgr, aStruct3d, theMode);
   UpdateTransformation (aStruct3d);
   aStruct3d->SetClipPlanes (myClipPlanes);
-  aStruct3d->SetTransformPersistence (GetTransformPersistenceMode(), GetTransformPersistencePoint());
+  aStruct3d->SetTransformPersistence (TransformPersistence());
 }
 
 //=======================================================================
@@ -85,7 +90,7 @@ void PrsMgr_PresentableObject::Compute (const Handle(PrsMgr_PresentationManager)
                                         const Handle(Prs3d_Presentation)& /*aPresentation*/,
                                         const Standard_Integer /*aMode*/)
 {
-  Standard_NotImplemented::Raise("cannot compute in a 3d visualizer");
+  throw Standard_NotImplemented("cannot compute in a 3d visualizer");
 }
 
 //=======================================================================
@@ -95,7 +100,7 @@ void PrsMgr_PresentableObject::Compute (const Handle(PrsMgr_PresentationManager)
 void PrsMgr_PresentableObject::Compute(const Handle(Prs3d_Projector)& /*aProjector*/,
                                        const Handle(Prs3d_Presentation)& /*aPresentation*/)
 {
-  Standard_NotImplemented::Raise("cannot compute under a specific projector");
+  throw Standard_NotImplemented("cannot compute under a specific projector");
 }
 
 //=======================================================================
@@ -106,7 +111,7 @@ void PrsMgr_PresentableObject::Compute(const Handle(Prs3d_Projector)& /* aProjec
                                        const Handle(Geom_Transformation)& /*aTrsf*/,
 				                               const Handle(Prs3d_Presentation)& /*aPresentation*/)
 {
-  Standard_NotImplemented::Raise("cannot compute under a specific projector");
+  throw Standard_NotImplemented("cannot compute under a specific projector");
 }
 
 //=======================================================================
@@ -165,23 +170,6 @@ void PrsMgr_PresentableObject::Update (const Standard_Integer aMode, const Stand
 }
 
 //=======================================================================
-//function : Presentations
-//purpose  : 
-//=======================================================================
-PrsMgr_Presentations& PrsMgr_PresentableObject::Presentations() {
-  return myPresentations;
-}
-
-//=======================================================================
-//function : HasTransformation
-//purpose  : 
-//=======================================================================
-Standard_Boolean PrsMgr_PresentableObject::HasTransformation() const 
-{
-  return myTransformation.Form() != gp_Identity;
-}
-
-//=======================================================================
 //function : SetToUpdate
 //purpose  : 
 //=======================================================================
@@ -212,17 +200,16 @@ void PrsMgr_PresentableObject::ToBeUpdated(TColStd_ListOfInteger& OutList) const
 {
   OutList.Clear();
   // on dimensionne les buckets a la taille de la seq.
-  static TColStd_MapOfInteger MI(myPresentations.Length()); 
+  TColStd_MapOfInteger MI(myPresentations.Length()); 
   
   for(Standard_Integer IP =1; IP<=myPresentations.Length();IP++){
     const PrsMgr_ModedPresentation& MP = myPresentations(IP);
     if(MP.Presentation()->MustBeUpdated())
       if(!MI.Contains(MP.Mode())){
-	OutList.Append(MP.Mode());
-	MI.Add(MP.Mode());
+        OutList.Append(MP.Mode());
+        MI.Add(MP.Mode());
       }
   }
-  MI.Clear();
 }
 
 //=======================================================================
@@ -242,10 +229,10 @@ void PrsMgr_PresentableObject::SetTypeOfPresentation (const PrsMgr_TypeOfPresent
 }
 
 //=======================================================================
-//function : SetLocalTransformation
-//purpose  : WARNING : use with only 3D objects...
+//function : setLocalTransformation
+//purpose  :
 //=======================================================================
-void PrsMgr_PresentableObject::SetLocalTransformation (const gp_Trsf& theTransformation) 
+void PrsMgr_PresentableObject::setLocalTransformation (const Handle(Geom_Transformation)& theTransformation)
 {
   myLocalTransformation = theTransformation;
   UpdateTransformation();
@@ -257,16 +244,16 @@ void PrsMgr_PresentableObject::SetLocalTransformation (const gp_Trsf& theTransfo
 //=======================================================================
 void PrsMgr_PresentableObject::ResetTransformation() 
 {
-  SetLocalTransformation (gp_Trsf());  
+  setLocalTransformation (Handle(Geom_Transformation)());
 }
 
 //=======================================================================
 //function : SetCombinedParentTransform
 //purpose  : 
 //=======================================================================
-void PrsMgr_PresentableObject::SetCombinedParentTransform (const gp_Trsf& theTransformation) 
+void PrsMgr_PresentableObject::SetCombinedParentTransform (const Handle(Geom_Transformation)& theTrsf)
 {
-  myCombinedParentTransform = theTransformation;
+  myCombinedParentTransform = theTrsf;
   UpdateTransformation();
 }
 
@@ -276,20 +263,36 @@ void PrsMgr_PresentableObject::SetCombinedParentTransform (const gp_Trsf& theTra
 //=======================================================================
 void PrsMgr_PresentableObject::UpdateTransformation()
 {
-  myTransformation = myCombinedParentTransform * myLocalTransformation;
-  myInvTransformation = myTransformation.Inverted();
-  Handle(Geom_Transformation) aTrsf = new Geom_Transformation (myTransformation);
+  myTransformation.Nullify();
+  myInvTransformation = gp_Trsf();
+  if (!myCombinedParentTransform.IsNull() && myCombinedParentTransform->Form() != gp_Identity)
+  {
+    if (!myLocalTransformation.IsNull() && myLocalTransformation->Form() != gp_Identity)
+    {
+      const gp_Trsf aTrsf = myCombinedParentTransform->Trsf() * myLocalTransformation->Trsf();
+      myTransformation    = new Geom_Transformation (aTrsf);
+      myInvTransformation = aTrsf.Inverted();
+    }
+    else
+    {
+      myTransformation    = myCombinedParentTransform;
+      myInvTransformation = myCombinedParentTransform->Trsf().Inverted();
+    }
+  }
+  else if (!myLocalTransformation.IsNull() && myLocalTransformation->Form() != gp_Identity)
+  {
+    myTransformation    = myLocalTransformation;
+    myInvTransformation = myLocalTransformation->Trsf().Inverted();
+  }
 
   for (Standard_Integer aPrsIter = 1; aPrsIter <= myPresentations.Length(); ++aPrsIter)
   {
-    myPresentations (aPrsIter).Presentation()->Transform (aTrsf);
+    myPresentations (aPrsIter).Presentation()->SetTransformation (myTransformation);
   }
-  
-  PrsMgr_ListOfPresentableObjectsIter anIter (myChildren);
 
-  for (; anIter.More(); anIter.Next())
+  for (PrsMgr_ListOfPresentableObjectsIter aChildIter (myChildren); aChildIter.More(); aChildIter.Next())
   {
-    anIter.Value()->SetCombinedParentTransform (myTransformation);
+    aChildIter.Value()->SetCombinedParentTransform (myTransformation);
   }
 }
 
@@ -299,61 +302,68 @@ void PrsMgr_PresentableObject::UpdateTransformation()
 //=======================================================================
 void PrsMgr_PresentableObject::UpdateTransformation(const Handle(Prs3d_Presentation)& P)
 {
-  Handle(Geom_Transformation) aTrsf = new Geom_Transformation (myTransformation);
-  P->Transform (aTrsf);  
+  P->SetTransformation (myTransformation);
 }
 
 //=======================================================================
 //function : SetTransformPersistence
 //purpose  :
 //=======================================================================
-void PrsMgr_PresentableObject::SetTransformPersistence (const Graphic3d_TransModeFlags& theFlag,
-                                                        const gp_Pnt&                   thePoint)
+void PrsMgr_PresentableObject::SetTransformPersistence (const Handle(Graphic3d_TransformPers)& theTrsfPers)
 {
-  myTransformPersistence.Flags     = theFlag;
-  myTransformPersistence.Point.x() = thePoint.X();
-  myTransformPersistence.Point.y() = thePoint.Y();
-  myTransformPersistence.Point.z() = thePoint.Z();
+  myTransformPersistence = theTrsfPers;
   for (Standard_Integer aPrsIter = 1; aPrsIter <= myPresentations.Length(); ++aPrsIter)
   {
     const Handle(PrsMgr_Presentation)& aPrs3d = myPresentations (aPrsIter).Presentation();
     if (!aPrs3d.IsNull()
      && !aPrs3d->Presentation().IsNull())
     {
-      aPrs3d->Presentation()->SetTransformPersistence (theFlag, thePoint);
+      aPrs3d->Presentation()->SetTransformPersistence (myTransformPersistence);
       aPrs3d->Presentation()->ReCompute();
     }
   }
 }
 
 //=======================================================================
-//function : SetTransformPersistence
-//purpose  : 
-//=======================================================================
-void  PrsMgr_PresentableObject::SetTransformPersistence( 
-				       const Graphic3d_TransModeFlags& TheFlag )
-{
-  SetTransformPersistence( TheFlag, gp_Pnt(0,0,0) );
-}
-
-//=======================================================================
 //function : GetTransformPersistence
-//purpose  : 
-//=======================================================================
-Graphic3d_TransModeFlags PrsMgr_PresentableObject::GetTransformPersistenceMode() const
-{
-  return myTransformPersistence.Flags;
-}
-
-//=======================================================================
-//function : GetTransformPersistence
-//purpose  : 
+//purpose  :
 //=======================================================================
 gp_Pnt PrsMgr_PresentableObject::GetTransformPersistencePoint() const
 {
-  return gp_Pnt (myTransformPersistence.Point.x(),
-                 myTransformPersistence.Point.y(),
-                 myTransformPersistence.Point.z());
+  if (myTransformPersistence.IsNull())
+  {
+    return gp_Pnt();
+  }
+  else if (myTransformPersistence->IsZoomOrRotate())
+  {
+    return myTransformPersistence->AnchorPoint();
+  }
+  else if (!myTransformPersistence->IsTrihedronOr2d())
+  {
+    return gp_Pnt();
+  }
+
+  Standard_Real anX = 0.0;
+  if ((myTransformPersistence->Corner2d() & Aspect_TOTP_RIGHT) != 0)
+  {
+    anX = 1.0;
+  }
+  else if ((myTransformPersistence->Corner2d() & Aspect_TOTP_LEFT) != 0)
+  {
+    anX = -1.0;
+  }
+
+  Standard_Real anY = 0.0;
+  if ((myTransformPersistence->Corner2d() & Aspect_TOTP_TOP) != 0)
+  {
+    anY = 1.0;
+  }
+  else if ((myTransformPersistence->Corner2d() & Aspect_TOTP_BOTTOM) != 0)
+  {
+    anY = -1.0;
+  }
+
+  return gp_Pnt (anX, anY, myTransformPersistence->Offset2d().x());
 }
 
 //=======================================================================
@@ -385,7 +395,7 @@ void PrsMgr_PresentableObject::RemoveChild (const Handle(PrsMgr_PresentableObjec
     if (anIter.Value() == theObject)
     {
       theObject->myParent = NULL;
-      theObject->SetCombinedParentTransform (gp_Trsf());
+      theObject->SetCombinedParentTransform (Handle(Geom_Transformation)());
       myChildren.Remove (anIter);
       break;
     }
@@ -398,12 +408,12 @@ void PrsMgr_PresentableObject::RemoveChild (const Handle(PrsMgr_PresentableObjec
 //=======================================================================
 void PrsMgr_PresentableObject::SetZLayer (const Graphic3d_ZLayerId theLayerId)
 {
-  if (myZLayer == theLayerId)
+  if (myDrawer->ZLayer() == theLayerId)
   {
     return;
   }
 
-  myZLayer = theLayerId;
+  myDrawer->SetZLayer (theLayerId);
   for (Standard_Integer aPrsIter = 1; aPrsIter <= myPresentations.Length(); ++aPrsIter)
   {
     const PrsMgr_ModedPresentation& aModedPrs = myPresentations (aPrsIter);
@@ -423,7 +433,7 @@ void PrsMgr_PresentableObject::SetZLayer (const Graphic3d_ZLayerId theLayerId)
 //=======================================================================
 Graphic3d_ZLayerId PrsMgr_PresentableObject::ZLayer() const
 {
-  return myZLayer;
+  return myDrawer->ZLayer();
 }
 
 // =======================================================================
@@ -433,7 +443,12 @@ Graphic3d_ZLayerId PrsMgr_PresentableObject::ZLayer() const
 void PrsMgr_PresentableObject::AddClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 {
   // add to collection and process changes
-  myClipPlanes.Append (thePlane);
+  if (myClipPlanes.IsNull())
+  {
+    myClipPlanes = new Graphic3d_SequenceOfHClipPlane();
+  }
+
+  myClipPlanes->Append (thePlane);
   UpdateClipping();
 }
 
@@ -443,15 +458,19 @@ void PrsMgr_PresentableObject::AddClipPlane (const Handle(Graphic3d_ClipPlane)& 
 // =======================================================================
 void PrsMgr_PresentableObject::RemoveClipPlane (const Handle(Graphic3d_ClipPlane)& thePlane)
 {
+  if (myClipPlanes.IsNull())
+  {
+    return;
+  }
+
   // remove from collection and process changes
-  Graphic3d_SequenceOfHClipPlane::Iterator aPlaneIt (myClipPlanes);
-  for (; aPlaneIt.More(); aPlaneIt.Next())
+  for (Graphic3d_SequenceOfHClipPlane::Iterator aPlaneIt (*myClipPlanes); aPlaneIt.More(); aPlaneIt.Next())
   {
     const Handle(Graphic3d_ClipPlane)& aPlane = aPlaneIt.Value();
     if (aPlane != thePlane)
       continue;
 
-    myClipPlanes.Remove (aPlaneIt);
+    myClipPlanes->Remove (aPlaneIt);
     UpdateClipping();
     return;
   }
@@ -461,7 +480,7 @@ void PrsMgr_PresentableObject::RemoveClipPlane (const Handle(Graphic3d_ClipPlane
 // function : SetClipPlanes
 // purpose  :
 // =======================================================================
-void PrsMgr_PresentableObject::SetClipPlanes (const Graphic3d_SequenceOfHClipPlane& thePlanes)
+void PrsMgr_PresentableObject::SetClipPlanes (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes)
 {
   // change collection and process changes
   myClipPlanes = thePlanes;
@@ -516,10 +535,24 @@ void PrsMgr_PresentableObject::SetMutable (const Standard_Boolean theIsMutable)
 }
 
 // =======================================================================
-// function : IsMutable
+// function : SetAttributes
 // purpose  :
 // =======================================================================
-Standard_Boolean PrsMgr_PresentableObject::IsMutable() const
+void PrsMgr_PresentableObject::SetAttributes (const Handle(Prs3d_Drawer)& theDrawer)
 {
-  return myIsMutable;
+  myDrawer = theDrawer;
+}
+
+// =======================================================================
+// function : UnsetAttributes
+// purpose  :
+// =======================================================================
+void PrsMgr_PresentableObject::UnsetAttributes()
+{
+  Handle(Prs3d_Drawer) aDrawer = new Prs3d_Drawer();
+  if (myDrawer->HasLink())
+  {
+    aDrawer->Link(myDrawer->Link());
+  }
+  myDrawer = aDrawer;
 }

@@ -19,21 +19,19 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAdaptor_HSurface.hxx>
+#include <OSD_Parallel.hxx>
 #include <StdPrs_DeflectionCurve.hxx>
 #include <StdPrs_ToolTriangulatedShape.hxx>
 #include <StdPrs_Isolines.hxx>
 #include <Standard_ErrorHandler.hxx>
 #include <Prs3d_ShapeTool.hxx>
 #include <Prs3d_IsoAspect.hxx>
-#include <Prs3d_NListOfSequenceOfPnt.hxx>
-#include <Prs3d_NListIteratorOfListOfSequenceOfPnt.hxx>
 #include <Prs3d.hxx>
 #include <Poly_Connect.hxx>
 #include <Poly_PolygonOnTriangulation.hxx>
 #include <Poly_Polygon3D.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Graphic3d_AspectLine3d.hxx>
-#include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_ArrayOfSegments.hxx>
 #include <Graphic3d_ArrayOfPoints.hxx>
 #include <gp_Pnt.hxx>
@@ -43,20 +41,58 @@
 #include <TopoDS_Face.hxx>
 #include <TopoDS.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
-#include <NCollection_List.hxx>
+#include <Standard_Mutex.hxx>
 
-namespace
+//! Functor for executing StdPrs_Isolines in parallel threads.
+class StdPrs_WFShape_IsoFunctor
 {
-  typedef NCollection_List<Handle(TColgp_HSequenceOfPnt)> ListOfSequenceOfPnt;
-}
+public:
+  StdPrs_WFShape_IsoFunctor (Prs3d_NListOfSequenceOfPnt& thePolylinesU,
+                             Prs3d_NListOfSequenceOfPnt& thePolylinesV,
+                             const std::vector<TopoDS_Face>& theFaces,
+                             const Handle(Prs3d_Drawer)& theDrawer,
+                             Standard_Real theShapeDeflection)
+  : myPolylinesU (thePolylinesU),
+    myPolylinesV (thePolylinesV),
+    myFaces (theFaces),
+    myDrawer (theDrawer),
+    myShapeDeflection (theShapeDeflection)
+  {
+    //
+  }
+
+  void operator()(const Standard_Integer& theIndex) const
+  {
+    Prs3d_NListOfSequenceOfPnt aPolylinesU, aPolylinesV;
+    const TopoDS_Face& aFace = myFaces[theIndex];
+    StdPrs_Isolines::Add (aFace, myDrawer, myShapeDeflection, aPolylinesU, aPolylinesV);
+    {
+      Standard_Mutex::Sentry aLock (myMutex);
+      myPolylinesU.Append (aPolylinesU);
+      myPolylinesV.Append (aPolylinesV);
+    }
+  }
+
+private:
+  StdPrs_WFShape_IsoFunctor operator= (StdPrs_WFShape_IsoFunctor& );
+private:
+  Prs3d_NListOfSequenceOfPnt&     myPolylinesU;
+  Prs3d_NListOfSequenceOfPnt&     myPolylinesV;
+  const std::vector<TopoDS_Face>& myFaces;
+  const Handle(Prs3d_Drawer)&     myDrawer;
+  mutable Standard_Mutex          myMutex;
+  const Standard_Real             myShapeDeflection;
+};
+
 
 // =========================================================================
 // function : Add
 // purpose  :
 // =========================================================================
-void StdPrs_WFShape::Add (const Handle (Prs3d_Presentation)& thePresentation,
-                          const TopoDS_Shape&                theShape,
-                          const Handle (Prs3d_Drawer)&       theDrawer)
+void StdPrs_WFShape::Add (const Handle(Prs3d_Presentation)& thePresentation,
+                          const TopoDS_Shape& theShape,
+                          const Handle(Prs3d_Drawer)& theDrawer,
+                          Standard_Boolean theIsParallel)
 {
   if (theShape.IsNull())
   {
@@ -78,54 +114,133 @@ void StdPrs_WFShape::Add (const Handle (Prs3d_Presentation)& thePresentation,
     }
   }
 
-  TColgp_SequenceOfPnt aShapeVertices;
-  for (aTool.InitVertex(); aTool.MoreVertex(); aTool.NextVertex())
-  {
-    aShapeVertices.Append (BRep_Tool::Pnt (aTool.GetVertex()));
-  }
-
   Standard_Real aShapeDeflection = Prs3d::GetDeflection (theShape, theDrawer);
 
-  // Draw shape elements.
-  TopTools_ListOfShape aDiscreteFaces;
-  for (aTool.InitFace(); aTool.MoreFace(); aTool.NextFace())
+  // Draw shape elements
   {
-    if (!aTool.HasSurface())
+    Handle(Graphic3d_ArrayOfPrimitives) aTriFreeEdges = AddEdgesOnTriangulation (theShape, Standard_True);
+    if (!aTriFreeEdges.IsNull())
     {
-      aDiscreteFaces.Append (aTool.GetFace());
+      Handle(Graphic3d_Group) aGroup = Prs3d_Root::NewGroup (thePresentation);
+      aGroup->SetPrimitivesAspect (theDrawer->FreeBoundaryAspect()->Aspect());
+      aGroup->AddPrimitiveArray (aTriFreeEdges);
     }
   }
-  addEdgesOnTriangulation (thePresentation, aDiscreteFaces, theDrawer->FreeBoundaryAspect());
+
+  Prs3d_NListOfSequenceOfPnt aCommonPolylines;
+  const Handle(Prs3d_LineAspect)& aWireAspect = theDrawer->WireAspect();
+
+  // Draw isolines
+  {
+    Prs3d_NListOfSequenceOfPnt  aUPolylines, aVPolylines;
+    Prs3d_NListOfSequenceOfPnt* aUPolylinesPtr = &aUPolylines;
+    Prs3d_NListOfSequenceOfPnt* aVPolylinesPtr = &aVPolylines;
+
+    const Handle(Prs3d_LineAspect)& anIsoAspectU = theDrawer->UIsoAspect();
+    const Handle(Prs3d_LineAspect)& anIsoAspectV = theDrawer->VIsoAspect();
+    if (anIsoAspectV->Aspect()->IsEqual (*anIsoAspectU->Aspect()))
+    {
+      aVPolylinesPtr = aUPolylinesPtr;
+    }
+    if (anIsoAspectU->Aspect()->IsEqual (*aWireAspect->Aspect()))
+    {
+      aUPolylinesPtr = &aCommonPolylines;
+    }
+    if (anIsoAspectV->Aspect()->IsEqual (*aWireAspect->Aspect()))
+    {
+      aVPolylinesPtr = &aCommonPolylines;
+    }
+
+    bool isParallelIso = false;
+    if (theIsParallel)
+    {
+      Standard_Integer aNbFaces = 0;
+      for (TopExp_Explorer aFaceExplorer (theShape, TopAbs_FACE); aFaceExplorer.More(); aFaceExplorer.Next())
+      {
+        ++aNbFaces;
+      }
+      if (aNbFaces > 1)
+      {
+        isParallelIso = true;
+        std::vector<TopoDS_Face> aFaces (aNbFaces);
+        aNbFaces = 0;
+        for (TopExp_Explorer aFaceExplorer (theShape, TopAbs_FACE); aFaceExplorer.More(); aFaceExplorer.Next())
+        {
+          const TopoDS_Face& aFace = TopoDS::Face (aFaceExplorer.Current());
+          if (theDrawer->IsoOnPlane() || !Prs3d_ShapeTool::IsPlanarFace (aFace))
+          {
+            aFaces[aNbFaces++] = aFace;
+          }
+        }
+
+        StdPrs_WFShape_IsoFunctor anIsoFunctor (*aUPolylinesPtr, *aVPolylinesPtr, aFaces, theDrawer, aShapeDeflection);
+        OSD_Parallel::For (0, aNbFaces, anIsoFunctor, aNbFaces < 2);
+      }
+    }
+
+    if (!isParallelIso)
+    {
+      for (TopExp_Explorer aFaceExplorer (theShape, TopAbs_FACE); aFaceExplorer.More(); aFaceExplorer.Next())
+      {
+        const TopoDS_Face& aFace = TopoDS::Face (aFaceExplorer.Current());
+        if (theDrawer->IsoOnPlane() || !Prs3d_ShapeTool::IsPlanarFace (aFace))
+        {
+          StdPrs_Isolines::Add (aFace, theDrawer, aShapeDeflection, *aUPolylinesPtr, *aVPolylinesPtr);
+        }
+      }
+    }
+
+    Prs3d::AddPrimitivesGroup (thePresentation, anIsoAspectU, aUPolylines);
+    Prs3d::AddPrimitivesGroup (thePresentation, anIsoAspectV, aVPolylines);
+  }
 
   if (!aLWire.IsEmpty() && theDrawer->WireDraw())
   {
-    addEdges (thePresentation, aLWire, theDrawer->WireAspect(), theDrawer, aShapeDeflection);
-  }
-
-  if (!aLFree.IsEmpty() && theDrawer->FreeBoundaryDraw())
-  {
-    addEdges (thePresentation, aLFree, theDrawer->FreeBoundaryAspect(), theDrawer, aShapeDeflection);
+    addEdges (aLWire, theDrawer, aShapeDeflection, aCommonPolylines);
   }
 
   if (!aLUnFree.IsEmpty() && theDrawer->UnFreeBoundaryDraw())
   {
-    addEdges (thePresentation, aLUnFree, theDrawer->UnFreeBoundaryAspect(), theDrawer, aShapeDeflection);
-  }
-
-  if (!aShapeVertices.IsEmpty())
-  {
-    addVertices (thePresentation, aShapeVertices, theDrawer->PointAspect());
-  }
-
-  // Draw isolines.
-  for (aTool.InitFace(); aTool.MoreFace(); aTool.NextFace())
-  {
-    if (aTool.IsPlanarFace() && !theDrawer->IsoOnPlane())
+    const Handle(Prs3d_LineAspect)& aLineAspect = theDrawer->UnFreeBoundaryAspect();
+    if (!aLineAspect->Aspect()->IsEqual (*aWireAspect->Aspect()))
     {
-      continue;
+      Prs3d_NListOfSequenceOfPnt aPolylines;
+      addEdges (aLUnFree, theDrawer, aShapeDeflection, aPolylines);
+      Prs3d::AddPrimitivesGroup (thePresentation, aLineAspect, aPolylines);
     }
+    else
+    {
+      addEdges (aLUnFree, theDrawer, aShapeDeflection, aCommonPolylines);
+    }
+  }
 
-    StdPrs_Isolines::Add (thePresentation, aTool.GetFace(), theDrawer, aShapeDeflection);
+  if (!aLFree.IsEmpty() && theDrawer->FreeBoundaryDraw())
+  {
+    const Handle(Prs3d_LineAspect)& aLineAspect = theDrawer->FreeBoundaryAspect();
+    if (!aLineAspect->Aspect()->IsEqual (*aWireAspect->Aspect()))
+    {
+      Prs3d_NListOfSequenceOfPnt aPolylines;
+      addEdges (aLFree, theDrawer, aShapeDeflection, aPolylines);
+      Prs3d::AddPrimitivesGroup (thePresentation, aLineAspect, aPolylines);
+    }
+    else
+    {
+      addEdges (aLFree, theDrawer, aShapeDeflection, aCommonPolylines);
+    }
+  }
+
+  Prs3d::AddPrimitivesGroup (thePresentation, theDrawer->WireAspect(), aCommonPolylines);
+
+  {
+    TColgp_SequenceOfPnt aShapeVertices;
+    for (aTool.InitVertex(); aTool.MoreVertex(); aTool.NextVertex())
+    {
+      aShapeVertices.Append (BRep_Tool::Pnt (aTool.GetVertex()));
+    }
+    if (!aShapeVertices.IsEmpty())
+    {
+      addVertices (thePresentation, aShapeVertices, theDrawer->PointAspect());
+    }
   }
 }
 
@@ -133,14 +248,11 @@ void StdPrs_WFShape::Add (const Handle (Prs3d_Presentation)& thePresentation,
 // function : AddEdges
 // purpose  :
 // =========================================================================
-void StdPrs_WFShape::addEdges (const Handle (Prs3d_Presentation)& thePresentation,
-                               const TopTools_ListOfShape&        theEdges,
-                               const Handle (Prs3d_LineAspect)&   theAspect,
-                               const Handle (Prs3d_Drawer)&       theDrawer,
-                               const Standard_Real                theShapeDeflection)
+void StdPrs_WFShape::addEdges (const TopTools_ListOfShape&  theEdges,
+                               const Handle (Prs3d_Drawer)& theDrawer,
+                               const Standard_Real          theShapeDeflection,
+                               Prs3d_NListOfSequenceOfPnt&  thePolylines)
 {
-  ListOfSequenceOfPnt aPointsOfEdges;
-
   TopTools_ListIteratorOfListOfShape anEdgesIter;
   for (anEdgesIter.Initialize (theEdges); anEdgesIter.More(); anEdgesIter.Next())
   {
@@ -204,7 +316,7 @@ void StdPrs_WFShape::addEdges (const Handle (Prs3d_Presentation)& thePresentatio
     {
       // Default presentation for edges without triangulation.
       BRepAdaptor_Curve aCurve (anEdge);
-      StdPrs_DeflectionCurve::Add (thePresentation,
+      StdPrs_DeflectionCurve::Add (Handle(Prs3d_Presentation)(),
                                    aCurve,
                                    theShapeDeflection,
                                    theDrawer,
@@ -214,59 +326,56 @@ void StdPrs_WFShape::addEdges (const Handle (Prs3d_Presentation)& thePresentatio
 
     if (!aPoints->IsEmpty())
     {
-      aPointsOfEdges.Append (aPoints);
+      thePolylines.Append (aPoints);
     }
   }
-
-  Standard_Integer aNbBounds   = aPointsOfEdges.Size();
-  Standard_Integer aNbVertices = 0;
-
-  ListOfSequenceOfPnt::Iterator aPolylineIter;
-  for (aPolylineIter.Initialize (aPointsOfEdges); aPolylineIter.More(); aPolylineIter.Next())
-  {
-    aNbVertices += aPolylineIter.Value()->Length();
-  }
-
-  if (aNbBounds < 1 || aNbVertices < 2)
-  {
-    return;
-  }
-
-  // Construct array of primitives.
-  Handle(Graphic3d_ArrayOfPolylines) aPrimitiveArray = new Graphic3d_ArrayOfPolylines (aNbVertices, aNbBounds);
-  for (aPolylineIter.Initialize (aPointsOfEdges); aPolylineIter.More(); aPolylineIter.Next())
-  {
-    const Handle(TColgp_HSequenceOfPnt)& aPoints = aPolylineIter.Value();
-    aPrimitiveArray->AddBound (aPoints->Length());
-    for (Standard_Integer anI = 1; anI <= aPoints->Length(); ++anI)
-    {
-      aPrimitiveArray->AddVertex (aPoints->Value (anI));
-    }
-  }
-
-  // Add array of primitives to presentation.
-  Handle(Graphic3d_Group) aGroup = Prs3d_Root::NewGroup (thePresentation);
-  aGroup->SetPrimitivesAspect (theAspect->Aspect());
-  aGroup->AddPrimitiveArray (aPrimitiveArray);
 }
 
 // =========================================================================
 // function : AddEdgesOnTriangulation
 // purpose  :
 // =========================================================================
-void StdPrs_WFShape::addEdgesOnTriangulation (const Handle(Prs3d_Presentation)& thePresentation,
-                                              const TopTools_ListOfShape&       theFaces,
-                                              const Handle (Prs3d_LineAspect)&  theAspect)
+Handle(Graphic3d_ArrayOfPrimitives) StdPrs_WFShape::AddEdgesOnTriangulation (const TopoDS_Shape& theShape,
+                                                                             const Standard_Boolean theToExcludeGeometric)
 {
-  TColgp_SequenceOfPnt aSurfPoints;
-
-  TopLoc_Location aLocation;
-  TopTools_ListIteratorOfListOfShape aFaceIter;
-  for (aFaceIter.Initialize (theFaces); aFaceIter.More(); aFaceIter.Next())
+  TColgp_SequenceOfPnt aSeqPnts;
+  AddEdgesOnTriangulation (aSeqPnts, theShape, theToExcludeGeometric);
+  if (aSeqPnts.Size() < 2)
   {
-    const TopoDS_Face& aFace = TopoDS::Face (aFaceIter.Value());
+    return Handle(Graphic3d_ArrayOfSegments)();
+  }
 
-    Handle(Poly_Triangulation) T = BRep_Tool::Triangulation (aFace, aLocation);
+  Standard_Integer aNbVertices = aSeqPnts.Size();
+  Handle(Graphic3d_ArrayOfSegments) aSurfArray = new Graphic3d_ArrayOfSegments (aNbVertices);
+  for (Standard_Integer anI = 1; anI <= aNbVertices; anI += 2)
+  {
+    aSurfArray->AddVertex (aSeqPnts.Value (anI));
+    aSurfArray->AddVertex (aSeqPnts.Value (anI + 1));
+  }
+  return aSurfArray;
+}
+
+// =========================================================================
+// function : AddEdgesOnTriangulation
+// purpose  :
+// =========================================================================
+void StdPrs_WFShape::AddEdgesOnTriangulation (TColgp_SequenceOfPnt& theSegments,
+                                              const TopoDS_Shape& theShape,
+                                              const Standard_Boolean theToExcludeGeometric)
+{
+  TopLoc_Location aLocation, aDummyLoc;
+  for (TopExp_Explorer aFaceIter (theShape, TopAbs_FACE); aFaceIter.More(); aFaceIter.Next())
+  {
+    const TopoDS_Face& aFace = TopoDS::Face (aFaceIter.Current());
+    if (theToExcludeGeometric)
+    {
+      const Handle(Geom_Surface)& aSurf = BRep_Tool::Surface (aFace, aDummyLoc);
+      if (!aSurf.IsNull())
+      {
+        continue;
+      }
+    }
+    const Handle(Poly_Triangulation)& T = BRep_Tool::Triangulation (aFace, aLocation);
     if (T.IsNull())
     {
       continue;
@@ -293,6 +402,11 @@ void StdPrs_WFShape::addEdgesOnTriangulation (const Handle(Prs3d_Presentation)& 
           ++aNbFree;
         }
       }
+    }
+
+    if (aNbFree == 0)
+    {
+      continue;
     }
 
     // Allocate the arrays.
@@ -331,28 +445,10 @@ void StdPrs_WFShape::addEdgesOnTriangulation (const Handle(Prs3d_Presentation)& 
     {
       gp_Pnt aPoint1 = aNodes (aFree (2 * anI - 1)).Transformed (aLocation);
       gp_Pnt aPoint2 = aNodes (aFree (2 * anI    )).Transformed (aLocation);
-      aSurfPoints.Append (aPoint1);
-      aSurfPoints.Append (aPoint2);
+      theSegments.Append (aPoint1);
+      theSegments.Append (aPoint2);
     }
   }
-
-  if (aSurfPoints.Length() < 2)
-  {
-    return;
-  }
-
-  Standard_Integer aNbVertices = aSurfPoints.Length();
-  Standard_Integer aNbBounds   = aNbVertices / 2;
-  Handle(Graphic3d_ArrayOfSegments) aSurfArray = new Graphic3d_ArrayOfSegments (aNbVertices, aNbBounds);
-  for (Standard_Integer anI = 1; anI <= aNbVertices; anI += 2)
-  {
-    aSurfArray->AddBound (2);
-    aSurfArray->AddVertex (aSurfPoints.Value (anI));
-    aSurfArray->AddVertex (aSurfPoints.Value (anI + 1));
-  }
-  Handle(Graphic3d_Group) aGroup = Prs3d_Root::NewGroup (thePresentation);
-  aGroup->SetPrimitivesAspect (theAspect->Aspect());
-  aGroup->AddPrimitiveArray (aSurfArray);
 }
 
 // =========================================================================

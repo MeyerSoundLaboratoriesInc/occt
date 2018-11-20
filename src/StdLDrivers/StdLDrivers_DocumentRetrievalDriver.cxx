@@ -95,13 +95,13 @@ Handle(StdObjMgt_Persistent) StdLDrivers_DocumentRetrievalDriver::read (
     PCDM_ReadWriter::Open (*aFileDriver, theFileName, Storage_VSRead);
     myReaderStatus = PCDM_RS_OK;
   } 
-  catch (Standard_Failure)
+  catch (Standard_Failure const& anException)
   {
     myReaderStatus = PCDM_RS_OpenError;
 
     Standard_SStream aMsg;
-    aMsg << Standard_Failure::Caught() << endl;
-    Standard_Failure::Raise (aMsg);
+    aMsg << anException << endl;
+    throw Standard_Failure(aMsg.str().c_str());
   }
   
   // Read header section
@@ -124,15 +124,15 @@ Handle(StdObjMgt_Persistent) StdLDrivers_DocumentRetrievalDriver::read (
 
     Standard_SStream aMsg;
     aMsg << "could not find any document in this file" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
   }
 
   // Select instantiators for the used types
   NCollection_Array1<StdObjMgt_Persistent::Instantiator>
     anInstantiators (1, aTypeData.NumberOfTypes());
   {
-    StdObjMgt_MapOfInstantiators aMapOfInstantiators;
-    bindTypes (aMapOfInstantiators);
+    StdObjMgt_MapOfInstantiators aMapOfInst;
+    bindTypes (aMapOfInst);
 
     TColStd_SequenceOfAsciiString anUnknownTypes;
     Standard_Integer        aCurTypeNum;
@@ -144,7 +144,7 @@ Handle(StdObjMgt_Persistent) StdLDrivers_DocumentRetrievalDriver::read (
       aCurTypeNum  = aTypeData.Type (aCurTypeName);
 
       StdObjMgt_Persistent::Instantiator anInstantiator;
-      if (aMapOfInstantiators.Find (aCurTypeName, anInstantiator))
+      if (aMapOfInst.Find(aCurTypeName, anInstantiator))
         anInstantiators (aCurTypeNum) = anInstantiator;
       else
         anUnknownTypes.Append (aCurTypeName);
@@ -164,7 +164,7 @@ Handle(StdObjMgt_Persistent) StdLDrivers_DocumentRetrievalDriver::read (
         else                             aMsg << endl;
       }
 
-      Standard_Failure::Raise (aMsg);
+      throw Standard_Failure(aMsg.str().c_str());
     }
   }
 
@@ -231,7 +231,7 @@ void StdLDrivers_DocumentRetrievalDriver::Read (Standard_IStream&               
                                                 const Handle(CDM_Document)&     /*theDoc*/,
                                                 const Handle(CDM_Application)&  /*theApplication*/)
 {
-  Standard_NotImplemented::Raise ("Reading from stream is not supported by StdLDrivers_DocumentRetrievalDriver");
+  throw Standard_NotImplemented("Reading from stream is not supported by StdLDrivers_DocumentRetrievalDriver");
 }
 
 //=======================================================================
@@ -253,37 +253,37 @@ void StdLDrivers_DocumentRetrievalDriver::raiseOnStorageError (Storage_Error the
   case Storage_VSAlreadyOpen:
     myReaderStatus = PCDM_RS_OpenError;
     aMsg << "Stream Open Error" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   case Storage_VSModeError:
     myReaderStatus = PCDM_RS_WrongStreamMode;
     aMsg << "Stream is opened with a wrong mode for operation" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   case Storage_VSSectionNotFound:
     myReaderStatus = PCDM_RS_FormatFailure;
     aMsg << "Section is not found" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   case Storage_VSFormatError:
     myReaderStatus = PCDM_RS_FormatFailure;
     aMsg << "Wrong format error" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   case Storage_VSUnknownType:
     myReaderStatus = PCDM_RS_TypeFailure;
     aMsg << "Try to read an unknown type" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   case Storage_VSTypeMismatch:
     myReaderStatus = PCDM_RS_TypeFailure;
     aMsg << "Try to read a wrong primitive type" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
 
   default:
     myReaderStatus = PCDM_RS_DriverFailure;
     aMsg << "Retrieval Driver Failure" << endl;
-    Standard_Failure::Raise (aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
   }
 }
 

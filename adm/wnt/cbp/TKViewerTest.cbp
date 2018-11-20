@@ -17,7 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__ViewerTest_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKViewerTest_obj.link" />
@@ -36,7 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__ViewerTest_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKViewerTest_objd.link" />
@@ -89,9 +87,6 @@
 		</Linker>
 		<Unit filename="../../../src/ViewerTest/ViewerTest.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_AutoUpdater.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/ViewerTest/ViewerTest_AviCommands.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/ViewerTest/ViewerTest_CmdParser.cxx">

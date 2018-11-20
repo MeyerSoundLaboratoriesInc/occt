@@ -2,28 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{E0B3D763-0923-0572-17E1-9617D9F7BB59}</UniqueIdentifier>
+      <UniqueIdentifier>{644842BC-0CAE-14B6-0683-08330D4FB31D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Geom2d">
-      <UniqueIdentifier>{2CF4F8B8-161B-092B-029F-EC3322112DDD}</UniqueIdentifier>
+      <UniqueIdentifier>{786B722D-187F-12C5-11E2-BFC1482A909E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\LProp">
-      <UniqueIdentifier>{DA3C0199-127A-0EB8-10B8-C9323D017A13}</UniqueIdentifier>
+      <UniqueIdentifier>{7C830107-1250-17D2-121B-0E4B807ED612}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Adaptor2d">
-      <UniqueIdentifier>{F5A9B6D5-17B5-04AC-196D-E355F72109A5}</UniqueIdentifier>
+      <UniqueIdentifier>{184033E1-1130-0377-1117-6B3307E34495}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Geom2dLProp">
-      <UniqueIdentifier>{004E7A32-1626-02D3-075B-0E7D5646D210}</UniqueIdentifier>
+      <UniqueIdentifier>{ABC3E4DC-0B57-074E-0EA1-A95DAA445FEF}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Geom2dAdaptor">
-      <UniqueIdentifier>{8928FE1E-195B-0EDB-09CC-A6F4F01AD622}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\GProp">
-      <UniqueIdentifier>{E0523BC3-0010-0D77-06B7-221ED716CBE3}</UniqueIdentifier>
+      <UniqueIdentifier>{F6591385-0B4F-0FE2-00CA-BFA3718382E0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Geom2dEvaluator">
-      <UniqueIdentifier>{A3DFA00A-0794-00F5-0FDB-2BCB6F390D87}</UniqueIdentifier>
+      <UniqueIdentifier>{055E2326-130D-1791-09E4-40E5CEAF6192}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -143,30 +140,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\Geom2dAdaptor\Geom2dAdaptor_HCurve.cxx">
       <Filter>Source files\Geom2dAdaptor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_CelGProps.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_GProps.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_PEquation.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_PGProps.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_PrincipalProps.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_SelGProps.cxx">
-      <Filter>Source files\GProp</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\GProp\GProp_VelGProps.cxx">
-      <Filter>Source files\GProp</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Geom2dEvaluator\Geom2dEvaluator_OffsetCurve.cxx">
       <Filter>Source files\Geom2dEvaluator</Filter>

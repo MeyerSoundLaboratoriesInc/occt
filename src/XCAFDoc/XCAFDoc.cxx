@@ -18,7 +18,7 @@
 #include <TDF_Tool.hxx>
 #include <TDataStd_Name.hxx>
 #include <TDocStd_Document.hxx>
-
+#include <Standard_GUID.hxx>
 
 //=======================================================================
 //function : ShapeRefGUID
@@ -173,6 +173,17 @@ Standard_GUID XCAFDoc::MaterialRefGUID ()
 
 
 //=======================================================================
+//function : NoteRefGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::NoteRefGUID()
+{
+  static Standard_GUID ID ("F3599E50-F84A-493e-8D1B-1284E79322F1");
+  return ID;
+}
+
+//=======================================================================
 //function : InvisibleGUID
 //purpose  : 
 //=======================================================================
@@ -185,6 +196,18 @@ Standard_GUID XCAFDoc::InvisibleGUID ()
 
 
 //=======================================================================
+//function : ColorByLayerGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ColorByLayerGUID ()
+{
+  static Standard_GUID ID ("279e8c1e-70af-4130-b626-9cc52a537db8");
+  return ID;
+}
+
+
+//=======================================================================
 //function : SHUORefGUID
 //purpose  : 
 //=======================================================================
@@ -192,5 +215,82 @@ Standard_GUID XCAFDoc::InvisibleGUID ()
 Standard_GUID XCAFDoc::SHUORefGUID ()
 {
   static Standard_GUID ID ("efd212ea-6dfd-11d4-b9c8-0060b0ee281b");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefGUID()
+{
+  static Standard_GUID ID("efd213e5-6dfd-11d4-b9c8-0060b0ee281b");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefShapeGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefShapeGUID()
+{
+  static Standard_GUID ID("efd213e6-6dfd-11d4-b9c8-0060b0ee281b");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefGDTGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefGDTGUID()
+{
+  static Standard_GUID ID("efd213e7-6dfd-11d4-b9c8-0060b0ee281b");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefPlaneGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefPlaneGUID()
+{
+  static Standard_GUID ID("efd213e9-6dfd-11d4-b9c8-0060b0ee281b");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefPlaneGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefNoteGUID()
+{
+  static Standard_GUID ID("C814ACC6-43AC-4812-9B2A-4E9A2A549354");
+  return ID;
+}
+
+//=======================================================================
+//function : ViewRefPlaneGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::ViewRefAnnotationGUID()
+{
+  static Standard_GUID ID("A2B5BA42-DD00-43f5-8882-4B5F8E76B9D2");
+  return ID;
+}
+
+//=======================================================================
+//function : LockGUID
+//purpose  : 
+//=======================================================================
+
+Standard_GUID XCAFDoc::LockGUID()
+{
+  static Standard_GUID ID("efd213eb-6dfd-11d4-b9c8-0060b0ee281b");
   return ID;
 }

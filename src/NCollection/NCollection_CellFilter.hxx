@@ -158,7 +158,7 @@ public:
   }
 
   //! Clear the data structures and set new cell sizes and allocator
-  void Reset (NCollection_Array1<Standard_Real> theCellSize, 
+  void Reset (NCollection_Array1<Standard_Real>& theCellSize, 
               const Handle(NCollection_IncAllocator)& theAlloc=0)
   {
     myCellSize = theCellSize;
@@ -246,7 +246,7 @@ protected:
     ListNode()
     {
       // Empty constructor is forbidden.
-      Standard_NoSuchObject::Raise("NCollection_CellFilter::ListNode()");
+      throw Standard_NoSuchObject("NCollection_CellFilter::ListNode()");
     }
 
     Target Object;

@@ -19,11 +19,15 @@
 #include <IVtkTools.hxx>
 
 #include "vtkPolyDataAlgorithm.h"
-#include <IVtk_Types.hxx>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4251) // avoid warning C4251: "class needs to have dll-interface..."
+#endif
 
 //! @class IVtkTools_SubPolyDataFilter 
 //! @brief Cells filter according to the given set of cells ids.
-class IVtkTools_EXPORT IVtkTools_SubPolyDataFilter : public vtkPolyDataAlgorithm
+class Standard_EXPORT IVtkTools_SubPolyDataFilter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(IVtkTools_SubPolyDataFilter,vtkPolyDataAlgorithm)
@@ -57,7 +61,7 @@ protected:
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   IVtkTools_SubPolyDataFilter();
-  ~IVtkTools_SubPolyDataFilter();
+  virtual ~IVtkTools_SubPolyDataFilter();
 
 protected:
   //! Set of ids to be passed through this filter.
@@ -65,5 +69,9 @@ protected:
   const char*    myIdsArrayName;
   bool           myDoFiltering;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // IVtkTOOLS_SUBPOLYDATAFILTER_H

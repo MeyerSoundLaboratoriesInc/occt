@@ -29,7 +29,7 @@
 #include <TDF_ListIteratorOfLabelList.hxx>
 #include <TDF_MapIteratorOfLabelMap.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(TDF_Delta,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(TDF_Delta,Standard_Transient)
 
 #ifdef OCCT_DEBUG
 #include <Standard_ConstructionError.hxx>
@@ -118,9 +118,9 @@ void TDF_Delta::BeforeOrAfterApply(const Standard_Boolean before) const
       cout<<"AttributeDelta type = "<<itr.Value()->DynamicType()->Name();
       cout<<"  Attribute type = "<<itr.Value()->Attribute()->DynamicType()->Name()<<endl;;
     if (before)
-      Standard_ConstructionError::Raise("BeforeUndo(): dead lock.");
+      cout<<"BeforeUndo(): dead lock."<<endl;
     else
-      Standard_ConstructionError::Raise("AfterUndo(): dead lock.");
+      cout<<"AfterUndo(): dead lock."<<endl;
     }
 #endif
     for (itr.Initialize(ADlist); itr.More(); itr.Next()) {

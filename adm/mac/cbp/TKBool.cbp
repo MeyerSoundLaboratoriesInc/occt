@@ -81,7 +81,6 @@
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FaceEdgeIntersector.cxx" />
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesFiller.cxx" />
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesFiller_1.cxx" />
-		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesFiller_VPonR.cxx" />
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesIntersector.cxx" />
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_GeomTool.cxx" />
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_Hctxee2d.cxx" />
@@ -120,7 +119,6 @@
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_CurveIterator.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_CurvePointInterference.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DRAW.cxx" />
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DSS.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DataStructure.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_Dumper.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_EIR.cxx" />
@@ -167,12 +165,9 @@
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_Transition.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_connex.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_funk.cxx" />
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_reDEB.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_redu.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_repvg.cxx" />
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_samdom.cxx" />
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_trace.cxx" />
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_traceDSX.cxx" />
 		<Unit filename="../../../src/TopOpeBRepBuild/TopOpeBRepBuild.cxx" />
 		<Unit filename="../../../src/TopOpeBRepBuild/TopOpeBRepBuild_Area1dBuilder.cxx" />
 		<Unit filename="../../../src/TopOpeBRepBuild/TopOpeBRepBuild_Area2dBuilder.cxx" />
@@ -268,7 +263,6 @@
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_TOOL.cxx" />
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_TOPOLOGY.cxx" />
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_box.cxx" />
-		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_closing.cxx" />
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_connexity.cxx" />
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_face.cxx" />
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_faulty.cxx" />

@@ -51,7 +51,6 @@
 #endif
 
 #ifdef _WIN32
-#define _WIN32_WINNT 0x0400  // for TrackMouseEvent support requires Win95 with IE 3.0 or greater.
 #include <windows.h>
 #include <WNT_WClass.hxx>
 #include <WNT_Window.hxx>
@@ -86,6 +85,11 @@
 #include <IVtkDraw_HighlightAndSelectionPipeline.hxx>
 #include <IVtkDraw_Interactor.hxx>
 
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4244)
+#endif
 #include <vtkAlgorithmOutput.h>
 #include <vtkAppendPolyData.h>
 #include <vtkBMPWriter.h>
@@ -108,7 +112,6 @@
 #include <vtkSmartPointer.h>
 #include <vtkTIFFWriter.h>
 #include <vtkWindowToImageFilter.h>
-
 #ifndef _WIN32
 #include <X11/X.h>
 #include <X11/Shell.h>
@@ -119,6 +122,9 @@
 #include <vtkXOpenGLRenderWindow.h>
 #include <X11/Xutil.h>
 #include <tk.h>
+#endif
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 // workaround name conflicts with OCCT methods (in class TopoDS_Shape for example)
@@ -205,12 +211,6 @@ static Handle(PipelinePtr) PipelineByActorName (const TCollection_AsciiString& t
   return PipelineByActor (anActor);
 }
 
-static Standard_Boolean IsEqual (const TopoDS_Shape& theLeft,
-                                 const TopoDS_Shape& theRight)
-{
-  return theLeft.IsEqual (theRight);
-}
-
 #ifdef _WIN32
 
 static Handle(WNT_Window)& GetWindow()
@@ -252,15 +252,15 @@ Standard_Integer GenerateId()
 // Function : WClass
 // Purpose  :
 //=========================================================
-const Handle(MMgt_TShared)& IVtkDraw::WClass()
+const Handle(Standard_Transient)& IVtkDraw::WClass()
 {
-  static Handle(MMgt_TShared) aWindowClass;
+  static Handle(Standard_Transient) aWindowClass;
 #ifdef _WIN32
   if (aWindowClass.IsNull())
   {
     aWindowClass = new WNT_WClass ("GWVTK_Class", DefWindowProc,
                                    CS_VREDRAW | CS_HREDRAW, 0, 0,
-                                   ::LoadCursor (NULL, IDC_ARROW));
+                                   ::LoadCursorW (NULL, IDC_ARROW));
   }
 #endif
   return aWindowClass;
@@ -374,7 +374,7 @@ void IVtkDraw::ViewerInit (Standard_Integer thePxLeft,
 
     // Init picker
     GetPicker() = vtkSmartPointer<IVtkTools_ShapePicker>::New();
-    GetPicker()->SetTolerance (0.025);
+    GetPicker()->SetTolerance (0.025f);
     GetPicker()->SetRenderer (GetRenderer());
 
     GetInteractor()->SetShapePicker (GetPicker());
@@ -451,7 +451,7 @@ static Standard_Integer VtkDisplay (Draw_Interpretor& theDI,
 
   TCollection_AsciiString aName;
   TopoDS_Shape anOldShape, aNewShape;
-  vtkSmartPointer<vtkRenderer> aRenderer = GetRenderer();
+  vtkSmartPointer<vtkRenderer>& aRenderer = GetRenderer();
   for (Standard_Integer anIndex = 1; anIndex < theArgNum; ++anIndex)
   {
     // Get name of shape
@@ -494,12 +494,13 @@ static Standard_Integer VtkDisplay (Draw_Interpretor& theDI,
     {
       if (aNewShape.IsNull()) continue;
       // Create actor from DRAW shape
-      vtkActor* anActor = CreateActor (GenerateId(), aNewShape);
+      Standard_Integer anId = GenerateId();
+      vtkSmartPointer<vtkActor> anActor = CreateActor (anId, aNewShape);
       // Update maps
       GetMapOfShapes().Bind (aNewShape, aName);
       GetMapOfActors().Bind (anActor, aName);
       // Display actor
-      PipelineByActorName (aName)->AddToRenderer (aRenderer);
+      GetPipeline(anId)->AddToRenderer(aRenderer);
 
       // Compute selection for displayed actors
       GetPicker()->SetSelectionMode (SM_Shape, Standard_True);
@@ -549,6 +550,89 @@ static Standard_Integer VtkErase (Draw_Interpretor& theDI,
       if (GetMapOfActors().IsBound2 (aName))
       {
         PipelineByActorName (aName)->RemoveFromRenderer (aRenderer);
+      }
+    }
+  }
+
+  // Redraw window
+  aRenderer->ResetCamera();
+  GetInteractor()->GetRenderWindow()->Render();
+  return 0;
+}
+
+//================================================================
+// Function : VtkRemove
+// Purpose  : Remove the actor from memory.
+//================================================================
+static Standard_Integer VtkRemove(Draw_Interpretor& theDI,
+  Standard_Integer theArgNum,
+  const char** theArgs)
+{
+  // Check viewer
+  if (!GetInteractor()->IsEnabled())
+  {
+    theDI << theArgs[0] << " error : call ivtkinit before\n";
+    return 1; // TCL_ERROR
+  }
+
+  vtkSmartPointer<vtkRenderer> aRenderer = GetRenderer();
+
+  // Remove all objects
+  if (theArgNum == 1)
+  {
+    // Remove all actors from the renderer
+    DoubleMapOfActorsAndNames::Iterator anIterator(GetMapOfActors());
+    while (anIterator.More())
+    {
+      vtkSmartPointer<IVtkTools_ShapeDataSource> aSrc =
+        IVtkTools_ShapeObject::GetShapeSource(anIterator.Key1());
+      if (aSrc.GetPointer() != NULL && !(aSrc->GetShape().IsNull()))
+      {
+        GetPicker()->RemoveSelectableObject(aSrc->GetShape());
+      }
+      else
+      {
+        aRenderer->RemoveActor(anIterator.Key1());
+      }
+      anIterator.Next();
+    }
+    // Remove all pipelines from the renderer
+    for (ShapePipelineMap::Iterator anIt(*GetPipelines()); anIt.More(); anIt.Next())
+    {
+      anIt.Value()->RemoveFromRenderer(aRenderer);
+    }
+    // Clear maps and remove all TopoDS_Shapes, actors and pipelines
+    GetMapOfShapes().Clear();
+    GetMapOfActors().Clear();
+    GetPipelines()->Clear();
+  }
+  // Remove named objects
+  else
+  {
+    TCollection_AsciiString aName;
+    for (Standard_Integer anIndex = 1; anIndex < theArgNum; ++anIndex)
+    {
+      aName = theArgs[anIndex];
+      if (GetMapOfActors().IsBound2(aName))
+      {
+        // Remove the actor and its pipeline (if found) from the renderer
+        vtkSmartPointer<vtkActor> anActor = GetMapOfActors().Find2(aName);
+        vtkSmartPointer<IVtkTools_ShapeDataSource> aSrc = 
+          IVtkTools_ShapeObject::GetShapeSource(anActor);
+        if (aSrc.GetPointer() != NULL && !(aSrc->GetShape().IsNull()))
+        {
+          IVtk_IdType aShapeID = aSrc->GetShape()->GetId();
+          GetPicker()->RemoveSelectableObject(aSrc->GetShape());
+          GetPipeline(aSrc->GetShape()->GetId())->RemoveFromRenderer(aRenderer);
+          GetPipelines()->UnBind(aShapeID); // Remove a pipepline
+        }
+        else
+        {
+          aRenderer->RemoveActor(anActor);
+        }
+        // Remove the TopoDS_Shape and the actor
+        GetMapOfShapes().UnBind2(aName); // Remove a TopoDS shape
+        GetMapOfActors().UnBind2(aName); // Remove an actor
       }
     }
   }
@@ -665,7 +749,7 @@ static Standard_Integer VtkSetSelectionMode (Draw_Interpretor& theDI,
   if (theArgNum == 3)
   {
     aMode = atoi (theArgs[1]);
-    isTurnOn = atoi (theArgs[2]);
+    isTurnOn = (atoi (theArgs[2]) != 0);
     if (aMode < 0 || aMode > 8)
     {
       theDI << theArgs[0] << " error: only 0-8 selection modes are supported\n";
@@ -726,7 +810,7 @@ static Standard_Integer VtkSetSelectionMode (Draw_Interpretor& theDI,
   if (theArgNum == 4)
   {
     aMode = atoi (theArgs[2]);
-    isTurnOn = atoi (theArgs[3]);
+    isTurnOn = (atoi (theArgs[3]) != 0);
 
     if (aMode < 0 || aMode > 8)
     {
@@ -841,7 +925,7 @@ static Standard_Integer VtkSelect (Draw_Interpretor& theDI,
     return 1; // TCL_ERROR
   }
 
-  Standard_Integer anY = GetInteractor()->GetRenderWindow()->GetSize()[1] - atoi (theArgs[1]) - 1;
+  Standard_Integer anY = GetInteractor()->GetRenderWindow()->GetSize()[1] - atoi (theArgs[2]) - 1;
   GetInteractor()->MoveTo (atoi (theArgs[1]), anY);
   GetInteractor()->OnSelection();
   return 0;
@@ -1096,6 +1180,12 @@ void IVtkDraw::Commands (Draw_Interpretor& theCommands)
     "ivtkerase [name1 name2 ...]"
     "\n\t\t: Removes from renderer named objects or all objects.",
     __FILE__, VtkErase, group);
+
+  theCommands.Add("ivtkremove",
+    "ivtkremove usage:\n"
+    "ivtkremove [name1 name2 ...]"
+    "\n\t\t: Removes from renderer and from memory named objects or all objects.",
+    __FILE__, VtkRemove, group);
 
   theCommands.Add("ivtksetdispmode",
     "ivtksetdispmode usage:\n"

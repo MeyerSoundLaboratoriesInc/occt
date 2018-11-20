@@ -3,6 +3,11 @@ cmake_minimum_required (VERSION 2.6)
 project (mfcsample)
 
 add_definitions(-DWINVER=0x0501 -D_AFXEXT -DUNICODE -D_UNICODE)
+
+if (NOT BUILD_SHARED_LIBS AND WIN32)
+  add_definitions ("-DOCCT_STATIC_BUILD")
+endif()
+
 set (CMAKE_MFC_FLAG 2)
 
 # mfcsample
@@ -52,12 +57,10 @@ set (COMMON_ISESSION2D_SOURCE_FILES ${COMMON_ISESSION2D_DIR}/ISession2D_Shape.cp
 set (COMMON_PRIMITIVE_DIR          ${MFC_STANDARD_COMMON_SAMPLES_DIR}/Primitive)
 set (COMMON_PRIMITIVE_HEADER_FILES ${COMMON_PRIMITIVE_DIR}/Sample2D_Face.h
                                    ${COMMON_PRIMITIVE_DIR}/Sample2D_Image.h
-                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Markers.h
-                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Text.h )
+                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Markers.h )
 set (COMMON_PRIMITIVE_SOURCE_FILES ${COMMON_PRIMITIVE_DIR}/Sample2D_Face.cpp
                                    ${COMMON_PRIMITIVE_DIR}/Sample2D_Image.cpp
-                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Markers.cpp
-                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Text.cpp )
+                                   ${COMMON_PRIMITIVE_DIR}/Sample2D_Markers.cpp )
 
 # Common Resource2D
 set (COMMON_RESOURCE2D_DIR          ${MFC_STANDARD_COMMON_SAMPLES_DIR}/Resource2D)
@@ -123,7 +126,7 @@ source_group ("Source Files" FILES    ${mfcsample_SOURCE_FILES}
 source_group ( "Resource Files" FILES ${COMMON_RESOURCE_FILES})
 
 # mfcsample library
-add_library ( mfcsample SHARED ${mfcsample_SOURCE_FILES}
+add_library ( mfcsample        ${mfcsample_SOURCE_FILES}
                                ${COMMON_HEADER_FILES}
                                ${COMMON_SOURCE_FILES}
                                ${COMMON_IE_HEADER_FILES}
@@ -136,24 +139,24 @@ add_library ( mfcsample SHARED ${mfcsample_SOURCE_FILES}
                                ${COMMON_ISESSION2D_SOURCE_FILES}
                                ${COMMON_RESOURCE_FILES})
 
-set_property (TARGET mfcsample PROPERTY FOLDER Samples)
+set_property (TARGET mfcsample PROPERTY FOLDER "Samples/mfc")
 
 if (SINGLE_GENERATOR)
   install (TARGETS mfcsample
-           RUNTIME DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}"
-           ARCHIVE DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}"
-           LIBRARY DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}")
+           RUNTIME DESTINATION "${INSTALL_DIR_BIN}"
+           ARCHIVE DESTINATION "${INSTALL_DIR_LIB}"
+           LIBRARY DESTINATION "${INSTALL_DIR_LIB}")
 else()
   install (TARGETS mfcsample
            CONFIGURATIONS Release RelWithDebInfo
-           RUNTIME DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}"
-           ARCHIVE DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}"
-           LIBRARY DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}")
+           RUNTIME DESTINATION "${INSTALL_DIR_BIN}"
+           ARCHIVE DESTINATION "${INSTALL_DIR_LIB}"
+           LIBRARY DESTINATION "${INSTALL_DIR_LIB}")
   install (TARGETS mfcsample
            CONFIGURATIONS Debug
-           RUNTIME DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}d"
-           ARCHIVE DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}d"
-           LIBRARY DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_LIB}d")
+           RUNTIME DESTINATION "${INSTALL_DIR_BIN}d"
+           ARCHIVE DESTINATION "${INSTALL_DIR_LIB}d"
+           LIBRARY DESTINATION "${INSTALL_DIR_LIB}d")
 endif()
 
 include_directories( ${CMAKE_BINARY_DIR}/inc
@@ -170,9 +173,12 @@ set (mfcsample_USED_LIBS  TKVRML
                           TKIGES
                           TKShHealing
                           TKSTEP
+                          TKSTEPBase
+                          TKSTEP209
+                          TKSTEPAttr
                           TKXSBase
-                          FWOSPlugin
                           TKBool
+                          TKBO
                           TKCAF
                           TKCDF
                           TKernel
@@ -190,6 +196,7 @@ set (mfcsample_USED_LIBS  TKVRML
                           TKService
                           TKTopAlgo
                           TKMesh
-                          TKV3d)
+                          TKV3d
+                          ${CSF_OpenGlLibs})
 
 target_link_libraries (mfcsample ${mfcsample_USED_LIBS})

@@ -17,7 +17,7 @@
 #include <BinMDataStd.hxx>
 #include <BinMDataStd_RealArrayDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_HArray1OfReal.hxx>
 #include <TDataStd_RealArray.hxx>
@@ -30,7 +30,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_RealArrayDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataStd_RealArrayDriver::BinMDataStd_RealArrayDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_RealArray)->Name())
 {
 }
@@ -62,7 +62,7 @@ Standard_Boolean BinMDataStd_RealArrayDriver::Paste
   if (aLength <= 0)
     return Standard_False;
 
-  Handle(TDataStd_RealArray) anAtt =
+  const Handle(TDataStd_RealArray) anAtt =
     Handle(TDataStd_RealArray)::DownCast(theTarget);
   anAtt->Init(aFirstInd, aLastInd);
   TColStd_Array1OfReal& aTargetArray = anAtt->Array()->ChangeArray1();
@@ -75,9 +75,11 @@ Standard_Boolean BinMDataStd_RealArrayDriver::Paste
     if (! (theSource >> aDeltaValue))
       return Standard_False;
     else
-      aDelta = (Standard_Boolean)aDeltaValue;
+      aDelta = (aDeltaValue != 0);
   }
   anAtt->SetDelta(aDelta);
+
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return Standard_True; 
 }
 
@@ -100,5 +102,8 @@ void BinMDataStd_RealArrayDriver::Paste
   theTarget << aFirstInd << aLastInd;
   Standard_Real *aPtr = (Standard_Real *) &aSourceArray(aFirstInd);
   theTarget.PutRealArray (aPtr, aLength);
-  theTarget << (Standard_Byte)anAtt->GetDelta(); 
+  theTarget << (Standard_Byte)(anAtt->GetDelta() ? 1 : 0);
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_RealArray::GetID()) 
+    theTarget << anAtt->ID();
 }

@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -80,6 +82,7 @@
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_PositionDriver.cxx" />
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_PresentationDriver.cxx" />
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_ShapeDriver.cxx" />
+		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_TriangulationDriver.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming_NamedShapeDriver.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming_NamingDriver.cxx" />

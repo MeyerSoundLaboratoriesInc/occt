@@ -17,8 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__XmlXCAFDrivers_DLL" />
-					<Add option="-D__XmlMXCAFDoc_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXmlXCAF_obj.link" />
@@ -37,8 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__XmlXCAFDrivers_DLL" />
-					<Add option="-D__XmlMXCAFDoc_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXmlXCAF_objd.link" />
@@ -87,7 +83,13 @@
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_AreaDriver.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_AssemblyItemRefDriver.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_CentroidDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_ClippingPlaneToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_ColorDriver.cxx">
@@ -123,7 +125,25 @@
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_MaterialToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_NoteBalloonDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_NoteBinDataDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_NoteCommentDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_NoteDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_NotesToolDriver.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_ShapeToolDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_ViewToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/XmlMXCAFDoc/XmlMXCAFDoc_VolumeDriver.cxx">

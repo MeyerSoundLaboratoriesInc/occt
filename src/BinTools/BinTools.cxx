@@ -15,7 +15,9 @@
 
 
 #include <BinTools.hxx>
+#include <BinTools_ShapeSet.hxx>
 #include <FSD_FileHeader.hxx>
+#include <OSD_OpenFile.hxx>
 #include <Storage_StreamTypeMismatchError.hxx>
 
 //=======================================================================
@@ -24,7 +26,7 @@
 //=======================================================================
 Standard_OStream& BinTools::PutBool(Standard_OStream& OS, const Standard_Boolean aValue)
 {
-  OS.put((Standard_Byte)aValue);
+  OS.put((Standard_Byte)(aValue ? 1 : 0));
   return OS;
 }
 
@@ -82,7 +84,7 @@ Standard_OStream& BinTools::PutExtChar(Standard_OStream& OS, const Standard_ExtC
 Standard_IStream& BinTools::GetReal(Standard_IStream& IS, Standard_Real& aValue)
 {
   if(!IS.read ((char*)&aValue, sizeof(Standard_Real)))
-    Storage_StreamTypeMismatchError::Raise();
+    throw Storage_StreamTypeMismatchError();
 #if DO_INVERSE
   aValue = InverseReal (aValue);
 #endif
@@ -97,7 +99,7 @@ Standard_IStream& BinTools::GetReal(Standard_IStream& IS, Standard_Real& aValue)
 Standard_IStream& BinTools::GetInteger(Standard_IStream& IS, Standard_Integer& aValue)
 {
   if(!IS.read ((char*)&aValue, sizeof(Standard_Integer)))
-    Storage_StreamTypeMismatchError::Raise();;
+    throw Storage_StreamTypeMismatchError();;
 #if DO_INVERSE
   aValue = InverseInt (aValue);
 #endif
@@ -112,7 +114,7 @@ Standard_IStream& BinTools::GetInteger(Standard_IStream& IS, Standard_Integer& a
 Standard_IStream& BinTools::GetExtChar(Standard_IStream& IS, Standard_ExtCharacter& theValue)
 {
   if(!IS.read ((char*)&theValue, sizeof(Standard_ExtCharacter)))
-    Storage_StreamTypeMismatchError::Raise();;
+    throw Storage_StreamTypeMismatchError();;
 #if DO_INVERSE
   theValue = InverseExtChar (theValue);
 #endif
@@ -126,6 +128,67 @@ Standard_IStream& BinTools::GetExtChar(Standard_IStream& IS, Standard_ExtCharact
 
 Standard_IStream& BinTools::GetBool(Standard_IStream& IS, Standard_Boolean& aValue)
 {
-  aValue = (Standard_Boolean)IS.get();
+  aValue = (IS.get() != 0);
   return IS;
+}
+
+//=======================================================================
+//function : Write
+//purpose  : 
+//=======================================================================
+
+void BinTools::Write (const TopoDS_Shape& theShape, Standard_OStream& theStream)
+{
+  BinTools_ShapeSet aShapeSet(Standard_True);
+  aShapeSet.SetFormatNb (3);
+  aShapeSet.Add (theShape);
+  aShapeSet.Write (theStream);
+  aShapeSet.Write (theShape, theStream);
+}
+
+//=======================================================================
+//function : Read
+//purpose  : 
+//=======================================================================
+
+void BinTools::Read (TopoDS_Shape& theShape, Standard_IStream& theStream)
+{
+  BinTools_ShapeSet aShapeSet(Standard_True);
+  aShapeSet.Read (theStream);
+  aShapeSet.Read (theShape, theStream, aShapeSet.NbShapes());
+}
+
+//=======================================================================
+//function : Write
+//purpose  : 
+//=======================================================================
+
+Standard_Boolean BinTools::Write (const TopoDS_Shape& theShape, const Standard_CString theFile)
+{
+  ofstream aStream;
+  aStream.precision (15);
+  OSD_OpenStream (aStream, theFile, ios::out | ios::binary);
+  if (!aStream.good())
+    return Standard_False;
+
+  Write (theShape, aStream);
+  aStream.close();
+  return aStream.good();
+}
+
+//=======================================================================
+//function : Read
+//purpose  : 
+//=======================================================================
+
+Standard_Boolean BinTools::Read (TopoDS_Shape& theShape, const Standard_CString theFile)
+{
+  filebuf aBuf;
+  OSD_OpenStream (aBuf, theFile, ios::in | ios::binary);
+  if (!aBuf.is_open())
+    return Standard_False;
+
+  Standard_IStream aStream (&aBuf);
+  Read (theShape, aStream);
+  return aStream.good();
 }

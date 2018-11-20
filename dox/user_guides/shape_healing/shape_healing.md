@@ -41,7 +41,7 @@ The solution: Shape Healing closes a gap by inserting lacking edge.
   
 The following diagram shows dependencies of API packages: 
 
-@figure{/user_guides/shape_healing/images/shape_healing_image009.svg, "Shape Healing packages"}
+@figure{/user_guides/shape_healing/images/shape_healing_image009.svg,"Shape Healing packages",420}
 
 Each sub-domain has its own scope of functionality: 
 * analysis -- exploring shape properties, computing shape features, detecting violation of OCCT requirements (shape itself is not modified);
@@ -443,8 +443,7 @@ TopoDS_Wire newwire = sfw.Wire();
 
 Let us correct the following wire:
 
-@image html /user_guides/shape_healing/images/shape_healing_image013.png "Initial shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image013.png "Initial shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image013.png,"Initial shape",420}
 
 It is necessary to apply the @ref occt_shg_3_1_2 "tools for the analysis of wire validity" to check that:
 * the edges are correctly oriented;
@@ -488,8 +487,7 @@ adjacent edges”<<endl;
 
 As the result all failures have been fixed.
 
-@image html /user_guides/shape_healing/images/shape_healing_image014.png "Resulting shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image014.png "Resulting shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image014.png,"Resulting shape",420}
 
 @subsubsection occt_shg_2_3_8 Repairing tool for edges 
 
@@ -502,8 +500,7 @@ This tool does not have the method *Perform()*.
 
 To see how this tool works, it is possible to take an edge, where the maximum deviation between the 3D curve and 2D curve P1 is greater than the edge tolerance.
 
-@image html /user_guides/shape_healing/images/shape_healing_image011.png "Initial shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image011.png "Initial shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image011.png,"Initial shape",420}
 
 First it is necessary to apply the @ref occt_shg_3_1_3 "tool for checking the edge validity" to find that the maximum deviation between pcurve and 3D curve is greater than tolerance. Then we can use the repairing tool to increase the tolerance and make the deviation acceptable.
 
@@ -523,8 +520,7 @@ if (sae.CheckSameParameter (edge, maxdev)) {
 }
 ~~~~~
 
-@image html /user_guides/shape_healing/images/shape_healing_image012.png "Resulting shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image012.png "Resulting shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image012.png,"Resulting shape",420}
 
 As the result, the  edge tolerance has been increased.
 
@@ -1183,11 +1179,9 @@ Such calculations are necessary to avoid creation of strip faces. In the process
 
 An example of using this tool is presented in the figures below: 
 
-@image html /user_guides/shape_healing/images/shape_healing_image003.png "Source Face"
-@image latex /user_guides/shape_healing/images/shape_healing_image003.png "Source Face"
+@figure{/user_guides/shape_healing/images/shape_healing_image003.png,"Source Face",240}
 
-@image html /user_guides/shape_healing/images/shape_healing_image004.png "Resulting shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image004.png "Resulting shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image004.png,"Resulting shape",240}
 
 
 *ShapeUpgrade_ShapeDivideArea* is inherited from the base class *ShapeUpgrade_ShapeDivide* and should be used in the following way: 
@@ -1371,19 +1365,15 @@ If the sequence of shapes contains faces, only the internal wires from these fac
 
 An example of using this tool is presented in the figures below: 
 
-@image html /user_guides/shape_healing/images/shape_healing_image005.png "Source Face"
-@image latex /user_guides/shape_healing/images/shape_healing_image005.png "Source Face"
-@image html /user_guides/shape_healing/images/shape_healing_image006.png "Resulting shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image006.png "Resulting shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image005.png,"Source Face",240}
+@figure{/user_guides/shape_healing/images/shape_healing_image006.png,"Resulting shape",240}
 
 After the processing three internal wires with contour area less than the specified minimal area have been removed. One internal face has been removed. The outer wire of this face consists of the edges belonging to the removed internal wires and a seam edge. 
 Two other internal faces have not been removed because their outer wires consist not only of edges belonging to the removed wires.
 
-@image html /user_guides/shape_healing/images/shape_healing_image007.png "Source Face"
-@image latex /user_guides/shape_healing/images/shape_healing_image007.png "Source Face"
+@figure{/user_guides/shape_healing/images/shape_healing_image007.png,"Source Face",240}
 
-@image html /user_guides/shape_healing/images/shape_healing_image008.png "Resulting shape"
-@image latex /user_guides/shape_healing/images/shape_healing_image008.png "Resulting shape"
+@figure{/user_guides/shape_healing/images/shape_healing_image008.png,"Resulting shape",240}
 
 After the processing six internal wires with contour area less than the specified minimal area have been removed. Six internal faces have been removed. These faces can be united into groups of faces. Each group of faces has an outer wire consisting only of edges belonging to the removed internal wires. Such groups of faces are also removed. 
 
@@ -1493,6 +1483,8 @@ To use this tool for the reconstruction of shapes it is necessary to take the fo
 For a sub-shape it is recommended to use method *Apply* before methods *Replace* and *Remove*, because the sub-shape has already been changed for the moment by its previous modifications or modification of its sub-shape (for example *TopoDS_Edge* can be changed by a modification of its *TopoDS_Vertex*, etc.). 
 3. Use method *Apply* for the initial shape again to get the resulting shape after all modifications have been made.
 4. Use method *Apply* to obtain the history of sub-shape modification.
+
+Additional method *IsNewShape* can be used to check if the shape has been recorded by *BRepTools_ReShape* tool as a value.
 
 **Note** that in fact class *ShapeBuild_ReShape* is an alias for class *BRepTools_ReShape*. They differ only in queries of statuses in the *ShapeBuild_ReShape* class. 
 
@@ -1974,4 +1966,5 @@ The Boolean set to False will rewrite the existing file. When set to True, new m
 A new default log file can be added using  method *SetDefault* with the same arguments as in the constructor. 
 The default trace level can be changed by using method *SetDefLevel*. In this way, the information received in the log file is modified. 
 It is possible to close the log file and set the default trace output to the screen display instead of the log file using the method *SetDefault* without any arguments. 
+
 

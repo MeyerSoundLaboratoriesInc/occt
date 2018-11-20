@@ -48,14 +48,11 @@ Handle(Standard_Transient) Plugin::Load (const Standard_GUID& aGUID,
     theResource += ".Location";
 
     if(!PluginResource->Find(theResource.ToCString())) {
-      PluginResource = AdditionalPluginMap();
-      if (!PluginResource->Find(theResource.ToCString())) {
-        Standard_SStream aMsg; aMsg << "could not find the resource:";
-        aMsg << theResource.ToCString()<< endl;
-        if (theVerbose)
-            cout << "could not find the resource:"<<theResource.ToCString()<< endl;
-        Plugin_Failure::Raise(aMsg);
-      }
+      Standard_SStream aMsg; aMsg << "could not find the resource:";
+      aMsg << theResource.ToCString() << endl;
+      if (theVerbose)
+        cout << "could not find the resource:" << theResource.ToCString() << endl;
+      throw Plugin_Failure(aMsg.str().c_str());
     }
     
     TCollection_AsciiString thePluginLibrary("");
@@ -81,7 +78,7 @@ Handle(Standard_Transient) Plugin::Load (const Standard_GUID& aGUID,
       aMsg << error.ToCString();
       if (theVerbose)
         cout << "could not open: "  << PluginResource->Value(theResource.ToCString())<< " ; reason: "<< error.ToCString() << endl;
-      Plugin_Failure::Raise(aMsg);
+      throw Plugin_Failure(aMsg.str().c_str());
     }
     f = theSharedLibrary.DlSymb("PLUGINFACTORY");
     if( f == NULL ) {
@@ -89,7 +86,7 @@ Handle(Standard_Transient) Plugin::Load (const Standard_GUID& aGUID,
       Standard_SStream aMsg; aMsg << "could not find the factory in:";
       aMsg << PluginResource->Value(theResource.ToCString());
       aMsg << error.ToCString();
-      Plugin_Failure::Raise(aMsg);
+      throw Plugin_Failure(aMsg.str().c_str());
     }
     theMapOfFunctions.Bind(pid,f);
   }
@@ -101,12 +98,4 @@ Handle(Standard_Transient) Plugin::Load (const Standard_GUID& aGUID,
   Handle(Standard_Transient) theServiceFactory = (*fp) (aGUID);
   return theServiceFactory;
   
-}
-
-const Handle(Resource_Manager)& Plugin::AdditionalPluginMap()
-{
-  static Handle(Resource_Manager) aMap;
-  if (aMap.IsNull())
-    aMap = new Resource_Manager ("" /*theName*/, Standard_False /*theVerbose*/);
-  return aMap;
 }

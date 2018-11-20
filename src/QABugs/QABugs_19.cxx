@@ -15,47 +15,50 @@
 
 #include <QABugs.hxx>
 
-#include <Draw_Interpretor.hxx>
-#include <DBRep.hxx>
-#include <DrawTrSurf.hxx>
-#include <ViewerTest.hxx>
-#include <V3d_View.hxx>
-#include <TopoDS_Shape.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_LocalContext.hxx>
-#include <AIS_TexturedShape.hxx>
-#include <Image_PixMap.hxx>
-#include <Image_Color.hxx>
-
-#include <gp_Pnt2d.hxx>
-#include <gp_Ax1.hxx>
-#include <gp_Quaternion.hxx>
+#include <AIS_Shape.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepOffsetAPI_MakePipe.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeSphere.hxx>
+#include <DBRep.hxx>
+#include <Draw_Interpretor.hxx>
+#include <DrawTrSurf.hxx>
 #include <GCE2d_MakeSegment.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
-#include <DrawTrSurf.hxx>
-
+#include <GeomFill_Trihedron.hxx>
+#include <Graphic3d_ArrayOfTriangles.hxx>
+#include <gp_Ax1.hxx>
+#include <gp_Pnt2d.hxx>
+#include <gp_Quaternion.hxx>
+#include <Image_Color.hxx>
+#include <Image_PixMap.hxx>
+#include <NCollection_Handle.hxx>
+#include <NCollection_IncAllocator.hxx>
+#include <NCollection_Map.hxx>
+#include <OSD_Parallel.hxx>
+#include <OSD_PerfMeter.hxx>
+#include <OSD_Timer.hxx>
 #include <Precision.hxx>
+#include <Prs3d_ShadingAspect.hxx>
+#include <Prs3d_Text.hxx>
+#include <SelectMgr_Filter.hxx>
+#include <Standard_Version.hxx>
+#include <StdSelect_BRepOwner.hxx>
+#include <TCollection_HAsciiString.hxx>
+#include <TopExp_Explorer.hxx>
+#include <TopoDS_Shape.hxx>
+#include <V3d_View.hxx>
+#include <ViewerTest.hxx>
+#include <XmlDrivers_DocumentRetrievalDriver.hxx>
+#include <XmlDrivers_DocumentStorageDriver.hxx>
+#include <TDataStd_Real.hxx>
+#include <Standard_Atomic.hxx>
 
 #include <cstdio>
 #include <cmath>
 #include <iostream>
-#include <OSD_Timer.hxx>
-#include <OSD_Parallel.hxx>
-#include <OSD_PerfMeter.hxx>
-#include <BRepPrimAPI_MakeBox.hxx>
-#include <BRepPrimAPI_MakeSphere.hxx>
-#include <BRepAlgo_Cut.hxx>
-#include <NCollection_Map.hxx>
-#include <NCollection_Handle.hxx>
-#include <NCollection_IncAllocator.hxx>
-#include <TCollection_HAsciiString.hxx>
-#include <GeomFill_Trihedron.hxx>
-#include <BRepOffsetAPI_MakePipe.hxx>
-#include <TopExp_Explorer.hxx>
-
-#include <SelectMgr_Filter.hxx>
-
-#include <Standard_Version.hxx>
 
 #define QCOMPARE(val1, val2) \
   di << "Checking " #val1 " == " #val2 << \
@@ -124,7 +127,7 @@ static Standard_Integer OCC23237 (Draw_Interpretor& di, Standard_Integer /*argc*
     // do some operation that will take considerable time compared with time of starting / stopping timers
     BRepPrimAPI_MakeBox aBox (10., 10., 10.);
     BRepPrimAPI_MakeSphere aSphere (10.);
-    BRepAlgo_Cut aCutter (aBox.Shape(), aSphere.Shape());
+    BRepAlgoAPI_Cut aCutter (aBox.Shape(), aSphere.Shape());
 
     aTM.Stop();
     aPM.Stop();
@@ -200,16 +203,16 @@ static Standard_Integer OCC22980 (Draw_Interpretor& di, Standard_Integer /*argc*
 }
 
 #include <TDocStd_Application.hxx>
-#include <XCAFApp_Application.hxx>
 #include <TDocStd_Document.hxx>
 #include <XCAFDoc_ShapeTool.hxx>
 #include <XCAFDoc_DocumentTool.hxx>
 #include <TDF_Label.hxx>
 #include <TDataStd_Name.hxx>
+#include <DDocStd.hxx>
 
 static Standard_Integer OCC23595 (Draw_Interpretor& di, Standard_Integer /*argc*/, const char** /*argv*/)
 {
-  Handle(TDocStd_Application) anApp = XCAFApp_Application::GetApplication();
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
   Handle(TDocStd_Document) aDoc;
   anApp->NewDocument ("XmlXCAF", aDoc);
   QCOMPARE (!aDoc.IsNull(), Standard_True);
@@ -1284,8 +1287,8 @@ static Standard_Integer OCC24012 (Draw_Interpretor& di, Standard_Integer argc, c
     {
         TopoDS_Shape rshape = anormpro.Projection();
 		Handle(AIS_InteractiveObject) myShape = new AIS_Shape (rshape);
-		myAISContext->SetColor(myShape, Quantity_Color(Quantity_NOC_YELLOW));
-		myAISContext->Display(myShape, Standard_True);
+		myAISContext->SetColor (myShape, Quantity_Color(Quantity_NOC_YELLOW), Standard_False);
+		myAISContext->Display (myShape, Standard_True);
     }
 
 	return 0;
@@ -1364,7 +1367,7 @@ static Standard_Integer OCC24945 (Draw_Interpretor& di, Standard_Integer argc, c
   return 0;
 }
 
-#include <Extrema_FuncExtPS.hxx>
+#include <Extrema_FuncPSNorm.hxx>
 #include <math_FunctionSetRoot.hxx>
 #include <math_Vector.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
@@ -1401,7 +1404,7 @@ static Standard_Integer OCC24137 (Draw_Interpretor& theDI, Standard_Integer theN
 
   gp_Pnt aPnt = BRep_Tool::Pnt (aVert), aRes;
 
-  Extrema_FuncExtPS    anExtFunc;
+  Extrema_FuncPSNorm    anExtFunc;
   math_FunctionSetRoot aRoot (anExtFunc, aNbIts);
 
   math_Vector aTolUV (1, 2), aUVinf  (1, 2), aUVsup  (1, 2), aFromUV (1, 2);
@@ -1773,6 +1776,7 @@ static Standard_Integer OCC23950 (Draw_Interpretor& di, Standard_Integer argc, c
   TDataStd_Name::Set(labelA0, "ASSEMBLY");
 
   TDF_Label component01 = XCAFDoc_DocumentTool::ShapeTool (aDoc->Main ())->AddComponent (labelA0, lab1, location0);
+  XCAFDoc_DocumentTool::ShapeTool (aDoc->Main ())->UpdateAssemblies();
 
   Quantity_Color yellow(1,1,0, Quantity_TOC_RGB);
   XCAFDoc_DocumentTool::ColorTool (labelA0)->SetColor (component01, yellow, XCAFDoc_ColorGen);
@@ -1787,65 +1791,6 @@ static Standard_Integer OCC23950 (Draw_Interpretor& di, Standard_Integer argc, c
   }
 
   writer.Write (argv[1]);
-  return 0;
-}
-
-//=======================================================================
-//function : OCC24622
-//purpose  : The command tests sourcing Image_PixMap to AIS_TexturedShape
-//=======================================================================
-static Standard_Integer OCC24622 (Draw_Interpretor& /*theDi*/, Standard_Integer theArgNb, const char** theArgVec)
-{
-  if (theArgNb != 2)
-  {
-    std::cout << "Usage : " << theArgVec[0] << " texture={1D|2D}";
-    return 1;
-  }
-
-  const Handle(AIS_InteractiveContext)& anAISContext = ViewerTest::GetAISContext();
-  if (anAISContext.IsNull())
-  {
-    std::cout << "Please initialize view with \"vinit\".\n";
-    return 1;
-  }
-
-  Handle(Image_PixMap) anImage = new Image_PixMap();
-
-  static const Image_ColorRGB aBitmap[8] =
-  {
-    {{255,   0, 0}}, {{0,  148, 255}}, {{ 0, 148, 255}}, {{255,  94, 0}},
-    {{255, 121, 0}}, {{76, 255,   0}}, {{76, 255,   0}}, {{255, 202, 0}}
-  };
-
-  TCollection_AsciiString aTextureTypeArg (theArgVec[1]);
-  aTextureTypeArg.UpperCase();
-  if (aTextureTypeArg == "1D")
-  {
-    anImage->InitWrapper (Image_PixMap::ImgRGB, (Standard_Byte*)aBitmap, 8, 1);
-  }
-  else if (aTextureTypeArg == "2D")
-  {
-    anImage->InitTrash (Image_PixMap::ImgRGB, 8, 8);
-    for (Standard_Integer aRow = 0; aRow < 8; ++aRow)
-    {
-      for (Standard_Integer aCol = 0; aCol < 8; ++aCol)
-      {
-        anImage->ChangeValue<Image_ColorRGB> (aRow, aCol) = aBitmap[aRow];
-      }
-    }
-  }
-  else
-  {
-    std::cout << "Please specify type of texture to test {1D|2D}.\n";
-    return 1;
-  }
-
-  TopoDS_Shape aBlankShape = BRepPrimAPI_MakeBox (10.0, 10.0, 10.0).Shape();
-
-  Handle(AIS_TexturedShape) aTexturedShape = new AIS_TexturedShape (aBlankShape);
-  aTexturedShape->SetTexturePixMap (anImage);
-  anAISContext->Display (aTexturedShape, 3, 0);
-
   return 0;
 }
 
@@ -1935,7 +1880,6 @@ static TopoDS_Shape CreateTestShape (int& theShapeNb)
   return aComp;
 }
 
-#include <AppStd_Application.hxx>
 #include <TDataStd_Integer.hxx>
 #include <TNaming_Builder.hxx>
 static Standard_Integer OCC24931 (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
@@ -1947,7 +1891,7 @@ static Standard_Integer OCC24931 (Draw_Interpretor& di, Standard_Integer argc, c
   TCollection_ExtendedString aFileName (argv[1]);
   PCDM_StoreStatus aSStatus  = PCDM_SS_Failure;
 
-  Handle(TDocStd_Application) anApp = new AppStd_Application;
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
   {
     Handle(TDocStd_Document) aDoc;
     anApp->NewDocument ("XmlOcaf", aDoc);
@@ -1965,9 +1909,6 @@ static Standard_Integer OCC24931 (Draw_Interpretor& di, Standard_Integer argc, c
   return 0;
 }
 
-#include <AppStdL_Application.hxx>
-#include <TDocStd_Application.hxx>
-#include <TDataStd_Integer.hxx>
 #include <TDF_AttributeIterator.hxx>
 //=======================================================================
 //function : OCC24755
@@ -1981,19 +1922,26 @@ static Standard_Integer OCC24755 (Draw_Interpretor& di, Standard_Integer n, cons
     return 1;
   }
 
-  Handle(TDocStd_Application) anApp = new AppStdL_Application;
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
   Handle(TDocStd_Document) aDoc;
   anApp->NewDocument ("BinOcaf", aDoc);
   TDF_Label aLab = aDoc->Main();
+  // Prepend an int value.
   TDataStd_Integer::Set (aLab, 0);
+  // Prepend a name.
   TDataStd_Name::Set (aLab, "test");
+  // Append a double value.
+  aLab.AddAttribute(new TDataStd_Real(), true/*append*/);
 
   TDF_AttributeIterator i (aLab);
   Handle(TDF_Attribute) anAttr = i.Value();
+  QCOMPARE (anAttr->IsKind (STANDARD_TYPE (TDataStd_Name)), Standard_True);
+  i.Next();
+  anAttr = i.Value();
   QCOMPARE (anAttr->IsKind (STANDARD_TYPE (TDataStd_Integer)), Standard_True);
   i.Next();
   anAttr = i.Value();
-  QCOMPARE (anAttr->IsKind (STANDARD_TYPE (TDataStd_Name)), Standard_True);
+  QCOMPARE (anAttr->IsKind (STANDARD_TYPE (TDataStd_Real)), Standard_True);
 
   return 0;
 }
@@ -2287,32 +2235,24 @@ class Test_TDocStd_Application : public TDocStd_Application
 {
 public:
 
-  static void initGlobalPluginMap (const TCollection_AsciiString& thePlugin,
-                                   const TCollection_AsciiString& theSaver,
-                                   const TCollection_AsciiString& theLoader)
+  Test_TDocStd_Application ()
   {
-    const Handle(Resource_Manager)& aManager = Plugin::AdditionalPluginMap();
-    aManager->SetResource ((theSaver  + ".Location").ToCString(), thePlugin.ToCString());
-    aManager->SetResource ((theLoader + ".Location").ToCString(), thePlugin.ToCString());
-  }
-
-  Test_TDocStd_Application (const TCollection_AsciiString& thePlugin,
-                            const TCollection_AsciiString& theSaver,
-                            const TCollection_AsciiString& theLoader)
-  {
-    initGlobalPluginMap (thePlugin, theSaver, theLoader);
-
     // explicitly initialize resource manager
     myResources = new Resource_Manager ("");
     myResources->SetResource ("xml.FileFormat", THE_QATEST_DOC_FORMAT);
     myResources->SetResource (THE_QATEST_DOC_FORMAT ".Description",     "Test XML Document");
     myResources->SetResource (THE_QATEST_DOC_FORMAT ".FileExtension",   "xml");
-    myResources->SetResource (THE_QATEST_DOC_FORMAT ".StoragePlugin",   theSaver.ToCString());
-    myResources->SetResource (THE_QATEST_DOC_FORMAT ".RetrievalPlugin", theLoader.ToCString());
   }
 
-  virtual Standard_CString ResourcesName() { return ""; }
-  virtual void Formats (TColStd_SequenceOfExtendedString& theFormats) { theFormats.Clear(); }
+  virtual Handle(PCDM_Reader) ReaderFromFormat (const TCollection_ExtendedString&) Standard_OVERRIDE
+  {
+    return new XmlDrivers_DocumentRetrievalDriver ();
+  }
+  virtual Handle(PCDM_StorageDriver) WriterFromFormat (const TCollection_ExtendedString&) Standard_OVERRIDE
+  {
+    return new XmlDrivers_DocumentStorageDriver ("Test");
+  }
+  virtual Standard_CString ResourcesName() Standard_OVERRIDE { return ""; }
 };
 
 //=======================================================================
@@ -2346,7 +2286,7 @@ static Standard_Integer OCC24925 (Draw_Interpretor& theDI,
   PCDM_StoreStatus  aSStatus = PCDM_SS_Failure;
   PCDM_ReaderStatus aRStatus = PCDM_RS_OpenError;
 
-  Handle(TDocStd_Application) anApp = new Test_TDocStd_Application (aPlugin, aSaver, aLoader);
+  Handle(TDocStd_Application) anApp = new Test_TDocStd_Application ();
   {
     Handle(TDocStd_Document) aDoc;
     anApp->NewDocument (THE_QATEST_DOC_FORMAT, aDoc);
@@ -2397,8 +2337,8 @@ static Standard_Integer OCC25043 (Draw_Interpretor& theDI,
     for (; anCheckIter.More(); anCheckIter.Next())
     {
       const BOPAlgo_CheckResult& aCurCheckRes = anCheckIter.Value();
-      const BOPCol_ListOfShape& aCurFaultyShapes = aCurCheckRes.GetFaultyShapes1();
-      BOPCol_ListIteratorOfListOfShape aFaultyIter(aCurFaultyShapes);
+      const TopTools_ListOfShape& aCurFaultyShapes = aCurCheckRes.GetFaultyShapes1();
+      TopTools_ListIteratorOfListOfShape aFaultyIter(aCurFaultyShapes);
       for (; aFaultyIter.More(); aFaultyIter.Next())
       {
         const TopoDS_Shape& aFaultyShape = aFaultyIter.Value();
@@ -2456,46 +2396,6 @@ static Standard_Integer OCC24606 (Draw_Interpretor& theDI,
   aView->DepthFitAll();
   aView->FitAll();
 
-  return 0;
-}
-
-//=======================================================================
-//function : OCC23010
-//purpose  :
-//=======================================================================
-#include <STEPCAFControl_Reader.hxx>
-
-class mOcafApplication : public TDocStd_Application
-{
-  void Formats(TColStd_SequenceOfExtendedString& Formats)
-  {
-    Formats.Append(TCollection_ExtendedString("mOcafApplication"));
-  }
-  Standard_CString ResourcesName()
-  {
-    return Standard_CString("Resources");
-  }
-};
-
-static Standard_Integer OCC23010 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  if (argc != 2) {
-    di << "Usage: " << argv[0] << " invalid number of arguments\n";
-    return 1;
-  }
-  std::string fileName=argv[1];
-  mOcafApplication *mCasApp = new mOcafApplication();
-  Handle(TDocStd_Document) doc;
-  mCasApp->NewDocument("BinXCAF", doc);
-  STEPCAFControl_Reader stepReader;
-  IFSelect_ReturnStatus status = stepReader.ReadFile (fileName.c_str());
-  if (status != IFSelect_RetDone)
-    return false;
-  stepReader.SetColorMode(Standard_True);
-  stepReader.SetLayerMode(Standard_True);
-  stepReader.SetNameMode(Standard_True);
-  stepReader.Transfer(doc); // ERROR HERE!!!
-  delete mCasApp;
   return 0;
 }
 
@@ -2816,10 +2716,8 @@ static Standard_Integer OCC25413 (Draw_Interpretor& di, Standard_Integer narg , 
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Section.hxx>
 //
-#include <BOPTools.hxx>
-//
-#include <BOPCol_MapOfShape.hxx>
-#include <BOPCol_ListOfShape.hxx>
+#include <TopExp.hxx>
+#include <TopTools_MapOfShape.hxx>
 //=======================================================================
 //function : OCC25446
 //purpose  :
@@ -2856,7 +2754,7 @@ static Standard_Integer OCC25446 (Draw_Interpretor& theDI,
   aOp = (BOPAlgo_Operation)iOp;
   //
   Standard_Integer iErr;
-  BOPCol_ListOfShape aLS;
+  TopTools_ListOfShape aLS;
   BOPAlgo_PaveFiller aPF;
   //
   aLS.Append(aS1);
@@ -2864,7 +2762,7 @@ static Standard_Integer OCC25446 (Draw_Interpretor& theDI,
   aPF.SetArguments(aLS);
   //
   aPF.Perform();
-  iErr = aPF.ErrorStatus();
+  iErr = aPF.HasErrors();
   if (iErr) {
     theDI << "Intersection failed with error status: " << iErr << "\n";
     return 1;
@@ -2892,7 +2790,7 @@ static Standard_Integer OCC25446 (Draw_Interpretor& theDI,
     break;
   }
   //
-  iErr = pBuilder->ErrorStatus();
+  iErr = pBuilder->HasErrors();
   if (!pBuilder->IsDone()) {
     theDI << "BOP failed with error status: " << iErr << "\n";
     return 1;
@@ -2901,14 +2799,14 @@ static Standard_Integer OCC25446 (Draw_Interpretor& theDI,
   const TopoDS_Shape& aRes = pBuilder->Shape();
   DBRep::Set(argv[1], aRes);
   //
-  BOPCol_MapOfShape aMapArgs, aMapShape;
-  BOPCol_MapIteratorOfMapOfShape aIt;
+  TopTools_MapOfShape aMapArgs, aMapShape;
+  TopTools_MapIteratorOfMapOfShape aIt;
   Standard_Boolean bIsDeletedHist, bIsDeletedMap;
   TopAbs_ShapeEnum aType;
   //
-  BOPTools::MapShapes(aS1, aMapArgs);
-  BOPTools::MapShapes(aS2, aMapArgs);
-  BOPTools::MapShapes(aRes, aMapShape);
+  TopExp::MapShapes(aS1, aMapArgs);
+  TopExp::MapShapes(aS2, aMapArgs);
+  TopExp::MapShapes(aRes, aMapShape);
   //
   aIt.Initialize(aMapArgs);
   for (; aIt.More(); aIt.Next()) {
@@ -2965,19 +2863,19 @@ struct OCC25545_Functor
 //function : OCC25545
 //purpose  : Tests data race when concurrently accessing TopLoc_Location::Transformation()
 //=======================================================================
-#ifdef HAVE_TBB
+
 static Standard_Integer OCC25545 (Draw_Interpretor& di, 
                                   Standard_Integer, 
                                   const char **)
 {
   // Place vertices in a vector, giving the i-th vertex the
   // transformation that translates it on the vector (i,0,0) from the origin.
-  size_t n = 1000;
+  Standard_Integer n = 1000;
   std::vector<TopoDS_Shape> aShapeVec (n);
   std::vector<TopLoc_Location> aLocVec (n);
   TopoDS_Shape aShape = BRepBuilderAPI_MakeVertex (gp::Origin ());
   aShapeVec[0] = aShape;
-  for (size_t i = 1; i < n; ++i) {
+  for (Standard_Integer i = 1; i < n; ++i) {
     gp_Trsf aT;
     aT.SetTranslation (gp_Vec (1, 0, 0));
     aLocVec[i] = aLocVec[i - 1] * aT;
@@ -2988,20 +2886,12 @@ static Standard_Integer OCC25545 (Draw_Interpretor& di,
   // concurrently
   OCC25545_Functor aFunc(aShapeVec);
 
-  //concurrently process
-  tbb::parallel_for (size_t (0), n, aFunc, tbb::simple_partitioner ());
+  // concurrently process
+  OSD_Parallel::For (0, n, aFunc);
+
   QVERIFY (!aFunc.myIsRaceDetected);
   return 0;
 }
-#else
-static Standard_Integer OCC25545 (Draw_Interpretor&, 
-                                  Standard_Integer, 
-                                  const char **argv)
-{
-  cout << "Test skipped: command " << argv[0] << " requires TBB library" << endl;
-  return 0;
-}
-#endif
 
 //=======================================================================
 //function : OCC25547
@@ -3355,14 +3245,16 @@ static Standard_Integer OCC26172 (Draw_Interpretor& theDI, Standard_Integer theA
   BRepBuilderAPI_MakeEdge anEdgeBuilder (aStart, anEnd);
   TopoDS_Edge anEdge = anEdgeBuilder.Edge();
   Handle(AIS_Shape) aTestAISShape = new AIS_Shape (anEdge);
-  anAISContext->Display (aTestAISShape);
+  anAISContext->Display (aTestAISShape, Standard_True);
 
   // 2. activate it in selection modes
   TColStd_SequenceOfInteger aModes;
   aModes.Append (AIS_Shape::SelectionMode ((TopAbs_ShapeEnum) TopAbs_VERTEX));
   aModes.Append (AIS_Shape::SelectionMode ((TopAbs_ShapeEnum) TopAbs_EDGE));
 
+  Standard_DISABLE_DEPRECATION_WARNINGS
   anAISContext->OpenLocalContext();
+  Standard_ENABLE_DEPRECATION_WARNINGS
   anAISContext->Deactivate (aTestAISShape);
   anAISContext->Load (aTestAISShape, -1, true);
   for (Standard_Integer anIt = 1; anIt <= aModes.Length(); ++anIt)
@@ -3372,6 +3264,7 @@ static Standard_Integer OCC26172 (Draw_Interpretor& theDI, Standard_Integer theA
 
   // select entities in vertex selection mode
   Handle(SelectMgr_Selection) aSelection = aTestAISShape->Selection (aModes (1));
+  Standard_DISABLE_DEPRECATION_WARNINGS
   for (aSelection->Init(); aSelection->More(); aSelection->Next())
   {
     Handle(SelectBasics_SensitiveEntity) anEntity = aSelection->Sensitive()->BaseSensitive();
@@ -3390,9 +3283,11 @@ static Standard_Integer OCC26172 (Draw_Interpretor& theDI, Standard_Integer theA
 
     anAISContext->LocalContext()->AddOrRemoveSelected (anOwner);
   }
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   // select entities in edge selection mode
   aSelection = aTestAISShape->Selection (aModes (2));
+  Standard_DISABLE_DEPRECATION_WARNINGS
   for (aSelection->Init(); aSelection->More(); aSelection->Next())
   {
     Handle(SelectBasics_SensitiveEntity) anEntity = aSelection->Sensitive()->BaseSensitive();
@@ -3411,10 +3306,13 @@ static Standard_Integer OCC26172 (Draw_Interpretor& theDI, Standard_Integer theA
 
     anAISContext->LocalContext()->AddOrRemoveSelected (anOwner);
   }
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   // deactivate vertex mode and check clearing of outdated selection
   anAISContext->Deactivate (aTestAISShape, aModes (1));
+  Standard_DISABLE_DEPRECATION_WARNINGS
   anAISContext->LocalContext()->ClearOutdatedSelection (aTestAISShape, true);
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   return 0;
 }
@@ -3441,16 +3339,17 @@ static Standard_Integer OCC26284 (Draw_Interpretor& theDI, Standard_Integer theA
 
   BRepPrimAPI_MakeSphere aSphereBuilder (gp_Pnt (0.0, 0.0, 0.0), 1.0);
   Handle(AIS_Shape) aSphere = new AIS_Shape (aSphereBuilder.Shape());
-  anAISContext->Display (aSphere);
+  anAISContext->Display (aSphere, Standard_False);
   for (Standard_Integer aChildIdx = 0; aChildIdx < 5; ++aChildIdx)
   {
     BRepPrimAPI_MakeSphere aBuilder (gp_Pnt (1.0 + aChildIdx, 1.0 + aChildIdx, 1.0 + aChildIdx), 1.0);
     Handle(AIS_Shape) aChild = new AIS_Shape (aBuilder.Shape());
     aSphere->AddChild (aChild);
-    anAISContext->Display (aChild);
+    anAISContext->Display (aChild, Standard_False);
   }
 
   anAISContext->RecomputeSelectionOnly (aSphere);
+  anAISContext->UpdateCurrentViewer();
 
   return 0;
 }
@@ -3581,7 +3480,7 @@ static Standard_Integer OCC24923(
   const Standard_Real aDeviation = 
     1. - (Standard_Real)(aPointsNb - aFailedNb) / (Standard_Real)aPointsNb;
 
-  theDI << "Number of failed cases: " << aFailedNb << " (Total " << aPointsNb << ")\n";
+  theDI << "Number of incorrect cases: " << aFailedNb << " (Total " << aPointsNb << ")\n";
   if (aDeviation > aMaxDeviation)
   {
     theDI << "Failed. Number of incorrect results is too huge: " << 
@@ -4119,7 +4018,7 @@ static Standard_Integer OCC26195 (Draw_Interpretor& theDI, Standard_Integer theA
   Standard_Boolean toPrint = Standard_False;
   if (theArgNb % 2 == 0)
   {
-    toPrint = Draw::Atoi (theArgVec[theArgNb - 1]);
+    toPrint = Draw::Atoi (theArgVec[theArgNb - 1]) != 0;
   }
 
   SelectMgr_SelectingVolumeManager* aMgr = new SelectMgr_SelectingVolumeManager();
@@ -4139,8 +4038,8 @@ static Standard_Integer OCC26195 (Draw_Interpretor& theDI, Standard_Integer theA
     aMgr->BuildSelectingVolume (aPxPnt1);
   }
   const gp_Pnt* aVerts = aMgr->GetVertices();
-  gp_Pnt aNearPnt = aMgr->GetNearPnt();
-  gp_Pnt aFarPnt  = aMgr->GetFarPnt();
+  gp_Pnt aNearPnt = aMgr->GetNearPickedPnt();
+  gp_Pnt aFarPnt  = aMgr->GetFarPickedPnt();
   BRepBuilderAPI_MakePolygon aWireBldrs[4];
 
   aWireBldrs[0].Add (gp_Pnt (aVerts[0].X(), aVerts[0].Y(), aVerts[0].Z()));
@@ -4213,17 +4112,16 @@ static Standard_Integer OCC26462 (Draw_Interpretor& theDI, Standard_Integer /*th
   Handle(AIS_InteractiveObject) aBox2 = new AIS_Shape (aBuilder2.Shape());
 
   const Handle(AIS_InteractiveContext) aCtx = ViewerTest::GetAISContext();
-  aCtx->OpenLocalContext();
-  aCtx->Display (aBox1, 0, 2);
-  aCtx->Display (aBox2, 0, 2);
+  aCtx->Display (aBox1, 0, 2, Standard_False);
+  aCtx->Display (aBox2, 0, 2, Standard_False);
   ViewerTest::CurrentView()->FitAll();
-  aCtx->SetWidth (aBox1, 3);
-  aCtx->SetWidth (aBox2, 3);
+  aCtx->SetWidth (aBox1, 3, Standard_False);
+  aCtx->SetWidth (aBox2, 3, Standard_False);
 
-  aCtx->MoveTo (305, 322, ViewerTest::CurrentView());
-  aCtx->ShiftSelect();
-  aCtx->MoveTo (103, 322, ViewerTest::CurrentView());
-  aCtx->ShiftSelect();
+  aCtx->MoveTo (305, 322, ViewerTest::CurrentView(), Standard_False);
+  aCtx->ShiftSelect (Standard_False);
+  aCtx->MoveTo (103, 322, ViewerTest::CurrentView(), Standard_False);
+  aCtx->ShiftSelect (Standard_False);
   if (aCtx->NbSelected() != 0)
   {
     theDI << "ERROR: no boxes must be selected!\n";
@@ -4232,15 +4130,15 @@ static Standard_Integer OCC26462 (Draw_Interpretor& theDI, Standard_Integer /*th
 
   aCtx->SetSelectionSensitivity (aBox1, 2, 5);
 
-  aCtx->MoveTo (305, 322, ViewerTest::CurrentView());
-  aCtx->ShiftSelect();
+  aCtx->MoveTo (305, 322, ViewerTest::CurrentView(), Standard_False);
+  aCtx->ShiftSelect (Standard_False);
   if (aCtx->NbSelected() != 1)
   {
     theDI << "ERROR: b1 was not selected\n";
     return 1;
   }
-  aCtx->MoveTo (103, 322, ViewerTest::CurrentView());
-  aCtx->ShiftSelect();
+  aCtx->MoveTo (103, 322, ViewerTest::CurrentView(), Standard_False);
+  aCtx->ShiftSelect (Standard_True);
   if (aCtx->NbSelected() != 1)
   {
     theDI << "ERROR: b2 is selected after b1's tolerance increased\n";
@@ -4908,7 +4806,9 @@ static Standard_Integer BUC26658 (Draw_Interpretor& theDI,
 
   // visualization of the box in the local mode with possibility to
   // select box vertices
+  Standard_DISABLE_DEPRECATION_WARNINGS
   aContext->OpenLocalContext();
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   int aDispMode = 0;// wireframe
   anAISIO->SetDisplayMode(aDispMode);
@@ -4927,8 +4827,8 @@ static Standard_Integer BUC26658 (Draw_Interpretor& theDI,
   Standard_Integer Xp,Yp;
   myV3dView->Convert(Xv,Yv,Xp,Yp);
 
-  aContext->MoveTo(Xp,Yp, myV3dView);
-  aContext->Select();
+  aContext->MoveTo (Xp, Yp, myV3dView, Standard_False);
+  aContext->Select (Standard_False);
   bool aHasSelected = false;
   for (aContext->InitSelected(); aContext->MoreSelected() && !aHasSelected; aContext->NextSelected()) {
     Handle(AIS_InteractiveObject) anIO = aContext->SelectedInteractive();
@@ -4949,10 +4849,12 @@ static Standard_Integer BUC26658 (Draw_Interpretor& theDI,
   aContext->AddFilter(aFilter);
 
   // update previous selection by hand
+  Standard_DISABLE_DEPRECATION_WARNINGS
   aContext->LocalContext()->ClearOutdatedSelection(anAISIO, true);
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   // check that there are no selected vertices
-  aContext->Select();
+  aContext->Select (Standard_True);
   aHasSelected = false;
   for (aContext->InitSelected(); aContext->MoreSelected() && !aHasSelected; aContext->NextSelected()) {
     Handle(AIS_InteractiveObject) anIO = aContext->SelectedInteractive();
@@ -4992,8 +4894,10 @@ static Standard_Integer OCC26945_open (Draw_Interpretor& theDI, Standard_Integer
   }
 
   const TopAbs_ShapeEnum aSelType = AIS_Shape::SelectionType (Draw::Atoi (theArgv[1]));
+  Standard_DISABLE_DEPRECATION_WARNINGS
   Standard_Integer aLocalCtxIdx = aCtx->OpenLocalContext();
   aCtx->ActivateStandardMode (aSelType);
+  Standard_ENABLE_DEPRECATION_WARNINGS
   theDI << aLocalCtxIdx;
 
   return 0;
@@ -5020,7 +4924,9 @@ static Standard_Integer OCC26945_close (Draw_Interpretor& theDI, Standard_Intege
   }
 
   const Standard_Integer aCtxToClose = Draw::Atoi (theArgv[1]);
+  Standard_DISABLE_DEPRECATION_WARNINGS
   aCtx->CloseLocalContext (aCtxToClose);
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
   return 0;
 }
@@ -5160,6 +5066,324 @@ static Standard_Integer OCC27318 (Draw_Interpretor& /*theDI*/, Standard_Integer 
   return 0;
 }
 
+//========================================================================
+//function : OCC27523
+//purpose  : Checks recomputation of deactivated selection mode after object's redisplaying
+//========================================================================
+static Standard_Integer OCC27523 (Draw_Interpretor& theDI, Standard_Integer theArgNb, const char** theArgVec)
+{
+  if (theArgNb != 1)
+  {
+    std::cerr << "Error: wrong number of arguments! See usage:\n";
+    theDI.PrintHelp (theArgVec[0]);
+    return 1;
+  }
+
+  Handle(AIS_InteractiveContext) anAISContext = ViewerTest::GetAISContext();
+  if(anAISContext.IsNull())
+  {
+    std::cerr << "Error: no active view. Please call vinit.\n";
+    return 1;
+  }
+
+  gp_Pnt aStart (100, 100, 100);
+  gp_Pnt anEnd (300, 400, 600);
+  BRepBuilderAPI_MakeEdge anEdgeBuilder (aStart, anEnd);
+  TopoDS_Edge anEdge = anEdgeBuilder.Edge();
+  Handle(AIS_InteractiveObject) aTestAISShape = new AIS_Shape (anEdge);
+  anAISContext->Display (aTestAISShape, Standard_False);
+
+  // activate it in selection modes
+  TColStd_SequenceOfInteger aModes;
+  aModes.Append (AIS_Shape::SelectionMode ((TopAbs_ShapeEnum) TopAbs_VERTEX));
+
+  anAISContext->Deactivate (aTestAISShape);
+  anAISContext->Load (aTestAISShape, -1, true);
+  anAISContext->Activate (aTestAISShape, 0);
+  anAISContext->Deactivate (aTestAISShape, 0);
+
+  // activate in vertices mode
+  for (Standard_Integer anIt = 1; anIt <= aModes.Length(); ++anIt)
+  {
+    anAISContext->Activate (aTestAISShape, aModes (anIt));
+  }
+
+  TopoDS_Shape aVertexShape = BRepBuilderAPI_MakeVertex (gp_Pnt (75, 0, 0));
+  TopAbs_ShapeEnum aVertexShapeType = aVertexShape.ShapeType();
+  Handle(AIS_Shape)::DownCast (aTestAISShape)->Set (aVertexShape);
+  aTestAISShape->Redisplay();
+
+  anAISContext->AddOrRemoveSelected (aTestAISShape, Standard_True);
+
+  bool aValidShapeType = false;
+  for (anAISContext->InitSelected(); anAISContext->MoreSelected(); anAISContext->NextSelected())
+  {
+    Handle(SelectMgr_EntityOwner) anOwner = anAISContext->SelectedOwner();
+    Handle(StdSelect_BRepOwner) aBRO = Handle(StdSelect_BRepOwner)::DownCast (anOwner);
+    if (!aBRO.IsNull() && aBRO->HasShape())
+    {
+      TopoDS_Shape aShape = aBRO->Shape();
+
+      aValidShapeType = aShape.ShapeType() == aVertexShapeType;
+    }
+  }
+
+  if (!aValidShapeType)
+  {
+    std::cerr << "Error: shape type is invalid.\n";
+    return 1;
+  }
+
+  return 0;
+}
+
+//========================================================================
+//function : OCC27700
+//purpose  : glPolygonMode() used for frame drawing affects label text shading
+//========================================================================
+
+class OCC27700_Text : public AIS_InteractiveObject
+{
+public:
+
+  DEFINE_STANDARD_RTTI_INLINE (OCC27700_Text, AIS_InteractiveObject)
+
+  virtual void Compute (const Handle(PrsMgr_PresentationManager3d)& /*thePresentationManager*/,
+                        const Handle(Prs3d_Presentation)& thePresentation,
+                        const Standard_Integer /*theMode*/) Standard_OVERRIDE
+  {
+    Handle(Graphic3d_ArrayOfTriangles) aFrame = new Graphic3d_ArrayOfTriangles (6, 6);
+    aFrame->AddVertex (gp_Pnt (-1, 0, 0));
+    aFrame->AddVertex (gp_Pnt (-1, 1, 0));
+    aFrame->AddVertex (gp_Pnt ( 3, 1, 0));
+    aFrame->AddVertex (gp_Pnt ( 3, 0, 0));
+
+    aFrame->AddEdge (1);
+    aFrame->AddEdge (2);
+    aFrame->AddEdge (3);
+
+    aFrame->AddEdge (2);
+    aFrame->AddEdge (3);
+    aFrame->AddEdge (4);
+
+    Handle(Graphic3d_AspectFillArea3d) aFillAspect =
+      new Graphic3d_AspectFillArea3d (*myDrawer->ShadingAspect()->Aspect().get());
+    aFillAspect->SetInteriorStyle (Aspect_IS_POINT);
+
+    // create separate group for frame elements
+    Handle(Graphic3d_Group) aFrameGroup = Prs3d_Root::NewGroup (thePresentation);
+    aFrameGroup->AddPrimitiveArray (aFrame);
+    aFrameGroup->SetGroupPrimitivesAspect (aFillAspect);
+
+    // create separate group for text elements
+    Handle(Graphic3d_Group) aTextGroup = Prs3d_Root::NewGroup (thePresentation);
+    TCollection_ExtendedString aString ("YOU SHOULD SEE THIS TEXT", Standard_True);
+    Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (thePresentation), myDrawer->TextAspect(), aString, gp_Ax2 (gp::Origin(), gp::DZ()));
+  }
+
+  virtual void ComputeSelection (const Handle(SelectMgr_Selection)& /*theSelection*/,
+                                 const Standard_Integer /*theMode*/) Standard_OVERRIDE {}
+};
+
+static Standard_Integer OCC27700 (Draw_Interpretor& /*theDI*/, Standard_Integer /*theArgNb*/, const char** /*theArgVec*/)
+{
+  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
+  if (aContext.IsNull())
+  {
+    std::cout << "Error: no view available, call 'vinit' before!" << std::endl;
+    return 1;
+  }
+  Handle(OCC27700_Text) aPresentation = new OCC27700_Text();
+  aContext->Display (aPresentation, Standard_True);
+  return 0;
+}
+
+//========================================================================
+//function : OCC27757
+//purpose  : Creates a box that has a sphere as child object and displays it
+//========================================================================
+static Standard_Integer OCC27757 (Draw_Interpretor& /*theDI*/, Standard_Integer /*theArgc*/, const char** theArgv)
+{
+  const Handle(AIS_InteractiveContext)& aCtx = ViewerTest::GetAISContext();
+  if (aCtx.IsNull())
+  {
+    std::cout << "No interactive context. Use 'vinit' command before " << theArgv[0] << "\n";
+    return 1;
+  }
+
+  TopoDS_Shape aBox = BRepPrimAPI_MakeBox (20.0, 20.0, 20.0).Shape();
+  TopoDS_Shape aSphere = BRepPrimAPI_MakeSphere (10.0).Shape();
+  gp_Trsf aTrsf;
+  aTrsf.SetTranslationPart (gp_Vec (20.0, 20.0, 0.0));
+  aSphere.Located (TopLoc_Location (aTrsf));
+
+
+  Handle(AIS_Shape) aBoxObj = new AIS_Shape (aBox);
+  Handle(AIS_Shape) aSphereObj = new AIS_Shape (aSphere);
+  aBoxObj->AddChild (aSphereObj);
+  aCtx->Display (aBoxObj, 1, 0, Standard_False);
+  aCtx->UpdateCurrentViewer();
+
+  return 0;
+}
+
+//========================================================================
+//function : OCC27818
+//purpose  : Creates three boxes and highlights one of them with own style
+//========================================================================
+static Standard_Integer OCC27818 (Draw_Interpretor& /*theDI*/, Standard_Integer /*theArgc*/, const char** theArgv)
+{
+  const Handle(AIS_InteractiveContext)& aCtx = ViewerTest::GetAISContext();
+  if (aCtx.IsNull())
+  {
+    std::cout << "No interactive context. Use 'vinit' command before " << theArgv[0] << "\n";
+    return 1;
+  }
+
+  Handle(AIS_Shape) aBoxObjs[3];
+  for (Standard_Integer aBoxIdx = 0; aBoxIdx < 3; ++aBoxIdx)
+  {
+    TopoDS_Shape aBox = BRepPrimAPI_MakeBox (20.0, 20.0, 20.0).Shape();
+    aBoxObjs[aBoxIdx] = new AIS_Shape (aBox);
+    gp_Trsf aTrsf;
+    aTrsf.SetTranslationPart (gp_Vec (30.0 * aBoxIdx, 30.0 * aBoxIdx, 0.0));
+    aBoxObjs[aBoxIdx]->SetLocalTransformation (aTrsf);
+    aBoxObjs[aBoxIdx]->SetHilightMode (AIS_Shaded);
+  }
+
+  {
+    Handle(Prs3d_Drawer) aHiStyle = new Prs3d_Drawer();
+    aBoxObjs[1]->SetDynamicHilightAttributes (aHiStyle);
+    aHiStyle->SetDisplayMode (AIS_Shaded);
+    aHiStyle->SetColor (Quantity_NOC_RED);
+    aHiStyle->SetTransparency (0.8f);
+  }
+  {
+    Handle(Prs3d_Drawer) aSelStyle = new Prs3d_Drawer();
+    aBoxObjs[2]->SetHilightAttributes (aSelStyle);
+    aSelStyle->SetDisplayMode (AIS_Shaded);
+    aSelStyle->SetColor (Quantity_NOC_RED);
+    aSelStyle->SetTransparency (0.0f);
+    aSelStyle->SetZLayer (Graphic3d_ZLayerId_Topmost);
+  }
+
+  for (Standard_Integer aBoxIdx = 0; aBoxIdx < 3; ++aBoxIdx)
+  {
+    aCtx->Display (aBoxObjs[aBoxIdx], AIS_Shaded, 0, Standard_False);
+  }
+
+  aCtx->UpdateCurrentViewer();
+
+  return 0;
+}
+
+//========================================================================
+//function : OCC27893
+//purpose  : Creates a box and selects it via AIS_InteractiveContext API
+//========================================================================
+static Standard_Integer OCC27893 (Draw_Interpretor& /*theDI*/, Standard_Integer /*theArgc*/, const char** theArgv)
+{
+  const Handle(AIS_InteractiveContext)& aCtx = ViewerTest::GetAISContext();
+  if (aCtx.IsNull())
+  {
+    std::cout << "No interactive context. Use 'vinit' command before " << theArgv[0] << "\n";
+    return 1;
+  }
+
+  TopoDS_Shape aBox = BRepPrimAPI_MakeBox (10.0, 10.0, 10.0).Shape();
+  Handle(AIS_InteractiveObject) aBoxObj = new AIS_Shape (aBox);
+  aCtx->Display (aBoxObj, AIS_Shaded, 0, Standard_False);
+  aCtx->SetSelected (aBoxObj, Standard_True);
+
+  return 0;
+}
+
+//========================================================================
+//function : OCC28310
+//purpose  : Tests validness of iterator in AIS_InteractiveContext after
+// an removing object from it
+//========================================================================
+static Standard_Integer OCC28310 (Draw_Interpretor& /*theDI*/, Standard_Integer /*theArgc*/, const char** theArgv)
+{
+  const Handle(AIS_InteractiveContext)& aCtx = ViewerTest::GetAISContext();
+  if (aCtx.IsNull())
+  {
+    std::cout << "No interactive context. Use 'vinit' command before " << theArgv[0] << "\n";
+    return 1;
+  }
+
+  TopoDS_Shape aBox = BRepPrimAPI_MakeBox (10.0, 10.0, 10.0).Shape();
+  Handle(AIS_InteractiveObject) aBoxObj = new AIS_Shape (aBox);
+  aCtx->Display (aBoxObj, AIS_Shaded, 0, Standard_False);
+  ViewerTest::CurrentView()->FitAll();
+  aCtx->MoveTo (200, 200, ViewerTest::CurrentView(), Standard_True);
+  aCtx->Select(Standard_True);
+
+  aCtx->Remove (aBoxObj, Standard_True);
+  // nullify the object explicitly to simulate situation in project,
+  // when ::Remove is called from another method and the object is destroyed
+  // before ::DetectedInteractive is called
+  aBoxObj.Nullify();
+
+  for (aCtx->InitDetected(); aCtx->MoreDetected(); aCtx->NextDetected())
+  {
+    Handle(AIS_InteractiveObject) anObj = aCtx->DetectedInteractive();
+  }
+
+  return 0;
+}
+
+// repetitive display and removal of multiple small objects in the viewer for 
+// test of memory leak in visualization (OCCT 6.9.0 - 7.0.0)
+static Standard_Integer OCC29412 (Draw_Interpretor& /*theDI*/, Standard_Integer theArgNb, const char** theArgVec)
+{
+  Handle(AIS_InteractiveContext) aCtx = ViewerTest::GetAISContext();
+  if (aCtx.IsNull())
+  {
+    std::cout << "Error: no active view.\n";
+    return 1;
+  }
+
+  const int aNbIters = (theArgNb <= 1 ? 10000 : Draw::Atoi (theArgVec[1]));
+  int aProgressPrev = -1;
+  for (int m_loopIndex = 0; m_loopIndex < aNbIters; m_loopIndex++)
+  {
+    gp_Pnt pos;
+    gp_Vec dir(0, 0,1);
+
+    gp_Ax2 center (pos, dir);
+    gp_Circ circle (center, 1);
+    Handle(AIS_Shape) feature;
+
+    BRepBuilderAPI_MakeEdge builder( circle );
+
+    if( builder.Error() == BRepBuilderAPI_EdgeDone )
+    {
+      TopoDS_Edge E1 = builder.Edge();
+      TopoDS_Shape W2 = BRepBuilderAPI_MakeWire(E1).Wire();
+      feature = new AIS_Shape(W2);
+      aCtx->Display (feature, true);
+    }
+
+    aCtx->CurrentViewer()->Update();
+    ViewerTest::CurrentView()->FitAll();
+    aCtx->Remove (feature, true);
+
+    const int aProgress = (m_loopIndex * 100) / aNbIters;
+    if (aProgress != aProgressPrev)
+    {
+      std::cerr << aProgress << "%\r";
+      aProgressPrev = aProgress;
+    }
+  }
+  return 0;
+}
+
+//========================================================================
+//function : Commands_19
+//purpose  :
+//========================================================================
+
 void QABugs::Commands_19(Draw_Interpretor& theCommands) {
   const char *group = "QABugs";
 
@@ -5193,7 +5417,6 @@ void QABugs::Commands_19(Draw_Interpretor& theCommands) {
   theCommands.Add ("OCC24533", "OCC24533", __FILE__, OCC24533, group);
   theCommands.Add ("OCC24012", "OCC24012 face edge", __FILE__, OCC24012, group);
   theCommands.Add ("OCC24086", "OCC24086 face wire", __FILE__, OCC24086, group);
-  theCommands.Add ("OCC24622", "OCC24622 texture={1D|2D}\n Tests sourcing of 1D/2D pixmaps for AIS_TexturedShape", __FILE__, OCC24622, group);
   theCommands.Add ("OCC24667", "OCC24667 result Wire_spine Profile [Mode [Approx]], no args to get help", __FILE__, OCC24667, group);
   theCommands.Add ("OCC24755", "OCC24755", __FILE__, OCC24755, group);
   theCommands.Add ("OCC24834", "OCC24834", __FILE__, OCC24834, group);
@@ -5207,7 +5430,6 @@ void QABugs::Commands_19(Draw_Interpretor& theCommands) {
                    "OCC24925 filename [pluginLib=TKXml storageGuid retrievalGuid]"
                    "\nOCAF persistence without setting environment variables",
                    __FILE__, OCC24925, group);
-  theCommands.Add ("OCC23010", "OCC23010 STEP_file", __FILE__, OCC23010, group);
   theCommands.Add ("OCC25043", "OCC25043 shape", __FILE__, OCC25043, group);
   theCommands.Add ("OCC24826,", "This test performs simple saxpy test.\n Usage: OCC24826 length", __FILE__, OCC24826, group);
   theCommands.Add ("OCC24606", "OCC24606 : Tests ::FitAll for V3d view ('vfit' is for NIS view)", __FILE__, OCC24606, group);
@@ -5277,6 +5499,24 @@ void QABugs::Commands_19(Draw_Interpretor& theCommands) {
   theCommands.Add ("OCC27318",
                    "OCC27318: Creates a box that is not listed in map of AIS objects of ViewerTest",
                    __FILE__, OCC27318, group);
-
+  theCommands.Add ("OCC27523",
+                   "OCC27523: Checks recomputation of deactivated selection mode after object's redisplaying",
+                   __FILE__, OCC27523, group);
+  theCommands.Add ("OCC27700",
+                   "OCC27700: Checks drawing text after setting interior style",
+                   __FILE__, OCC27700, group);
+  theCommands.Add ("OCC27757",
+                   "OCC27757: Creates a box that has a sphere as child object and displays it",
+                   __FILE__, OCC27757, group);
+  theCommands.Add ("OCC27818",
+                   "OCC27818: Creates three boxes and highlights one of them with own style",
+                   __FILE__, OCC27818, group);
+  theCommands.Add ("OCC27893",
+                   "OCC27893: Creates a box and selects it via AIS_InteractiveContext API",
+                   __FILE__, OCC27893, group);
+  theCommands.Add("OCC28310",
+                  "OCC28310: Tests validness of iterator in AIS_InteractiveContext after an removing object from it",
+                  __FILE__, OCC28310, group);
+  theCommands.Add("OCC29412", "OCC29412 [nb cycles]: test display / remove of many small objects", __FILE__, OCC29412, group);
   return;
 }

@@ -702,7 +702,13 @@ public:
   //! value of Nth derivative of first non vanishing
   //! Bspline function which has Index FirstNonZeroBsplineIndex
   //! if N <= DerivativeOrder + 1
-  Standard_EXPORT static Standard_Integer EvalBsplineBasis (const Standard_Integer Side, const Standard_Integer DerivativeOrder, const Standard_Integer Order, const TColStd_Array1OfReal& FlatKnots, const Standard_Real Parameter, Standard_Integer& FirstNonZeroBsplineIndex, math_Matrix& BsplineBasis, const Standard_Boolean isPeriodic = Standard_False);
+  Standard_EXPORT static Standard_Integer EvalBsplineBasis (const Standard_Integer DerivativeOrder,
+                                                            const Standard_Integer Order,
+                                                            const TColStd_Array1OfReal& FlatKnots,
+                                                            const Standard_Real Parameter,
+                                                            Standard_Integer& FirstNonZeroBsplineIndex,
+                                                            math_Matrix& BsplineBasis,
+                                                            const Standard_Boolean isPeriodic = Standard_False);
   
   //! This Builds   a fully  blown   Matrix of
   //! (ni)
@@ -825,11 +831,11 @@ public:
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
   //!
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of F(a(t))
-  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const Standard_Integer PolesDimension, Standard_Real& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, Standard_Real& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const Standard_Integer PolesDimension, Standard_Real& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, Standard_Real& NewPoles, Standard_Integer& theStatus);
   
   //! This function will compose  a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -852,11 +858,11 @@ public:
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
   //!
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of F(a(t))
-  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColStd_Array1OfReal& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColStd_Array1OfReal& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColStd_Array1OfReal& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColStd_Array1OfReal& NewPoles, Standard_Integer& theStatus);
   
   //! this will compose  a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -874,11 +880,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of F(a(t))
-  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt& NewPoles, Standard_Integer& theStatus);
   
   //! this will compose  a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -896,11 +902,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of F(a(t))
-  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt2d& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt2d& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionReparameterise (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt2d& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt2d& NewPoles, Standard_Integer& theStatus);
   
   //! this will  multiply a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -915,11 +921,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of a(t)*F(t)
-  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const Standard_Integer PolesDimension, Standard_Real& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, Standard_Real& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const Standard_Integer PolesDimension, Standard_Real& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, Standard_Real& NewPoles, Standard_Integer& theStatus);
   
   //! this will  multiply a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -934,11 +940,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of a(t)*F(t)
-  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColStd_Array1OfReal& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColStd_Array1OfReal& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColStd_Array1OfReal& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColStd_Array1OfReal& NewPoles, Standard_Integer& theStatus);
   
   //! this will  multiply a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -953,11 +959,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of a(t)*F(t)
-  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt2d& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt2d& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt2d& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt2d& NewPoles, Standard_Integer& theStatus);
   
   //! this will  multiply a given Vectorial BSpline F(t)
   //! defined  by its  BSplineDegree and BSplineFlatKnotsl,
@@ -972,11 +978,11 @@ public:
   //! the caller's responsability to insure that conditions
   //! 1. and  2. above are  satisfied : no check whatsoever
   //! is made in this method
-  //! Status will return 0 if OK else it will return the pivot index
+  //! theStatus will return 0 if OK else it will return the pivot index
   //! of the matrix that was inverted to compute the multiplied
   //! BSpline : the method used is interpolation at Schoenenberg
   //! points of a(t)*F(t)
-  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt& NewPoles, Standard_Integer& Status);
+  Standard_EXPORT static void FunctionMultiply (const BSplCLib_EvaluatorFunction& Function, const Standard_Integer BSplineDegree, const TColStd_Array1OfReal& BSplineFlatKnots, const TColgp_Array1OfPnt& Poles, const TColStd_Array1OfReal& FlatKnots, const Standard_Integer NewDegree, TColgp_Array1OfPnt& NewPoles, Standard_Integer& theStatus);
   
   //! Perform the De Boor   algorithm  to  evaluate a point at
   //! parameter <U>, with <Degree> and <Dimension>.
@@ -1189,12 +1195,12 @@ public:
   //! Perform the evaluation of the Taylor expansion
   //! of the Bspline normalized between 0 and 1.
   //! Structure of result optimized for BSplCLib_Cache.
-  Standard_EXPORT static void BuildCache (const Standard_Real theParameter, const Standard_Real theSpanDomain, const Standard_Boolean thePeriodicFlag, const Standard_Integer theDegree, const TColStd_Array1OfReal& theFlatKnots, const TColgp_Array1OfPnt& thePoles, const TColStd_Array1OfReal* theWeights, TColStd_Array2OfReal& theCacheArray);
+  Standard_EXPORT static void BuildCache (const Standard_Real theParameter, const Standard_Real theSpanDomain, const Standard_Boolean thePeriodicFlag, const Standard_Integer theDegree, const Standard_Integer theSpanIndex, const TColStd_Array1OfReal& theFlatKnots, const TColgp_Array1OfPnt& thePoles, const TColStd_Array1OfReal* theWeights, TColStd_Array2OfReal& theCacheArray);
   
   //! Perform the evaluation of the Taylor expansion
   //! of the Bspline normalized between 0 and 1.
   //! Structure of result optimized for BSplCLib_Cache.
-  Standard_EXPORT static void BuildCache (const Standard_Real theParameter, const Standard_Real theSpanDomain, const Standard_Boolean thePeriodicFlag, const Standard_Integer theDegree, const TColStd_Array1OfReal& theFlatKnots, const TColgp_Array1OfPnt2d& thePoles, const TColStd_Array1OfReal* theWeights, TColStd_Array2OfReal& theCacheArray);
+  Standard_EXPORT static void BuildCache (const Standard_Real theParameter, const Standard_Real theSpanDomain, const Standard_Boolean thePeriodicFlag, const Standard_Integer theDegree, const Standard_Integer theSpanIndex, const TColStd_Array1OfReal& theFlatKnots, const TColgp_Array1OfPnt2d& thePoles, const TColStd_Array1OfReal* theWeights, TColStd_Array2OfReal& theCacheArray);
   
     static void PolesCoefficients (const TColgp_Array1OfPnt2d& Poles, TColgp_Array1OfPnt2d& CachePoles);
   

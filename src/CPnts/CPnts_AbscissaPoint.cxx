@@ -41,13 +41,17 @@
 // auxiliary functions to compute the length of the derivative
 static Standard_Real f3d(const Standard_Real X, const Standard_Address C)
 {
-  gp_Vec V = ((Adaptor3d_Curve*)C)->DN(X,1);
+  gp_Pnt P;
+  gp_Vec V;
+  ((Adaptor3d_Curve*)C)->D1(X,P,V);
   return V.Magnitude();
 }
 
 static Standard_Real f2d(const Standard_Real X, const Standard_Address C)
 {
-  gp_Vec2d V = ((Adaptor2d_Curve2d*)C)->DN(X,1);
+  gp_Pnt2d P;
+  gp_Vec2d V;
+  ((Adaptor2d_Curve2d*)C)->D1(X,P,V);
   return V.Magnitude();
 }
 
@@ -155,7 +159,7 @@ Standard_Real CPnts_AbscissaPoint::Length(const Adaptor3d_Curve& C,
 //  FG.Init(f3d,(Standard_Address)&C);
   math_GaussSingleIntegration TheLength(FG, U1, U2, order(C));
   if (!TheLength.IsDone()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   return Abs(TheLength.Value());
 }
@@ -176,7 +180,7 @@ Standard_Real CPnts_AbscissaPoint::Length(const Adaptor2d_Curve2d& C,
 //  FG.Init(f2d,(Standard_Address)&C);
   math_GaussSingleIntegration TheLength(FG, U1, U2, order(C));
   if (!TheLength.IsDone()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   return Abs(TheLength.Value());
 }
@@ -198,7 +202,7 @@ Standard_Real CPnts_AbscissaPoint::Length(const Adaptor3d_Curve& C,
 //  FG.Init(f3d,(Standard_Address)&C);
   math_GaussSingleIntegration TheLength(FG, U1, U2, order(C), Tol);
   if (!TheLength.IsDone()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   return Abs(TheLength.Value());
 }
@@ -220,7 +224,7 @@ Standard_Real CPnts_AbscissaPoint::Length(const Adaptor2d_Curve2d& C,
 //  FG.Init(f2d,(Standard_Address)&C);
   math_GaussSingleIntegration TheLength(FG, U1, U2, order(C), Tol);
   if (!TheLength.IsDone()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   return Abs(TheLength.Value());
 }

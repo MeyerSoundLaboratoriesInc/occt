@@ -35,13 +35,6 @@
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Wire.hxx>
 
-#undef Standard_True
-#undef Standard_False
-
-#define Standard_True ((Standard_Boolean) 1)
-#define Standard_False ((Standard_Boolean) 0)
-
-
 #define NBVERTICES 6
 #define VAXISTOP    0
 #define VAXISBOT    1
@@ -88,13 +81,13 @@ static void BRepPrim_OneAxis_Check(const Standard_Boolean V[],
 {
   Standard_Integer i;
   for (i = 0; i < NBVERTICES; i++)
-    if (V[i]) Standard_DomainError::Raise();
+    if (V[i]) throw Standard_DomainError();
   for (i = 0; i < NBEDGES; i++)
-    if (E[i]) Standard_DomainError::Raise();
+    if (E[i]) throw Standard_DomainError();
   for (i = 0; i < NBWIRES; i++)
-    if (W[i]) Standard_DomainError::Raise();
+    if (W[i]) throw Standard_DomainError();
   for (i = 0; i < NBFACES; i++)
-    if (F[i]) Standard_DomainError::Raise();
+    if (F[i]) throw Standard_DomainError();
 }
 
 //=======================================================================

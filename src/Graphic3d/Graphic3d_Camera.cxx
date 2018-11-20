@@ -13,18 +13,17 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-#include <gp_Pln.hxx>
-#include <Standard_ShortReal.hxx>
-
 #include <Graphic3d_Camera.hxx>
+
+#include <gp_Pln.hxx>
+#include <gp_QuaternionNLerp.hxx>
+#include <gp_QuaternionSLerp.hxx>
 #include <Graphic3d_Vec4.hxx>
 #include <Graphic3d_WorldViewProjState.hxx>
-
+#include <NCollection_Sequence.hxx>
+#include <Standard_ShortReal.hxx>
 #include <Standard_Atomic.hxx>
 #include <Standard_Assert.hxx>
-
-#include <NCollection_Sequence.hxx>
-
 
 IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_Camera,Standard_Transient)
 
@@ -61,6 +60,16 @@ namespace
     Standard_Real aExp = Floor (aLogRadix);
     return FLT_EPSILON * Pow (FLT_RADIX, aExp);
   }
+
+  //! Convert camera definition to Ax3
+  gp_Ax3 cameraToAx3 (const Graphic3d_Camera& theCamera)
+  {
+    const gp_Dir aBackDir(gp_Vec(theCamera.Center(), theCamera.Eye()));
+    const gp_Dir anXAxis (theCamera.Up().Crossed (aBackDir));
+    const gp_Dir anYAxis (aBackDir      .Crossed (anXAxis));
+    const gp_Dir aZAxis  (anXAxis       .Crossed (anYAxis));
+    return gp_Ax3 (gp_Pnt (0.0, 0.0, 0.0), aZAxis, anXAxis);
+  }
 }
 
 // =======================================================================
@@ -74,6 +83,7 @@ Graphic3d_Camera::Graphic3d_Camera()
   myAxialScale (1.0, 1.0, 1.0),
   myProjType (Projection_Orthographic),
   myFOVy (45.0),
+  myFOVyTan (Tan (DTR_HALF * 45.0)),
   myZNear (DEFAULT_ZNEAR),
   myZFar (DEFAULT_ZFAR),
   myAspect (1.0),
@@ -112,6 +122,7 @@ void Graphic3d_Camera::CopyMappingData (const Handle(Graphic3d_Camera)& theOther
   SetZFocus         (theOtherCamera->ZFocusType(), theOtherCamera->ZFocus());
   SetIOD            (theOtherCamera->GetIODType(), theOtherCamera->IOD());
   SetProjectionType (theOtherCamera->ProjectionType());
+  SetTile           (theOtherCamera->myTile);
 }
 
 // =======================================================================
@@ -270,7 +281,7 @@ void Graphic3d_Camera::SetScale (const Standard_Real theScale)
     case Projection_MonoLeftEye  :
     case Projection_MonoRightEye :
     {
-      Standard_Real aDistance = theScale * 0.5 / Tan(myFOVy * M_PI / 360.0);
+      Standard_Real aDistance = theScale * 0.5 / myFOVyTan;
       SetDistance (aDistance);
     }
 
@@ -297,7 +308,7 @@ Standard_Real Graphic3d_Camera::Scale() const
     // case Projection_MonoLeftEye  :
     // case Projection_MonoRightEye :
     default :
-      return Distance() * 2.0 * Tan (myFOVy * M_PI / 360.0);
+      return Distance() * 2.0 * myFOVyTan;
   }
 }
 
@@ -343,6 +354,7 @@ void Graphic3d_Camera::SetFOVy (const Standard_Real theFOVy)
   }
 
   myFOVy = theFOVy;
+  myFOVyTan = Tan(DTR_HALF * myFOVy);
 
   InvalidateProjection();
 }
@@ -422,6 +434,21 @@ void Graphic3d_Camera::SetIOD (const IODType theType, const Standard_Real theIOD
   myIODType = theType;
   myIOD     = theIOD;
 
+  InvalidateProjection();
+}
+
+// =======================================================================
+// function : SetTile
+// purpose  :
+// =======================================================================
+void Graphic3d_Camera::SetTile (const Graphic3d_CameraTile& theTile)
+{
+  if (myTile == theTile)
+  {
+    return;
+  }
+
+  myTile = theTile;
   InvalidateProjection();
 }
 
@@ -627,10 +654,10 @@ gp_Pnt Graphic3d_Camera::ConvertView2World (const gp_Pnt& thePnt) const
 // function : ViewDimensions
 // purpose  :
 // =======================================================================
-gp_XYZ Graphic3d_Camera::ViewDimensions() const
+gp_XYZ Graphic3d_Camera::ViewDimensions (const Standard_Real theZValue) const
 {
   // view plane dimensions
-  Standard_Real aSize = IsOrthographic() ? myScale : (2.0 * Distance() * Tan (DTR_HALF * myFOVy));
+  Standard_Real aSize = IsOrthographic() ? myScale : (2.0 * theZValue * myFOVyTan);
   Standard_Real aSizeX, aSizeY;
   if (myAspect > 1.0)
   {
@@ -703,7 +730,7 @@ void Graphic3d_Camera::Frustum (gp_Pln& theLeft,
 // =======================================================================
 const Graphic3d_Mat4d& Graphic3d_Camera::OrientationMatrix() const
 {
-  return *UpdateOrientation (myMatricesD).Orientation;
+  return UpdateOrientation (myMatricesD).Orientation;
 }
 
 // =======================================================================
@@ -712,7 +739,7 @@ const Graphic3d_Mat4d& Graphic3d_Camera::OrientationMatrix() const
 // =======================================================================
 const Graphic3d_Mat4& Graphic3d_Camera::OrientationMatrixF() const
 {
-  return *UpdateOrientation (myMatricesF).Orientation;
+  return UpdateOrientation (myMatricesF).Orientation;
 }
 
 // =======================================================================
@@ -721,7 +748,7 @@ const Graphic3d_Mat4& Graphic3d_Camera::OrientationMatrixF() const
 // =======================================================================
 const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionMatrix() const
 {
-  return *UpdateProjection (myMatricesD).MProjection;
+  return UpdateProjection (myMatricesD).MProjection;
 }
 
 // =======================================================================
@@ -730,7 +757,7 @@ const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionMatrix() const
 // =======================================================================
 const Graphic3d_Mat4& Graphic3d_Camera::ProjectionMatrixF() const
 {
-  return *UpdateProjection (myMatricesF).MProjection;
+  return UpdateProjection (myMatricesF).MProjection;
 }
 
 // =======================================================================
@@ -739,7 +766,7 @@ const Graphic3d_Mat4& Graphic3d_Camera::ProjectionMatrixF() const
 // =======================================================================
 const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionStereoLeft() const
 {
-  return *UpdateProjection (myMatricesD).LProjection;
+  return UpdateProjection (myMatricesD).LProjection;
 }
 
 // =======================================================================
@@ -748,7 +775,7 @@ const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionStereoLeft() const
 // =======================================================================
 const Graphic3d_Mat4& Graphic3d_Camera::ProjectionStereoLeftF() const
 {
-  return *UpdateProjection (myMatricesF).LProjection;
+  return UpdateProjection (myMatricesF).LProjection;
 }
 
 // =======================================================================
@@ -757,7 +784,7 @@ const Graphic3d_Mat4& Graphic3d_Camera::ProjectionStereoLeftF() const
 // =======================================================================
 const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionStereoRight() const
 {
-  return *UpdateProjection (myMatricesD).RProjection;
+  return UpdateProjection (myMatricesD).RProjection;
 }
 
 // =======================================================================
@@ -766,7 +793,7 @@ const Graphic3d_Mat4d& Graphic3d_Camera::ProjectionStereoRight() const
 // =======================================================================
 const Graphic3d_Mat4& Graphic3d_Camera::ProjectionStereoRightF() const
 {
-  return *UpdateProjection (myMatricesF).RProjection;
+  return UpdateProjection (myMatricesF).RProjection;
 }
 
 // =======================================================================
@@ -797,8 +824,8 @@ Graphic3d_Camera::TransformMatrices<Elem_t>&
   }
   else
   {
-    aDXHalf = aZNear * Elem_t (Tan (DTR_HALF * myFOVy));
-    aDYHalf = aZNear * Elem_t (Tan (DTR_HALF * myFOVy));
+    aDXHalf = aZNear * Elem_t (myFOVyTan);
+    aDYHalf = aZNear * Elem_t (myFOVyTan);
   }
 
   if (anAspect > 1.0)
@@ -824,22 +851,33 @@ Graphic3d_Camera::TransformMatrices<Elem_t>&
     ? static_cast<Elem_t> (myZFocus * Distance())
     : static_cast<Elem_t> (myZFocus);
 
+  if (myTile.IsValid())
+  {
+    const Elem_t aDXFull = Elem_t(2) * aDXHalf;
+    const Elem_t aDYFull = Elem_t(2) * aDYHalf;
+    const Graphic3d_Vec2i anOffset = myTile.OffsetLowerLeft();
+    aLeft  = -aDXHalf + aDXFull * static_cast<Elem_t> (anOffset.x())                       / static_cast<Elem_t> (myTile.TotalSize.x());
+    aRight = -aDXHalf + aDXFull * static_cast<Elem_t> (anOffset.x() + myTile.TileSize.x()) / static_cast<Elem_t> (myTile.TotalSize.x());
+    aBot   = -aDYHalf + aDYFull * static_cast<Elem_t> (anOffset.y())                       / static_cast<Elem_t> (myTile.TotalSize.y());
+    aTop   = -aDYHalf + aDYFull * static_cast<Elem_t> (anOffset.y() + myTile.TileSize.y()) / static_cast<Elem_t> (myTile.TotalSize.y());
+  }
+
   switch (myProjType)
   {
     case Projection_Orthographic :
-      OrthoProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, *theMatrices.MProjection);
+      OrthoProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, theMatrices.MProjection);
       break;
 
     case Projection_Perspective :
-      PerspectiveProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, *theMatrices.MProjection);
+      PerspectiveProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, theMatrices.MProjection);
       break;
 
     case Projection_MonoLeftEye :
     {
       StereoEyeProj (aLeft, aRight, aBot, aTop,
                      aZNear, aZFar, aIOD, aFocus,
-                     Standard_True, *theMatrices.MProjection);
-      *theMatrices.LProjection = *theMatrices.MProjection;
+                     Standard_True, theMatrices.MProjection);
+      theMatrices.LProjection = theMatrices.MProjection;
       break;
     }
 
@@ -847,24 +885,24 @@ Graphic3d_Camera::TransformMatrices<Elem_t>&
     {
       StereoEyeProj (aLeft, aRight, aBot, aTop,
                      aZNear, aZFar, aIOD, aFocus,
-                     Standard_False, *theMatrices.MProjection);
-      *theMatrices.RProjection = *theMatrices.MProjection;
+                     Standard_False, theMatrices.MProjection);
+      theMatrices.RProjection = theMatrices.MProjection;
       break;
     }
 
     case Projection_Stereo :
     {
-      PerspectiveProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, *theMatrices.MProjection);
+      PerspectiveProj (aLeft, aRight, aBot, aTop, aZNear, aZFar, theMatrices.MProjection);
 
       StereoEyeProj (aLeft, aRight, aBot, aTop,
                      aZNear, aZFar, aIOD, aFocus,
                      Standard_True,
-                     *theMatrices.LProjection);
+                     theMatrices.LProjection);
 
       StereoEyeProj (aLeft, aRight, aBot, aTop,
                      aZNear, aZFar, aIOD, aFocus,
                      Standard_False,
-                     *theMatrices.RProjection);
+                     theMatrices.RProjection);
       break;
     }
   }
@@ -903,7 +941,7 @@ Graphic3d_Camera::TransformMatrices<Elem_t>&
                                          static_cast<Elem_t> (myAxialScale.Y()),
                                          static_cast<Elem_t> (myAxialScale.Z()));
 
-  LookOrientation (anEye, aCenter, anUp, anAxialScale, *theMatrices.Orientation);
+  LookOrientation (anEye, aCenter, anUp, anAxialScale, theMatrices.Orientation);
 
   return theMatrices; // for inline accessors
 }
@@ -1268,4 +1306,85 @@ bool Graphic3d_Camera::ZFitAll (const Standard_Real theScaleFactor,
   theZNear = aZNear;
   theZFar  = aZFar;
   return true;
+}
+
+//=============================================================================
+//function : Interpolate
+//purpose  :
+//=============================================================================
+template<>
+Standard_EXPORT void NCollection_Lerp<Handle(Graphic3d_Camera)>::Interpolate (const double theT,
+                                                                              Handle(Graphic3d_Camera)& theCamera) const
+{
+  if (Abs (theT - 1.0) < Precision::Confusion())
+  {
+    // just copy end-point transformation
+    theCamera->Copy (myEnd);
+    return;
+  }
+
+  theCamera->Copy (myStart);
+  if (Abs (theT - 0.0) < Precision::Confusion())
+  {
+    return;
+  }
+
+  // apply rotation
+  {
+    gp_Ax3 aCamStart = cameraToAx3 (*myStart);
+    gp_Ax3 aCamEnd   = cameraToAx3 (*myEnd);
+    gp_Trsf aTrsfStart, aTrsfEnd;
+    aTrsfStart.SetTransformation (aCamStart, gp::XOY());
+    aTrsfEnd  .SetTransformation (aCamEnd,   gp::XOY());
+
+    gp_Quaternion aRotStart = aTrsfStart.GetRotation();
+    gp_Quaternion aRotEnd   = aTrsfEnd  .GetRotation();
+    gp_Quaternion aRotDelta = aRotEnd * aRotStart.Inverted();
+    gp_Quaternion aRot = gp_QuaternionNLerp::Interpolate (gp_Quaternion(), aRotDelta, theT);
+    gp_Trsf aTrsfRot;
+    aTrsfRot.SetRotation (aRot);
+    theCamera->Transform (aTrsfRot);
+  }
+
+  // apply translation
+  {
+    gp_XYZ aCenter  = NCollection_Lerp<gp_XYZ>::Interpolate (myStart->Center().XYZ(), myEnd->Center().XYZ(), theT);
+    gp_XYZ anEye    = NCollection_Lerp<gp_XYZ>::Interpolate (myStart->Eye().XYZ(),    myEnd->Eye().XYZ(),    theT);
+    gp_XYZ anAnchor = aCenter;
+    Standard_Real aKc = 0.0;
+
+    const Standard_Real aDeltaCenter = myStart->Center().Distance (myEnd->Center());
+    const Standard_Real aDeltaEye    = myStart->Eye()   .Distance (myEnd->Eye());
+    if (aDeltaEye <= gp::Resolution())
+    {
+      anAnchor = anEye;
+      aKc = 1.0;
+    }
+    else if (aDeltaCenter > gp::Resolution())
+    {
+      aKc = aDeltaCenter / (aDeltaCenter + aDeltaEye);
+
+      const gp_XYZ anAnchorStart = NCollection_Lerp<gp_XYZ>::Interpolate (myStart->Center().XYZ(), myStart->Eye().XYZ(), aKc);
+      const gp_XYZ anAnchorEnd   = NCollection_Lerp<gp_XYZ>::Interpolate (myEnd  ->Center().XYZ(), myEnd  ->Eye().XYZ(), aKc);
+      anAnchor = NCollection_Lerp<gp_XYZ>::Interpolate (anAnchorStart, anAnchorEnd, theT);
+    }
+
+    const gp_Vec        aDirEyeToCenter     = theCamera->Direction();
+    const Standard_Real aDistEyeCenterStart = myStart->Eye().Distance (myStart->Center());
+    const Standard_Real aDistEyeCenterEnd   = myEnd  ->Eye().Distance (myEnd  ->Center());
+    const Standard_Real aDistEyeCenter      = NCollection_Lerp<Standard_Real>::Interpolate (aDistEyeCenterStart, aDistEyeCenterEnd, theT);
+    aCenter = anAnchor + aDirEyeToCenter.XYZ() * aDistEyeCenter * aKc;
+    anEye   = anAnchor - aDirEyeToCenter.XYZ() * aDistEyeCenter * (1.0 - aKc);
+
+    theCamera->SetCenter (aCenter);
+    theCamera->SetEye    (anEye);
+  }
+
+  // apply scaling
+  if (Abs(myStart->Scale() - myEnd->Scale()) > Precision::Confusion()
+   && myStart->IsOrthographic())
+  {
+    const Standard_Real aScale = NCollection_Lerp<Standard_Real>::Interpolate (myStart->Scale(), myEnd->Scale(), theT);
+    theCamera->SetScale (aScale);
+  }
 }

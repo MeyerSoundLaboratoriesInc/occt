@@ -17,34 +17,11 @@
 #ifndef _AIS_Shape_HeaderFile
 #define _AIS_Shape_HeaderFile
 
-#include <Standard.hxx>
-#include <Standard_Type.hxx>
-
-#include <TopoDS_Shape.hxx>
-#include <Bnd_Box.hxx>
-#include <Standard_Boolean.hxx>
-#include <Standard_Real.hxx>
 #include <AIS_InteractiveObject.hxx>
-#include <Standard_Integer.hxx>
-#include <AIS_KindOfInteractive.hxx>
-#include <Prs3d_TypeOfHLR.hxx>
-#include <PrsMgr_PresentationManager3d.hxx>
-#include <SelectMgr_Selection.hxx>
-#include <Quantity_NameOfColor.hxx>
-#include <Graphic3d_NameOfMaterial.hxx>
-#include <TopAbs_ShapeEnum.hxx>
+#include <Bnd_Box.hxx>
+#include <TopoDS_Shape.hxx>
 #include <Prs3d_Drawer.hxx>
-class TopoDS_Shape;
-class Prs3d_Presentation;
-class Prs3d_Projector;
-class Geom_Transformation;
-class Quantity_Color;
-class Graphic3d_MaterialAspect;
-class Bnd_Box;
-
-
-class AIS_Shape;
-DEFINE_STANDARD_HANDLE(AIS_Shape, AIS_InteractiveObject)
+#include <Prs3d_TypeOfHLR.hxx>
 
 //! A framework to manage presentation and selection of shapes.
 //! AIS_Shape is the interactive object which is used the
@@ -68,31 +45,51 @@ DEFINE_STANDARD_HANDLE(AIS_Shape, AIS_InteractiveObject)
 //! above deviation angle and coefficient functions return
 //! true indicating that there is a local setting available
 //! for the specific object.
+//!
+//! This class allows to map textures on shapes using native UV parametric space of underlying surface of each Face
+//! (this means that texture will be visually duplicated on all Faces).
+//! To generate texture coordinates, appropriate shading attribute should be set before computing presentation in AIS_Shaded display mode:
+//! @code
+//!   Handle(AIS_Shape) aPrs = new AIS_Shape();
+//!   aPrs->Attributes()->SetShadingAspect (new Prs3d_ShadingAspect());
+//!   aPrs->Attributes()->ShadingAspect()->Aspect()->SetTextureMapOn();
+//!   aPrs->Attributes()->ShadingAspect()->Aspect()->SetTextureMap (new Graphic3d_Texture2Dmanual (Graphic3d_NOT_2D_ALUMINUM));
+//! @endcode
+//! The texture itself is parametrized in (0,1)x(0,1).
 class AIS_Shape : public AIS_InteractiveObject
 {
-
+  DEFINE_STANDARD_RTTIEXT(AIS_Shape, AIS_InteractiveObject)
 public:
 
-  
   //! Initializes construction of the shape shap from wires,
   //! edges and vertices.
   Standard_EXPORT AIS_Shape(const TopoDS_Shape& shap);
-  
+
   //! Returns index 0. This value refers to SHAPE from TopAbs_ShapeEnum
-  Standard_EXPORT virtual Standard_Integer Signature() const Standard_OVERRIDE;
-  
+  virtual Standard_Integer Signature() const Standard_OVERRIDE { return 0; }
+
   //! Returns Object as the type of Interactive Object.
-  Standard_EXPORT virtual AIS_KindOfInteractive Type() const Standard_OVERRIDE;
-  
+  virtual AIS_KindOfInteractive Type() const Standard_OVERRIDE { return AIS_KOI_Shape; }
+
   //! Returns true if the Interactive Object accepts shape decomposition.
-  Standard_EXPORT virtual Standard_Boolean AcceptShapeDecomposition() const Standard_OVERRIDE;
-  
-  //! Constructs an instance of the shape object ashape.
-    void Set (const TopoDS_Shape& ashap);
-  
+  virtual Standard_Boolean AcceptShapeDecomposition() const Standard_OVERRIDE { return Standard_True; }
+
+  //! Return true if specified display mode is supported.
+  virtual Standard_Boolean AcceptDisplayMode (const Standard_Integer theMode) const Standard_OVERRIDE { return theMode >= 0 && theMode <= 2; }
+
   //! Returns this shape object.
-    const TopoDS_Shape& Shape() const;
-  
+  const TopoDS_Shape& Shape() const { return myshape; }
+
+  //! Constructs an instance of the shape object theShape.
+  void SetShape (const TopoDS_Shape& theShape)
+  {
+    myshape  = theShape;
+    myCompBB = Standard_True;
+  }
+
+  //! Alias for ::SetShape().
+  void Set (const TopoDS_Shape& theShape) { SetShape (theShape); }
+
   //! Sets a local value for deviation coefficient for this specific shape.
   Standard_EXPORT Standard_Boolean SetOwnDeviationCoefficient();
   
@@ -153,11 +150,11 @@ public:
   Standard_EXPORT Standard_Boolean OwnHLRDeviationAngle (Standard_Real& anAngle, Standard_Real& aPreviousAngle) const;
   
   //! Sets the type of HLR algorithm used by the shape
-    void SetTypeOfHLR (const Prs3d_TypeOfHLR theTypeOfHLR);
-  
+  void SetTypeOfHLR (const Prs3d_TypeOfHLR theTypeOfHLR) {  myDrawer->SetTypeOfHLR (theTypeOfHLR); }
+
   //! Gets the type of HLR algorithm
-    Prs3d_TypeOfHLR TypeOfHLR() const;
-  
+  Prs3d_TypeOfHLR TypeOfHLR() const { return myDrawer->TypeOfHLR(); }
+
   //! Sets the color aColor in the reconstructed
   //! compound shape. Acts via the Drawer methods below on the appearance of:
   //! -   free boundaries:
@@ -171,10 +168,8 @@ public:
   //! Prs3d_Drawer_SeenLineAspect
   //! -   hidden line color in hidden line mode:
   //! Prs3d_Drawer_HiddenLineAspect.
-  Standard_EXPORT virtual void SetColor (const Quantity_NameOfColor aColor) Standard_OVERRIDE;
-  
-  Standard_EXPORT virtual void SetColor (const Quantity_Color& aColor) Standard_OVERRIDE;
-  
+  Standard_EXPORT virtual void SetColor (const Quantity_Color& theColor) Standard_OVERRIDE;
+
   //! Removes settings for color in the reconstructed compound shape.
   Standard_EXPORT virtual void UnsetColor() Standard_OVERRIDE;
   
@@ -185,9 +180,7 @@ public:
   
   //! Removes the setting for line width in the reconstructed compound shape.
   Standard_EXPORT virtual void UnsetWidth() Standard_OVERRIDE;
-  
-  Standard_EXPORT virtual void SetMaterial (const Graphic3d_NameOfMaterial aName) Standard_OVERRIDE;
-  
+
   //! Allows you to provide settings for the material aName
   //! in the reconstructed compound shape.
   Standard_EXPORT virtual void SetMaterial (const Graphic3d_MaterialAspect& aName) Standard_OVERRIDE;
@@ -209,10 +202,6 @@ public:
   //! which is not the same as above; keep it visible.
   using AIS_InteractiveObject::BoundingBox;
 
-  //! Returns the NameOfColor attributes of the shape accordingly to
-  //! the current facing model;
-  Standard_EXPORT virtual Quantity_NameOfColor Color() const Standard_OVERRIDE;
-  
   //! Returns the Color attributes of the shape accordingly to
   //! the current facing model;
   Standard_EXPORT virtual void Color (Quantity_Color& aColor) const Standard_OVERRIDE;
@@ -224,39 +213,95 @@ public:
   //! Returns the transparency attributes of the shape accordingly to
   //! the current facing model;
   Standard_EXPORT virtual Standard_Real Transparency() const Standard_OVERRIDE;
-  
-  //! Activates the same TopAbs shape enumerations as
-  //! those used by SelectionMode assigning a type to the mode aDecompositionMode.
-  Standard_EXPORT static TopAbs_ShapeEnum SelectionType (const Standard_Integer aDecompositionMode);
-  
-  //! Establishes an equivalence between a mode and the
-  //! type, aShapeType,   of selection. The correspondences are as follows:
-  //! -   mode 0 - Shape
-  //! -   mode 1 - Vertex
-  //! -   mode 2 - Edge
-  //! -   mode 3 - Wire
-  //! -   mode 4 - Face
-  //! -   mode 5 - Shell
-  //! -   mode 6 - Solid
-  //! -   mode 7 - Compsolid
-  //! -   mode 8 - Compound
-  Standard_EXPORT static Standard_Integer SelectionMode (const TopAbs_ShapeEnum aShapeType);
 
+  //! Return shape type for specified selection mode.
+  static TopAbs_ShapeEnum SelectionType (const Standard_Integer theSelMode)
+  {
+    switch (theSelMode)
+    {
+      case 1: return TopAbs_VERTEX;
+      case 2: return TopAbs_EDGE;
+      case 3: return TopAbs_WIRE;
+      case 4: return TopAbs_FACE;
+      case 5: return TopAbs_SHELL;
+      case 6: return TopAbs_SOLID;
+      case 7: return TopAbs_COMPSOLID;
+      case 8: return TopAbs_COMPOUND;
+      case 0: return TopAbs_SHAPE;
+    }
+    return TopAbs_SHAPE;
+  }
 
+  //! Return selection mode for specified shape type.
+  static Standard_Integer SelectionMode (const TopAbs_ShapeEnum theShapeType)
+  {
+    switch (theShapeType)
+    {
+      case TopAbs_VERTEX:    return 1;
+      case TopAbs_EDGE:      return 2;
+      case TopAbs_WIRE:      return 3;
+      case TopAbs_FACE:      return 4;
+      case TopAbs_SHELL:     return 5;
+      case TopAbs_SOLID:     return 6;
+      case TopAbs_COMPSOLID: return 7;
+      case TopAbs_COMPOUND:  return 8;
+      case TopAbs_SHAPE:     return 0;
+    }
+    return 0;
+  }
 
+public: //! @name methods to alter texture mapping properties
 
-  DEFINE_STANDARD_RTTIEXT(AIS_Shape,AIS_InteractiveObject)
+  //! Return texture repeat UV values; (1, 1) by default.
+  const gp_Pnt2d& TextureRepeatUV() const { return myUVRepeat; }
+
+  //! Sets the number of occurrences of the texture on each face. The texture itself is parameterized in (0,1) by (0,1).
+  //! Each face of the shape to be textured is parameterized in UV space (Umin,Umax) by (Vmin,Vmax).
+  void SetTextureRepeatUV (const gp_Pnt2d& theRepeatUV) { myUVRepeat = theRepeatUV; }
+
+  //! Return texture origin UV position; (0, 0) by default.
+  const gp_Pnt2d& TextureOriginUV() const { return myUVOrigin; }
+
+  //! Use this method to change the origin of the texture.
+  //! The texel (0,0) will be mapped to the surface (myUVOrigin.X(), myUVOrigin.Y()).
+  void SetTextureOriginUV (const gp_Pnt2d& theOriginUV) { myUVOrigin = theOriginUV; }
+
+  //! Return scale factor for UV coordinates; (1, 1) by default.
+  const gp_Pnt2d& TextureScaleUV() const { return myUVScale; }
+
+  //! Use this method to scale the texture (percent of the face).
+  //! You can specify a scale factor for both U and V.
+  //! Example: if you set ScaleU and ScaleV to 0.5 and you enable texture repeat,
+  //!          the texture will appear twice on the face in each direction.
+  void SetTextureScaleUV (const gp_Pnt2d& theScaleUV) { myUVScale = theScaleUV; }
 
 protected:
 
-  
-  Standard_EXPORT virtual void Compute (const Handle(PrsMgr_PresentationManager3d)& aPresentationManager, const Handle(Prs3d_Presentation)& aPresentation, const Standard_Integer aMode = 0) Standard_OVERRIDE;
-  
-  Standard_EXPORT virtual void Compute (const Handle(Prs3d_Projector)& aProjector, const Handle(Prs3d_Presentation)& aPresentation) Standard_OVERRIDE;
-  
-  Standard_EXPORT virtual void Compute (const Handle(Prs3d_Projector)& aProjector, const Handle(Geom_Transformation)& aTrsf, const Handle(Prs3d_Presentation)& aPresentation) Standard_OVERRIDE;
-  
-  Standard_EXPORT virtual void ComputeSelection (const Handle(SelectMgr_Selection)& aSelection, const Standard_Integer aMode) Standard_OVERRIDE;
+  //! Compute normal presentation.
+  Standard_EXPORT virtual void Compute (const Handle(PrsMgr_PresentationManager3d)& thePrsMgr,
+                                        const Handle(Prs3d_Presentation)& thePrs,
+                                        const Standard_Integer theMode) Standard_OVERRIDE;
+
+  //! Compute projected presentation.
+  virtual void Compute (const Handle(Prs3d_Projector)& theProjector,
+                        const Handle(Prs3d_Presentation)& thePrs) Standard_OVERRIDE
+  {
+    computeHlrPresentation (theProjector, thePrs, myshape, myDrawer);
+  }
+
+  //! Compute projected presentation with transformation.
+  virtual void Compute (const Handle(Prs3d_Projector)& theProjector,
+                        const Handle(Geom_Transformation)& theTrsf,
+                        const Handle(Prs3d_Presentation)& thePrs) Standard_OVERRIDE
+  {
+    const TopLoc_Location& aLoc = myshape.Location();
+    const TopoDS_Shape aShape = myshape.Located (TopLoc_Location (theTrsf->Trsf()) * aLoc);
+    computeHlrPresentation (theProjector, thePrs, aShape, myDrawer);
+  }
+
+  //! Compute selection.
+  Standard_EXPORT virtual void ComputeSelection (const Handle(SelectMgr_Selection)& theSelection,
+                                                 const Standard_Integer theMode) Standard_OVERRIDE;
   
   Standard_EXPORT void LoadRecomputable (const Standard_Integer TheMode);
   
@@ -268,26 +313,26 @@ protected:
   
   Standard_EXPORT void setMaterial (const Handle(Prs3d_Drawer)& theDrawer, const Graphic3d_MaterialAspect& theMaterial, const Standard_Boolean theToKeepColor, const Standard_Boolean theToKeepTransp) const;
 
-  TopoDS_Shape myshape;
-  Bnd_Box myBB;
-  Standard_Boolean myCompBB;
+public:
 
+  //! Compute HLR presentation for specified shape.
+  Standard_EXPORT static void computeHlrPresentation (const Handle(Prs3d_Projector)& theProjector,
+                                                      const Handle(Prs3d_Presentation)& thePrs,
+                                                      const TopoDS_Shape& theShape,
+                                                      const Handle(Prs3d_Drawer)& theDrawer);
 
-private:
+protected:
 
-  
-  Standard_EXPORT void Compute (const Handle(Prs3d_Projector)& aProjector, const Handle(Prs3d_Presentation)& aPresentation, const TopoDS_Shape& ashape);
-
-  Standard_Real myInitAng;
-
+  TopoDS_Shape     myshape;    //!< shape to display
+  Bnd_Box          myBB;       //!< cached bounding box of the shape
+  gp_Pnt2d         myUVOrigin; //!< UV origin vector for generating texture coordinates
+  gp_Pnt2d         myUVRepeat; //!< UV repeat vector for generating texture coordinates
+  gp_Pnt2d         myUVScale;  //!< UV scale  vector for generating texture coordinates
+  Standard_Real    myInitAng;
+  Standard_Boolean myCompBB;   //!< if TRUE, then bounding box should be recomputed
 
 };
 
-
-#include <AIS_Shape.lxx>
-
-
-
-
+DEFINE_STANDARD_HANDLE(AIS_Shape, AIS_InteractiveObject)
 
 #endif // _AIS_Shape_HeaderFile

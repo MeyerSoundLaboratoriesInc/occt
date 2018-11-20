@@ -30,16 +30,16 @@
 #include <Vrml_TransformSeparator.hxx>
 #include <VrmlConverter_Projector.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(VrmlConverter_Projector,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(VrmlConverter_Projector,Standard_Transient)
 
 VrmlConverter_Projector::VrmlConverter_Projector (const TopTools_Array1OfShape& Shapes,
-						  const Quantity_Length Focus,
-						  const Quantity_Length DX,
-						  const Quantity_Length DY,
-						  const Quantity_Length DZ,
-						  const Quantity_Length XUp,
-						  const Quantity_Length YUp,
-						  const Quantity_Length ZUp, 
+						  const Standard_Real Focus,
+						  const Standard_Real DX,
+						  const Standard_Real DY,
+						  const Standard_Real DZ,
+						  const Standard_Real XUp,
+						  const Standard_Real YUp,
+						  const Standard_Real ZUp, 
 						  const VrmlConverter_TypeOfCamera Camera,
 						  const VrmlConverter_TypeOfLight Light)
 
@@ -110,7 +110,7 @@ VrmlConverter_Projector::VrmlConverter_Projector (const TopTools_Array1OfShape& 
 
   if( Ypers.IsParallel(Zpers,Precision::Angular()) )
     {
-      Standard_Failure::Raise("Projection Vector is Parallel to High Point Direction");
+      throw Standard_Failure("Projection Vector is Parallel to High Point Direction");
     }
   gp_Dir Xpers = Ypers.Crossed(Zpers);
 

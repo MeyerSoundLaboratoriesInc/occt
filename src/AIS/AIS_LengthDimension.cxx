@@ -44,7 +44,8 @@ IMPLEMENT_STANDARD_RTTIEXT(AIS_LengthDimension,AIS_Dimension)
 //=======================================================================
 AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Face& theFirstFace,
                                           const TopoDS_Face& theSecondFace)
-: AIS_Dimension (AIS_KOD_LENGTH)
+: AIS_Dimension (AIS_KOD_LENGTH),
+  myHasCustomDirection (Standard_False)
 {
   SetMeasuredGeometry (theFirstFace, theSecondFace);
   SetFlyout (15.0);
@@ -56,7 +57,8 @@ AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Face& theFirstFace,
 //=======================================================================
 AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Face& theFace,
                                           const TopoDS_Edge& theEdge)
-: AIS_Dimension (AIS_KOD_LENGTH)
+: AIS_Dimension (AIS_KOD_LENGTH),
+  myHasCustomDirection (Standard_False)
 {
   SetMeasuredGeometry (theFace, theEdge);
   SetFlyout (15.0);
@@ -69,7 +71,8 @@ AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Face& theFace,
 AIS_LengthDimension::AIS_LengthDimension (const gp_Pnt& theFirstPoint,
                                           const gp_Pnt& theSecondPoint,
                                           const gp_Pln& thePlane)
-: AIS_Dimension (AIS_KOD_LENGTH)
+: AIS_Dimension (AIS_KOD_LENGTH),
+  myHasCustomDirection (Standard_False)
 {
   SetMeasuredGeometry (theFirstPoint, theSecondPoint, thePlane);
   SetFlyout (15.0);
@@ -82,7 +85,8 @@ AIS_LengthDimension::AIS_LengthDimension (const gp_Pnt& theFirstPoint,
 AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Shape& theFirstShape,
                                           const TopoDS_Shape& theSecondShape,
                                           const gp_Pln& thePlane)
-: AIS_Dimension (AIS_KOD_LENGTH)
+: AIS_Dimension (AIS_KOD_LENGTH),
+  myHasCustomDirection (Standard_False)
 {
   SetCustomPlane (thePlane);
   SetMeasuredShapes (theFirstShape, theSecondShape);
@@ -95,7 +99,8 @@ AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Shape& theFirstShape,
 //=======================================================================
 AIS_LengthDimension::AIS_LengthDimension (const TopoDS_Edge& theEdge,
                                           const gp_Pln& thePlane)
-: AIS_Dimension (AIS_KOD_LENGTH)
+: AIS_Dimension (AIS_KOD_LENGTH),
+  myHasCustomDirection (Standard_False)
 {
   SetMeasuredGeometry (theEdge, thePlane);
   SetFlyout (15.0);
@@ -261,7 +266,13 @@ void AIS_LengthDimension::SetDisplayUnits (const TCollection_AsciiString& theUni
 //=======================================================================
 Standard_Real AIS_LengthDimension::ComputeValue() const
 {
-  return IsValid() ? myFirstPoint.Distance (mySecondPoint) : 0.0;
+  if (!IsValid())
+    return 0.0;
+
+  if (!myHasCustomDirection)
+    return myFirstPoint.Distance (mySecondPoint);
+
+  return fabs (gp_Vec(myFirstPoint, mySecondPoint).Dot (myDirection));
 }
 
 //=======================================================================
@@ -272,7 +283,6 @@ void AIS_LengthDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /
                                    const Handle(Prs3d_Presentation)& thePresentation,
                                    const Standard_Integer theMode)
 {
-  thePresentation->Clear();
   mySelectionGeom.Clear (theMode);
 
   if (!IsValid())
@@ -281,6 +291,35 @@ void AIS_LengthDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /
   }
 
   DrawLinearDimension (thePresentation, theMode, myFirstPoint, mySecondPoint);
+}
+
+ //=======================================================================
+//function : ComputeFlyoutLinePoints
+//purpose  : 
+//=======================================================================
+void AIS_LengthDimension::ComputeFlyoutLinePoints (const gp_Pnt& theFirstPoint, const gp_Pnt& theSecondPoint,
+                                                   gp_Pnt& theLineBegPoint, gp_Pnt& theLineEndPoint)
+{
+  if (!myHasCustomDirection)
+  {
+    AIS_Dimension::ComputeFlyoutLinePoints (theFirstPoint, theSecondPoint, theLineBegPoint, theLineEndPoint);
+    return;
+  }
+
+  // find scalar of projection target vector (from start to second point) to flyout vector
+  gp_Ax1 aPlaneNormal = GetPlane().Axis();
+  gp_Vec aFlyoutNormalizedDir(aPlaneNormal.Direction() ^ myDirection);
+  aFlyoutNormalizedDir.Normalize();
+  Standard_Real aTargetProjectedToFlyout = gp_Vec(theFirstPoint, theSecondPoint).Dot (aFlyoutNormalizedDir);
+
+  gp_Dir aFlyoutVector = aFlyoutNormalizedDir;
+  // create lines for layouts
+  gp_Lin aLine1 (theFirstPoint, aFlyoutVector);
+  gp_Lin aLine2 (theSecondPoint, aFlyoutVector);
+
+  // Get flyout end points
+  theLineBegPoint = ElCLib::Value (ElCLib::Parameter (aLine1, theFirstPoint)  + GetFlyout() + aTargetProjectedToFlyout, aLine1);
+  theLineEndPoint = ElCLib::Value (ElCLib::Parameter (aLine2, theSecondPoint) + GetFlyout(), aLine2);
 }
 
 //=======================================================================
@@ -436,32 +475,44 @@ Standard_Boolean AIS_LengthDimension::InitEdgeFaceLength (const TopoDS_Edge& the
                                                           const TopoDS_Face& theFace,
                                                           gp_Dir& theEdgeDir)
 {
-  // Compute edge direction
-  BRepAdaptor_Curve aCurveAdaptor (theEdge);
-  Handle(Geom_Curve) aCurve = Handle(Geom_Curve)::DownCast (aCurveAdaptor.Curve().Curve()->Transformed (aCurveAdaptor.Trsf()));
-  if (aCurve.IsNull())
-  {
-    return Standard_False;
-  }
-  Standard_Real aFirst = aCurveAdaptor.FirstParameter();
-  Standard_Real aLast = aCurveAdaptor.LastParameter();
-  gp_Pnt aFirstPoint = !Precision::IsInfinite (aFirst) ? aCurve->Value (aFirst) : gp::Origin();
-  gp_Pnt aSecondPoint = !Precision::IsInfinite (aLast) ? aCurve->Value (aLast) : gp::Origin();
-  gce_MakeDir aMakeDir (aFirstPoint, aSecondPoint);
-  if (!aMakeDir.IsDone())
-  {
-    return Standard_False;
-  }
-  theEdgeDir = aMakeDir.Value();
+  theEdgeDir = gp::DX();
 
-  // Find attachment points
+  // Find attachment points (closest distance between the edge and the face)
   BRepExtrema_DistShapeShape aDistAdaptor (theEdge, theFace, Extrema_ExtFlag_MIN);
-  if (!aDistAdaptor.IsDone())
+  if (!aDistAdaptor.IsDone() || aDistAdaptor.NbSolution() <1)
   {
     return Standard_False;
   }
   myFirstPoint = aDistAdaptor.PointOnShape1 (1);
   mySecondPoint = aDistAdaptor.PointOnShape2 (1);
+
+  // Take direction for dimension line (will be orthogonalized later) parallel to edge
+  BRepAdaptor_Curve aCurveAdaptor (theEdge);
+  Standard_Real aParam;
+  if (aDistAdaptor.SupportOnShape1 (1).ShapeType() == TopAbs_EDGE)
+  {
+    aDistAdaptor.ParOnEdgeS1 (1, aParam);
+  }
+  else
+  {
+    Standard_Real aD1 = aCurveAdaptor.Value(aCurveAdaptor.FirstParameter()).SquareDistance (myFirstPoint);
+    Standard_Real aD2 = aCurveAdaptor.Value(aCurveAdaptor.LastParameter()).SquareDistance (myFirstPoint);
+    aParam = (aD1 < aD2 ? aCurveAdaptor.FirstParameter() : aCurveAdaptor.LastParameter());
+  }
+  gp_Pnt aP;
+  gp_Vec aV;
+  aCurveAdaptor.D1 (aParam, aP, aV);
+  if (aV.SquareMagnitude() > gp::Resolution())
+  {
+    theEdgeDir = aV;
+  }
+
+  // reverse direction if parameter is close to the end of the curve,
+  // to reduce chances to have overlapping between dimension line and edge
+  if (Abs (aParam - aCurveAdaptor.FirstParameter()) < Abs (aParam - aCurveAdaptor.LastParameter()))
+  {
+    theEdgeDir.Reverse();
+  }
 
   return IsValidPoints (myFirstPoint, mySecondPoint);
 }
@@ -536,7 +587,7 @@ Standard_Boolean AIS_LengthDimension::InitTwoShapesPoints (const TopoDS_Shape& t
 
           mySecondPoint = AIS::ProjectPointOnPlane (myFirstPoint, aSecondPlane);
 
-          Quantity_Parameter anU, aV;
+          Standard_Real anU, aV;
           ElSLib::Parameters (aSecondPlane, mySecondPoint, anU, aV);
 
           BRepTopAdaptor_FClass2d aClassifier (aSecondFace, Precision::Confusion());
@@ -761,4 +812,15 @@ void AIS_LengthDimension::SetTextPosition (const gp_Pnt& theTextPos)
   myFixedTextPosition = theTextPos;
 
   SetToUpdate();
+}
+
+//=======================================================================
+//function : SetDirection
+//purpose  : 
+//=======================================================================
+void AIS_LengthDimension::SetDirection (const gp_Dir& theDirection, const Standard_Boolean theUseDirection)
+{
+  myHasCustomDirection = theUseDirection;
+  if (myHasCustomDirection)
+    myDirection = theDirection;
 }

@@ -14,8 +14,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-
 #include <AIS_Axis.hxx>
+
 #include <Aspect_TypeOfLine.hxx>
 #include <DsgPrs_XYZAxisPresentation.hxx>
 #include <Geom_Axis1Placement.hxx>
@@ -85,10 +85,10 @@ myIsXYZAxis(Standard_True)
     aLength = 0.1;
   }
   DA->SetAxisLength(aLength,aLength,aLength);
-  Quantity_NameOfColor col = Quantity_NOC_TURQUOISE;
-  DA->FirstAxisAspect()->SetColor(col);
-  DA->SecondAxisAspect()->SetColor(col);
-  DA->ThirdAxisAspect()->SetColor(col);
+  Quantity_Color col (Quantity_NOC_TURQUOISE);
+  DA->LineAspect(Prs3d_DP_XAxis)->SetColor(col);
+  DA->LineAspect(Prs3d_DP_YAxis)->SetColor(col);
+  DA->LineAspect(Prs3d_DP_ZAxis)->SetColor(col);
   myDrawer->SetDatumAspect(DA); 
   
   ComputeFields();
@@ -169,9 +169,6 @@ void AIS_Axis::Compute(const Handle(PrsMgr_PresentationManager3d)&,
 		       const Handle(Prs3d_Presentation)& aPresentation, 
 		       const Standard_Integer)
 {
-  aPresentation->Clear();
-
-  //Pro.... : pas de prise en compte des axes lors du FITALL (jmi)
   aPresentation->SetInfiniteState (myInfiniteState);
 
   aPresentation->SetDisplayPriority(5);
@@ -190,7 +187,7 @@ void AIS_Axis::Compute(const Handle(PrsMgr_PresentationManager3d)&,
 
 void AIS_Axis::Compute(const Handle(Prs3d_Projector)& aProjector, const Handle(Geom_Transformation)& aTransformation, const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_Axis::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
+// throw Standard_NotImplemented("AIS_Axis::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
   PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation ) ;
 }
 
@@ -212,25 +209,18 @@ void AIS_Axis::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
 
 //=======================================================================
 //function : SetColor
-//purpose  : 
+//purpose  :
 //=======================================================================
-
-
-void AIS_Axis::SetColor(const Quantity_NameOfColor aCol)
-{
-  SetColor(Quantity_Color(aCol));
-}
-
 void AIS_Axis::SetColor(const Quantity_Color &aCol)
 {
   hasOwnColor=Standard_True;
-  myOwnColor=aCol;
+  myDrawer->SetColor (aCol);
   myDrawer->LineAspect()->SetColor(aCol);
   
   const Handle(Prs3d_DatumAspect)& DA = myDrawer->DatumAspect();
-  DA->FirstAxisAspect()->SetColor(aCol);
-  DA->SecondAxisAspect()->SetColor(aCol);
-  DA->ThirdAxisAspect()->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_XAxis)->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_YAxis)->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_ZAxis)->SetColor(aCol);
   
 }
 
@@ -247,9 +237,9 @@ void AIS_Axis::SetWidth(const Standard_Real aValue)
   myDrawer->LineAspect()->SetWidth(aValue);
   
   const Handle(Prs3d_DatumAspect)& DA = myDrawer->DatumAspect();
-  DA->FirstAxisAspect()->SetWidth(aValue);
-  DA->SecondAxisAspect()->SetWidth(aValue);
-  DA->ThirdAxisAspect()->SetWidth(aValue);
+  DA->LineAspect(Prs3d_DP_XAxis)->SetWidth(aValue);
+  DA->LineAspect(Prs3d_DP_YAxis)->SetWidth(aValue);
+  DA->LineAspect(Prs3d_DP_ZAxis)->SetWidth(aValue);
 }
 
 
@@ -276,7 +266,7 @@ void AIS_Axis::ComputeFields()
     const gp_Dir& oX   = anAxis.XDirection();
     const gp_Dir& oY   = anAxis.YDirection();
     const gp_Dir& oZ   = anAxis.Direction();
-    Quantity_Length xo,yo,zo,x = 0.,y = 0.,z = 0.;
+    Standard_Real xo,yo,zo,x = 0.,y = 0.,z = 0.;
     Orig.Coord(xo,yo,zo);
     myPfirst.SetCoord(xo,yo,zo);
     
@@ -284,27 +274,27 @@ void AIS_Axis::ComputeFields()
     case AIS_TOAX_XAxis:
       {
 	oX.Coord(x,y,z);
-	myVal = DA->FirstAxisLength();
+    myVal = DA->AxisLength(Prs3d_DP_XAxis);
 	myDir = oX;
-	myLineAspect = DA->FirstAxisAspect();
+	myLineAspect = DA->LineAspect(Prs3d_DP_XAxis);
 	myText = Standard_CString ("X");
 	break;
       }
     case AIS_TOAX_YAxis:
       {
 	oY.Coord(x,y,z);
-	myVal = DA->SecondAxisLength();
+	myVal = DA->AxisLength(Prs3d_DP_YAxis);
 	myDir = oY;
-	myLineAspect = DA->SecondAxisAspect();
+	myLineAspect = DA->LineAspect(Prs3d_DP_YAxis);
 	myText = Standard_CString ("Y");
 	break;
       }
     case AIS_TOAX_ZAxis:
       {
 	oZ.Coord(x,y,z); 
-	myVal = DA->ThirdAxisLength();
+	myVal = DA->AxisLength(Prs3d_DP_ZAxis);
 	myDir = oZ;
-	myLineAspect = DA->ThirdAxisAspect();
+	myLineAspect = DA->LineAspect(Prs3d_DP_ZAxis);
 	myText = Standard_CString ("Z");
 	break;
       }
@@ -339,9 +329,9 @@ void AIS_Axis::UnsetColor()
 
   hasOwnColor=Standard_False;
 
-  myDrawer->DatumAspect()->FirstAxisAspect()->SetColor(Quantity_NOC_TURQUOISE);
-  myDrawer->DatumAspect()->SecondAxisAspect()->SetColor(Quantity_NOC_TURQUOISE);
-  myDrawer->DatumAspect()->ThirdAxisAspect()->SetColor(Quantity_NOC_TURQUOISE);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_XAxis)->SetColor(Quantity_NOC_TURQUOISE);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_YAxis)->SetColor(Quantity_NOC_TURQUOISE);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_ZAxis)->SetColor(Quantity_NOC_TURQUOISE);
 }
 //=======================================================================
 //function : UnsetWidth
@@ -352,8 +342,8 @@ void AIS_Axis::UnsetWidth()
 {
   myOwnWidth = 0.0;
   myDrawer->LineAspect()->SetWidth(1.);
-  myDrawer->DatumAspect()->FirstAxisAspect()->SetWidth(1.);
-  myDrawer->DatumAspect()->SecondAxisAspect()->SetWidth(1.);
-  myDrawer->DatumAspect()->ThirdAxisAspect()->SetWidth(1.);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_XAxis)->SetWidth(1.);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_YAxis)->SetWidth(1.);
+  myDrawer->DatumAspect()->LineAspect(Prs3d_DP_ZAxis)->SetWidth(1.);
 }
 

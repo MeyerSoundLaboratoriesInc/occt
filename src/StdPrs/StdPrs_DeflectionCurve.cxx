@@ -131,7 +131,7 @@ static Standard_Boolean FindLimits(const Adaptor3d_Curve& aCurve,
 //==================================================================
 static void drawCurve (Adaptor3d_Curve&              aCurve,
                        const Handle(Graphic3d_Group)& aGroup,
-                       const Quantity_Length         TheDeflection,
+                       const Standard_Real           TheDeflection,
                        const Standard_Real           anAngle,
                        const Standard_Real           U1,
                        const Standard_Real           U2,
@@ -174,12 +174,8 @@ static void drawCurve (Adaptor3d_Curve&              aCurve,
           NumberOfPoints = Algo.NbPoints();
 
           if (NumberOfPoints > 0) {
-            for (i=1;i<NumberOfPoints;i++) { 
+            for (i = 1; i <= NumberOfPoints; i++)
               SeqP.Append(Algo.Value(i)); 
-            }
-            if (j == nbinter) {
-              SeqP.Append(Algo.Value(NumberOfPoints));
-            }
           }
         }
       }
@@ -210,17 +206,17 @@ static void drawCurve (Adaptor3d_Curve&              aCurve,
 // purpose:
 //==================================================================
 static Standard_Boolean MatchCurve (
-		       const Quantity_Length X,
-		       const Quantity_Length Y,
-		       const Quantity_Length Z,
-		       const Quantity_Length aDistance,
+		       const Standard_Real X,
+		       const Standard_Real Y,
+		       const Standard_Real Z,
+		       const Standard_Real aDistance,
 		       const Adaptor3d_Curve&  aCurve,
-		       const Quantity_Length TheDeflection,
+		       const Standard_Real TheDeflection,
 		       const Standard_Real   anAngle,
 		       const Standard_Real   U1,
 		       const Standard_Real   U2)
 {
-  Quantity_Length retdist;
+  Standard_Real retdist;
   switch (aCurve.GetType())
   {
     case GeomAbs_Line:
@@ -289,29 +285,30 @@ void StdPrs_DeflectionCurve::Add (const Handle (Prs3d_Presentation)& aPresentati
                                   const Handle (Prs3d_Drawer)&       aDrawer,
                                   const Standard_Boolean theToDrawCurve)
 {
-  Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect(aDrawer->LineAspect()->Aspect());
+  Handle(Graphic3d_Group) aGroup;
+  if (theToDrawCurve)
+  {
+    aGroup = Prs3d_Root::CurrentGroup(aPresentation);
+    aGroup->SetPrimitivesAspect (aDrawer->LineAspect()->Aspect());
+  }
 
   Standard_Real V1, V2;
   if (FindLimits(aCurve, aDrawer->MaximalParameterValue(), V1, V2))
   {
     TColgp_SequenceOfPnt Points;
-    Handle(Graphic3d_Group) aGroup;
-    if (theToDrawCurve)
-    {
-      aGroup = Prs3d_Root::CurrentGroup (aPresentation);
-    }
-
     drawCurve(aCurve,
               aGroup,
               GetDeflection(aCurve, V1, V2, aDrawer),
               aDrawer->DeviationAngle(),
               V1, V2, Points);
 
-    if (aDrawer->LineArrowDraw()) {
+    if (aDrawer->LineArrowDraw()
+    && !aGroup.IsNull())
+    {
       gp_Pnt Location;
       gp_Vec Direction;
       aCurve.D1(V2, Location,Direction);
-      Prs3d_Arrow::Draw (aPresentation,
+      Prs3d_Arrow::Draw (aGroup,
                          Location,
                          gp_Dir(Direction),
                          aDrawer->ArrowAspect()->Angle(),
@@ -352,11 +349,13 @@ void StdPrs_DeflectionCurve::Add (const Handle (Prs3d_Presentation)& aPresentati
             aDrawer->DeviationAngle(),
             V1 , V2, Points);
 
-  if (aDrawer->LineArrowDraw()) {
+  if (aDrawer->LineArrowDraw()
+  && !aGroup.IsNull())
+  {
     gp_Pnt Location;
     gp_Vec Direction;
     aCurve.D1(V2, Location,Direction);
-    Prs3d_Arrow::Draw (aPresentation,
+    Prs3d_Arrow::Draw (aGroup,
                        Location,
                        gp_Dir(Direction),
                        aDrawer->ArrowAspect()->Angle(),
@@ -445,10 +444,10 @@ void StdPrs_DeflectionCurve::Add (const Handle (Prs3d_Presentation)& aPresentati
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_DeflectionCurve::Match 
-		      (const Quantity_Length        X,
-		       const Quantity_Length        Y,
-		       const Quantity_Length        Z,
-		       const Quantity_Length        aDistance,
+		      (const Standard_Real        X,
+		       const Standard_Real        Y,
+		       const Standard_Real        Z,
+		       const Standard_Real        aDistance,
 		       const Adaptor3d_Curve&         aCurve,
 		       const Handle (Prs3d_Drawer)& aDrawer) 
 {
@@ -468,10 +467,10 @@ Standard_Boolean StdPrs_DeflectionCurve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_DeflectionCurve::Match 
-			(const Quantity_Length        X,
-			 const Quantity_Length        Y,
-			 const Quantity_Length        Z,
-			 const Quantity_Length        aDistance,
+			(const Standard_Real        X,
+			 const Standard_Real        Y,
+			 const Standard_Real        Z,
+			 const Standard_Real        aDistance,
 			 const Adaptor3d_Curve&         aCurve,
 			 const Standard_Real          U1,
 			 const Standard_Real          U2,
@@ -493,10 +492,10 @@ Standard_Boolean StdPrs_DeflectionCurve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_DeflectionCurve::Match 
-		        (const Quantity_Length X,
-                 const Quantity_Length Y,
-                 const Quantity_Length Z,
-                 const Quantity_Length aDistance,
+		        (const Standard_Real X,
+                 const Standard_Real Y,
+                 const Standard_Real Z,
+                 const Standard_Real aDistance,
                  const Adaptor3d_Curve&  aCurve,
                  const Standard_Real   U1,
                  const Standard_Real   U2,
@@ -511,10 +510,10 @@ Standard_Boolean StdPrs_DeflectionCurve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_DeflectionCurve::Match 
-			  (const Quantity_Length X,
-			   const Quantity_Length Y,
-			   const Quantity_Length Z,
-			   const Quantity_Length aDistance,
+			  (const Standard_Real X,
+			   const Standard_Real Y,
+			   const Standard_Real Z,
+			   const Standard_Real aDistance,
 			   const Adaptor3d_Curve&  aCurve,
 			   const Standard_Real   aDeflection,
 			   const Standard_Real   aLimit,

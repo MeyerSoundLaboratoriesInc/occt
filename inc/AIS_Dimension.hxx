@@ -202,6 +202,13 @@ protected:
     LabelPosition_VMask   = LabelPosition_Above | LabelPosition_Below | LabelPosition_VCenter
   };
 
+  enum ValueType
+  {
+    ValueType_Computed,
+    ValueType_CustomReal,
+    ValueType_CustomText
+  };
+
 public:
 
   //! Specifies supported presentation compute modes.
@@ -227,7 +234,13 @@ public:
   //! during display of the presentation.
   Standard_Real GetValue() const
   {
-    return myIsValueCustom ? myCustomValue : ComputeValue();
+    return myValueType == ValueType_CustomReal ? myCustomValue : ComputeValue();
+  }
+
+  //! Sets computed dimension value. Resets custom value mode if it was set.
+  void SetComputedValue ()
+  {
+    myValueType = ValueType_Computed;
   }
 
   //! Sets user-defined dimension value.
@@ -235,6 +248,15 @@ public:
   //! and affect by unit conversion during the display.
   //! @param theValue [in] the user-defined value to display.
   Standard_EXPORT void SetCustomValue (const Standard_Real theValue);
+
+  //! Sets user-defined dimension value.
+  //! Unit conversion during the display is not applyed.
+  //! @param theValue [in] the user-defined value to display.
+  Standard_EXPORT void SetCustomValue (const TCollection_ExtendedString& theValue);
+
+  //! Gets user-defined dimension value.
+  //! @return dimension value string.
+  Standard_EXPORT const TCollection_ExtendedString& GetCustomValue () const;
 
   //! Get the dimension plane in which the 2D dimension presentation is computed.
   //! By default, if plane is not defined by user, it is computed automatically
@@ -259,7 +281,7 @@ public:
 
   //! Unsets user-defined plane. Therefore the plane for dimension will be
   //! computed automatically.
-  Standard_EXPORT void UnsetCustomPlane() { myIsPlaneCustom = Standard_False; }
+  void UnsetCustomPlane() { myIsPlaneCustom = Standard_False; }
 
   //! @return TRUE if text position is set by user with method SetTextPosition().
   Standard_Boolean IsTextPositionCustom() const
@@ -335,9 +357,9 @@ public:
 
   Standard_EXPORT virtual const TCollection_AsciiString& GetModelUnits() const;
 
-  Standard_EXPORT virtual void SetDisplayUnits (const TCollection_AsciiString& /*theUnits*/) { }
+  virtual void SetDisplayUnits (const TCollection_AsciiString& /*theUnits*/) { }
 
-  Standard_EXPORT virtual void SetModelUnits (const TCollection_AsciiString& /*theUnits*/) { }
+  virtual void SetModelUnits (const TCollection_AsciiString& /*theUnits*/) { }
 
   //! Unsets user defined text positioning and enables text positioning
   //!  by other parameters: text alignment, extension size, flyout and custom plane.
@@ -440,6 +462,14 @@ protected:
                                             const gp_Pnt& theFirstPoint,
                                             const gp_Pnt& theSecondPoint,
                                             const Standard_Boolean theIsOneSide = Standard_False);
+
+  //! Computes points bounded the flyout line for linear dimension.
+  //! @param theFirstPoint [in] the first attach point of linear dimension.
+  //! @param theSecondPoint [in] the second attach point of linear dimension.
+  //! @param theLineBegPoint [out] the first attach point of linear dimension.
+  //! @param theLineEndPoint [out] the second attach point of linear dimension.
+  Standard_EXPORT virtual void ComputeFlyoutLinePoints (const gp_Pnt& theFirstPoint, const gp_Pnt& theSecondPoint,
+                                                        gp_Pnt& theLineBegPoint, gp_Pnt& theLineEndPoint);
 
   //! Compute selection sensitives for linear dimension flyout lines (length, diameter, radius).
   //! Please note that this method uses base dimension properties: working plane and flyout length.
@@ -649,8 +679,10 @@ protected: //! @name Selection geometry
 
 protected: //! @name Value properties
 
+  ValueType        myValueType; //! type of value (computed or user-defined)
   Standard_Real    myCustomValue;   //!< Value of the dimension (computed or user-defined).
-  Standard_Boolean myIsValueCustom; //!< Is user-defined value.
+
+  TCollection_ExtendedString myCustomStringValue; //!< Value of the dimension (computed or user-defined).
 
 protected: //! @name Fixed text position properties
 

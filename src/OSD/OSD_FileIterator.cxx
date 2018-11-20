@@ -51,7 +51,7 @@ extern char *vmsify PARAMS ((char *name, int type));
 
 
 OSD_FileIterator::OSD_FileIterator()
-: myFlag(0),
+: myFlag(false),
   myDescr(0),
   myEntry(0),
   myInit(0)
@@ -60,7 +60,7 @@ OSD_FileIterator::OSD_FileIterator()
 
 OSD_FileIterator::OSD_FileIterator(const OSD_Path& where,
                                    const TCollection_AsciiString& Mask)
-: myFlag(0),
+: myFlag(false),
   myDescr(0),
   myEntry(0),
   myInit(0)
@@ -96,7 +96,7 @@ Standard_Boolean OSD_FileIterator::More(){
      Next();          // Now find first entry
    }
  }
- return (myFlag);
+ return myFlag;
 }
 
 // Private :  See if file name matches with a mask (like "*.c")
@@ -176,13 +176,11 @@ static int strcmp_joker(char *fileMask,char *fileName)
 void OSD_FileIterator::Next(){
 int again = 1;
 struct stat stat_buf;
-char full_name[255];
-
- myFlag = 0;   // Initialize to nothing found
+ myFlag = false;   // Initialize to nothing found
 
  do {
     myEntry = readdir((DIR *)myDescr);
-   
+
     if (!myEntry){   // No file found
      myEntry = NULL;              // Keep pointer clean
      myFlag = Standard_False;   // No more files/directory
@@ -195,14 +193,8 @@ char full_name[255];
      if (!strcmp(((struct dirent *)myEntry)->d_name,"..")) continue;
 
      // Is it a file ?
-
-     sprintf(full_name,"%s/%s",myPlace.ToCString(),
-	     ((struct dirent *)myEntry)->d_name);		 // LD debug
-#ifdef OCCT_DEBUG
-     cout << "Place : " << myPlace << endl;
-     cout << "FName : " << full_name << endl;
-#endif
-     stat(full_name, &stat_buf);
+     const TCollection_AsciiString aFullName = myPlace + "/" + ((struct dirent* )myEntry)->d_name;
+     stat(aFullName.ToCString(), &stat_buf);
      if (S_ISREG(stat_buf.st_mode))   // LD : Ensure me it's a regular file
       if (strcmp_joker(myMask.ToCString(), ((struct dirent *)myEntry)->d_name)){
 							 // Does it follow mask ?
@@ -263,7 +255,6 @@ Standard_Integer OSD_FileIterator::Error()const{
 //-------------------  Windows NT sources for OSD_FileIterator -----------
 //------------------------------------------------------------------------
 
-#define STRICT
 #include <windows.h>
 
 
@@ -317,7 +308,7 @@ Standard_Boolean OSD_FileIterator :: More () {
 
   // make wchar_t string from UTF-8
   TCollection_ExtendedString wcW(wc);
-  myHandle = FindFirstFileW ((const wchar_t*)wcW.ToExtString(), (PWIN32_FIND_DATAW)myData);
+  myHandle = FindFirstFileExW (wcW.ToWideString(), FindExInfoStandard, (PWIN32_FIND_DATAW)myData, FindExSearchNameMatch, NULL, 0);
 
   if (  myHandle == INVALID_HANDLE_VALUE  )
   

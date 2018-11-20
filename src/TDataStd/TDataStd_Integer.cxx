@@ -35,6 +35,23 @@ const Standard_GUID& TDataStd_Integer::GetID()
   return TDataStd_IntegerID; 
 }
 
+//=======================================================================
+//function : SetAttr
+//purpose  : Implements Set functionality
+//=======================================================================
+static Handle(TDataStd_Integer) SetAttr(const TDF_Label&     label,
+                                        const Standard_Integer  V,
+                                        const Standard_GUID& theGuid)
+{
+  Handle(TDataStd_Integer) A;
+  if (!label.FindAttribute(theGuid, A)) {
+    A = new TDataStd_Integer ();
+    A->SetID(theGuid);
+    label.AddAttribute(A);
+  }
+  A->Set (V); 
+  return A;
+}
 
 //=======================================================================
 //function : Set
@@ -45,22 +62,27 @@ Handle(TDataStd_Integer) TDataStd_Integer::Set (const TDF_Label&        L,
                                                 const Standard_Integer  V) 
 
 {
-  Handle(TDataStd_Integer) A;
-  if (!L.FindAttribute (TDataStd_Integer::GetID(), A)) {
-    A = new TDataStd_Integer ();
-    L.AddAttribute(A);
-  }
-  A->Set (V); 
-  return A;
+  return SetAttr(L, V, GetID());
 }
 
+//=======================================================================
+//function : Set
+//purpose  : Set user defined attribute
+//=======================================================================
+
+Handle(TDataStd_Integer) TDataStd_Integer::Set (const TDF_Label&    L,
+                                                const Standard_GUID& theGuid,
+                                                const Standard_Integer V) 
+{
+  return SetAttr(L, V, theGuid);
+}
 //=======================================================================
 //function : TDataStd_Integer
 //purpose  : Empty Constructor
 //=======================================================================
 
 TDataStd_Integer::TDataStd_Integer ()
-     : myValue (-1)
+     : myValue (-1), myID(GetID())
  { }
 
 
@@ -103,8 +125,30 @@ Standard_Boolean TDataStd_Integer::IsCaptured() const
 //purpose  : 
 //=======================================================================
 
-const Standard_GUID& TDataStd_Integer::ID () const { return GetID(); }
+const Standard_GUID& TDataStd_Integer::ID () const { return myID; }
 
+//=======================================================================
+//function : SetID
+//purpose  :
+//=======================================================================
+
+void TDataStd_Integer::SetID( const Standard_GUID&  theGuid)
+{  
+  if(myID == theGuid) return;
+
+  Backup();
+  myID = theGuid;
+}
+
+//=======================================================================
+//function : SetID
+//purpose  : sets default ID
+//=======================================================================
+void TDataStd_Integer::SetID()
+{
+  Backup();
+  myID = GetID();
+}
 
 //=======================================================================
 //function : NewEmpty
@@ -112,8 +156,8 @@ const Standard_GUID& TDataStd_Integer::ID () const { return GetID(); }
 //=======================================================================
 
 Handle(TDF_Attribute) TDataStd_Integer::NewEmpty () const
-{  
-  return new TDataStd_Integer (); 
+{
+  return new TDataStd_Integer();
 }
 
 //=======================================================================
@@ -123,7 +167,9 @@ Handle(TDF_Attribute) TDataStd_Integer::NewEmpty () const
 
 void TDataStd_Integer::Restore(const Handle(TDF_Attribute)& With) 
 {
-  myValue = Handle(TDataStd_Integer)::DownCast (With)->Get();
+  Handle(TDataStd_Integer) anInt = Handle(TDataStd_Integer)::DownCast (With);
+  myValue = anInt->Get();
+  myID = anInt->ID();
 }
 
 //=======================================================================
@@ -134,7 +180,9 @@ void TDataStd_Integer::Restore(const Handle(TDF_Attribute)& With)
 void TDataStd_Integer::Paste (const Handle(TDF_Attribute)& Into,
                               const Handle(TDF_RelocationTable)& /*RT*/) const
 {
-  Handle(TDataStd_Integer)::DownCast(Into)->Set(myValue);
+  Handle(TDataStd_Integer) anInt = Handle(TDataStd_Integer)::DownCast (Into);
+  anInt->Set(myValue);
+  anInt->SetID(myID);
 }
 
 //=======================================================================
@@ -146,6 +194,9 @@ Standard_OStream& TDataStd_Integer::Dump (Standard_OStream& anOS) const
 {  
   anOS << "Integer:: "<< this <<" : ";
   anOS << myValue; 
+  Standard_Character sguid[Standard_GUID_SIZE_ALLOC];
+  myID.ToCString(sguid);
+  anOS << sguid;
 //
   anOS <<"\nAttribute fields: ";
   TDF_Attribute::Dump(anOS);

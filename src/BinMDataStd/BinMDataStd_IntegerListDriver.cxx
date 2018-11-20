@@ -15,8 +15,9 @@
 
 
 #include <BinMDataStd_IntegerListDriver.hxx>
+#include <BinMDataStd.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_Array1OfInteger.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
@@ -29,7 +30,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_IntegerListDriver,BinMDF_ADriver)
 //function : BinMDataStd_IntegerListDriver
 //purpose  : Constructor
 //=======================================================================
-BinMDataStd_IntegerListDriver::BinMDataStd_IntegerListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+BinMDataStd_IntegerListDriver::BinMDataStd_IntegerListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_IntegerList)->Name())
 {
 
@@ -49,26 +50,24 @@ Handle(TDF_Attribute) BinMDataStd_IntegerListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean BinMDataStd_IntegerListDriver::Paste(const BinObjMgt_Persistent&  theSource,
-						      const Handle(TDF_Attribute)& theTarget,
-						      BinObjMgt_RRelocationTable&  ) const
+                                                      const Handle(TDF_Attribute)& theTarget,
+                                                      BinObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aIndex, aFirstInd, aLastInd;
   if (! (theSource >> aFirstInd >> aLastInd))
     return Standard_False;
-  if(aLastInd == 0) return Standard_True;
-
-  const Standard_Integer aLength = aLastInd - aFirstInd + 1;
-  if (aLength <= 0)
-    return Standard_False;
-
-  TColStd_Array1OfInteger aTargetArray(aFirstInd, aLastInd);
-  theSource.GetIntArray (&aTargetArray(aFirstInd), aLength);
-
   const Handle(TDataStd_IntegerList) anAtt = Handle(TDataStd_IntegerList)::DownCast(theTarget);
-  for (aIndex = aFirstInd; aIndex <= aLastInd; aIndex++)
-  {
-    anAtt->Append(aTargetArray.Value(aIndex));
+  if(aLastInd > 0) {
+    const Standard_Integer aLength = aLastInd - aFirstInd + 1;
+    if (aLength > 0) {
+      TColStd_Array1OfInteger aTargetArray(aFirstInd, aLastInd);
+      theSource.GetIntArray (&aTargetArray(aFirstInd), aLength);
+      for (aIndex = aFirstInd; aIndex <= aLastInd; aIndex++)  
+        anAtt->Append(aTargetArray.Value(aIndex));
+    }
   }
+
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return Standard_True;
 }
 
@@ -99,4 +98,8 @@ void BinMDataStd_IntegerListDriver::Paste(const Handle(TDF_Attribute)& theSource
     Standard_Integer *aPtr = (Standard_Integer *) &aSourceArray(aFirstInd);
     theTarget.PutIntArray(aPtr, aLength);
   }
+
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_IntegerList::GetID()) 
+	theTarget << anAtt->ID();
 }

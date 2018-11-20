@@ -15,8 +15,9 @@
 
 
 #include <BinMDataStd_ReferenceListDriver.hxx>
+#include <BinMDataStd.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_ReferenceList.hxx>
 #include <TDF_Attribute.hxx>
@@ -30,7 +31,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_ReferenceListDriver,BinMDF_ADriver)
 //function : BinMDataStd_ReferenceListDriver
 //purpose  : Constructor
 //=======================================================================
-BinMDataStd_ReferenceListDriver::BinMDataStd_ReferenceListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+BinMDataStd_ReferenceListDriver::BinMDataStd_ReferenceListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_ReferenceList)->Name())
 {
 
@@ -50,30 +51,32 @@ Handle(TDF_Attribute) BinMDataStd_ReferenceListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean BinMDataStd_ReferenceListDriver::Paste(const BinObjMgt_Persistent&  theSource,
-							const Handle(TDF_Attribute)& theTarget,
-							BinObjMgt_RRelocationTable&  ) const
+                                                        const Handle(TDF_Attribute)& theTarget,
+                                                        BinObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aFirstInd, aLastInd;
   if (! (theSource >> aFirstInd >> aLastInd))
     return Standard_False;
-  if(aLastInd == 0) return Standard_True;
-
-  const Standard_Integer aLength = aLastInd - aFirstInd + 1;
-  if (aLength <= 0)
-    return Standard_False;
 
   const Handle(TDataStd_ReferenceList) anAtt = Handle(TDataStd_ReferenceList)::DownCast(theTarget);
-  for (Standard_Integer i = aFirstInd; i <= aLastInd; i++)
-  {
-    TCollection_AsciiString entry;
-    if ( !(theSource >> entry) )
+  if(aLastInd > 0) {
+
+    const Standard_Integer aLength = aLastInd - aFirstInd + 1;
+    if (aLength <= 0)
       return Standard_False;
-    TDF_Label L;
-    TDF_Tool::Label(anAtt->Label().Data(), entry, L, Standard_True);
-    if (!L.IsNull())
-      anAtt->Append(L);
+    for (Standard_Integer i = aFirstInd; i <= aLastInd; i++)
+    {
+      TCollection_AsciiString entry;
+      if ( !(theSource >> entry) )
+        return Standard_False;
+      TDF_Label L;
+      TDF_Tool::Label(anAtt->Label().Data(), entry, L, Standard_True);
+      if (!L.IsNull())
+        anAtt->Append(L);
+    }
   }
 
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return Standard_True;
 }
 
@@ -82,8 +85,8 @@ Standard_Boolean BinMDataStd_ReferenceListDriver::Paste(const BinObjMgt_Persiste
 //purpose  : transient -> persistent (store)
 //=======================================================================
 void BinMDataStd_ReferenceListDriver::Paste(const Handle(TDF_Attribute)& theSource,
-					    BinObjMgt_Persistent&        theTarget,
-					    BinObjMgt_SRelocationTable&  ) const
+                                            BinObjMgt_Persistent&        theTarget,
+                                            BinObjMgt_SRelocationTable&  ) const
 {
   const Handle(TDataStd_ReferenceList) anAtt = Handle(TDataStd_ReferenceList)::DownCast(theSource);
   if (anAtt.IsNull())
@@ -103,4 +106,8 @@ void BinMDataStd_ReferenceListDriver::Paste(const Handle(TDF_Attribute)& theSour
       theTarget << entry;
     }
   }
+
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_ReferenceList::GetID()) 
+    theTarget << anAtt->ID();
 }

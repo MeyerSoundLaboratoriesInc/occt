@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{62990B42-0C25-1360-14D2-F617CC9472E2}</UniqueIdentifier>
+      <UniqueIdentifier>{73897134-18F8-1464-168A-2C9CFBF658AE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\STEPCAFControl">
-      <UniqueIdentifier>{026EE94B-018A-02A4-07EF-D58C3BE993AA}</UniqueIdentifier>
+      <UniqueIdentifier>{3840EF22-09B9-1834-0B58-915640B5BF89}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -15,22 +15,13 @@
     <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_Controller.cxx">
       <Filter>Source files\STEPCAFControl</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_DictionaryOfExternFile_0.cxx">
-      <Filter>Source files\STEPCAFControl</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_ExternFile.cxx">
       <Filter>Source files\STEPCAFControl</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_GDTProperty.cxx">
       <Filter>Source files\STEPCAFControl</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_IteratorOfDictionaryOfExternFile_0.cxx">
-      <Filter>Source files\STEPCAFControl</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_Reader.cxx">
-      <Filter>Source files\STEPCAFControl</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_StackItemOfDictionaryOfExternFile_0.cxx">
       <Filter>Source files\STEPCAFControl</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\STEPCAFControl\STEPCAFControl_Writer.cxx">

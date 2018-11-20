@@ -12,8 +12,6 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-
-#include <Aspect_AspectMarker.hxx>
 #include <Aspect_TypeOfLine.hxx>
 #include <Aspect_TypeOfMarker.hxx>
 #include <DsgPrs.hxx>
@@ -37,7 +35,6 @@
 #include <Graphic3d_AspectLine3d.hxx>
 #include <Graphic3d_AspectMarker3d.hxx>
 #include <Graphic3d_Group.hxx>
-#include <Graphic3d_Vertex.hxx>
 #include <Precision.hxx>
 #include <Prs3d_Arrow.hxx>
 #include <Prs3d_ArrowAspect.hxx>
@@ -60,10 +57,7 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
 {
   Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect(LA->LineAspect()->Aspect());
 
-  Quantity_Color aColor;
-  Aspect_TypeOfLine aType;
-  Standard_Real aWidth;
-  LA->LineAspect()->Aspect()->Values (aColor, aType, aWidth);
+  Quantity_Color aColor = LA->LineAspect()->Aspect()->Color();
   Handle(Graphic3d_AspectMarker3d) aMarkerAsp = new Graphic3d_AspectMarker3d (Aspect_TOM_O, aColor, 1.0);
   Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect (aMarkerAsp);
   Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect(LA->LineAspect()->Aspect());
@@ -75,8 +69,7 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
     }
   case DsgPrs_AS_FIRSTAR:
     {
-
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw(Prs3d_Root::CurrentGroup (aPresentation),
 		    pt1,
 		    dir1,
 		    LA->ArrowAspect()->Angle(),
@@ -86,7 +79,7 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
   case DsgPrs_AS_LASTAR:
     {
 
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation),
 		    pt2,
 		    dir2,
 		    LA->ArrowAspect()->Angle(),
@@ -96,12 +89,12 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
 
   case DsgPrs_AS_BOTHAR:
     {
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation),
 		    pt1,
 		    dir1,
 		    LA->ArrowAspect()->Angle(),
 		    LA->ArrowAspect()->Length());  
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation),
 		    pt2,
 		    dir2,
 		    LA->ArrowAspect()->Angle(),
@@ -150,7 +143,7 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
   case DsgPrs_AS_FIRSTAR_LASTPT:
     {
       // an Arrow
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation),
                         pt1,
                         dir1,
                         LA->ArrowAspect()->Angle(),
@@ -172,7 +165,7 @@ void DsgPrs::ComputeSymbol (const Handle(Prs3d_Presentation)& aPresentation,
         Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray (anArrayOfPoints);
       }
       // an Arrow
-      Prs3d_Arrow::Draw(aPresentation,
+      Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation),
                         pt2,
                         dir2,
                         LA->ArrowAspect()->Angle(),
@@ -240,14 +233,14 @@ void DsgPrs::ComputeCurvilinearFacesLengthPresentation( const Standard_Real Firs
 {
   GeomAPI_ProjectPointOnSurf ProjectorOnSurface;
   GeomAPI_ProjectPointOnCurve ProjectorOnCurve;
-  Quantity_Parameter U1, V1, U2, V2;
+  Standard_Real U1, V1, U2, V2;
   Standard_Real LastU, LastV;
   Standard_Real SquareTolerance = Precision::SquareConfusion();
 
   ProjectorOnSurface.Init( AttachmentPoint1, SecondSurf );
   Standard_Integer Index(1);
-  Quantity_Length MinDist = RealLast();
-  Quantity_Parameter LocalU, LocalV;
+  Standard_Real MinDist = RealLast();
+  Standard_Real LocalU, LocalV;
   gp_Vec D1U, D1V;
   gp_Dir LocalDir;
   for (Standard_Integer i = 1; i <= ProjectorOnSurface.NbPoints(); i++)
@@ -489,16 +482,8 @@ void DsgPrs::ComputeFilletRadiusPresentation( const Standard_Real /*ArrowLength*
       FilletCirc.SetRadius( Center.Distance( FirstPoint ) ); //***
       gp_Vec vec1( dir1 );
       vec1 *= FilletCirc.Radius();
-#ifdef OCCT_DEBUG
-      gp_Pnt p1 =
-#endif
-                  Center.Translated( vec1 );
       gp_Vec vec2( dir2 );
       vec2 *= FilletCirc.Radius();
-#ifdef OCCT_DEBUG
-      gp_Pnt p2 =
-#endif
-                  Center.Translated( vec2 );
       gp_Vec PosVec;
       if(! Center.IsEqual( Position, Precision::Confusion() ))
 	PosVec.SetXYZ( gp_Vec(Center, Position).XYZ() );
@@ -542,16 +527,12 @@ void DsgPrs::ComputeFilletRadiusPresentation( const Standard_Real /*ArrowLength*
 	}
       FirstParCirc = ElCLib::Parameter( FilletCirc, FirstPoint );
       LastParCirc  = ElCLib::Parameter( FilletCirc, SecondPoint );
-
-#ifdef OCCT_DEBUG
-#endif
     }
   else //Angle equal 0 or PI or R = 0
     {
       DrawPosition = Position;
       EndOfArrow   = BasePnt;
     }
-
 
   if(drawRevers)
     {

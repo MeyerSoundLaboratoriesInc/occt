@@ -17,7 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__MeshVS_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKMeshVS_obj.link" />
@@ -36,7 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__MeshVS_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKMeshVS_objd.link" />
@@ -66,10 +64,7 @@
 			<Add library="TKG3d" />
 			<Add library="TKG2d" />
 		</Linker>
-		<Unit filename="../../../src/MeshVS/MeshVS_ColorHasher.cxx" />
-		<Unit filename="../../../src/MeshVS/MeshVS_CommonSensitiveEntity.cxx">
-			<Option link="0" />
-		</Unit>
+		<Unit filename="../../../src/MeshVS/MeshVS_CommonSensitiveEntity.cxx" />
 		<Unit filename="../../../src/MeshVS/MeshVS_DataSource.cxx">
 			<Option link="0" />
 		</Unit>

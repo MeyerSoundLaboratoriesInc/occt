@@ -4,8 +4,6 @@
 #include <Standard_Macro.hxx>
 #include <Standard_DefineHandle.hxx>
 
-
-#include <Quantity_Length.hxx>
 #include <Aspect_TypeOfline.hxx>
 #include <Aspect_WidthOfline.hxx>
 #include <Standard_Integer.hxx>
@@ -64,9 +62,9 @@ public:
 private: 
 
   // Methods PRIVATE
-  // 
+  virtual Standard_Boolean AcceptDisplayMode (const Standard_Integer theMode) const { return theMode == 0; }
   virtual  void Compute(const Handle(PrsMgr_PresentationManager3d)& aPresentationManager,const Handle(Prs3d_Presentation)& aPresentation,const Standard_Integer aMode = 0) ;
-  void ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,const Standard_Integer aMode) ;
+  void ComputeSelection(const Handle(SelectMgr_Selection)& ,const Standard_Integer ) {}
 
   // Fields PRIVATE
   //

@@ -37,6 +37,7 @@ class StdLPersistent_Collection
   // Converters
   struct noConversion;
   struct byteConverter;
+  struct boolConverter;
   struct stringConverter;
   struct referenceConverter;
 
@@ -46,7 +47,11 @@ class StdLPersistent_Collection
   {
   public:
     //! Read persistent data from a file.
-    Standard_EXPORT virtual void Read (StdObjMgt_ReadData& theReadData);
+    virtual void Read (StdObjMgt_ReadData& theReadData)
+    {
+      Base::Read (theReadData);
+      theReadData >> myLower >> myUpper;
+    }
 
   protected:
     template <class ArrayHandle, class Converter>
@@ -175,7 +180,7 @@ public:
   typedef listT <real, TDataStd_RealList>
     RealList;
 
-  typedef listT <integer, TDataStd_BooleanList>
+  typedef listT <integer, TDataStd_BooleanList, boolConverter>
     BooleanList;
 
   typedef listT <persistent, TDataStd_ExtStringList, stringConverter>

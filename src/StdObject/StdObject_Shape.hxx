@@ -16,6 +16,7 @@
 #define _StdObject_Shape_HeaderFile
 
 #include <StdObjMgt_ReadData.hxx>
+#include <StdObjMgt_WriteData.hxx>
 #include <StdObject_Location.hxx>
 #include <StdPersistent_TopoDS.hxx>
 
@@ -24,30 +25,50 @@
 
 class StdObject_Shape
 {
+  friend class ShapePersistent_TopoDS;
+
 public:
   //! Import transient object from the persistent data.
   Standard_EXPORT TopoDS_Shape Import() const;
+
+  Standard_EXPORT void PChildren(StdObjMgt_Persistent::SequenceOfPersistent& theChildren) const;
 
 protected:
   //! Read persistent data from a file.
   inline void read (StdObjMgt_ReadData& theReadData)
     { theReadData >> myTShape >> myLocation >> myOrient; }
 
-private:
+  //! Write persistent data to a file.
+  inline void write (StdObjMgt_WriteData& theWriteData) const
+    { theWriteData << myTShape << myLocation << myOrient; }
+
+protected:
   Handle(StdPersistent_TopoDS::TShape) myTShape;
   StdObject_Location                   myLocation;
   Standard_Integer                     myOrient;
 
   friend StdObjMgt_ReadData& operator >>
-    (StdObjMgt_ReadData::Object, StdObject_Shape&);
+    (StdObjMgt_ReadData&, StdObject_Shape&);
+  friend StdObjMgt_WriteData& operator <<
+    (StdObjMgt_WriteData&, const StdObject_Shape&);
 };
 
 //! Read persistent data from a file.
 inline StdObjMgt_ReadData& operator >>
-  (StdObjMgt_ReadData::Object theReadData, StdObject_Shape& theShape)
+  (StdObjMgt_ReadData& theReadData, StdObject_Shape& theShape)
 {
+  StdObjMgt_ReadData::ObjectSentry aSentry (theReadData);
   theShape.read (theReadData);
   return theReadData;
+}
+
+//! Write persistent data to a file.
+inline StdObjMgt_WriteData& operator <<
+  (StdObjMgt_WriteData& theWriteData, const StdObject_Shape& theShape)
+{
+  StdObjMgt_WriteData::ObjectSentry aSentry (theWriteData);
+  theShape.write (theWriteData);
+  return theWriteData;
 }
 
 #endif

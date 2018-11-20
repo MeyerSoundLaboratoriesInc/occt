@@ -74,7 +74,7 @@ COcafDoc::~COcafDoc()
  
  	Handle(AIS_InteractiveContext) CTX;
  	TPrsStd_AISViewer::Find(myOcafDoc->Main(), CTX);
- 	CTX->SetDisplayMode(AIS_Shaded);
+ 	CTX->SetDisplayMode (AIS_Shaded, Standard_True);
  	myAISContext=CTX;
  
  	// Set the maximum number of available "undo" actions
@@ -213,7 +213,7 @@ void COcafDoc::OnCreatebox()
 
 	// Create a new box using the CNewBoxDlg Dialog parameters as attributes
   TDF_Label L = TSC.CreateBox (Dlg.m_x, Dlg.m_y, Dlg.m_z, Dlg.m_w, Dlg.m_l, Dlg.m_h,
-                               TCollection_ExtendedString ((Standard_ExtString )(const wchar_t* )Dlg.m_Name));
+                               TCollection_ExtendedString ((const wchar_t* )Dlg.m_Name));
 
 	// Get the TPrsStd_AISPresentation of the new box TNaming_NamedShape
 	Handle(TPrsStd_AISPresentation) prs= TPrsStd_AISPresentation::Set(L, TNaming_NamedShape::GetID()); 
@@ -270,7 +270,7 @@ void COcafDoc::OnCreatecyl()
 
 	// Create a new box using the CNewCylDlg Dialog parameters as attributes
   TDF_Label L = TSC.CreateCyl (Dlg.m_x, Dlg.m_y, Dlg.m_z, Dlg.m_r, Dlg.m_h,
-                               TCollection_ExtendedString ((Standard_ExtString )(const wchar_t* )Dlg.m_Name));
+                               TCollection_ExtendedString ((const wchar_t* )Dlg.m_Name));
 
 	// Get the TPrsStd_AISPresentation of the new cylinder TNaming_NamedShape
 	Handle(TPrsStd_AISPresentation) prs= TPrsStd_AISPresentation::Set(L, TNaming_NamedShape::GetID()); 
@@ -316,8 +316,8 @@ D->CommitCommand(); \n\
 void COcafDoc::OnModify() 
 {
 	// Get the selected interactive object
-	myAISContext->InitCurrent();
-	Handle(AIS_InteractiveObject) curAISObject = myAISContext->Current();
+	myAISContext->InitSelected();
+	Handle(AIS_InteractiveObject) curAISObject = myAISContext->SelectedInteractive();
 
 
 	// Get the main label of the selected object
@@ -389,7 +389,7 @@ Handle(TFunction_Function) TFF; \n\
 		// Modify the box
 		TOcaf_Commands TSC(LabObject);
 		TSC.ModifyBox (Dlg.m_x, Dlg.m_y, Dlg.m_z, Dlg.m_w, Dlg.m_l, Dlg.m_h,
-                   TCollection_ExtendedString ((Standard_ExtString )(const wchar_t* )Dlg.m_Name), log);
+                   TCollection_ExtendedString ((const wchar_t* )Dlg.m_Name), log);
 
 		// Get the presentation of the box, display it and set it selected
 		Handle(TPrsStd_AISPresentation) prs= TPrsStd_AISPresentation::Set(LabObject, TNaming_NamedShape::GetID()); 
@@ -474,7 +474,7 @@ D->CommitCommand(); \n\
 		// Modify the cylinder
 		TOcaf_Commands TSC(LabObject);
 		TSC.ModifyCyl (Dlg.m_x, Dlg.m_y, Dlg.m_z, Dlg.m_r, Dlg.m_h,
-                   TCollection_ExtendedString ((Standard_ExtString )(const wchar_t* )Dlg.m_Name), log);
+                   TCollection_ExtendedString ((const wchar_t* )Dlg.m_Name), log);
 
 		// Get the presentation of the cylinder, display it and set it selected
 		Handle(TPrsStd_AISPresentation) prs= TPrsStd_AISPresentation::Set(LabObject, TNaming_NamedShape::GetID()); 
@@ -591,7 +591,7 @@ D->CommitCommand(); \n\
 		// Modify the cylinder
 		TOcaf_Commands ToolTSC(ToolLab);
 		ToolTSC.ModifyCyl (Dlg.m_x, Dlg.m_y, Dlg.m_z, Dlg.m_r, Dlg.m_h,
-                       TCollection_ExtendedString ((Standard_ExtString )(const wchar_t* )Dlg.m_Name), log);
+                       TCollection_ExtendedString ((const wchar_t* )Dlg.m_Name), log);
 
 		// Redisplay the modified Tool object
 		TDataStd_Integer::Set(ToolLab, 1);
@@ -678,17 +678,17 @@ D->CommitCommand(); \n\
 void COcafDoc::OnUpdateModify(CCmdUI* pCmdUI) 
 {
 	// Disable the "modify" button if there is no selected object or several selected objects 
-	myAISContext->InitCurrent();
-	if(myAISContext->NbCurrents()!=1)
+	myAISContext->InitSelected();
+	if(myAISContext->NbSelected()!=1)
 	{
 		pCmdUI->Enable(Standard_False);
 		return;
 	}
 
 	// Get the root label of the selected object using its TPrsStd_AISPresentation
-	myAISContext->InitCurrent();
+	myAISContext->InitSelected();
 	Handle(TPrsStd_AISPresentation) ObjectPrs = 
-		Handle(TPrsStd_AISPresentation)::DownCast(myAISContext->Current()->GetOwner());
+		Handle(TPrsStd_AISPresentation)::DownCast(myAISContext->SelectedInteractive()->GetOwner());
 	if (!ObjectPrs.IsNull()){
 		TDF_Label LabObject = ObjectPrs->Label();
 
@@ -815,10 +815,10 @@ void COcafDoc::OnObjectDelete()
 	D->NewCommand();
 
 	AIS_SequenceOfInteractive aSequence;
-	for(myAISContext->InitCurrent();
-      myAISContext->MoreCurrent();
-      myAISContext->NextCurrent())
-        aSequence.Append(myAISContext->Current());
+	for(myAISContext->InitSelected();
+      myAISContext->MoreSelected();
+      myAISContext->NextSelected())
+        aSequence.Append(myAISContext->SelectedInteractive());
 	
 	for(int iter=1;iter <=aSequence.Length();iter++)
 	{
@@ -860,8 +860,8 @@ void COcafDoc::OnObjectDelete()
  
  void COcafDoc::OnUpdateObjectDelete(CCmdUI* pCmdUI) 
  {
-     myAISContext->InitCurrent();
- 	pCmdUI->Enable (myAISContext->MoreCurrent());		
+     myAISContext->InitSelected();
+	pCmdUI->Enable (myAISContext->MoreSelected());
  }
  
  void COcafDoc::DisplayPrs()
@@ -899,7 +899,7 @@ void COcafDoc::OnCloseDocument()
 void COcafDoc::OnFileSaveAs() 
 {
 	const wchar_t* SPathName = PathName;
-	TCollection_ExtendedString TPathName ((Standard_ExtString )SPathName);
+	TCollection_ExtendedString TPathName (SPathName);
 
 	CString Filter;
 
@@ -928,7 +928,7 @@ void COcafDoc::OnFileSaveAs()
 	cout << "Save As " << CSPath << endl;
 	PathName=CSPath;
         const wchar_t* SPath = CSPath;
-	TCollection_ExtendedString TPath ((Standard_ExtString )SPath);
+	TCollection_ExtendedString TPath (SPath);
 
 	    if (TPath.SearchFromEnd(".xml") > 0)
 		{
@@ -984,7 +984,7 @@ void COcafDoc::OnFileSave()
 	if(PathName!="")
 	{
           const wchar_t* SPath = PathName;
-          TCollection_ExtendedString TPath ((Standard_ExtString )SPath);
+          TCollection_ExtendedString TPath (SPath);
 
 	    if (TPath.SearchFromEnd(".xml") > 0)
 		{
@@ -1038,7 +1038,7 @@ m_App->SaveAs(myOcafDoc,(TCollection_ExtendedString) TPath); \n\
 	CString CSPath = dlg.GetPathName();
 
 	const wchar_t* SPath = CSPath;
-    TCollection_ExtendedString TPath ((Standard_ExtString )SPath);
+    TCollection_ExtendedString TPath (SPath);
 
     // Choose storage format
     if (TPath.SearchFromEnd(".xml") > 0)
@@ -1094,7 +1094,7 @@ BOOL COcafDoc::OnOpenDocument(LPCTSTR lpszPathName)
   PathName = lpszPathName;
 
   const wchar_t* aPathName = lpszPathName;
-  TCollection_ExtendedString anOccPathName ((Standard_ExtString)aPathName);
+  TCollection_ExtendedString anOccPathName (aPathName);
 
   // Open the document in the current application
   //PCDM_ReaderStatus RS = m_App->Open(TPath,myOcafDoc);
@@ -1107,7 +1107,7 @@ BOOL COcafDoc::OnOpenDocument(LPCTSTR lpszPathName)
 
   Handle(AIS_InteractiveContext) aContext;
   TPrsStd_AISViewer::Find (myOcafDoc->Main(), aContext);
-  aContext->SetDisplayMode (AIS_Shaded);
+  aContext->SetDisplayMode (AIS_Shaded, Standard_True);
   myAISContext = aContext;
 
   // Display the presentations (which was not stored in the document)
@@ -1172,8 +1172,8 @@ void  COcafDoc::Popup(const Standard_Integer  x,
                                const Handle(V3d_View)& aView   ) 
 {
   Standard_Integer PopupMenuNumber=0;
- myAISContext->InitCurrent();
-  if (myAISContext->MoreCurrent())
+ myAISContext->InitSelected();
+  if (myAISContext->MoreSelected())
     PopupMenuNumber=1;
 
   CMenu menu;
@@ -1184,8 +1184,8 @@ void  COcafDoc::Popup(const Standard_Integer  x,
    if (PopupMenuNumber == 1) // more than 1 object.
   {
     bool OneOrMoreInShading = false;
-	for (myAISContext->InitCurrent();myAISContext->MoreCurrent ();myAISContext->NextCurrent ())
-    if (myAISContext->IsDisplayed(myAISContext->Current(),1)) OneOrMoreInShading=true;
+	for (myAISContext->InitSelected();myAISContext->MoreSelected ();myAISContext->NextSelected ())
+    if (myAISContext->IsDisplayed(myAISContext->SelectedInteractive(),1)) OneOrMoreInShading=true;
 	if(!OneOrMoreInShading)
    	pPopup->EnableMenuItem(5, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
    }

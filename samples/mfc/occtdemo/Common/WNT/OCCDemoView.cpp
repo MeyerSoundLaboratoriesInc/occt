@@ -8,7 +8,6 @@
 #include "OCCDemoView.h"
 
 #include <Graphic3d_GraphicDriver.hxx>
-#include <V3d_Coordinate.hxx>
 
 #define ValZWMin 1
 
@@ -279,6 +278,7 @@ void COCCDemoView::OnLButtonUp(UINT nFlags, CPoint point)
       {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
         myView->SetComputedMode(Standard_True);
+        myView->Redraw();
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
       }
       myCurrentMode = CurAction3d_Nothing;
@@ -302,6 +302,7 @@ void COCCDemoView::OnRButtonUp(UINT nFlags, CPoint point)
   {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
     myView->SetComputedMode(Standard_True);
+    myView->Redraw();
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
   }
 }
@@ -498,14 +499,17 @@ void COCCDemoView::RedrawVisMode()
   case VIS_WIREFRAME:
     GetDocument()->GetAISContext()->SetDisplayMode(AIS_WireFrame);
     myView->SetComputedMode (Standard_False);
+    myView->Redraw();
     break;
   case VIS_SHADE:
     GetDocument()->GetAISContext()->SetDisplayMode(AIS_Shaded);
     myView->SetComputedMode (Standard_False);
+    myView->Redraw();
     break;
   case VIS_HLR:
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
     myView->SetComputedMode (Standard_True);
+    myView->Redraw();
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
     GetDocument()->GetAISContext()->SetDisplayMode(AIS_WireFrame);
     break;
@@ -548,32 +552,32 @@ void COCCDemoView::OnUpdateBUTTONHlrOn(CCmdUI* pCmdUI)
 	pCmdUI->Enable   (myVisMode != VIS_HLR);	
 }
 
-void COCCDemoView::GetViewCenter(V3d_Coordinate& Xc, V3d_Coordinate& Yc)
+void COCCDemoView::GetViewCenter(Standard_Real& Xc, Standard_Real& Yc)
 {
 	myView->Center(Xc,Yc);
 }
 
-void COCCDemoView::SetViewCenter(V3d_Coordinate Xc, V3d_Coordinate Yc)
+void COCCDemoView::SetViewCenter(Standard_Real Xc, Standard_Real Yc)
 {
 	myView->SetCenter(Xc,Yc);
 }
 
-void COCCDemoView::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_Coordinate& Z)
+void COCCDemoView::GetViewEye(Standard_Real& X, Standard_Real& Y, Standard_Real& Z)
 {
 	myView->Eye(X,Y,Z);
 }
 
-void COCCDemoView::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Coordinate Z)
+void COCCDemoView::SetViewEye(Standard_Real X, Standard_Real Y, Standard_Real Z)
 {
 	myView->SetEye(X,Y,Z);
 }
 
-Quantity_Factor COCCDemoView::GetViewScale()
+Standard_Real COCCDemoView::GetViewScale()
 {
 	return myView->Scale();
 }
 
-void COCCDemoView::SetViewScale(Quantity_Factor Coef)
+void COCCDemoView::SetViewScale(Standard_Real Coef)
 {
 	myView->SetScale(Coef);
 }

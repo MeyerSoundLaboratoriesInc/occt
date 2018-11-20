@@ -47,7 +47,6 @@
 #include <gp_Pln.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec.hxx>
-#include <OSD_Chronometer.hxx>
 #include <Precision.hxx>
 #include <ProjLib_ProjectedCurve.hxx>
 #include <Standard_NotImplemented.hxx>
@@ -155,7 +154,7 @@ Standard_EXPORT Handle(Geom2d_Curve) MakePCurve(const ProjLib_ProjectedCurve& PC
   case GeomAbs_Hyperbola : C2D = new Geom2d_Hyperbola(PC.Hyperbola()); break;
   case GeomAbs_BSplineCurve : C2D = PC.BSpline(); break;
   default :
-    Standard_NotImplemented::Raise("CurveTool::MakePCurve");
+    throw Standard_NotImplemented("CurveTool::MakePCurve");
     break;
   }
   return C2D;

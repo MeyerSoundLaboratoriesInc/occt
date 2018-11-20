@@ -16,7 +16,7 @@
 
 #include <BinMXCAFDoc_ColorDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDF_Attribute.hxx>
 #include <XCAFDoc_Color.hxx>
@@ -27,7 +27,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMXCAFDoc_ColorDriver,BinMDF_ADriver)
 //function :
 //purpose  : 
 //=======================================================================
-BinMXCAFDoc_ColorDriver::BinMXCAFDoc_ColorDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+BinMXCAFDoc_ColorDriver::BinMXCAFDoc_ColorDriver(const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver(theMsgDriver, STANDARD_TYPE(XCAFDoc_Color)->Name()) {
 }
 
@@ -49,9 +49,13 @@ Standard_Boolean BinMXCAFDoc_ColorDriver::Paste(const BinObjMgt_Persistent& theS
 {
   Handle(XCAFDoc_Color) anAtt = Handle(XCAFDoc_Color)::DownCast(theTarget);
   Standard_Real R, G, B;
+  Standard_ShortReal alpha;
   Standard_Boolean isOk = theSource >> R >> G >> B;
   if(isOk) {
-    anAtt->Set(R, G, B);
+    Standard_Boolean isRGBA = theSource >> alpha;
+    if (!isRGBA)
+      alpha = 1.0;
+    anAtt->Set(R, G, B, alpha);
   }
   return isOk;
 }
@@ -66,7 +70,9 @@ void BinMXCAFDoc_ColorDriver::Paste(const Handle(TDF_Attribute)& theSource,
 {
   Handle(XCAFDoc_Color) anAtt = Handle(XCAFDoc_Color)::DownCast(theSource);
   Standard_Real R, G, B;
+  Standard_ShortReal alpha;
   anAtt->GetRGB(R, G, B);
-  theTarget << R << G << B;
+  alpha = anAtt->GetAlpha();
+  theTarget << R << G << B << alpha;
 }
 

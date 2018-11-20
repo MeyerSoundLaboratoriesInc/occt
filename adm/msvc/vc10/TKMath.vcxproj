@@ -19,24 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{22AD0818-06AF-0778-0C45-D41C1780482D}</ProjectGuid>
+    <ProjectGuid>{39A76691-0941-0274-179D-8AC4A5744796}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -85,7 +89,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -97,18 +101,19 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc10\bin\TKMath.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc10\lib;$(CSF_OPT_LIB32);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win32\vc10\bin\TKMath.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win32\vc10\lib\TKMath.lib</ImportLibrary>
@@ -130,7 +135,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win32\vc10\objd\TKMath/</AssemblerListingLocation>
@@ -143,14 +148,15 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc10\bind\TKMath.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc10\libd;$(CSF_OPT_LIB32D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -176,7 +182,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -188,17 +194,18 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc10\bin\TKMath.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc10\lib;$(CSF_OPT_LIB64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win64\vc10\bin\TKMath.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win64\vc10\lib\TKMath.lib</ImportLibrary>
@@ -220,7 +227,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win64\vc10\objd\TKMath/</AssemblerListingLocation>
@@ -233,13 +240,14 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__math_DLL;__ElCLib_DLL;__ElSLib_DLL;__BSplCLib_DLL;__BSplSLib_DLL;__PLib_DLL;__Precision_DLL;__GeomAbs_DLL;__Poly_DLL;__CSLib_DLL;__Convert_DLL;__Bnd_DLL;__BVH_DLL;__gp_DLL;__TColgp_DLL;__TopLoc_DLL;__Expr_DLL;__ExprIntrp_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKernel.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKernel.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc10\bind\TKMath.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc10\libd;$(CSF_OPT_LIB64D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -290,8 +298,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_FunctionSetRoot.cxx">
     </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_FunctionSetWithDerivatives.cxx">
-    </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_FunctionWithDerivative.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_Gauss.cxx">
@@ -319,10 +325,6 @@
     <ClCompile Include="..\..\..\src\math\math_Matrix.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_MultipleVarFunction.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_MultipleVarFunctionWithGradient.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_MultipleVarFunctionWithHessian.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_NewtonFunctionRoot.cxx">
     </ClCompile>
@@ -377,8 +379,6 @@
     <ClCompile Include="..\..\..\src\PLib\PLib_HermitJacobi.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\PLib\PLib_JacobiPolynomial.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Precision\Precision.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\Poly\Poly.cxx">
     </ClCompile>
@@ -457,6 +457,10 @@
     <ClCompile Include="..\..\..\src\Bnd\Bnd_Box.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\Bnd\Bnd_Box2d.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Bnd\Bnd_OBB.cxx">
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Bnd\Bnd_Range.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\Bnd\Bnd_Sphere.cxx">
     </ClCompile>

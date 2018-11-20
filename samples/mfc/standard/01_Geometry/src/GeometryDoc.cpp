@@ -148,8 +148,7 @@ CGeometryDoc::CGeometryDoc()
   myAISContext->DefaultDrawer()->VIsoAspect()->SetNumber(11);
 
   Handle(Graphic3d_GraphicDriver) aGraphicDriver = ((OCC_App*)AfxGetApp())->GetGraphicDriver();
-  TCollection_ExtendedString a2DName("Visu2D");
-  myViewer2D = new V3d_Viewer(aGraphicDriver,a2DName.ToExtString());
+  myViewer2D = new V3d_Viewer (aGraphicDriver);
   myViewer2D->SetCircularGridValues(0,0,1,8,0);
   myViewer2D->SetRectangularGridValues(0,0,1,1,0);
 
@@ -257,12 +256,12 @@ void CGeometryDoc::MoveEvent2D(const Standard_Integer x,
 {
   if(aView->Viewer()->Grid()->IsActive())
   {
-    Quantity_Length aGridX=0,aGridY=0,aGridZ=0;
+    Standard_Real aGridX=0,aGridY=0,aGridZ=0;
     aView->ConvertToGrid(x,y,aGridX,aGridY,aGridZ);
     //View is not updated automatically in ConvertToGrid
     aView->Update();
   }
-  this->myAISContext2D->MoveTo(x, y, aView);
+  this->myAISContext2D->MoveTo (x, y, aView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -326,8 +325,8 @@ void  CGeometryDoc::Popup (const Standard_Integer theMouseX,
                            const Handle(V3d_View)& theView) 
 { 
   Standard_Integer PopupMenuNumber=0;
-  GetAISContext()->InitCurrent();
-  if (GetAISContext()->MoreCurrent())
+  GetAISContext()->InitSelected();
+  if (GetAISContext()->MoreSelected())
   {
     PopupMenuNumber=1;
   }
@@ -353,7 +352,7 @@ void CGeometryDoc::InputEvent (const Standard_Integer /*theMouseX*/,
                                 const Standard_Integer /*theMouseY*/,
                                 const Handle(V3d_View)& /*theView*/)
 {
-  myAISContext->Select();
+  myAISContext->Select (Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -471,7 +470,7 @@ void CGeometryDoc::Minimize3D()
 //-----------------------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------------------
-void CGeometryDoc::Fit3DViews(Quantity_Coefficient Coef)
+void CGeometryDoc::Fit3DViews(Standard_Real Coef)
 {
   POSITION position = GetFirstViewPosition();
   while (position != (POSITION)NULL)
@@ -489,7 +488,7 @@ void CGeometryDoc::Fit3DViews(Quantity_Coefficient Coef)
 //-----------------------------------------------------------------------------------------
 //
 //-----------------------------------------------------------------------------------------
-void CGeometryDoc::Set3DViewsZoom(const Quantity_Factor& Coef)
+void CGeometryDoc::Set3DViewsZoom(const Standard_Real& Coef)
 {
   POSITION position = GetFirstViewPosition();
   while (position != (POSITION)NULL)
@@ -1071,8 +1070,9 @@ void CGeometryDoc::OnCreateSol()
   CFileDialog dlg (TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
                    L"Points Files (*.dat)|*.dat; |All Files (*.*)|*.*||", NULL);
 
-  CString initdir(((OCC_App*) AfxGetApp())->GetInitDataDir());
-  initdir += L"\\Data\\SurfaceFromPoints";
+  CString anOCCTDataPathValue;
+  anOCCTDataPathValue.GetEnvironmentVariable(L"CSF_OCCTDataPath");
+  CString initdir = (anOCCTDataPathValue + L"\\occ\\SurfaceFromPoints");
 
   dlg.m_ofn.lpstrInitialDir = initdir;
 
@@ -1156,9 +1156,9 @@ static Standard_Boolean fixParam(Standard_Real& theParam)
 
 void CGeometryDoc::OnSimplify() 
 {
-  CString initfile(((OCC_App*) AfxGetApp())->GetInitDataDir());
-  initfile += L"\\..\\..\\..\\samples\\mfc\\standard\\01_Geometry\\Data\\";
-  initfile += L"shell1.brep";
+  CString anOCCTDataPathValue;
+  anOCCTDataPathValue.GetEnvironmentVariable(L"CSF_OCCTDataPath");
+  CString initfile = (anOCCTDataPathValue + L"\\occ\\shell1.brep");
 
   std::filebuf aFileBuf;
   std::istream aStream (&aFileBuf);
@@ -1178,7 +1178,7 @@ void CGeometryDoc::OnSimplify()
     myCResultDialog.SetText(initfile);
     return;
   }
-  myAISContext->SetDisplayMode(AIS_Shaded);
+  myAISContext->SetDisplayMode(AIS_Shaded, Standard_True);
   simplify(aShape);
 }
 
@@ -1542,7 +1542,7 @@ Handle(AIS_InteractiveObject) CGeometryDoc::drawSurface
       Fit();
     }
     else
-      myAISContext->Display (aGraphicSurface);
+      myAISContext->Display (aGraphicSurface, Standard_True);
   }
 
   return aGraphicSurface;
@@ -1579,7 +1579,7 @@ Handle(AIS_Point) CGeometryDoc::drawPoint
   myAISContext->SetColor (aGraphicPoint, theColor, toDisplay);
   if (toDisplay)
   {
-  myAISContext->Display (aGraphicPoint);
+  myAISContext->Display (aGraphicPoint, Standard_True);
     //COCCDemoDoc::Fit();
   }
 
@@ -1602,7 +1602,7 @@ Handle(AIS_Shape) CGeometryDoc::drawShape
       Fit();
     }
     else
-      myAISContext->Display (aGraphicShape);
+      myAISContext->Display (aGraphicShape, Standard_True);
   }
 
   return aGraphicShape;

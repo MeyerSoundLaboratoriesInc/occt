@@ -16,16 +16,15 @@ if (MSVC)
   set (CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /fp:precise")
 endif()
 
-# set compiler short name and choose SSE2 option for appropriate MSVC compilers
-# ONLY for 32-bit
+# add SSE2 option for old MSVC compilers (VS 2005 - 2010, 32 bit only)
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  if (MSVC80 OR MSVC90 OR MSVC10)
+  if (MSVC AND ((MSVC_VERSION EQUAL 1400) OR (MSVC_VERSION EQUAL 1500) OR (MSVC_VERSION EQUAL 1600)))
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
     set (CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   /arch:SSE2")
   endif()
 endif()
 
-if (WIN32)
+if (MSVC)
   add_definitions (-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE)
 else()
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions -fPIC")
@@ -82,7 +81,7 @@ if (IS_DEBUG_C)
   string (REGEX REPLACE "-DDEBUG" "" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
 endif()
 # enable parallel compilation on MSVC 9 and above
-if (MSVC AND NOT MSVC70 AND NOT MSVC80)
+if (MSVC AND (MSVC_VERSION GREATER 1400))
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 endif()
 
@@ -104,19 +103,32 @@ elseif (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMP
     elseif(NOT WIN32)
       set (CMAKE_SHARED_LINKER_FLAGS "-lm ${CMAKE_SHARED_LINKER_FLAGS}")
     endif()
-  else()
-    if (NOT ANDROID AND NOT MINGW)
-      set (CMAKE_STATIC_LINKER_FLAGS "-lm ${CMAKE_SHARED_STATIC_FLAGS}")
-    endif()
   endif()
 endif()
 
 if(MINGW)
+  # Set default release optimization option to O2 instead of O3, since in
+  # some OCCT related examples, this gives significantly smaller binaries
+  # at comparable performace with MinGW-w64.
+  string (REGEX MATCH "-O3" IS_O3_CXX "${CMAKE_CXX_FLAGS_RELEASE}")
+  if (IS_O3_CXX)
+    string (REGEX REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+  else()
+    set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+  endif()
+
   set (CMAKE_CXX_FLAGS "-std=gnu++0x ${CMAKE_CXX_FLAGS}")
   add_definitions(-D_WIN32_WINNT=0x0501)
   # workaround bugs in mingw with vtable export
   set (CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
-elseif (DEFINED CMAKE_COMPILER_IS_GNUCXX OR "x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xClang")
+elseif ("x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xClang")
+  if (APPLE)
+    # CLang can be used with both libstdc++ and libc++, however on OS X libstdc++ is outdated.
+    set (CMAKE_CXX_FLAGS "-std=c++0x -stdlib=libc++ ${CMAKE_CXX_FLAGS}")
+  else()
+    set (CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+  endif()
+elseif (DEFINED CMAKE_COMPILER_IS_GNUCXX)
   set (CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 endif()
 

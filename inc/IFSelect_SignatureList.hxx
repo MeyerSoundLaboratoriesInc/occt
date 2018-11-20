@@ -23,21 +23,20 @@
 #include <Standard_Boolean.hxx>
 #include <Standard_Integer.hxx>
 #include <TCollection_AsciiString.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_CString.hxx>
 #include <TColStd_HSequenceOfHAsciiString.hxx>
 #include <TColStd_HSequenceOfTransient.hxx>
 #include <IFSelect_PrintCount.hxx>
+#include <Standard_Transient.hxx>
+#include <NCollection_IndexedDataMap.hxx>
 class TCollection_HAsciiString;
-class Dico_DictionaryOfInteger;
-class Dico_DictionaryOfTransient;
-class Standard_Transient;
 class Message_Messenger;
 class Interface_InterfaceModel;
 
 
 class IFSelect_SignatureList;
-DEFINE_STANDARD_HANDLE(IFSelect_SignatureList, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(IFSelect_SignatureList, Standard_Transient)
 
 //! A SignatureList is given as result from a Counter (any kind)
 //! It gives access to a list of signatures, with counts, and
@@ -47,7 +46,7 @@ DEFINE_STANDARD_HANDLE(IFSelect_SignatureList, MMgt_TShared)
 //! Mode. This can be useful for a specific counter (used in a
 //! Selection), while it remains better to use a Signature
 //! whenever possible
-class IFSelect_SignatureList : public MMgt_TShared
+class IFSelect_SignatureList : public Standard_Transient
 {
 
 public:
@@ -85,7 +84,7 @@ public:
   Standard_EXPORT Standard_CString LastValue() const;
   
   //! Aknowledges the list in once. Name identifies the Signature
-  Standard_EXPORT void Init (const Standard_CString name, const Handle(Dico_DictionaryOfInteger)& count, const Handle(Dico_DictionaryOfTransient)& list, const Standard_Integer nbnuls);
+  Standard_EXPORT void Init (const Standard_CString name, const NCollection_IndexedDataMap<TCollection_AsciiString, Standard_Integer>& count, const NCollection_IndexedDataMap<TCollection_AsciiString, Handle(Standard_Transient)>& list, const Standard_Integer nbnuls);
   
   //! Returns the list of signatures, as a sequence of strings
   //! (but without their respective counts). It is ordered.
@@ -141,7 +140,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(IFSelect_SignatureList,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(IFSelect_SignatureList,Standard_Transient)
 
 protected:
 
@@ -156,8 +155,8 @@ private:
   Standard_Integer thenbnuls;
   Handle(TCollection_HAsciiString) thename;
   TCollection_AsciiString thelastval;
-  Handle(Dico_DictionaryOfInteger) thedicount;
-  Handle(Dico_DictionaryOfTransient) thediclist;
+  NCollection_IndexedDataMap<TCollection_AsciiString, Standard_Integer> thedicount;
+  NCollection_IndexedDataMap<TCollection_AsciiString, Handle(Standard_Transient)> thediclist;
 
 
 };

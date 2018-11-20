@@ -17,7 +17,7 @@
 
 #include <BinMDataXtd_ConstraintDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_Real.hxx>
 #include <TDataXtd_Constraint.hxx>
@@ -31,7 +31,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataXtd_ConstraintDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataXtd_ConstraintDriver::BinMDataXtd_ConstraintDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : BinMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -124,9 +124,9 @@ Standard_Boolean BinMDataXtd_ConstraintDriver::Paste
   Standard_Integer flags;
   if (! (theSource >> flags))
     return Standard_False;
-  aC->Verified( flags & 1);
-  aC->Inverted( flags & 2);
-  aC->Reversed( flags & 4);
+  aC->Verified ((flags & 1) != 0);
+  aC->Inverted ((flags & 2) != 0);
+  aC->Reversed ((flags & 4) != 0);
 
   return Standard_True;
 }

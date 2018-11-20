@@ -14,161 +14,29 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <AIS_MultipleConnectedInteractive.hxx>
 
 #include <AIS_ConnectedInteractive.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_InteractiveObject.hxx>
-#include <AIS_MultipleConnectedInteractive.hxx>
-#include <Geom_Transformation.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Trsf.hxx>
-#include <NCollection_DataMap.hxx>
-#include <Prs3d_Presentation.hxx>
 #include <Prs3d_Projector.hxx>
 #include <PrsMgr_ModedPresentation.hxx>
-#include <PrsMgr_Presentation.hxx>
 #include <Select3D_SensitiveEntity.hxx>
 #include <SelectMgr_EntityOwner.hxx>
 #include <Standard_NotImplemented.hxx>
-#include <Standard_Type.hxx>
 #include <TopLoc_Location.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(AIS_MultipleConnectedInteractive,AIS_InteractiveObject)
 
-namespace
-{
-  //! SelectMgr_AssemblyEntityOwner replaces original owners in sensitive entities
-  //! copied from reference objects to AIS_MultipleConnectedInteractive in order to
-  //! redirect all selection queries to multiply connected (assembly).
-  class SelectMgr_AssemblyEntityOwner : public SelectMgr_EntityOwner
-  {
-
-  public:
-
-    // Copies another SelectMgr_EntityOwner.
-    SelectMgr_AssemblyEntityOwner (const Handle(SelectMgr_EntityOwner) theOwner,
-                                   SelectMgr_SelectableObject* theAssembly);
-
-    void SetAssembly (SelectMgr_SelectableObject* theAssembly)
-    {
-      myAssembly = theAssembly;
-    }
-
-    //! Selectable() method modified to return myAssembly.
-    virtual Handle(SelectMgr_SelectableObject) Selectable() const;
-
-    Standard_Boolean IsHilighted (const Handle(PrsMgr_PresentationManager)& PM,const Standard_Integer aMode) const;
-
-    void Hilight (const Handle(PrsMgr_PresentationManager)& PM,const Standard_Integer aMode);
-
-    void HilightWithColor (const Handle(PrsMgr_PresentationManager3d)& PM,
-                           const Quantity_NameOfColor aColor,
-                           const Standard_Integer aMode);
-
-    void Unhilight (const Handle(PrsMgr_PresentationManager)& PM, const Standard_Integer aMode);
-
-  private:
-
-    SelectMgr_SelectableObject* myAssembly;
-  };
-
-}
-
-//=======================================================================
-//function : SelectMgr_AssemblyEntityOwner
-//purpose  : 
-//=======================================================================
-SelectMgr_AssemblyEntityOwner::SelectMgr_AssemblyEntityOwner (const Handle(SelectMgr_EntityOwner) theOwner,
-                                                              SelectMgr_SelectableObject* theAssembly)
-:
-  SelectMgr_EntityOwner (theOwner),
-  myAssembly (theAssembly)
-{
-}
-
-//=======================================================================
-//function : Selectable
-//purpose  : 
-//=======================================================================
-Handle(SelectMgr_SelectableObject) SelectMgr_AssemblyEntityOwner::Selectable() const
-{  
-  return myAssembly;
-}
-
-//=======================================================================
-//function : IsHilighted
-//purpose  : 
-//=======================================================================
-Standard_Boolean SelectMgr_AssemblyEntityOwner::IsHilighted (const Handle(PrsMgr_PresentationManager)& PM,
-                                                             const Standard_Integer aMode) const 
-{
-  if (HasSelectable())
-  {
-   return PM->IsHighlighted (myAssembly, aMode);
-  }
-
-  return Standard_False;
-}
-
-//=======================================================================
-//function : Hilight
-//purpose  : 
-//=======================================================================
-void SelectMgr_AssemblyEntityOwner::Hilight (const Handle(PrsMgr_PresentationManager)& PM,
-                                             const Standard_Integer aMode)
-{
-  if (HasSelectable())
-  {
-   PM->Highlight (myAssembly, aMode);
-  }
-}
-
-//=======================================================================
-//function : HilightWithColor
-//purpose  : 
-//=======================================================================
-void SelectMgr_AssemblyEntityOwner::HilightWithColor (const Handle(PrsMgr_PresentationManager3d)& PM,
-                                                      const Quantity_NameOfColor aColor,
-                                                      const Standard_Integer aMode)
-{
-  if (HasSelectable())
-  {
-    if (IsAutoHilight())
-    {
-      PM->Color (myAssembly, aColor, aMode);
-    }
-    else
-    {
-      myAssembly->HilightOwnerWithColor (PM, aColor, this);
-    }
-  }
-}
-
-//=======================================================================
-//function : Unhilight
-//purpose  : 
-//=======================================================================
-void SelectMgr_AssemblyEntityOwner::Unhilight (const Handle(PrsMgr_PresentationManager)& PM,
-                                               const Standard_Integer aMode)
-{
-  if (HasSelectable())
-  {
-    PM->Unhighlight (myAssembly, aMode);
-  }
-}
-
-
 //=======================================================================
 //function : AIS_MultipleConnectedInteractive
-//purpose  : 
+//purpose  :
 //=======================================================================
 
 AIS_MultipleConnectedInteractive::AIS_MultipleConnectedInteractive()
-  : AIS_InteractiveObject (PrsMgr_TOP_AllView)
+: AIS_InteractiveObject (PrsMgr_TOP_AllView)
 {
   myHasOwnPresentations = Standard_False;
-  myAssemblyOwner = NULL;
-  SetHilightMode (0);
 }
 
 //=======================================================================
@@ -190,13 +58,12 @@ Standard_Integer AIS_MultipleConnectedInteractive::Signature() const
 }
 
 //=======================================================================
-//function : Connect
+//function : connect
 //purpose  :
 //=======================================================================
-Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::Connect (const Handle(AIS_InteractiveObject)& theAnotherObj,
-                                                                         const gp_Trsf&                       theTransformation,
-                                                                         const Graphic3d_TransModeFlags&      theTrsfPersFlag,
-                                                                         const gp_Pnt&                        theTrsfPersPoint)
+Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::connect (const Handle(AIS_InteractiveObject)& theAnotherObj,
+                                                                         const Handle(Geom_Transformation)& theTrsf,
+                                                                         const Handle(Graphic3d_TransformPers)& theTrsfPers)
 {
   if (myAssemblyOwner.IsNull())
     myAssemblyOwner = new SelectMgr_EntityOwner (this);
@@ -208,7 +75,7 @@ Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::Connect (const H
   { 
     Handle(AIS_MultipleConnectedInteractive) aNewMultiConnected = new AIS_MultipleConnectedInteractive();
     aNewMultiConnected->myAssemblyOwner = myAssemblyOwner;
-    aNewMultiConnected->SetLocalTransformation (aMultiConnected->LocalTransformation());
+    aNewMultiConnected->SetLocalTransformation (aMultiConnected->LocalTransformationGeom());
 
     // Perform deep copy of instance tree
     for (PrsMgr_ListOfPresentableObjectsIter anIter (aMultiConnected->Children()); anIter.More(); anIter.Next())
@@ -227,42 +94,18 @@ Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::Connect (const H
   else
   {
     Handle(AIS_ConnectedInteractive) aNewConnected = new AIS_ConnectedInteractive();
-    aNewConnected->Connect (theAnotherObj);
-    aNewConnected->SetLocalTransformation (theAnotherObj->LocalTransformation());
+    aNewConnected->Connect (theAnotherObj, theAnotherObj->LocalTransformationGeom());
 
     anObjectToAdd = aNewConnected;
   }
 
-  anObjectToAdd->SetLocalTransformation (theTransformation);
-  if (theTrsfPersFlag != Graphic3d_TMF_None)
+  anObjectToAdd->SetLocalTransformation (theTrsf);
+  if (!theTrsfPers.IsNull())
   {
-    anObjectToAdd->SetTransformPersistence (theTrsfPersFlag, theTrsfPersPoint);
+    anObjectToAdd->SetTransformPersistence (theTrsfPers);
   }
   AddChild (anObjectToAdd);
   return anObjectToAdd;
-}
-
-//=======================================================================
-//function : Connect
-//purpose  :
-//=======================================================================
-Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::Connect (const Handle(AIS_InteractiveObject)& theAnotherObj)
-{
-  return Connect (theAnotherObj, theAnotherObj->LocalTransformation(),
-                  theAnotherObj->GetTransformPersistenceMode(),
-                  theAnotherObj->GetTransformPersistencePoint());
-}
-
-//=======================================================================
-//function : Connect
-//purpose  :
-//=======================================================================
-Handle(AIS_InteractiveObject) AIS_MultipleConnectedInteractive::Connect (const Handle(AIS_InteractiveObject)& theAnotherObj,
-                                                                         const gp_Trsf&                       theTransformation)
-{
-  return Connect (theAnotherObj, theTransformation,
-                  theAnotherObj->GetTransformPersistenceMode(),
-                  theAnotherObj->GetTransformPersistencePoint());
 }
 
 //=======================================================================
@@ -306,17 +149,13 @@ void AIS_MultipleConnectedInteractive::Compute (const Handle(PrsMgr_Presentation
                                                 const Handle(Prs3d_Presentation)&           /*thePrs*/,
                                                 const Standard_Integer                      /*theMode*/)
 {
+  Handle(AIS_InteractiveContext) aCtx = GetContext();
   for (PrsMgr_ListOfPresentableObjectsIter anIter (Children()); anIter.More(); anIter.Next())
   {
     Handle(AIS_InteractiveObject) aChild = Handle(AIS_InteractiveObject)::DownCast (anIter.Value());
-    if (aChild.IsNull())
+    if (!aChild.IsNull())
     {
-      continue;
-    }
-
-    if (!aChild->HasInteractiveContext())
-    {
-      aChild->SetContext (GetContext());
+      aChild->SetContext (aCtx);
     }
   }
 }
@@ -373,51 +212,42 @@ Standard_Boolean AIS_MultipleConnectedInteractive::AcceptShapeDecomposition() co
 void AIS_MultipleConnectedInteractive::ComputeSelection (const Handle(SelectMgr_Selection)& /*theSelection*/,
                                                          const Standard_Integer             theMode)
 {
-  if (theMode != 0)
+  if (theMode == 0)
   {
-    for (PrsMgr_ListOfPresentableObjectsIter anIter (Children()); anIter.More(); anIter.Next())
-    {
-      Handle(AIS_InteractiveObject) aChild = Handle(AIS_InteractiveObject)::DownCast (anIter.Value());
-      if (aChild.IsNull())
-      {
-        continue;
-      }
-
-      if (!aChild->HasSelection (theMode))
-      {
-        aChild->RecomputePrimitives (theMode);
-      }
-
-      Handle(SelectMgr_Selection) aSelection = new SelectMgr_Selection (theMode);
-      aChild->ComputeSelection (aSelection, theMode);
-    }
+    return;
   }
-}
 
-//=======================================================================
-//function : GlobalSelOwner
-//purpose  :
-//=======================================================================
-Handle(SelectMgr_EntityOwner) AIS_MultipleConnectedInteractive::GlobalSelOwner() const
-{
-  return myAssemblyOwner;
-}
-
-//=======================================================================
-//function : HasSelection
-//purpose  :
-//=======================================================================
-Standard_Boolean AIS_MultipleConnectedInteractive::HasSelection (const Standard_Integer theMode) const
-{
   for (PrsMgr_ListOfPresentableObjectsIter anIter (Children()); anIter.More(); anIter.Next())
   {
     Handle(AIS_InteractiveObject) aChild = Handle(AIS_InteractiveObject)::DownCast (anIter.Value());
     if (aChild.IsNull())
+    {
       continue;
+    }
 
     if (!aChild->HasSelection (theMode))
-      return Standard_False;
-  }
+    {
+      aChild->RecomputePrimitives (theMode);
+    }
 
-  return Standard_True;
+    Handle(SelectMgr_Selection) aSelection = new SelectMgr_Selection (theMode);
+    aChild->ComputeSelection (aSelection, theMode);
+  }
+}
+
+//=======================================================================
+//function : SetContext
+//purpose  :
+//=======================================================================
+void AIS_MultipleConnectedInteractive::SetContext (const Handle(AIS_InteractiveContext)& theCtx)
+{
+  AIS_InteractiveObject::SetContext (theCtx);
+  for (PrsMgr_ListOfPresentableObjectsIter anIter (Children()); anIter.More(); anIter.Next())
+  {
+    Handle(AIS_InteractiveObject) aChild = Handle(AIS_InteractiveObject)::DownCast (anIter.Value());
+    if (!aChild.IsNull())
+    {
+      aChild->SetContext (theCtx);
+    }
+  }
 }

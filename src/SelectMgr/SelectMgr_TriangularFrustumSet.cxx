@@ -108,17 +108,17 @@ void SelectMgr_TriangularFrustumSet::Build (const TColgp_Array1OfPnt2d& thePoint
 //                  as any negative value;
 //                - scale only is needed: @theTrsf must be set to gp_Identity.
 // =======================================================================
-NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_TriangularFrustumSet::ScaleAndTransform (const Standard_Integer theScale,
-                                                                                             const gp_Trsf& theTrsf)
+Handle(SelectMgr_BaseFrustum) SelectMgr_TriangularFrustumSet::ScaleAndTransform (const Standard_Integer theScale,
+                                                                                 const gp_GTrsf& theTrsf) const
 {
-  SelectMgr_TriangularFrustumSet* aRes = new SelectMgr_TriangularFrustumSet();
+  Handle(SelectMgr_TriangularFrustumSet) aRes = new SelectMgr_TriangularFrustumSet();
 
   for (SelectMgr_TriangFrustumsIter anIter (myFrustums); anIter.More(); anIter.Next())
   {
     aRes->myFrustums.Append (Handle(SelectMgr_TriangularFrustum)::DownCast (anIter.Value()->ScaleAndTransform (theScale, theTrsf)));
   }
 
-  return NCollection_Handle<SelectMgr_BaseFrustum> (aRes);
+  return aRes;
 }
 
 // =======================================================================
@@ -222,6 +222,20 @@ Standard_Boolean SelectMgr_TriangularFrustumSet::Overlaps (const gp_Pnt& thePnt1
   }
 
   return Standard_False;
+}
+
+// =======================================================================
+// function : GetPlanes
+// purpose  :
+// =======================================================================
+void SelectMgr_TriangularFrustumSet::GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const
+{
+  thePlaneEquations.Clear();
+
+  for (SelectMgr_TriangFrustumsIter anIter (myFrustums); anIter.More(); anIter.Next())
+  {
+    anIter.Value()->GetPlanes (thePlaneEquations);
+  }
 }
 
 #undef MEMORY_BLOCK_SIZE

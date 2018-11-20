@@ -15,13 +15,20 @@
 
 #include <IVtkTools_SubPolyDataFilter.hxx>
 #include <IVtkVTK_ShapeData.hxx>
-#include <vtkCellArray.h>
+
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#endif
+#include <vtkCellData.h>
+#include <vtkIdList.h>
+#include <vtkIdTypeArray.h>
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkObjectFactory.h>
-#include <vtkCellData.h>
-#include <vtkIdTypeArray.h>
-
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 vtkStandardNewMacro(IVtkTools_SubPolyDataFilter)
 
@@ -31,7 +38,7 @@ vtkStandardNewMacro(IVtkTools_SubPolyDataFilter)
 //================================================================
 IVtkTools_SubPolyDataFilter::IVtkTools_SubPolyDataFilter()
 {
-  myIdsArrayName = IVtkVTK_ShapeData::ARRNAME_SUBSHAPE_IDS;
+  myIdsArrayName = IVtkVTK_ShapeData::ARRNAME_SUBSHAPE_IDS();
   myDoFiltering = true;
 }
 
@@ -50,27 +57,29 @@ int IVtkTools_SubPolyDataFilter::RequestData (vtkInformation *vtkNotUsed(theRequ
                                               vtkInformationVector *theOutputVector)
 {
   // get the input and output
-  vtkInformation *anInInfo = theInputVector[0]->GetInformationObject(0);
-  vtkInformation *anOutInfo = theOutputVector->GetInformationObject(0);
+  vtkSmartPointer<vtkInformation> anInInfo = theInputVector[0]->GetInformationObject(0);
+  vtkSmartPointer<vtkInformation> anOutInfo = theOutputVector->GetInformationObject(0);
 
-  vtkPolyData *anInput = vtkPolyData::SafeDownCast(
+  vtkSmartPointer<vtkPolyData> anInput = vtkPolyData::SafeDownCast(
     anInInfo->Get (vtkDataObject::DATA_OBJECT()));
 
-  vtkPolyData *anOutput = vtkPolyData::SafeDownCast(
+  vtkSmartPointer<vtkPolyData> anOutput = vtkPolyData::SafeDownCast(
     anOutInfo->Get (vtkDataObject::DATA_OBJECT()));
-
-  vtkIdList *anIdList = vtkIdList::New(); // List of cell ids to be passed
-  anIdList->Allocate(myIdsSet.Extent());  // Allocate the list of ids
 
   anInput->Modified();
 
   if (myDoFiltering)
   {
-    vtkCellData* aCellData = anInput->GetCellData();
-    int aSize = 0;
-    vtkIdTypeArray* aDataArray = vtkIdTypeArray::SafeDownCast (aCellData->GetArray (myIdsArrayName));
+    vtkSmartPointer<vtkCellData> aCellData = anInput->GetCellData();
+    vtkIdType aSize = 0;
+    vtkSmartPointer<vtkIdTypeArray> aDataArray =
+      vtkIdTypeArray::SafeDownCast (aCellData->GetArray (myIdsArrayName));
 
-    if(aDataArray != NULL)
+    // List of cell ids to be passed
+    vtkSmartPointer<vtkIdList> anIdList = vtkSmartPointer<vtkIdList>::New();
+    anIdList->Allocate(myIdsSet.Extent());  // Allocate the list of ids
+
+    if (aDataArray.GetPointer() != NULL)
     {
       aSize = aDataArray->GetNumberOfTuples();
       anIdList->Allocate (aSize);  // Allocate the list of ids
@@ -95,14 +104,15 @@ int IVtkTools_SubPolyDataFilter::RequestData (vtkInformation *vtkNotUsed(theRequ
     anOutput->Allocate(anInput, anIdList->GetNumberOfIds());  // Allocate output cells
     // Pass data arrays.
     // Create new arrays for output data 
-    vtkCellData *const anInData = anInput->GetCellData();
-    vtkCellData *const anOutData = anOutput->GetCellData();
-    vtkDataArray *anOutArr, *anInArr;
+    vtkSmartPointer<vtkCellData> anInData = anInput->GetCellData();
+    vtkSmartPointer<vtkCellData> anOutData = anOutput->GetCellData();
+    vtkSmartPointer<vtkDataArray> anInArr, anOutArr;
 
     for (Standard_Integer anI = 0; anI < anInData->GetNumberOfArrays(); anI++)
     {
       anInArr = anInData->GetArray (anI);
-      anOutArr = vtkDataArray::CreateDataArray(anInArr->GetDataType());
+      anOutArr = vtkSmartPointer<vtkDataArray>::Take(
+        vtkDataArray::CreateDataArray(anInArr->GetDataType()));
       anOutArr->SetName(anInArr->GetName());
       anOutArr->Allocate(anIdList->GetNumberOfIds() * anInArr->GetNumberOfComponents());
       anOutArr->SetNumberOfTuples (anIdList->GetNumberOfIds());
@@ -119,16 +129,13 @@ int IVtkTools_SubPolyDataFilter::RequestData (vtkInformation *vtkNotUsed(theRequ
     for (Standard_Integer anI = 0; anI < anInData->GetNumberOfArrays(); anI++)
     {
       anInArr = anInData->GetArray (anI);
-      anOutArr = anOutData->GetArray (anI);
+      anOutArr = anOutData->GetArray(anI);
       for (anOutId = 0; anOutId < anIdList->GetNumberOfIds(); anOutId++)
       {
         anInId = anIdList->GetId (anOutId);
         anOutArr->SetTuple (anOutId, anInId, anInArr);
       }
     }
-
-    anIdList->Delete();
-
   }
   else
   {

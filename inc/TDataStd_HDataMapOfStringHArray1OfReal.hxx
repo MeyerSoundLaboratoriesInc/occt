@@ -20,52 +20,30 @@
 #include <Standard_Type.hxx>
 
 #include <TDataStd_DataMapOfStringHArray1OfReal.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Integer.hxx>
-
-
-class TDataStd_HDataMapOfStringHArray1OfReal;
-DEFINE_STANDARD_HANDLE(TDataStd_HDataMapOfStringHArray1OfReal, MMgt_TShared)
 
 //! Extension of TDataStd_DataMapOfStringHArray1OfReal class
 //! to be manipulated by handle.
-class TDataStd_HDataMapOfStringHArray1OfReal : public MMgt_TShared
+class TDataStd_HDataMapOfStringHArray1OfReal : public Standard_Transient
 {
-
+  DEFINE_STANDARD_RTTIEXT(TDataStd_HDataMapOfStringHArray1OfReal, Standard_Transient)
 public:
 
-  
   Standard_EXPORT TDataStd_HDataMapOfStringHArray1OfReal(const Standard_Integer NbBuckets = 1);
-  
+
   Standard_EXPORT TDataStd_HDataMapOfStringHArray1OfReal(const TDataStd_DataMapOfStringHArray1OfReal& theOther);
-  
-    const TDataStd_DataMapOfStringHArray1OfReal& Map() const;
-  
-    TDataStd_DataMapOfStringHArray1OfReal& ChangeMap();
 
+  const TDataStd_DataMapOfStringHArray1OfReal& Map() const { return myMap; }
 
-
-
-  DEFINE_STANDARD_RTTIEXT(TDataStd_HDataMapOfStringHArray1OfReal,MMgt_TShared)
-
-protected:
-
-
-
+  TDataStd_DataMapOfStringHArray1OfReal& ChangeMap() { return myMap; }
 
 private:
 
-
   TDataStd_DataMapOfStringHArray1OfReal myMap;
-
 
 };
 
-
-#include <TDataStd_HDataMapOfStringHArray1OfReal.lxx>
-
-
-
-
+DEFINE_STANDARD_HANDLE(TDataStd_HDataMapOfStringHArray1OfReal, Standard_Transient)
 
 #endif // _TDataStd_HDataMapOfStringHArray1OfReal_HeaderFile

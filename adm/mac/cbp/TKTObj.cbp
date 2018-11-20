@@ -74,7 +74,6 @@
 		<Unit filename="../../../src/TObj/TObj_Persistence.cxx" />
 		<Unit filename="../../../src/TObj/TObj_ReferenceIterator.cxx" />
 		<Unit filename="../../../src/TObj/TObj_SequenceIterator.cxx" />
-		<Unit filename="../../../src/TObj/TObj_SequenceOfObject.cxx" />
 		<Unit filename="../../../src/TObj/TObj_TIntSparseArray.cxx" />
 		<Unit filename="../../../src/TObj/TObj_TModel.cxx" />
 		<Unit filename="../../../src/TObj/TObj_TNameContainer.cxx" />

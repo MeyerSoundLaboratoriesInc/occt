@@ -16,6 +16,7 @@
 #include <QABugs.hxx>
 
 #include <gp_Ax2.hxx>
+#include <Extrema_GenLocateExtPS.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_SurfaceOfLinearExtrusion.hxx>
 #include <NCollection_List.hxx>
@@ -23,8 +24,15 @@
 #include <TColStd_Array2OfReal.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_Array1OfInteger.hxx>
+#include <Geom_BezierCurve.hxx>
 #include <Geom_BSplineSurface.hxx>
+#include <GeomConvert.hxx>
+#include <Geom2d_Curve.hxx>
+#include <Geom2d_Line.hxx>
+#include <GeomFill_BSplineCurves.hxx>
+#include <Draw.hxx>
 #include <DrawTrSurf.hxx>
+#include <ShapeConstruct_ProjectCurveOnSurface.hxx>
 
 #include <TopExp.hxx>
 #include <TopoDS_Vertex.hxx>
@@ -32,8 +40,29 @@
 #include <TopoDS_Edge.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepTools.hxx>
+#include <BRepAdaptor_Surface.hxx>
 #include <TopoDS.hxx>
 #include <DBRep.hxx>
+
+#include <BRepGProp.hxx>
+#include <DDocStd.hxx>
+#include <GProp_GProps.hxx>
+#include <TDocStd_Document.hxx>
+#include <XCAFDimTolObjects_DatumObject.hxx>
+#include <XCAFDimTolObjects_DimensionObject.hxx>
+#include <XCAFDimTolObjects_GeomToleranceObject.hxx>
+#include <XCAFDoc_Datum.hxx>
+#include <XCAFDoc_Dimension.hxx>
+#include <XCAFDoc_DimTolTool.hxx>
+#include <XCAFDoc_DocumentTool.hxx>
+#include <XCAFDoc_GeomTolerance.hxx>
+#include <XCAFDoc_ShapeTool.hxx>
+
+#include <HLRAppli_ReflectLines.hxx>
+#include <HLRBRep_PolyHLRToShape.hxx>
+#include <HLRBRep_PolyAlgo.hxx>
+
+#include <limits>
 
 //=======================================================================
 //function : SurfaceGenOCC26675_1 
@@ -1257,7 +1286,7 @@ namespace AllocTest
   // The test is based of occupying of all available virtual memory.
   // Obviously it has no sense on 64-bit platforms.
 
-  enum Status
+  enum AllocTestStatus
   {
     NotApplicable = 0x1,
     OUMCatchOK    = 0x2,
@@ -1418,6 +1447,1447 @@ static Standard_Integer OCC27021(Draw_Interpretor& theDI,
   return 0;
 }
 
+//=======================================================================
+//function : OCC27235
+//purpose : check presentation in GDT document
+//=======================================================================
+static Standard_Integer OCC27235 (Draw_Interpretor& theDI, Standard_Integer n, const char** a)
+{
+  if (n < 2) {
+    theDI<<"Use: OCC27235 Doc";
+    return 1;
+  }
+
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(a[1], Doc);
+  if ( Doc.IsNull() ) { theDI << a[1] << " is not a document\n"; return 1; }
+  Handle(XCAFDoc_DimTolTool) aDimTolTool= XCAFDoc_DocumentTool::DimTolTool(Doc->Main());
+  Handle(XCAFDoc_ShapeTool) aShapeTool= XCAFDoc_DocumentTool::ShapeTool(Doc->Main());
+  TopoDS_Compound aPresentations;
+  BRep_Builder B;
+  B.MakeCompound(aPresentations);
+
+  TDF_LabelSequence aLabels;
+  aShapeTool->GetShapes(aLabels);
+  for ( Standard_Integer i=1; i <= aLabels.Length(); i++ )
+  {
+    aShapeTool->GetSubShapes(aLabels.Value(i), aLabels);
+  }
+
+  TDF_LabelSequence aGDTs;
+  aDimTolTool->GetDimensionLabels(aGDTs);
+  for (Standard_Integer i = 1; i <= aGDTs.Length(); i++) {
+    Handle(XCAFDoc_Dimension) aDimAttr;
+    if (!aGDTs.Value(i).FindAttribute(XCAFDoc_Dimension::GetID(),aDimAttr)) 
+      continue;
+    Handle(XCAFDimTolObjects_DimensionObject) anObject = aDimAttr->GetObject();
+    if (anObject.IsNull())
+      continue;
+    TopoDS_Shape aShape = anObject->GetPresentation();
+    if (!aShape.IsNull())
+      B.Add(aPresentations, aShape);
+  }
+
+  aGDTs.Clear();
+  aDimTolTool->GetGeomToleranceLabels(aGDTs);
+  for (Standard_Integer i = 1; i <= aGDTs.Length(); i++) {
+    Handle(XCAFDoc_GeomTolerance) aGTAttr;
+    if (!aGDTs.Value(i).FindAttribute(XCAFDoc_GeomTolerance::GetID(),aGTAttr)) 
+      continue;
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObject = aGTAttr->GetObject();
+    if (anObject.IsNull())
+      continue;
+    TopoDS_Shape aShape = anObject->GetPresentation();
+    if (!aShape.IsNull())
+      B.Add(aPresentations, aShape);
+  }
+
+  for ( Standard_Integer i=1; i <= aLabels.Length(); i++ )
+  {
+    TDF_LabelSequence aDatL;
+    if(aDimTolTool->GetRefDatumLabel(aLabels.Value(i), aDatL))
+    {
+      for(Standard_Integer j = aDatL.Lower(); j <= aDatL.Upper(); j++)
+      {
+        Handle(XCAFDoc_Datum) aDat;
+        if(!aDatL.Value(j).FindAttribute(XCAFDoc_Datum::GetID(), aDat))
+          continue;
+        Handle(XCAFDimTolObjects_DatumObject) anObject = aDat->GetObject();
+        if (anObject.IsNull())
+          continue;
+        TopoDS_Shape aShape = anObject->GetPresentation();
+        if (!aShape.IsNull())
+          B.Add(aPresentations, aShape);
+      }
+    }
+  }
+
+  GProp_GProps aG;
+  BRepGProp::LinearProperties(aPresentations, aG);
+  gp_Pnt aPnt = aG.CentreOfMass();
+  theDI << "Centre of mass: " << aPnt.X() << " " << aPnt.Y() << " " << aPnt.Z() << "\n";
+  theDI << "Mass: " << aG.Mass() << "\n";
+
+  return 0;
+}
+
+//=======================================================================
+//function : OCC24836
+//purpose :
+//=======================================================================
+static Standard_Integer OCC26930(Draw_Interpretor& theDI,
+                                 Standard_Integer  theNArg,
+                                 const char ** theArgVal)
+{
+  if (theNArg != 5)
+  {
+    cout << "Use: " << theArgVal[0] <<" surface curve start end" << endl;
+    return 1;
+  }
+
+
+
+
+
+  Handle(Geom_Surface) aSurface = DrawTrSurf::GetSurface(theArgVal[1]);
+  Handle(Geom_Curve) aCurve = DrawTrSurf::GetCurve(theArgVal[2]);
+  Standard_Real aStart = Draw::Atof(theArgVal[3]);
+  Standard_Real anEnd = Draw::Atof(theArgVal[4]);
+
+  //project
+  Handle (Geom2d_Curve) aPCurve;
+
+  ShapeConstruct_ProjectCurveOnSurface aProj;
+  aProj.Init(aSurface, Precision::Confusion());
+  {
+    try {
+        Handle (Geom_Curve) aTmpCurve = aCurve; //to use reference in Perform()
+        aProj.Perform (aTmpCurve, aStart, anEnd, aPCurve);
+    } catch (const Standard_Failure&) {
+    }
+  }
+
+  //check results
+  if (aPCurve.IsNull()) {
+    theDI << "Error: pcurve is null\n";
+  }
+  else {
+    if (aPCurve->IsKind(STANDARD_TYPE(Geom2d_Line))) {
+      theDI << "Pcurve is line: OK\n";
+    }
+    else {
+      theDI << "Error: PCurve is not line\n";
+    }
+  }
+
+  return 0;
+}
+
+//=======================================================================
+//function : OCC27341
+//purpose : check exact HLR algorighm's work
+//=======================================================================
+static Standard_Integer OCC27341 (Draw_Interpretor& , Standard_Integer n, const char** a)
+{
+  if (n != 4)
+  {
+    cout << "Use: OCC27341 res shape axo/top/bottom/front/back/left/right" << endl;
+    return 1;
+  }
+
+  TopoDS_Shape aShape =  DBRep::Get(a[2]);
+  if (aShape.IsNull())
+    return 1;
+
+  gp_Pnt anOrigin(0.,0.,0.);
+  gp_Dir aNormal(0.57735026918962573, -0.57735026918962573, 0.57735026918962573);
+  gp_Ax2 anAxes(anOrigin, aNormal);
+  gp_Dir aDX = anAxes.XDirection();
+  
+  HLRAppli_ReflectLines Reflector(aShape);
+
+  if (strcmp(a[3],"axo") == 0)
+  {
+    aNormal.SetCoord(0.57735026918962573, -0.57735026918962573, 0.57735026918962573);
+    aDX.SetCoord(-0.40824829046386307, 0.40824829046386307, 0.81649658092772615);
+  }
+  else if (strcmp(a[3],"top") == 0)
+  {
+    aNormal.SetCoord(0,0,1);
+    aDX.SetCoord(0,1,0);
+  }
+  else if (strcmp(a[3],"bottom") == 0)
+  {
+    aNormal.SetCoord(0,0,-1);
+    aDX.SetCoord(0,-1,0);
+  }
+  else if (strcmp(a[3],"front") == 0)
+  {
+    aNormal.SetCoord(0,-1,0);
+    aDX.SetCoord(0,0,1);
+  }
+  else if (strcmp(a[3],"back") == 0)
+  {
+    aNormal.SetCoord(0,1,0);
+    aDX.SetCoord(0,0,1);
+  }
+  else if (strcmp(a[3],"left") == 0)
+  {
+    aNormal.SetCoord(-1,0,0);
+    aDX.SetCoord(0,0,1);
+  }
+  else if (strcmp(a[3],"right") == 0)
+  {
+    aNormal.SetCoord(1,0,0);
+    aDX.SetCoord(0,0,1);
+  }
+    
+  Reflector.SetAxes(aNormal.X(), aNormal.Y(), aNormal.Z(),
+                    anOrigin.X(), anOrigin.Y(), anOrigin.Z(),
+                    aDX.X(), aDX.Y(), aDX.Z());
+
+  Reflector.Perform();
+
+  TopoDS_Compound Result;
+  BRep_Builder BB;
+  BB.MakeCompound(Result);
+  
+  TopoDS_Shape SharpEdges = Reflector.GetCompoundOf3dEdges(HLRBRep_Sharp, Standard_True, Standard_False);
+  if (!SharpEdges.IsNull())
+    BB.Add(Result, SharpEdges);
+  TopoDS_Shape OutLines = Reflector.GetCompoundOf3dEdges(HLRBRep_OutLine, Standard_True, Standard_False);
+  if (!OutLines.IsNull())
+    BB.Add(Result, OutLines);
+  TopoDS_Shape SmoothEdges = Reflector.GetCompoundOf3dEdges(HLRBRep_Rg1Line, Standard_True, Standard_False);
+  if (!SmoothEdges.IsNull())
+    BB.Add(Result, SmoothEdges);
+  
+  DBRep::Set(a[1], Result);
+
+  return 0;
+}
+
+//=======================================================================
+//function : OCC27466
+//purpose :
+//=======================================================================
+static Standard_Integer OCC27466(Draw_Interpretor& theDI,
+  Standard_Integer  theNArg,
+  const char ** theArgVal)
+{
+  if (theNArg != 4)
+  {
+    cout << "Use: " << theArgVal[0] << " face point start_pnt2d" << endl;
+    return 1;
+  }
+
+  TopoDS_Face aFace = TopoDS::Face(DBRep::Get(theArgVal[1], TopAbs_FACE, Standard_True));
+  if (aFace.IsNull())
+    return 1;
+  gp_Pnt aPnt;
+  if (!DrawTrSurf::GetPoint(theArgVal[2], aPnt))
+    return 1;
+  gp_Pnt2d aUV;
+  if (!DrawTrSurf::GetPoint2d(theArgVal[3], aUV))
+    return 1;
+  BRepAdaptor_Surface aSurf(aFace);
+
+  Standard_Real aTolU = Precision::PConfusion();
+  Standard_Real aTolV = Precision::PConfusion();
+
+  Extrema_GenLocateExtPS anExtrema(aSurf, aTolU, aTolV);
+  anExtrema.Perform(aPnt, aUV.X(), aUV.Y(), Standard_True);
+
+  if (!anExtrema.IsDone())
+  {
+    theDI << "Error: Extrema is not done";
+  }
+  else
+  {
+    Standard_Real aSqDist = anExtrema.SquareDistance();
+    gp_Pnt aResPnt = anExtrema.Point().Value();
+    Standard_Real u, v;
+    anExtrema.Point().Parameter(u, v);
+    gp_Pnt2d aResUV(u, v);
+    DrawTrSurf::Set((TCollection_AsciiString(theArgVal[2]) + "_res").ToCString(), aResPnt);
+    DrawTrSurf::Set((TCollection_AsciiString(theArgVal[3]) + "_res").ToCString(), aResUV);
+    theDI << theArgVal[2] << "_res and " << theArgVal[3] << "_res are created, dist=" << sqrt(aSqDist);
+  }
+  return 0;
+}
+
+#include <GCE2d_MakeParabola.hxx>
+#include <gp_Ax22d.hxx>
+#include <Geom2d_Parabola.hxx>
+#include <gp_Parab2d.hxx>
+
+namespace Parab2d_Bug26747
+{
+  //Directrix and X-axe direction
+  gp_Ax2d Axes;
+
+  //Focus
+  gp_Pnt2d FocusPoint;
+
+  //Focal length
+  Standard_Real FocalLength;
+
+  //Coordiantes of the vertex
+  Standard_Real VertX, VertY;
+
+  //Parameter
+  Standard_Real Parameter;
+
+  //Coefficients
+  Standard_Real Coeffs[6];
+}
+
+//========================================================================
+//function : OCC26747_CheckParabola
+//purpose  : Checks if created parabola is correct
+//========================================================================
+static void OCC26747_CheckParabola(Draw_Interpretor& theDI,
+                                   const char *theName,
+                                   const Standard_Boolean theSense = Standard_True)
+{
+  const Standard_Real aCompareTol = 1.0e-12;
+
+  //                      Directrix,                    Focus
+  GCE2d_MakeParabola aPrb(Parab2d_Bug26747::Axes, Parab2d_Bug26747::FocusPoint, theSense);
+
+  DrawTrSurf::Set(theName, aPrb.Value());
+
+  gp_Pnt2d aVert(aPrb.Value()->Parab2d().Location());
+
+  theDI << "Focal Length: " << aPrb.Value()->Parab2d().Focal() << "\n";
+  theDI << "Vertex (" << aVert.X() << ", " << aVert.Y() << ")\n";
+  theDI << "Parameter = " << aPrb.Value()->Parab2d().Parameter() << "\n";
+
+  Standard_Real aF[6] = {RealLast(), RealLast(), RealLast(),
+                         RealLast(), RealLast(), RealLast()};  
+  aPrb.Value()->Parab2d().Coefficients(aF[0], aF[1], aF[2], aF[3], aF[4], aF[5]);
+  theDI << "A = " << aF[0] << ", B = " << aF[1] << ", C = " << aF[2] <<
+           ", D = " << aF[3] << ", E = " << aF[4] << ", F = " << aF[5] << "\n";
+
+  if(Abs(aPrb.Value()->Parab2d().Focal() - 
+                        Parab2d_Bug26747::FocalLength) > aCompareTol)
+    theDI << "Error in focal length computation!\n";
+
+  if( (Abs(aVert.X() - Parab2d_Bug26747::VertX) > aCompareTol) ||
+      (Abs(aVert.Y() - Parab2d_Bug26747::VertY) > aCompareTol))
+    theDI << "Error in vertex computation!\n";
+
+  if(Abs(aPrb.Value()->Parab2d().Parameter() -
+                        Parab2d_Bug26747::Parameter) > aCompareTol)
+    theDI << "Error in parameter computation!\n";
+
+  for(int i = 0; i < 6; i++)
+  {
+    if(Abs(aF[i] - Parab2d_Bug26747::Coeffs[i]) > aCompareTol)
+    {
+      theDI << "Error in " << i << "-th coefficient computation!\n";
+    }
+  }
+}
+
+//========================================================================
+//function : OCC26747_1
+//purpose  : Creates a 2D-parabola for testing
+//========================================================================
+static Standard_Integer OCC26747_1(Draw_Interpretor& theDI, 
+                                   Standard_Integer  theNArg, 
+                                   const char **     theArgVal)
+{
+  if(theNArg < 2)
+  {
+    theDI << "Use: OCC26747_1 result\n";
+    return 1;
+  }
+
+  //Expected parabola:
+
+  //  ^ Y
+  //  |
+  //  |
+  //  |
+  //  |
+  //  |                 o
+  //  |    A   o   F
+  //  |     o     x
+  //  |        o
+  //  |                 o
+  //  |
+  //  ---------------------------> X
+
+  //  where
+  //  Y-axe is the directrix of the parabola,
+  //  A(0.5, 3.0) is a Vertex of the parabola,
+  //  F(1.0, 3.0) is the focus of the parabola,
+  //  Focal length is 0.5,
+  //  Parameter of the parabola is 1.
+  //  Equation: (y-3)^2=2*p*(x-0.5), i.e. (y-3)^2=2*(x-0.5)
+  //  A * X^2 + B * Y^2 + 2*C*X*Y + 2*D*X    + 2*E*Y    + F = 0.
+  //                  OR
+  //  0 * X^2 + 1 * Y^2 + 2*0*X*Y + 2*(-1)*X + 2*(-3)*Y + 10 = 0.
+
+  Parab2d_Bug26747::Axes = gp_Ax2d(gp_Pnt2d(0.0, 3.0), gp_Dir2d(0.0, 1.0));
+  Parab2d_Bug26747::FocusPoint.SetCoord(1.0, 3.0);
+
+  Parab2d_Bug26747::FocalLength = 0.5;
+
+  Parab2d_Bug26747::VertX = 0.5;
+  Parab2d_Bug26747::VertY = 3.0;
+
+  Parab2d_Bug26747::Parameter = 1.0;
+
+  Parab2d_Bug26747::Coeffs[0] = 0.0;
+  Parab2d_Bug26747::Coeffs[1] = 1.0;
+  Parab2d_Bug26747::Coeffs[2] = 0.0;
+  Parab2d_Bug26747::Coeffs[3] = -1.0;
+  Parab2d_Bug26747::Coeffs[4] = -3.0;
+  Parab2d_Bug26747::Coeffs[5] = 10.0;
+
+  OCC26747_CheckParabola(theDI, theArgVal[1]);
+
+  return 0;
+}
+
+//=======================================================================
+//function : OCC26747_2
+//purpose  : Creates a 2D-parabola for testing
+//=======================================================================
+static Standard_Integer OCC26747_2(Draw_Interpretor& theDI,
+                                   Standard_Integer  theNArg,
+                                   const char **     theArgVal)
+{
+  if(theNArg < 2)
+  {
+    theDI << "Use: OCC26747_2 result\n";
+    return 1;
+  }
+
+  //Expected parabola:
+
+  //                          ^ Y
+  //                          |
+  //        o                 |
+  //                 o        |
+  //            F x     o A   |
+  //                 o        |
+  //        o                 |
+  //                          |
+  //  <------------------------
+  //  X
+
+  //  where (in UCS - User Coordinate System, - which
+  //  is shown in the picture):
+  //    Y-axe is the directrix of the parabola,
+  //    A(0.5, 3.0) is a Vertex of the parabola,
+  //    F(1.0, 3.0) is the focus of the parabola.
+  //
+  //  In WCS (World Coordinate System) these points have coordinates:
+  //    A(-0.5, 3.0), F(-1.0, 3.0).
+  //
+  //  Focal length is 0.5,
+  //  Parameter of the parabola is 1.
+  //  Equation (in WCS): (y-3)^2=2*p*(-x-0.5), i.e. (y-3)^2=2*(-x-0.5)
+  //  A * X^2 + B * (Y^2) + 2*C*(X*Y) + 2*D*X + 2*E*Y    + F = 0.
+  //  0 * X^2 + 1 * (Y^2) + 2*0*(X*Y) + 2*1*X + 2*(-3)*Y + 10 = 0.
+
+
+  Parab2d_Bug26747::Axes = gp_Ax2d(gp_Pnt2d(0.0, 0.0), gp_Dir2d(0.0, 1.0));
+  Parab2d_Bug26747::FocusPoint.SetCoord(-1.0, 3.0);
+
+  Parab2d_Bug26747::FocalLength = 0.5;
+
+  Parab2d_Bug26747::VertX = -0.5;
+  Parab2d_Bug26747::VertY = 3.0;
+
+  Parab2d_Bug26747::Parameter = 1.0;
+
+  Parab2d_Bug26747::Coeffs[0] = 0.0;
+  Parab2d_Bug26747::Coeffs[1] = 1.0;
+  Parab2d_Bug26747::Coeffs[2] = 0.0;
+  Parab2d_Bug26747::Coeffs[3] = 1.0;
+  Parab2d_Bug26747::Coeffs[4] = -3.0;
+  Parab2d_Bug26747::Coeffs[5] = 10.0;
+
+  OCC26747_CheckParabola(theDI, theArgVal[1], Standard_False);
+
+  return 0;
+}
+
+//=======================================================================
+//function : OCC26747_3
+//purpose  : Creates a 2D-parabola for testing
+//=======================================================================
+static Standard_Integer OCC26747_3(Draw_Interpretor& theDI,
+                                   Standard_Integer  theNArg,
+                                   const char **     theArgVal)
+{
+  if(theNArg < 2)
+  {
+    theDI << "Use: OCC26747_2 result\n";
+    return 1;
+  }
+
+  //Expected parabola:
+
+  //                    ^ Y
+  //                    |
+  //        o           |
+  //                 o  |
+  //            F x     o A
+  //                 o  |
+  //        o           |
+  //                    |
+  //  <------------------
+  //  X
+
+  //  where (in UCS - User Coordinate System, - which
+  //  is shown in the picture):
+  //    Y-axe is the directrix of the parabola,
+  //    A(0.0, 3.0) is a Vertex of the parabola,
+  //    F(0.0, 3.0) is the focus of the parabola (the Focus
+  //                matches with the Apex).
+  //
+  //  In WCS (World Coordinate System) these points have coordinates:
+  //    A(0.0, 3.0), F(0.0, 3.0).
+  //
+  //  Focal length is 0.0,
+  //  Parameter of the parabola is 0.0.
+  //  Equation (in WCS): (y-3)^2=2*p*(-x-0.0), i.e. (y-3)^2=0 (looks like a line y=3)
+  //  A * X^2 + B * (Y^2) + 2*C*(X*Y) + 2*D*X + 2*E*Y    + F = 0.
+  //  0 * X^2 + 1 * (Y^2) + 2*0*(X*Y) + 2*0*X + 2*(-3)*Y + 9 = 0.
+
+  Parab2d_Bug26747::Axes = gp_Ax2d(gp_Pnt2d(0.0, 0.0), gp_Dir2d(0.0, 1.0));
+  Parab2d_Bug26747::FocusPoint.SetCoord(0.0, 3.0);
+
+  Parab2d_Bug26747::FocalLength = 0.0;
+
+  Parab2d_Bug26747::VertX = 0.0;
+  Parab2d_Bug26747::VertY = 3.0;
+
+  Parab2d_Bug26747::Parameter = 0.0;
+
+  Parab2d_Bug26747::Coeffs[0] = 0.0;
+  Parab2d_Bug26747::Coeffs[1] = 1.0;
+  Parab2d_Bug26747::Coeffs[2] = 0.0;
+  Parab2d_Bug26747::Coeffs[3] = 0.0;
+  Parab2d_Bug26747::Coeffs[4] = -3.0;
+  Parab2d_Bug26747::Coeffs[5] = 9.0;
+
+  OCC26747_CheckParabola(theDI, theArgVal[1], Standard_False);
+
+  return 0;
+}
+
+#include "Geom2d_BezierCurve.hxx"
+#include "Geom2dGcc_QualifiedCurve.hxx"
+#include "Geom2dAdaptor_Curve.hxx"
+#include "Geom2dAPI_ProjectPointOnCurve.hxx"
+#include "Geom2dGcc_Circ2d2TanOn.hxx"
+//=======================================================================
+//function : OCC27357
+//purpose :
+//=======================================================================
+static Standard_Integer OCC27357(Draw_Interpretor& theDI,
+                                 Standard_Integer,
+                                 const char **)
+{
+  TColgp_Array1OfPnt2d aPoles(1,3);
+  aPoles.SetValue(1, gp_Pnt2d(0.,0.));
+  aPoles.SetValue(2, gp_Pnt2d(0.,1.));
+  aPoles.SetValue(3, gp_Pnt2d(6.,0.));
+
+  Handle(Geom2d_BezierCurve) aCurve1 = new Geom2d_BezierCurve(aPoles);
+  aPoles.SetValue(2, gp_Pnt2d(0.,1.5));
+  Handle(Geom2d_BezierCurve) aCurve2 = new Geom2d_BezierCurve(aPoles);
+  NCollection_List<Standard_Integer> aDuumyList;
+  int nP = 100;
+  for(int i = 0 ; i < nP ; i++){
+    Standard_Real u = i / (nP-1.);
+    gp_Pnt2d aP1;
+    gp_Vec2d aTangent;
+    aCurve1->D1(u,aP1,aTangent);
+    gp_Vec2d aNormal(-aTangent.Y(),aTangent.X());
+    Handle(Geom2d_Line) normalLine=new Geom2d_Line(aP1, gp_Dir2d(aNormal));
+    Geom2dGcc_QualifiedCurve qualifiedC1(Geom2dAdaptor_Curve(aCurve1),GccEnt_unqualified);
+    Geom2dGcc_QualifiedCurve qualifiedC2(Geom2dAdaptor_Curve(aCurve2),GccEnt_unqualified);
+
+    try
+    {
+      Geom2dAPI_ProjectPointOnCurve projPc1(aP1, aCurve1);
+      double g1 = projPc1.LowerDistanceParameter();
+      Geom2dAPI_ProjectPointOnCurve projPc3(aP1, normalLine);
+      double g3 = projPc3.LowerDistanceParameter();
+      Geom2dGcc_Circ2d2TanOn aCircleBuilder(qualifiedC1,qualifiedC2,
+        Geom2dAdaptor_Curve(normalLine),1e-9,g1,g1,g3);
+      aDuumyList.Append(aCircleBuilder.NbSolutions());
+    }
+    catch(Standard_Failure)
+    {
+      theDI << "Exception was caught\n";
+    }
+  }
+  return 0;
+}
+#include <Standard_ErrorHandler.hxx>
+#include <TColGeom_SequenceOfCurve.hxx>
+#include <GeomFill_NSections.hxx>
+#include <Geom_TrimmedCurve.hxx>
+#include <TopExp_Explorer.hxx>
+#include <BRepBuilderAPI_MakeFace.hxx>
+//=======================================================================
+//function : OCC26270
+//purpose :
+//=======================================================================
+static Standard_Integer OCC26270(Draw_Interpretor& theDI,
+                                 Standard_Integer theNArg,
+                                 const char **theArgVal)
+{
+  if (theNArg != 3)
+  {
+    theDI << "Usage :" << theArgVal[0] << " shape result\n";
+    return 0;
+  }
+  TopoDS_Shape aShape = DBRep::Get(theArgVal[1]);
+  TopExp_Explorer anExp(aShape, TopAbs_EDGE);
+  TColGeom_SequenceOfCurve aCurveSeq;
+  for (; anExp.More(); anExp.Next())
+  {
+    Standard_Real f, l;
+    Handle(Geom_Curve) aCurve = BRep_Tool::Curve(TopoDS::Edge(anExp.Current()), f, l);
+    if (!aCurve.IsNull())
+    {
+      aCurve = new Geom_TrimmedCurve(aCurve, f, l);
+      aCurveSeq.Append(aCurve);
+    }
+  }
+  if (aCurveSeq.Length() > 1)
+  {
+    try
+    {
+      OCC_CATCH_SIGNALS
+        GeomFill_NSections aBSurface(aCurveSeq);
+      Handle(Geom_BSplineSurface) aRes = aBSurface.BSplineSurface();
+      if (!aRes.IsNull())
+      {
+        BRepBuilderAPI_MakeFace b_face1(aRes, Precision::Confusion());
+        TopoDS_Face bsp_face1 = b_face1.Face();
+        DBRep::Set(theArgVal[2], bsp_face1);
+      }
+    }
+    catch (Standard_Failure)
+    {
+      theDI << "ERROR: Exception in GeomFill_NSections\n";
+    }
+  }
+  return 0;
+}
+
+#include "BRepBuilderAPI_MakeWire.hxx"
+#include "BRepBuilderAPI_MakeEdge.hxx"
+static Standard_Integer OCC27552(Draw_Interpretor&,
+                                   Standard_Integer,
+                                   const char **  )
+{
+  BRep_Builder BB;
+  TopoDS_Vertex V1, V2, V3;
+  TopoDS_Edge E1, E2;
+  BB.MakeVertex(V1, gp_Pnt(0,0,0), 0.1);
+  BB.MakeVertex(V2, gp_Pnt(5,0,0), 0.1);
+  BB.MakeVertex(V3, gp_Pnt(10,0,0), 0.1);
+  E1 = BRepBuilderAPI_MakeEdge(V1, V2).Edge();
+  E2 = BRepBuilderAPI_MakeEdge(V2, V3).Edge();
+  BRepBuilderAPI_MakeWire MW;
+  MW.Add(E1);
+  MW.Add(E2);
+  TopoDS_Vertex V4, V5, V6, V7;
+  TopoDS_Edge E3, E4;
+  BB.MakeVertex(V4, gp_Pnt(10,0+0.05,0), 0.07);
+  BB.MakeVertex(V5, gp_Pnt(10,0-0.05,0), 0.07);
+  BB.MakeVertex(V6, gp_Pnt(10,0+2,0), 0.07);
+  BB.MakeVertex(V7, gp_Pnt(10,0-2,0), 0.07);
+  E3 = BRepBuilderAPI_MakeEdge(V4, V6).Edge();
+  E4 = BRepBuilderAPI_MakeEdge(V5, V7).Edge();
+  TopTools_ListOfShape LLE;
+  LLE.Append(E3);
+  LLE.Append(E4);
+  MW.Add(LLE);
+  TopoDS_Shape W = MW.Wire();
+  DBRep::Set("outw", W);
+
+  return 0;
+}
+
+#include <NCollection_IncAllocator.hxx>
+static Standard_Integer OCC27875(Draw_Interpretor& theDI,
+                                 Standard_Integer theNArg,
+                                 const char ** theArgVal)
+{
+  if (theNArg < 2)
+  {
+    theDI << "Use: OCC27875 curve\n";
+  }
+
+  TColGeom_SequenceOfCurve aNC(new NCollection_IncAllocator());
+
+  const Handle(Geom_Curve) aC = Handle(Geom_Curve)::DownCast(DrawTrSurf::Get(theArgVal[1]));
+
+  aNC.Append(aC);
+
+  GeomFill_NSections aNS(aNC);
+
+  if (aNS.BSplineSurface().IsNull())
+  {
+    theDI << "GeomFill_NSections is not done.\n";
+  }
+
+  return 0;
+}
+
+
+#include <TDF_Tool.hxx>
+#include <XCAFDoc_View.hxx>
+#include <XCAFDoc_ViewTool.hxx>
+#include <XCAFView_Object.hxx>
+#include <XCAFView_ProjectionType.hxx>
+static Standard_Integer OCC28389(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 20) {
+    di << "Use: OCC28389 Doc label nb_shapes nb_GDT nb_planes name type pp_x pp_y pp_z vd_x vd_y vd_z ud_x ud_y ud_z zoom width height";
+    return 1;
+  }
+  Handle(TDocStd_Document) aDoc;
+  DDocStd::GetDocument(argv[1], aDoc);
+  if (aDoc.IsNull()) {
+    di << "Error: Wrong document";
+    return 1;
+  }
+  Handle(XCAFDoc_ViewTool) aViewTool = XCAFDoc_DocumentTool::ViewTool(aDoc->Main());
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(aDoc->GetData(), argv[2], aLabel);
+  if (aLabel.IsNull()) {
+    di << "Error: Wrong label";
+    return 1;
+  }
+  Handle(XCAFDoc_View) aView;
+  if (!aLabel.FindAttribute(XCAFDoc_View::GetID(), aView)) {
+    di << "Error: Wrong label";
+    return 1;
+  }
+  Handle(XCAFView_Object) anObj = aView->GetObject();
+  if (anObj.IsNull()) {
+    di << "Error: Wrong label";
+    return 1;
+  }
+
+  Standard_Boolean isOK = Standard_True;
+  // check links
+  Standard_Integer nbShapes = Draw::Atoi(argv[3]);
+  Standard_Integer nbGDTs = Draw::Atoi(argv[4]);
+  Standard_Integer nbPlanes = Draw::Atoi(argv[5]);
+  TDF_LabelSequence aSequence;
+  aViewTool->GetRefShapeLabel(aLabel, aSequence);
+  if (aSequence.Length() != nbShapes)
+    isOK = Standard_False;
+  aSequence.Clear();
+  aViewTool->GetRefGDTLabel(aLabel, aSequence);
+  if (aSequence.Length() != nbGDTs)
+    isOK = Standard_False;
+  aSequence.Clear();
+  aViewTool->GetRefClippingPlaneLabel(aLabel, aSequence);
+  if (aSequence.Length() != nbPlanes)
+    isOK = Standard_False;
+  if (!isOK) {
+    di << "Error: Wrong references";
+    return 1;
+  }
+
+  if (anObj->Name()->IsDifferent(new TCollection_HAsciiString(argv[6]))) {
+    di << "Error: Wrong name";
+    return 1;
+  }
+
+  XCAFView_ProjectionType aType = XCAFView_ProjectionType_NoCamera;
+  if (argv[7][0] == 'p')
+    aType = XCAFView_ProjectionType_Parallel;
+  else if (argv[7][0] == 'c')
+    aType = XCAFView_ProjectionType_Central;
+
+  if (anObj->Type()!= aType) {
+    di << "Error: Wrong type";
+    return 1;
+  }
+
+  gp_Pnt aPP(Draw::Atof(argv[8]), Draw::Atof(argv[9]), Draw::Atof(argv[10]));
+  if (aPP.Distance(anObj->ProjectionPoint()) > Precision::Confusion()) {
+    di << "Error: Wrong projection point";
+    return 1;
+  }
+
+  gp_Dir aVD(Draw::Atof(argv[11]), Draw::Atof(argv[12]), Draw::Atof(argv[13]));
+  if (!aVD.IsEqual(anObj->ViewDirection(), Precision::Angular())) {
+    di << "Error: Wrong view direction";
+    return 1;
+  }
+
+  gp_Dir aUD(Draw::Atof(argv[14]), Draw::Atof(argv[15]), Draw::Atof(argv[16]));
+  if (!aUD.IsEqual(anObj->UpDirection(), Precision::Angular())) {
+    di << "Error: Wrong up direction";
+    return 1;
+  }
+
+  if (fabs(anObj->ZoomFactor() - Draw::Atof(argv[17])) > Precision::Confusion()) {
+    di << "Error: Wrong zoom factor";
+    return 1;
+  }
+
+  if (fabs(anObj->WindowHorizontalSize() - Draw::Atof(argv[18])) > Precision::Confusion())
+    isOK = Standard_False;
+  if (fabs(anObj->WindowVerticalSize() - Draw::Atof(argv[19])) > Precision::Confusion())
+    isOK = Standard_False;
+  if (!isOK) {
+    di << "Error: Wrong Window size";
+    return 1;
+  }
+
+  di << argv[2] << " OK";
+  return 0;
+}
+
+#include <TColgp_HArray1OfPnt2d.hxx>
+#include <TColgp_Array1OfVec2d.hxx>
+#include <TColStd_HArray1OfBoolean.hxx>
+#include <Geom2d_BSplineCurve.hxx>
+#include <Geom2dAPI_Interpolate.hxx>
+#include <GeomAPI.hxx>
+#include <BRepBuilderAPI_MakeEdge2d.hxx>
+
+static Standard_Integer OCC28594(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc != 3)
+  {
+    di << "Usage :" << argv[0] << " curve_with_scale curve_without_scale\n";
+    return 0;
+  }
+  Handle(TColgp_HArray1OfPnt2d) points_2d = new TColgp_HArray1OfPnt2d(1, 6);
+  (*points_2d)(1) = gp_Pnt2d(-30.4, 8);
+  (*points_2d)(2) = gp_Pnt2d(-16.689912, 17.498217);
+  (*points_2d)(3) = gp_Pnt2d(-23.803064, 24.748543);
+  (*points_2d)(4) = gp_Pnt2d(-16.907466, 32.919615);
+  (*points_2d)(5) = gp_Pnt2d(-8.543829, 26.549421);
+  (*points_2d)(6) = gp_Pnt2d(0, 39.200000);
+
+  TColgp_Array1OfVec2d tangent_2d(1, 6);
+  (tangent_2d)(1) = gp_Vec2d(0.3, 0.4);
+  (tangent_2d)(2) = gp_Vec2d(0, 0);
+  (tangent_2d)(3) = gp_Vec2d(0, 0);
+  (tangent_2d)(4) = gp_Vec2d(0, 0);
+  (tangent_2d)(5) = gp_Vec2d(0, 0);
+  (tangent_2d)(6) = gp_Vec2d(1, 0);
+
+  Handle(TColStd_HArray1OfBoolean) tangent_flags = new TColStd_HArray1OfBoolean(1, 6);
+  (*tangent_flags)(1) = true;
+  (*tangent_flags)(2) = false;
+  (*tangent_flags)(3) = false;
+  (*tangent_flags)(4) = false;
+  (*tangent_flags)(5) = false;
+  (*tangent_flags)(6) = true;
+
+  Geom2dAPI_Interpolate interp_2d_with_scale(points_2d, Standard_False, Precision::Confusion());
+  interp_2d_with_scale.Load(tangent_2d, tangent_flags);
+  interp_2d_with_scale.Perform();
+  Handle(Geom2d_BSplineCurve) curve_2d_with_scale = interp_2d_with_scale.Curve();
+
+  Geom2dAPI_Interpolate interp_2d_without_scale(points_2d, Standard_False, Precision::Confusion());
+  interp_2d_without_scale.Load(tangent_2d, tangent_flags, Standard_False);
+  interp_2d_without_scale.Perform();
+  Handle(Geom2d_BSplineCurve) curve_2d_without_scale = interp_2d_without_scale.Curve();
+
+  DrawTrSurf::Set(argv[1], curve_2d_with_scale);
+  DrawTrSurf::Set(argv[2], curve_2d_without_scale);
+  return 0;
+}
+
+static Standard_Integer OCC28784(Draw_Interpretor&, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3)
+    return 1;
+
+  TopoDS_Shape aShape =  DBRep::Get(argv[2]);
+  if (aShape.IsNull())
+    return 1;
+
+  gp_Ax2 aPlane (gp::Origin(), gp::DX(), -gp::DZ());
+  HLRAlgo_Projector aProjector(aPlane);
+
+  Handle(HLRBRep_PolyAlgo) aHLR = new HLRBRep_PolyAlgo(aShape);
+  aHLR->Projector(aProjector);
+  aHLR->Update();
+
+  HLRBRep_PolyHLRToShape aHLRtoShape;
+  aHLRtoShape.Update(aHLR);
+
+  TopoDS_Shape aHidden = aHLRtoShape.HCompound();
+  
+  DBRep::Set(argv[1], aHidden);
+
+  return 0;
+}
+
+static Standard_Integer OCC28829 (Draw_Interpretor&, Standard_Integer, const char**)
+{
+  // do something that causes FPE exception
+  std::cout << "sqrt(-1) = " << sqrt (-1.) << std::endl;
+  return 0;
+}
+
+#include <NCollection_Buffer.hxx>
+#include <DDocStd_DrawDocument.hxx>
+#include <OSD_OpenFile.hxx>
+#include <Standard_ArrayStreamBuffer.hxx>
+#include <TDataStd_Name.hxx>
+#include <TDocStd_Application.hxx>
+
+#ifdef max
+  #undef max
+#endif
+
+static Standard_Integer OCC28887 (Draw_Interpretor&, Standard_Integer theNbArgs, const char** theArgVec)
+{
+  if (theNbArgs < 3)
+  {
+    std::cout << "Syntax error: wrong number of arguments!\n";
+    return 1;
+  }
+
+  const TCollection_AsciiString aFilePath (theArgVec[1]);
+  const TCollection_AsciiString aName     (theArgVec[2]);
+  Handle(NCollection_Buffer) aBuffer;
+  {
+    std::ifstream aFile;
+    OSD_OpenStream (aFile, aFilePath.ToCString(), std::ios::binary | std::ios::in);
+    if (!aFile.is_open())
+    {
+      std::cout << "Error: input file '" << aFilePath << "' cannot be read\n";
+      return 1;
+    }
+    aFile.seekg (0, std::ios_base::end);
+    const int64_t aFileLength = int64_t (aFile.tellg());
+    if (aFileLength > int64_t (std::numeric_limits<ptrdiff_t>::max())
+     || aFileLength < 1)
+    {
+      std::cout << "Error: input file '" << aFilePath << "' is too large\n";
+      return 1;
+    }
+    aFile.seekg (0, std::ios_base::beg);
+
+    aBuffer = new NCollection_Buffer (NCollection_BaseAllocator::CommonBaseAllocator());
+    if (!aBuffer->Allocate (size_t(aFileLength)))
+    {
+      std::cout << "Error: memory allocation (" << aFileLength << ") has failed\n";
+      return 1;
+    }
+
+    aFile.read ((char* )aBuffer->ChangeData(), aBuffer->Size());
+    if (!aFile.good())
+    {
+      std::cout << "Error: input file '" << aFilePath << "' reading failure\n";
+      return 1;
+    }
+  }
+
+  Standard_ArrayStreamBuffer aStreamBuffer ((const char* )aBuffer->ChangeData(), aBuffer->Size());
+  std::istream aStream (&aStreamBuffer);
+  // just play with seeking
+  aStream.seekg (0, std::ios_base::end);
+  aStream.seekg (0, std::ios_base::beg);
+  if (aFilePath.EndsWith (".brep")
+   || aFilePath.EndsWith (".rle"))
+  {
+    TopoDS_Shape aShape;
+    BRep_Builder aBuilder;
+    BRepTools::Read (aShape, aStream, aBuilder);
+    DBRep::Set (aName.ToCString(), aShape);
+  }
+  else
+  {
+    Handle(TDocStd_Document) aDoc;
+    Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
+    Standard_CString aNameVar = aName.ToCString();
+    if (DDocStd::GetDocument (aNameVar, aDoc, Standard_False))
+    {
+      std::cout << "Error: document with name " << aName << " already exists\n";
+      return 1;
+    }
+
+    if (anApp->Open (aStream, aDoc) != PCDM_RS_OK)
+    {
+      std::cout << "Error: cannot open XDE document\n";
+      return 1;
+    }
+
+    Handle(DDocStd_DrawDocument) aDrawDoc = new DDocStd_DrawDocument (aDoc);
+    TDataStd_Name::Set (aDoc->GetData()->Root(), aName.ToCString());
+    Draw::Set (aName.ToCString(), aDrawDoc);
+  }
+
+  return 0;
+}
+
+static Standard_Integer OCC28131 (Draw_Interpretor&, Standard_Integer theNbArgs, const char** theArgVec)
+{
+  if (theNbArgs != 2)
+  {
+    std::cerr << "Error: wrong number of arguments" << std::endl;
+    return 1;
+  }
+
+  double height = 8.5;
+  gp_Pnt JiZhunXian2_v0 = gp_Pnt(-17.6, 0.0, 0.0);
+  gp_Pnt JiZhunXian2_v1 = gp_Pnt(0, 32.8, 0.0);
+
+  // Outline
+  TColgp_Array1OfPnt outer_e_bzr_geom_v(1, 4);
+  {
+    outer_e_bzr_geom_v(1) = JiZhunXian2_v0;
+    outer_e_bzr_geom_v(4) = JiZhunXian2_v1;
+
+    Standard_Real ratio1 = 5.4 / 13.2;
+    outer_e_bzr_geom_v(2) = gp_Pnt(outer_e_bzr_geom_v(1).X(), ratio1*outer_e_bzr_geom_v(4).Y(), 0);
+    Standard_Real ratio2 = 6.0 / 6.8;
+    outer_e_bzr_geom_v(3) = gp_Pnt(ratio2*outer_e_bzr_geom_v(1).X(), outer_e_bzr_geom_v(4).Y(), 0);
+  }
+
+  Handle(Geom_BezierCurve) outer_e_bzr_geom = new Geom_BezierCurve(outer_e_bzr_geom_v);
+  Handle(Geom_BSplineCurve) outer_e_bsp_geom = GeomConvert::CurveToBSplineCurve(outer_e_bzr_geom);
+  TopoDS_Edge outer_e = BRepBuilderAPI_MakeEdge(outer_e_bsp_geom);
+
+  Handle(Geom_BSplineCurve) curve1;
+  {
+    Handle(TColgp_HArray1OfPnt2d) harray = new TColgp_HArray1OfPnt2d(1, 2); // sizing harray
+    harray->SetValue(1, gp_Pnt2d(-JiZhunXian2_v1.Y(), 0));
+    harray->SetValue(2, gp_Pnt2d(0, height + height / 2));
+
+    Geom2dAPI_Interpolate anInterpolation(harray, Standard_False, 1e-6);
+
+    gp_Vec2d vtangent1(0, 1);
+    gp_Vec2d vtangent2(1, 0);
+    anInterpolation.Load(vtangent1, vtangent2);
+    anInterpolation.Perform();
+
+    Handle(Geom2d_BSplineCurve) c = anInterpolation.Curve();
+
+    gp_Pln pln(gp_Ax3(gp_Pnt(), gp_Dir(1, 0, 0), gp_Dir(0, -1, 0)));
+
+    Handle(Geom_BSplineCurve) c3d = Handle(Geom_BSplineCurve)::DownCast(GeomAPI::To3d(c, pln));
+    curve1 = c3d;
+  }
+
+  Handle(Geom_BSplineCurve) curve2;
+  {
+    Handle(TColgp_HArray1OfPnt2d) harray = new TColgp_HArray1OfPnt2d(1, 3); // sizing harray
+    harray->SetValue(1, gp_Pnt2d(-JiZhunXian2_v0.X(), 0));
+    harray->SetValue(2, gp_Pnt2d(-JiZhunXian2_v0.X() - 2.6, height));
+    harray->SetValue(3, gp_Pnt2d(0, height + height / 2));
+
+    Geom2dAPI_Interpolate anInterpolation(harray, Standard_False, 1e-6);
+    anInterpolation.Perform();
+
+    Handle(Geom2d_BSplineCurve) c = anInterpolation.Curve();
+    gp_Pln pln(gp_Ax3(gp_Pnt(), gp_Dir(0, -1, 0), gp_Dir(-1, 0, 0)));
+    Handle(Geom_BSplineCurve) c3d = Handle(Geom_BSplineCurve)::DownCast(GeomAPI::To3d(c, pln));
+    curve2 = c3d;
+  }
+
+  //////////////////////////////////////
+  GeomFill_BSplineCurves fill2;
+  fill2.Init(outer_e_bsp_geom, curve1, curve2, GeomFill_CoonsStyle);
+
+  const Handle(Geom_BSplineSurface)& surf_geom = fill2.Surface();
+
+  TopoDS_Shape filled_face = BRepBuilderAPI_MakeFace(surf_geom, 0);
+
+  DBRep::Set (theArgVec[1], filled_face);
+
+/*
+  ///////////////////////////////////////////////////////////////////////
+  TopoDS_Solid first_solid;
+  {
+    BRepOffset_MakeOffset myOffsetShape(filled_face, -offset_thick, 1e-4,
+      BRepOffset_Skin, //Mode
+      Standard_False, //Intersection
+      Standard_False, //SelfInter
+      GeomAbs_Intersection, //Join
+      Standard_True, //Thickening
+      Standard_False //RemoveIntEdges
+      ); //RemoveInvalidFaces
+    first_solid = TopoDS::Solid(myOffsetShape.Shape());
+  }
+*/
+  return 0;
+}
+#include <math_NewtonFunctionRoot.hxx>
+#include <math_TrigonometricFunctionRoots.hxx>
+#include <math_TrigonometricEquationFunction.hxx>
+#include <gp_Elips2d.hxx>
+#include <Geom2d_Ellipse.hxx>
+#include <Geom2dAPI_InterCurveCurve.hxx>
+static Standard_Integer OCC29289(Draw_Interpretor&, Standard_Integer , const char** )
+{
+  gp_Elips2d e1(gp_Ax2d(gp_Pnt2d(0., 0.), gp_Dir2d(1., 0)), 2., 1.);
+  Handle(Geom2d_Ellipse) Ge1 = new Geom2d_Ellipse(e1);
+  gp_Elips2d e2(gp_Ax2d(gp_Pnt2d(0.5, 0.5), gp_Dir2d(1., 1.)), 2., 1.);
+  Handle(Geom2d_Ellipse) Ge2 = new Geom2d_Ellipse(e2);
+
+  Standard_Integer err = 0;
+  Geom2dAPI_InterCurveCurve Intersector;
+  Intersector.Init(Ge1, Ge2, 1.e-7);
+  if (Intersector.NbPoints() == 0)
+  {
+    std::cout << "Error: intersector is not done  \n";
+    err = 1;
+  }
+
+
+  Standard_Real A, B, C, D, E;
+  A = 1.875;
+  B = -.75;
+  C = -.5;
+  D = -.25;
+  E = -.25;
+  math_TrigonometricEquationFunction MyF(A, B, C, D, E);
+  Standard_Real X, Tol1, Eps, Teta, TetaNewton;
+  Tol1 = 1.e-15;
+  Eps = 1.5e-12;
+  Standard_Integer Nit[] = { 5, 6, 7, 6 };
+
+  Standard_Real TetaPrev = 0.;
+  Standard_Integer i;
+  for (i = 1; i <= Intersector.NbPoints(); i++) {
+    Teta = Intersector.Intersector().Point(i).ParamOnFirst();
+    X = Teta - 0.1 * (Teta - TetaPrev);
+    TetaPrev = Teta;
+    math_NewtonFunctionRoot Resol(MyF, X, Tol1, Eps, Nit[i-1]);
+    if (Resol.IsDone()) {
+      TetaNewton = Resol.Root();
+      if (Abs(Teta - TetaNewton) > 1.e-7)
+      {
+        std::cout << "Error: Newton root is wrong for " << Teta << " \n";
+        err = 1;
+      }
+    }
+    else
+    {
+      std::cout << "Error: Newton is not done for " << Teta << " \n";
+      err = 1;
+    }
+  }
+
+  return err;
+}
+
+//===============================================================================================
+Standard_Boolean IsSameGuid (const Standard_GUID& aGuidNull, const Standard_GUID& aGuid2)
+{
+  Standard_Boolean isSame (Standard_False);
+  if(Standard_GUID::IsEqual(aGuidNull, aGuid2)) {
+    aGuid2.ShallowDump(cout);
+    isSame = Standard_True;
+  } else {
+    aGuid2.ShallowDump(cout);
+    cout <<endl;
+  }
+  return isSame;
+}
+
+#include <TDataStd_AsciiString.hxx>
+#include <TDataStd_BooleanArray.hxx>
+#include <TDataStd_BooleanList.hxx>
+#include <TDataStd_ByteArray.hxx>
+#include <TDataStd_ExtStringArray.hxx>
+#include <TDataStd_ExtStringList.hxx>
+#include <TDataStd_Integer.hxx>
+#include <TDataStd_IntegerArray.hxx>
+#include <TDataStd_IntegerList.hxx>
+#include <TDataStd_Name.hxx>
+#include <TDataStd_Real.hxx>
+#include <TDataStd_RealArray.hxx>
+#include <TDataStd_RealList.hxx>
+#include <TDataStd_ReferenceArray.hxx>
+#include <TDataStd_ReferenceList.hxx>
+
+#define QCOMPARE(val1, val2) \
+  di << "Checking " #val1 " == " #val2 << \
+        ((val1) == (val2) ? ": OK\n" : ": Error\n")
+
+static Standard_Integer OCC29371 (Draw_Interpretor& di, Standard_Integer n, const char** a)
+{
+  if (n != 1)
+  {
+    std::cout << "Usage : " << a[0] << "\n";
+    return 1;
+  }
+
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
+  Handle(TDocStd_Document) aDoc;
+  anApp->NewDocument ("BinOcaf", aDoc);
+  TDF_Label aLab = aDoc->Main();
+  Standard_GUID aNullGuid("00000000-0000-0000-0000-000000000000");
+  Standard_Boolean IsNullGuid(Standard_False);
+
+  try {
+    //1. Set TDataStd_AsciiString
+    Handle(TDataStd_AsciiString) aStrAtt = new TDataStd_AsciiString();
+    aLab.AddAttribute(aStrAtt);
+    if(!aStrAtt.IsNull()) {
+      Standard_GUID aGuid = aStrAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //2. Set TDataStd_BooleanArray
+    Handle(TDataStd_BooleanArray) aBArAtt = new TDataStd_BooleanArray();
+    aLab.AddAttribute(aBArAtt);
+    if(!aBArAtt.IsNull()) {
+      Standard_GUID aGuid = aBArAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //3. Set TDataStd_BooleanList
+    Handle(TDataStd_BooleanList) aBListAtt = new TDataStd_BooleanList();
+    aLab.AddAttribute(aBListAtt);
+    if(!aBListAtt.IsNull()) {
+      Standard_GUID aGuid = aBListAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //4. Set TDataStd_ByteArray
+    Handle(TDataStd_ByteArray) aByteArAtt = new TDataStd_ByteArray();
+    aLab.AddAttribute(aByteArAtt);
+    if(!aByteArAtt.IsNull()) {
+      Standard_GUID aGuid = aByteArAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //5. Set TDataStd_ExtStringArray
+    Handle(TDataStd_ExtStringArray) anExtStrArAtt = new TDataStd_ExtStringArray();
+    aLab.AddAttribute(anExtStrArAtt);
+    if(!anExtStrArAtt.IsNull()) {
+      Standard_GUID aGuid = anExtStrArAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //6. Set TDataStd_ExtStringList
+    Handle(TDataStd_ExtStringList) anExtStrListAtt = new TDataStd_ExtStringList();
+    aLab.AddAttribute(anExtStrListAtt);
+    if(!anExtStrListAtt.IsNull()) {
+      Standard_GUID aGuid = anExtStrListAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //7. Set TDataStd_Integer
+    Handle(TDataStd_Integer) anIntAtt = new TDataStd_Integer();
+    aLab.AddAttribute(anIntAtt);
+    if(!anIntAtt.IsNull()) {
+      Standard_GUID aGuid = anIntAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //8. Set TDataStd_IntegerArray
+    Handle(TDataStd_IntegerArray) anIntArrAtt = new TDataStd_IntegerArray();
+    aLab.AddAttribute(anIntArrAtt);
+    if(!anIntArrAtt.IsNull()) {
+      Standard_GUID aGuid = anIntArrAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //9. Set TDataStd_IntegerList
+    Handle(TDataStd_IntegerList) anIntListAtt = new TDataStd_IntegerList();
+    aLab.AddAttribute(anIntListAtt);
+    if(!anIntListAtt.IsNull()) {
+      Standard_GUID aGuid = anIntListAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //10. Set TDataStd_Name
+    Handle(TDataStd_Name) aNameAtt = new TDataStd_Name();
+    aLab.AddAttribute(aNameAtt);
+    if(!aNameAtt.IsNull()) {
+      Standard_GUID aGuid = aNameAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //11. Set TDataStd_Real
+    Handle(TDataStd_Real) aRealAtt = new TDataStd_Real();
+    aLab.AddAttribute(aRealAtt);
+    if(!aRealAtt.IsNull()) {
+      Standard_GUID aGuid = aRealAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //12. Set TDataStd_RealArray
+    Handle(TDataStd_RealArray) aRealArrAtt = new TDataStd_RealArray();
+    aLab.AddAttribute(aRealArrAtt);
+    if(!aRealArrAtt.IsNull()) {
+      Standard_GUID aGuid = aRealArrAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //13. Set TDataStd_RealList
+    Handle(TDataStd_RealList) aRealListAtt = new TDataStd_RealList();
+    aLab.AddAttribute(aRealListAtt);
+    if(!aRealListAtt.IsNull()) {
+      Standard_GUID aGuid = aRealListAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //14. Set TDataStd_ReferenceArray
+    Handle(TDataStd_ReferenceArray) aRefArrAtt = new TDataStd_ReferenceArray();
+    aLab.AddAttribute(aRefArrAtt);
+    if(!aRefArrAtt.IsNull()) {
+      Standard_GUID aGuid = aRefArrAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+
+    //15. Set TDataStd_ReferenceList
+    Handle(TDataStd_ReferenceList) aRefListAtt = new TDataStd_ReferenceList();
+    aLab.AddAttribute(aRefListAtt);
+    if(!aRefListAtt.IsNull()) {
+      Standard_GUID aGuid = aRefListAtt->ID();
+      IsNullGuid = IsSameGuid(aNullGuid, aGuid);
+    }
+  } catch (...)
+  {
+    IsNullGuid = Standard_True;
+  }
+  QCOMPARE (IsNullGuid, Standard_False);
+  anApp->Close(aDoc);
+  return 0;
+}
+
+#include <NCollection_DoubleMap.hxx>
+#include <NCollection_IndexedMap.hxx>
+#include <NCollection_DataMap.hxx>
+#include <NCollection_IndexedDataMap.hxx>
+#include <OSD_MemInfo.hxx>
+
+// check that copying of empty maps does not allocate extra memory
+template<typename T> void AllocDummyArr (Draw_Interpretor& theDI, int theN1, int theN2)
+{
+  NCollection_Array1<T> aMapArr1(0, theN1), aMapArr2(0, theN2);
+
+  OSD_MemInfo aMemTool;
+  Standard_Size aMem0 = aMemTool.Value (OSD_MemInfo::MemHeapUsage);
+
+  for (int i = 1; i < theN1; i++)
+    aMapArr1(i) = aMapArr1(i-1);
+  for (int i = 1; i < theN2; i++)
+    aMapArr2(i) = aMapArr2(0);
+
+  aMemTool.Update();
+  Standard_Size aMem1 = aMemTool.Value (OSD_MemInfo::MemHeapUsage);
+
+  theDI << "Heap usage before copy = " << (int)aMem0 << ", after = " << (int)aMem1 << "\n";
+  
+  if (aMem1 > aMem0)
+    theDI << "Error: memory increased by " << (int)(aMem1 - aMem0) << " bytes\n";
+};
+
+static Standard_Integer OCC29064 (Draw_Interpretor& theDI, Standard_Integer theArgc, const char** theArgv)
+{
+  if (theArgc < 2)
+  {
+    cout << "Error: give argument indicating type of map (map, doublemap, datamap, indexedmap, indexeddatamap)" << endl;
+    return 1;
+  }
+
+  const int nbm1 = 10000, nbm2 = 10000;
+  if (strcasecmp (theArgv[1], "map") == 0)
+    AllocDummyArr<NCollection_Map<int> > (theDI, nbm1, nbm2);
+  else if (strcasecmp (theArgv[1], "doublemap") == 0)
+    AllocDummyArr<NCollection_DoubleMap<int, int> > (theDI, nbm1, nbm2);
+  else if (strcasecmp (theArgv[1], "datamap") == 0)
+    AllocDummyArr<NCollection_DataMap<int, int> > (theDI, nbm1, nbm2);
+  else if (strcasecmp (theArgv[1], "indexedmap") == 0)
+    AllocDummyArr<NCollection_IndexedMap<int> > (theDI, nbm1, nbm2);
+  else if (strcasecmp (theArgv[1], "indexeddatamap") == 0)
+    AllocDummyArr<NCollection_IndexedDataMap<int, int> > (theDI, nbm1, nbm2);
+  else
+  {
+    cout << "Error: unrecognized argument " << theArgv[1] << endl;
+    return 1;
+  }
+  return 0;
+}
+
+#include <BRepOffsetAPI_MakePipeShell.hxx>
+#include <GC_MakeArcOfCircle.hxx>
+#include <BRepAdaptor_CompCurve.hxx>
+#include <gp_Circ.hxx>
+//=======================================================================
+//function : OCC29430
+//purpose  : 
+//=======================================================================
+static Standard_Integer OCC29430(Draw_Interpretor& theDI,
+                                 Standard_Integer /*theNArg*/,
+                                 const char** theArgVal)
+{
+  const Standard_Real r45 = M_PI / 4.0, r225 = 3.0*M_PI / 4.0;
+
+  GC_MakeArcOfCircle arcMaker(gp_Circ(gp_Ax2(gp_Pnt(0.0, 0.0, 0.0), gp_Dir(0.0, 0.0, 1.0), gp_Dir(1.0, 0.0, 0.0)), 1.0), r45, r225, Standard_True);
+  BRepBuilderAPI_MakeEdge edgeMaker(arcMaker.Value());
+  BRepBuilderAPI_MakeWire wireMaker(edgeMaker.Edge());
+  const TopoDS_Wire circle = wireMaker.Wire();
+
+  DBRep::Set(theArgVal[1], circle);
+
+  BRepAdaptor_CompCurve curve(circle);
+  theDI << "Curve.FirstParameter() = " << curve.FirstParameter() << "\n";
+  theDI << "Curve.LastParameter() = " << curve.LastParameter() << "\n";
+  theDI << "Curve.Period() = " << (curve.IsPeriodic()? curve.Period() : 0.0) << "\n";
+  const gp_Pnt aStartPt = curve.Value(curve.FirstParameter());
+  const gp_Pnt anEndPt = curve.Value(curve.LastParameter());
+
+  DrawTrSurf::Set(theArgVal[2], aStartPt);
+  DrawTrSurf::Set(theArgVal[3], anEndPt);
+
+  return 0;
+}
+
+#include <STEPCAFControl_Reader.hxx>
+
+//=======================================================================
+//function : OCC29531
+//purpose  : 
+//=======================================================================
+static Standard_Integer OCC29531(Draw_Interpretor&, Standard_Integer, const char** theArgV)
+{
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
+  Handle(TDocStd_Document) aDoc;
+  anApp->NewDocument("BinOcaf", aDoc);
+  aDoc->SetUndoLimit(1);
+
+  STEPCAFControl_Reader Reader;
+  Reader.ReadFile(theArgV[1]);
+  Reader.Transfer(aDoc);
+  TDF_Label aShL, aDL;
+  TDF_Tool::Label(aDoc->GetData(), "0:1:1:2:672", aShL);
+  TDF_Tool::Label(aDoc->GetData(), "0:1:4:10", aDL);
+
+  aDoc->OpenCommand();
+
+  Handle(XCAFDoc_DimTolTool) aDimTolTool = XCAFDoc_DocumentTool::DimTolTool(aDoc->Main());
+  aDimTolTool->SetDimension(aShL, aDL);
+
+  aDoc->CommitCommand();
+
+  aDoc->Undo();
+  aDoc->Redo();
+  return 0;
+}
 
 void QABugs::Commands_20(Draw_Interpretor& theCommands) {
   const char *group = "QABugs";
@@ -1425,6 +2895,35 @@ void QABugs::Commands_20(Draw_Interpretor& theCommands) {
   theCommands.Add ("OCC26675_1", "OCC26675_1 result", __FILE__, SurfaceGenOCC26675_1, group);
   theCommands.Add ("OCC24836", "OCC24836", __FILE__, OCC24836, group);
   theCommands.Add("OCC27021", "OCC27021", __FILE__, OCC27021, group);
+  theCommands.Add("OCC27235", "OCC27235", __FILE__, OCC27235, group);
+  theCommands.Add("OCC26930", "OCC26930", __FILE__, OCC26930, group);
+  theCommands.Add("OCC27466", "OCC27466", __FILE__, OCC27466, group);
+  theCommands.Add("OCC27341",
+                  "OCC27341 res shape axo/top/bottom/front/back/left/right",
+                  __FILE__, OCC27341, group);
+  theCommands.Add ("OCC26747_1", "OCC26747_1 result", __FILE__, OCC26747_1, group);
+  theCommands.Add ("OCC26747_2", "OCC26747_2 result", __FILE__, OCC26747_2, group);
+  theCommands.Add ("OCC26747_3", "OCC26747_3 result", __FILE__, OCC26747_3, group);
+  theCommands.Add ("OCC27357", "OCC27357", __FILE__, OCC27357, group);
+  theCommands.Add("OCC26270", "OCC26270 shape result", __FILE__, OCC26270, group);
+  theCommands.Add ("OCC27552", "OCC27552", __FILE__, OCC27552, group); 
+  theCommands.Add("OCC27875", "OCC27875 curve", __FILE__, OCC27875, group);
+  theCommands.Add("OCC28389", "OCC28389", __FILE__, OCC28389, group);
+  theCommands.Add("OCC28594", "OCC28594", __FILE__, OCC28594, group);
+  theCommands.Add("OCC28784", "OCC28784 result shape", __FILE__, OCC28784, group);
+  theCommands.Add("OCC28829", "OCC28829: perform invalid FPE operation", __FILE__, OCC28829, group);
+  theCommands.Add("OCC28887",
+                  "OCC28887 filePath result"
+                  "\n\t\t: Check interface for reading BRep from memory.",
+                  __FILE__, OCC28887, group);
+  theCommands.Add("OCC28131", "OCC28131 name: creates face problematic for offset", __FILE__, OCC28131, group);
+  theCommands.Add("OCC29289", "OCC29289 : searching trigonometric root by Newton iterations", __FILE__, OCC29289, group);
+  theCommands.Add ("OCC29371", "OCC29371", __FILE__, OCC29371, group);
+  theCommands.Add("OCC29430", "OCC29430 <result wire> "
+                              "<result first point> <result last point>",
+                              __FILE__, OCC29430, group);
+  theCommands.Add("OCC29531", "OCC29531 <step file name>", __FILE__, OCC29531, group);
 
+  theCommands.Add ("OCC29064", "OCC29064: test memory usage by copying empty maps", __FILE__, OCC29064, group);
   return;
 }

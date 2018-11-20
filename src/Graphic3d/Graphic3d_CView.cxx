@@ -17,6 +17,17 @@
 
 IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_CView,Graphic3d_DataStructureManager)
 
+namespace
+{
+  static const int THE_DEFAULT_LAYERS[] = { Graphic3d_ZLayerId_Top,
+                                            Graphic3d_ZLayerId_Topmost,
+                                            Graphic3d_ZLayerId_BotOSD,
+                                            Graphic3d_ZLayerId_TopOSD };
+
+  static const int THE_NB_DEFAULT_LAYERS = sizeof(THE_DEFAULT_LAYERS) / sizeof(*THE_DEFAULT_LAYERS);
+
+}
+
 //=======================================================================
 //function : Constructor
 //purpose  :
@@ -27,6 +38,7 @@ Graphic3d_CView::Graphic3d_CView (const Handle(Graphic3d_StructureManager)& theM
   myIsInComputedMode       (Standard_False),
   myIsActive               (Standard_False),
   myIsRemoved              (Standard_False),
+  myShadingModel           (Graphic3d_TOSM_FRAGMENT),
   myVisualization          (Graphic3d_TOV_WIREFRAME)
 {
   myId = myStructureManager->Identification (this);
@@ -75,12 +87,12 @@ void Graphic3d_CView::Activate()
       if (anAnswer == Graphic3d_TOA_YES
        || anAnswer == Graphic3d_TOA_COMPUTE)
       {
-        Display (aStruct, Aspect_TOU_WAIT);
+        Display (aStruct);
       }
     }
   }
 
-  Update (myStructureManager->UpdateMode());
+  Update();
 }
 
 // =======================================================================
@@ -111,11 +123,11 @@ void Graphic3d_CView::Deactivate()
       if (anAnswer == Graphic3d_TOA_YES
        || anAnswer == Graphic3d_TOA_COMPUTE)
       {
-        Erase (aStruct, Aspect_TOU_WAIT);
+        Erase (aStruct);
       }
     }
 
-    Update (myStructureManager->UpdateMode());
+    Update();
     myIsActive = Standard_False;
   }
 }
@@ -135,7 +147,7 @@ void Graphic3d_CView::Remove()
 
   for (Graphic3d_MapIteratorOfMapOfStructure aStructIter (aDisplayedStructs); aStructIter.More(); aStructIter.Next())
   {
-    Erase (aStructIter.Value(), Aspect_TOU_WAIT);
+    Erase (aStructIter.Value());
   }
 
   myStructsToCompute.Clear();
@@ -201,21 +213,19 @@ void Graphic3d_CView::SetComputedMode (const Standard_Boolean theMode)
       eraseStructure   (aStruct->CStructure());
       displayStructure (myStructsComputed.Value (anIndex)->CStructure(), aStruct->DisplayPriority());
 
-      Display (aStruct, Aspect_TOU_WAIT);
+      Display (aStruct);
       if (aStruct->IsHighlighted())
       {
         const Handle(Graphic3d_Structure)& aCompStruct = myStructsComputed.Value (anIndex);
         if (!aCompStruct->IsHighlighted())
         {
-          aCompStruct->Highlight (Aspect_TOHM_COLOR, aStruct->HighlightColor(), Standard_False);
+          aCompStruct->Highlight (aStruct->HighlightStyle(), Standard_False);
         }
       }
     }
     else
     {
-      TColStd_Array2OfReal aTrsf (0, 3, 0, 3);
-      aStruct->Transform (aTrsf);
-      Handle(Graphic3d_Structure) aCompStruct = aStruct->IsTransformed() ? aStruct->Compute (this, aTrsf) : aStruct->Compute (this);
+      Handle(Graphic3d_Structure) aCompStruct = aStruct->IsTransformed() ? aStruct->Compute (this, aStruct->Transformation()) : aStruct->Compute (this);
       aCompStruct->SetHLRValidation (Standard_True);
 
       const Standard_Boolean toComputeWireframe = myVisualization == Graphic3d_TOV_WIREFRAME
@@ -227,7 +237,7 @@ void Graphic3d_CView::SetComputedMode (const Standard_Boolean theMode)
 
       if (aStruct->IsHighlighted())
       {
-        aCompStruct->Highlight (Aspect_TOHM_COLOR, aStruct->HighlightColor(), Standard_False);
+        aCompStruct->Highlight (aStruct->HighlightStyle(), Standard_False);
       }
 
       Standard_Boolean hasResult = Standard_False;
@@ -249,11 +259,12 @@ void Graphic3d_CView::SetComputedMode (const Standard_Boolean theMode)
         myStructsComputed .Append (aCompStruct);
       }
 
+      aCompStruct->CalculateBoundBox();
       eraseStructure   (aStruct->CStructure());
       displayStructure (aCompStruct->CStructure(), aStruct->DisplayPriority());
     }
   }
-  Update (myStructureManager->UpdateMode());
+  Update();
 }
 
 // =======================================================================
@@ -267,7 +278,7 @@ void Graphic3d_CView::ReCompute (const Handle(Graphic3d_Structure)& theStruct)
    && !theStruct->CStructure()->IsForHighlight
    && !theStruct->CStructure()->IsInfinite)
   {
-    const Standard_Integer aLayerId = theStruct->DisplayPriority();
+    const Graphic3d_ZLayerId aLayerId = theStruct->GetZLayer();
     InvalidateBVHData (aLayerId);
   }
 
@@ -291,23 +302,13 @@ void Graphic3d_CView::ReCompute (const Handle(Graphic3d_Structure)& theStruct)
   }
 
   // compute + validation
-  TColStd_Array2OfReal anIdent (0, 3, 0, 3);
-  for (Standard_Integer aRow = 0; aRow <= 3; ++aRow)
-  {
-    for (Standard_Integer aCol = 0; aCol <= 3; ++aCol)
-    {
-      anIdent (aRow, aCol) = (aRow == aCol ? 1.0 : 0.0);
-    }
-  }
-  TColStd_Array2OfReal aTrsf (0, 3, 0, 3);
-  theStruct->Transform (aTrsf);
-
   Handle(Graphic3d_Structure) aCompStructOld = myStructsComputed.ChangeValue (anIndex);
   Handle(Graphic3d_Structure) aCompStruct    = aCompStructOld;
-  aCompStruct->SetTransform (anIdent, Graphic3d_TOC_REPLACE);
-  theStruct->IsTransformed() ? theStruct->Compute (this, aTrsf, aCompStruct)
-                             : theStruct->Compute (this,        aCompStruct);
+  aCompStruct->SetTransformation (Handle(Geom_Transformation)());
+  theStruct->IsTransformed() ? theStruct->Compute (this, theStruct->Transformation(), aCompStruct)
+                             : theStruct->Compute (this,                              aCompStruct);
   aCompStruct->SetHLRValidation (Standard_True);
+  aCompStruct->CalculateBoundBox();
 
   // of which type will be the computed?
   const Standard_Boolean toComputeWireframe = myVisualization == Graphic3d_TOV_WIREFRAME
@@ -325,7 +326,7 @@ void Graphic3d_CView::ReCompute (const Handle(Graphic3d_Structure)& theStruct)
 
   if (theStruct->IsHighlighted())
   {
-    aCompStruct->Highlight (Aspect_TOHM_COLOR, theStruct->HighlightColor(), Standard_False);
+    aCompStruct->Highlight (theStruct->HighlightStyle(), Standard_False);
   }
 
   // The previous calculation is removed and the new one is displayed
@@ -349,14 +350,9 @@ void Graphic3d_CView::ReCompute (const Handle(Graphic3d_Structure)& theStruct)
 // function : Update
 // purpose  :
 // =======================================================================
-void Graphic3d_CView::Update (const Aspect_TypeOfUpdate theUpdateMode)
+void Graphic3d_CView::Update (const Graphic3d_ZLayerId theLayerId)
 {
-  myMinMax.Invalidate();
-  if (theUpdateMode == Aspect_TOU_ASAP)
-  {
-    Compute();
-    Redraw();
-  }
+  InvalidateZLayerBoundingBox (theLayerId);
 }
 
 // =======================================================================
@@ -407,15 +403,74 @@ void Graphic3d_CView::DisplayedStructures (Graphic3d_MapOfStructure& theStructur
 // function : MinMaxValues
 // purpose  :
 // =======================================================================
-Bnd_Box Graphic3d_CView::MinMaxValues (const Standard_Boolean theToIgnoreInfiniteFlag) const
+Bnd_Box Graphic3d_CView::MinMaxValues (const Standard_Boolean theToIncludeAuxiliary) const
 {
-  if (myMinMax.IsOutdated (theToIgnoreInfiniteFlag))
+  Bnd_Box aResult;
+
+  if (!IsDefined())
   {
-    myMinMax.BoundingBox (theToIgnoreInfiniteFlag) = MinMaxValues (myStructsDisplayed, theToIgnoreInfiniteFlag);
-    myMinMax.IsOutdated  (theToIgnoreInfiniteFlag) = Standard_False;
+    return aResult;
   }
 
-  return myMinMax.BoundingBox (theToIgnoreInfiniteFlag);
+  Handle(Graphic3d_Camera) aCamera = Camera();
+  Standard_Integer aWinWidth  = 0;
+  Standard_Integer aWinHeight = 0;
+
+  Window()->Size (aWinWidth, aWinHeight);
+
+  for (Standard_Integer aLayer = 0; aLayer < THE_NB_DEFAULT_LAYERS; ++aLayer)
+  {
+    Bnd_Box aBox = ZLayerBoundingBox (THE_DEFAULT_LAYERS[aLayer],
+                                      aCamera,
+                                      aWinWidth,
+                                      aWinHeight,
+                                      theToIncludeAuxiliary);
+    aResult.Add (aBox);
+  }
+
+  Standard_Integer aMaxZLayer = ZLayerMax();
+  for (Standard_Integer aLayerId = Graphic3d_ZLayerId_Default; aLayerId <= aMaxZLayer; ++aLayerId)
+  {
+    Bnd_Box aBox = ZLayerBoundingBox (aLayerId,
+                                      aCamera,
+                                      aWinWidth,
+                                      aWinHeight,
+                                      theToIncludeAuxiliary);
+    aResult.Add(aBox);
+  }
+
+  return aResult;
+}
+
+// =======================================================================
+// function : ConsiderZoomPersistenceObjects
+// purpose  :
+// =======================================================================
+Standard_Real Graphic3d_CView::ConsiderZoomPersistenceObjects()
+{
+  if (!IsDefined())
+  {
+    return 1.0;
+  }
+
+  Handle(Graphic3d_Camera) aCamera = Camera();
+  Standard_Integer aWinWidth  = 0;
+  Standard_Integer aWinHeight = 0;
+
+  Window()->Size (aWinWidth, aWinHeight);
+
+  Standard_Real aMaxCoef = 1.0;
+  for (Standard_Integer aLayer = 0; aLayer < THE_NB_DEFAULT_LAYERS; ++aLayer)
+  {
+    aMaxCoef = Max (aMaxCoef, considerZoomPersistenceObjects (THE_DEFAULT_LAYERS[aLayer], aCamera, aWinWidth, aWinHeight));
+  }
+
+  for (Standard_Integer aLayer = Graphic3d_ZLayerId_Default; aLayer <= ZLayerMax(); ++aLayer)
+  {
+    aMaxCoef = Max (aMaxCoef, considerZoomPersistenceObjects (aLayer, aCamera, aWinWidth, aWinHeight));
+  }
+
+  return aMaxCoef;
 }
 
 // =======================================================================
@@ -439,25 +494,19 @@ Bnd_Box Graphic3d_CView::MinMaxValues (const Graphic3d_MapOfStructure& theSet,
   for (Graphic3d_MapIteratorOfMapOfStructure aStructIter (theSet); aStructIter.More(); aStructIter.Next())
   {
     const Handle(Graphic3d_Structure)& aStructure = aStructIter.Key();
-    if (!aStructure->IsVisible() || aStructure->IsEmpty())
-    {
-      continue;
-    }
-    else if (!aStructure->CStructure()->ViewAffinity.IsNull()
-          && !aStructure->CStructure()->ViewAffinity->IsVisible (aViewId))
+    if (aStructure->IsEmpty()
+    || !aStructure->CStructure()->IsVisible (aViewId))
     {
       continue;
     }
 
     // "FitAll" operation ignores object with transform persistence parameter
-    if (aStructure->TransformPersistence().Flags != Graphic3d_TMF_None)
+    if (!aStructure->TransformPersistence().IsNull())
     {
       // Panning and 2d persistence apply changes to projection or/and its translation components.
       // It makes them incompatible with z-fitting algorithm. Ignored by now.
-      if (!theToIgnoreInfiniteFlag ||
-          (aStructure->TransformPersistence().Flags & Graphic3d_TMF_2d) ||
-          (aStructure->TransformPersistence().Flags & Graphic3d_TMF_PanPers) ||
-          (aStructure->TransformPersistence().Flags & Graphic3d_TMF_TriedronPers))
+      if (!theToIgnoreInfiniteFlag
+       || aStructure->TransformPersistence()->IsTrihedronOr2d())
       {
         continue;
       }
@@ -470,11 +519,11 @@ Bnd_Box Graphic3d_CView::MinMaxValues (const Graphic3d_MapOfStructure& theSet,
       continue;
     }
 
-    if (aStructure->TransformPersistence().Flags != Graphic3d_TMF_None)
+    if (!aStructure->TransformPersistence().IsNull())
     {
       const Graphic3d_Mat4d& aProjectionMat = aCamera->ProjectionMatrix();
       const Graphic3d_Mat4d& aWorldViewMat  = aCamera->OrientationMatrix();
-      aStructure->TransformPersistence().Apply (aProjectionMat, aWorldViewMat, aWinWidth, aWinHeight, aBox);
+      aStructure->TransformPersistence()->Apply (aCamera, aProjectionMat, aWorldViewMat, aWinWidth, aWinHeight, aBox);
     }
 
     // To prevent float overflow at camera parameters calculation and further
@@ -536,10 +585,9 @@ Graphic3d_TypeOfAnswer Graphic3d_CView::acceptDisplay (const Graphic3d_TypeOfStr
 void Graphic3d_CView::Compute()
 {
   // force HLRValidation to False on all structures calculated in the view
-  const Standard_Integer aNbCompStructs = myStructsComputed.Length();
-  for (Standard_Integer aStructIter = 1; aStructIter <= aNbCompStructs; ++aStructIter)
+  for (Graphic3d_SequenceOfStructure::Iterator aStructIter (myStructsComputed); aStructIter.More(); aStructIter.Next())
   {
-    myStructsComputed.Value (aStructIter)->SetHLRValidation (Standard_False);
+    aStructIter.Value()->SetHLRValidation (Standard_False);
   }
 
   if (!ComputedMode())
@@ -562,7 +610,7 @@ void Graphic3d_CView::Compute()
 
   for (NCollection_Sequence<Handle(Graphic3d_Structure)>::Iterator aStructIter (aStructsSeq); aStructIter.More(); aStructIter.Next())
   {
-    Display (aStructIter.ChangeValue(), Aspect_TOU_WAIT);
+    Display (aStructIter.ChangeValue());
   }
 }
 
@@ -624,16 +672,6 @@ void Graphic3d_CView::Disconnect (const Handle(Graphic3d_Structure)& theMother,
 // =======================================================================
 void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure)
 {
-  Display (theStructure, myStructureManager->UpdateMode());
-}
-
-// =======================================================================
-// function : Display
-// purpose  :
-// =======================================================================
-void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
-                               const Aspect_TypeOfUpdate theUpdateMode)
-{
   if (!IsActive())
   {
     return;
@@ -672,7 +710,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
 
     theStructure->CalculateBoundBox();
     displayStructure (theStructure->CStructure(), theStructure->DisplayPriority());
-    Update (theUpdateMode);
+    Update (theStructure->GetZLayer());
     return;
   }
   else if (anAnswer != Graphic3d_TOA_COMPUTE)
@@ -693,7 +731,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
       }
 
       displayStructure (anOldStruct->CStructure(), theStructure->DisplayPriority());
-      Update (theUpdateMode);
+      Update (anOldStruct->GetZLayer());
       return;
     }
     else
@@ -716,7 +754,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
         const Handle(Graphic3d_Structure)& aNewStruct = myStructsComputed.Value (aNewIndex);
         myStructsComputed.SetValue (anIndex, aNewStruct);
         displayStructure (aNewStruct->CStructure(), theStructure->DisplayPriority());
-        Update (theUpdateMode);
+        Update (aNewStruct->GetZLayer());
         return;
       }
       else
@@ -733,24 +771,13 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
 
   // Compute + Validation
   Handle(Graphic3d_Structure) aStruct;
-  TColStd_Array2OfReal aTrsf (0, 3, 0, 3);
-  theStructure->Transform (aTrsf);
   if (anIndex != 0)
   {
-    TColStd_Array2OfReal anIdent (0, 3, 0, 3);
-    for (Standard_Integer ii = 0; ii <= 3; ++ii)
-    {
-      for (Standard_Integer jj = 0; jj <= 3; ++jj)
-      {
-        anIdent (ii, jj) = (ii == jj ? 1.0 : 0.0);
-      }
-    }
-
     aStruct = myStructsComputed.Value (anIndex);
-    aStruct->SetTransform (anIdent, Graphic3d_TOC_REPLACE);
+    aStruct->SetTransformation (Handle(Geom_Transformation)());
     if (theStructure->IsTransformed())
     {
-      theStructure->Compute (this, aTrsf, aStruct);
+      theStructure->Compute (this, theStructure->Transformation(), aStruct);
     }
     else
     {
@@ -760,7 +787,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
   else
   {
     aStruct = theStructure->IsTransformed()
-            ? theStructure->Compute (this, aTrsf)
+            ? theStructure->Compute (this, theStructure->Transformation())
             : theStructure->Compute (this);
   }
 
@@ -794,7 +821,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
 
   if (theStructure->IsHighlighted())
   {
-    aStruct->Highlight (Aspect_TOHM_COLOR, theStructure->HighlightColor(), Standard_False);
+    aStruct->Highlight (theStructure->HighlightStyle(), Standard_False);
   }
 
   // It is displayed only if the calculated structure
@@ -807,7 +834,7 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
   myStructsDisplayed.Add (theStructure);
   displayStructure (aStruct->CStructure(), theStructure->DisplayPriority());
 
-  Update (theUpdateMode);
+  Update (aStruct->GetZLayer());
 }
 
 // =======================================================================
@@ -815,16 +842,6 @@ void Graphic3d_CView::Display (const Handle(Graphic3d_Structure)& theStructure,
 // purpose  :
 // =======================================================================
 void Graphic3d_CView::Erase (const Handle(Graphic3d_Structure)& theStructure)
-{
-  Erase (theStructure, myStructureManager->UpdateMode());
-}
-
-// =======================================================================
-// function : Erase
-// purpose  :
-// =======================================================================
-void Graphic3d_CView::Erase (const Handle(Graphic3d_Structure)& theStructure,
-                             const Aspect_TypeOfUpdate theUpdateMode)
 {
   if (!IsDisplayed (theStructure))
   {
@@ -851,21 +868,20 @@ void Graphic3d_CView::Erase (const Handle(Graphic3d_Structure)& theStructure,
     }
   }
   myStructsDisplayed.Remove (theStructure);
-  Update (theUpdateMode);
+  Update (theStructure->GetZLayer());
 }
 
 // =======================================================================
 // function : Highlight
 // purpose  :
 // =======================================================================
-void Graphic3d_CView::Highlight (const Handle(Graphic3d_Structure)& theStructure,
-                                 const Aspect_TypeOfHighlightMethod theMethod)
+void Graphic3d_CView::Highlight (const Handle(Graphic3d_Structure)& theStructure)
 {
   const Standard_Integer anIndex = IsComputed (theStructure);
   if (anIndex != 0)
   {
     const Handle(Graphic3d_Structure)& aCompStruct = myStructsComputed.ChangeValue (anIndex);
-    aCompStruct->Highlight (theMethod, theStructure->HighlightColor(), Standard_False);
+    aCompStruct->Highlight (theStructure->HighlightStyle(), Standard_False);
   }
 }
 
@@ -874,7 +890,7 @@ void Graphic3d_CView::Highlight (const Handle(Graphic3d_Structure)& theStructure
 // purpose  :
 // =======================================================================
 void Graphic3d_CView::SetTransform (const Handle(Graphic3d_Structure)& theStructure,
-                                    const TColStd_Array2OfReal& theTrsf)
+                                    const Handle(Geom_Transformation)& theTrsf)
 {
   const Standard_Integer anIndex = IsComputed (theStructure);
   if (anIndex != 0)
@@ -883,9 +899,10 @@ void Graphic3d_CView::SetTransform (const Handle(Graphic3d_Structure)& theStruct
     // trsf is transferred only if it is :
     // a translation
     // a scale
-    if (theTrsf (0, 1) != 0.0 || theTrsf (0, 2) != 0.0
-     || theTrsf (1, 0) != 0.0 || theTrsf (1, 2) != 0.0
-     || theTrsf (2, 0) != 0.0 || theTrsf (2, 1) != 0.0)
+    if (!theTrsf.IsNull()
+      && (theTrsf->Form() == gp_Translation
+       || theTrsf->Form() == gp_Scale
+       || theTrsf->Form() == gp_CompoundTrsf))
     {
       ReCompute (theStructure);
     }
@@ -916,7 +933,7 @@ void Graphic3d_CView::UnHighlight (const Handle(Graphic3d_Structure)& theStructu
   if (anIndex != 0)
   {
     const Handle(Graphic3d_Structure)& aCompStruct = myStructsComputed.ChangeValue (anIndex);
-    aCompStruct->GraphicUnHighlight();
+    aCompStruct->CStructure()->GraphicUnhighlight();
   }
 }
 
@@ -1060,7 +1077,6 @@ Standard_Integer Graphic3d_CView::HaveTheSameOwner (const Handle(Graphic3d_Struc
 void Graphic3d_CView::CopySettings (const Handle(Graphic3d_CView)& theOther)
 {
   ChangeRenderingParams() = theOther->RenderingParams();
-  SetAntialiasingEnabled   (theOther->IsAntialiasingEnabled());
   SetBackground            (theOther->Background());
   SetGradientBackground    (theOther->GradientBackground());
   SetBackgroundImage       (theOther->BackgroundImage());
@@ -1068,17 +1084,22 @@ void Graphic3d_CView::CopySettings (const Handle(Graphic3d_CView)& theOther)
   SetTextureEnv            (theOther->TextureEnv());
   SetCullingEnabled        (theOther->IsCullingEnabled());
   SetShadingModel          (theOther->ShadingModel());
-  SetSurfaceDetailType     (theOther->SurfaceDetailType());
   SetBackfacingModel       (theOther->BackfacingModel());
   SetCamera                (new Graphic3d_Camera (theOther->Camera()));
-  SetBackZClippingOn       (theOther->BackZClippingIsOn());
-  SetFrontZClippingOn      (theOther->FrontZClippingIsOn());
-  SetZClippingBackPlane    (theOther->ZClippingBackPlane());
-  SetZClippingFrontPlane   (theOther->ZClippingFrontPlane());
-  SetDepthCueingOn         (theOther->DepthCueingIsOn());
-  SetDepthCueingBackPlane  (theOther->DepthCueingBackPlane());
-  SetDepthCueingFrontPlane (theOther->DepthCueingFrontPlane());
-  SetGLLightEnabled        (theOther->IsGLLightEnabled());
   SetLights                (theOther->Lights());
   SetClipPlanes            (theOther->ClipPlanes());
+}
+
+// =======================================================================
+// function : SetShadingModel
+// purpose  :
+// =======================================================================
+void Graphic3d_CView::SetShadingModel (Graphic3d_TypeOfShadingModel theModel)
+{
+  if (theModel == Graphic3d_TOSM_DEFAULT)
+  {
+    throw Standard_ProgramError ("Graphic3d_CView::SetShadingModel() - attempt to set invalid Shading Model!");
+  }
+
+  myShadingModel = theModel;
 }

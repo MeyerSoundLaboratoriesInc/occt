@@ -89,7 +89,7 @@ void TopoDSToStep_MakeStepEdge::Init(const TopoDS_Edge& aEdge,
   aTool.SetCurrentEdge(aEdge);
 
   // [BEGIN] Processing non-manifold topology (ssv; 11.11.2010)
-  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold");
+  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold") != 0;
   if (isNMMode) {
     Handle(StepShape_EdgeCurve) anEC;
     Handle(TransferBRep_ShapeMapper) aSTEPMapper = TransferBRep::ShapeMapper(FP, aEdge);
@@ -283,7 +283,7 @@ void TopoDSToStep_MakeStepEdge::Init(const TopoDS_Edge& aEdge,
 
 const Handle(StepShape_TopologicalRepresentationItem)& TopoDSToStep_MakeStepEdge::Value() const 
 {
-  StdFail_NotDone_Raise_if(!done,"");
+  StdFail_NotDone_Raise_if (!done, "TopoDSToStep_MakeStepEdge::Value() - no result");
   return myResult;
 }
 

@@ -2,28 +2,28 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{9DB806C9-0ABE-1086-16C3-649B6F18C44F}</UniqueIdentifier>
+      <UniqueIdentifier>{DFB1A790-0AAC-117F-1700-F9E69791FF80}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopOpeBRep">
-      <UniqueIdentifier>{005C224A-02BB-052F-004B-AA7D18FAD4D9}</UniqueIdentifier>
+      <UniqueIdentifier>{1D4EA4F1-05A5-188E-131D-361C848A4FF8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopOpeBRepDS">
-      <UniqueIdentifier>{AC16F6F1-09B1-02CE-1671-D7BF2B47CC14}</UniqueIdentifier>
+      <UniqueIdentifier>{88370FDD-0347-1778-17E8-A0094FC33C86}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopOpeBRepBuild">
-      <UniqueIdentifier>{A7599B7E-0358-0490-03C4-F3FD7785BECA}</UniqueIdentifier>
+      <UniqueIdentifier>{BABE5412-1178-020F-086A-36761281B40F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopOpeBRepTool">
-      <UniqueIdentifier>{B0F8F96A-05A9-15DA-09BD-1C4C6FDE230F}</UniqueIdentifier>
+      <UniqueIdentifier>{54722E51-0D43-1775-0F67-648E77C52AEF}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepAlgo">
-      <UniqueIdentifier>{CFD09858-15D1-14F4-16D4-9C63CD5C42B7}</UniqueIdentifier>
+      <UniqueIdentifier>{85B1D165-0420-03E6-0CDF-964A60ED1D58}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepFill">
-      <UniqueIdentifier>{2000277E-0A65-00AC-0C85-CA8877C57159}</UniqueIdentifier>
+      <UniqueIdentifier>{21A3DCC8-12DF-13DD-0573-23D9C4AE06BC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepProj">
-      <UniqueIdentifier>{94C90771-1726-1806-12B9-BE1B6DFA9720}</UniqueIdentifier>
+      <UniqueIdentifier>{3C2B3F53-016A-06FB-04D1-A087DA3704D1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -67,9 +67,6 @@
       <Filter>Source files\TopOpeBRep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRep\TopOpeBRep_FacesFiller_1.cxx">
-      <Filter>Source files\TopOpeBRep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRep\TopOpeBRep_FacesFiller_VPonR.cxx">
       <Filter>Source files\TopOpeBRep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRep\TopOpeBRep_FacesIntersector.cxx">
@@ -184,9 +181,6 @@
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_DRAW.cxx">
-      <Filter>Source files\TopOpeBRepDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_DSS.cxx">
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_DataStructure.cxx">
@@ -327,9 +321,6 @@
     <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_funk.cxx">
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_reDEB.cxx">
-      <Filter>Source files\TopOpeBRepDS</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_redu.cxx">
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
@@ -337,12 +328,6 @@
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_samdom.cxx">
-      <Filter>Source files\TopOpeBRepDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_trace.cxx">
-      <Filter>Source files\TopOpeBRepDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRepDS\TopOpeBRepDS_traceDSX.cxx">
       <Filter>Source files\TopOpeBRepDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepBuild\TopOpeBRepBuild.cxx">
@@ -628,9 +613,6 @@
       <Filter>Source files\TopOpeBRepTool</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepTool\TopOpeBRepTool_box.cxx">
-      <Filter>Source files\TopOpeBRepTool</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopOpeBRepTool\TopOpeBRepTool_closing.cxx">
       <Filter>Source files\TopOpeBRepTool</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopOpeBRepTool\TopOpeBRepTool_connexity.cxx">

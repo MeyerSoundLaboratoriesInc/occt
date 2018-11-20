@@ -41,16 +41,8 @@ if { "$tcl_platform(platform)" == "unix" } {
   set VCVARS ""
 }
 
-set SHORTCUT_HEADERS "true"
+set SHORTCUT_HEADERS "ShortCut"
 
-set HAVE_FREEIMAGE "false"
-set HAVE_GL2PS     "false"
-set HAVE_TBB       "false"
-set HAVE_OPENCL    "false"
-set HAVE_VTK       "false"
-set MACOSX_USE_GLX "false"
-set CHECK_QT4      "false"
-set CHECK_JDK      "false"
 set PRODUCTS_PATH ""
 set CSF_OPT_INC   [list]
 set CSF_OPT_LIB32 [list]
@@ -64,42 +56,38 @@ if { "$tcl_platform(pointerSize)" == "4" } {
 if { [info exists ::env(ARCH)] } {
   set ARCH "$::env(ARCH)"
 }
-if { [info exists ::env(VCVER)] } {
-  set VCVER "$::env(VCVER)"
-}
-if { [info exists ::env(VCVARS)] } {
-  set VCVARS "$::env(VCVARS)"
-}
+
 if { [info exists ::env(SHORTCUT_HEADERS)] } {
   set SHORTCUT_HEADERS "$::env(SHORTCUT_HEADERS)"
+  if { $SHORTCUT_HEADERS == "true" } {
+    set SHORTCUT_HEADERS "ShortCut"
+  }
 }
-if { [info exists ::env(HAVE_FREEIMAGE)] } {
-  set HAVE_FREEIMAGE "$::env(HAVE_FREEIMAGE)"
+
+# fetch environment variables (e.g. set by custom.sh or custom.bat) and set them as tcl variables with the same name
+set THE_ENV_VARIABLES {HAVE_FREEIMAGE HAVE_FFMPEG HAVE_TBB HAVE_GLES2 HAVE_D3D HAVE_VTK HAVE_GL2PS HAVE_ZLIB HAVE_LIBLZMA HAVE_OPENCL CHECK_QT4 CHECK_JDK MACOSX_USE_GLX HAVE_RelWithDebInfo}
+foreach anEnvIter $THE_ENV_VARIABLES {
+  set ${anEnvIter} "false"
+  if { [info exists ::env(${anEnvIter})] } {
+    set ${anEnvIter} "$::env(${anEnvIter})"
+  }
 }
-if { [info exists ::env(HAVE_GL2PS)] } {
-  set HAVE_GL2PS "$::env(HAVE_GL2PS)"
+# do not export platform-specific variables
+if { "$::tcl_platform(os)" == "Darwin" } {
+  set HAVE_GLES2 ""
+} else {
+  set MACOSX_USE_GLX ""
 }
-if { [info exists ::env(HAVE_TBB)] } {
-  set HAVE_TBB "$::env(HAVE_TBB)"
+if { "$tcl_platform(platform)" != "windows" } {
+  set HAVE_D3D ""
+  set HAVE_RelWithDebInfo ""
 }
-if { [info exists ::env(HAVE_OPENCL)] } {
-  set HAVE_OPENCL "$::env(HAVE_OPENCL)"
+foreach anEnvIter {ARCH VCVER VCVARS PRODUCTS_PATH} {
+  if { [info exists ::env(${anEnvIter})] } {
+    set ${anEnvIter} "$::env(${anEnvIter})"
+  }
 }
-if { [info exists ::env(HAVE_VTK)] } {
-  set HAVE_VTK "$::env(HAVE_VTK)"
-}
-if { [info exists ::env(MACOSX_USE_GLX)] } {
-  set MACOSX_USE_GLX "$::env(MACOSX_USE_GLX)"
-}
-if { [info exists ::env(CHECK_QT4)] } {
-  set CHECK_QT4 "$::env(CHECK_QT4)"
-}
-if { [info exists ::env(CHECK_JDK)] } {
-  set CHECK_JDK "$::env(CHECK_JDK)"
-}
-if { [info exists ::env(PRODUCTS_PATH)] } {
-  set PRODUCTS_PATH "$::env(PRODUCTS_PATH)"
-}
+
 if { [info exists ::env(CSF_OPT_INC)] } {
   set CSF_OPT_INC [split "$::env(CSF_OPT_INC)" $::SYS_PATH_SPLITTER]
 }
@@ -131,6 +119,21 @@ proc wokdep:SearchHeader {theHeader} {
   if { [file exists "$aPath"] } {
     return "$aPath"
   }
+
+  if { "$::tcl_platform(os)" == "Linux" } {
+    if { "$::ARCH" == "64" } {
+      set aPath "/usr/include/x86_64-linux-gnu/${theHeader}"
+      if { [file exists "$aPath"] } {
+        return "$aPath"
+      }
+    } else {
+      set aPath "/usr/include/i386-linux-gnu/${theHeader}"
+      if { [file exists "$aPath"] } {
+        return "$aPath"
+      }
+    }
+  }
+
   return ""
 }
 
@@ -216,9 +219,14 @@ proc wokdep:Preferred {theList theCmpl theArch} {
     return ""
   }
 
+  # keep only two first digits in "vc141"
+  if { ! [regexp {^vc[0-9][0-9]} $theCmpl aCmpl] } {
+    set aCmpl $theCmpl
+  }
+
   set aShortList {}
   foreach aPath $theList {
-    if { [string first "$theCmpl" "$aPath"] != "-1" } {
+    if { [string first "$aCmpl" "$aPath"] != "-1" } {
       lappend aShortList "$aPath"
     }
   }
@@ -239,6 +247,83 @@ proc wokdep:Preferred {theList theCmpl theArch} {
   }
 
   return [lindex [lsort -decreasing $aVeryShortList] 0]
+}
+
+# Search library placement
+proc wokdep:SearchStandardLibrary {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64 theName theCheckHeader theCheckLib theCheckFolders} {
+  upvar $theErrInc   anErrInc
+  upvar $theErrLib32 anErrLib32
+  upvar $theErrLib64 anErrLib64
+  upvar $theErrBin32 anErrBin32
+  upvar $theErrBin64 anErrBin64
+
+  set isFound "true"
+  set aHeaderPath [wokdep:SearchHeader "$theCheckHeader"]
+  if { "$aHeaderPath"  == "" } {
+    set hasHeader false
+    foreach aFolderIter $theCheckFolders {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{$aFolderIter}*] "$::VCVER" "$::ARCH" ]
+      if { "$aPath" != "" && [file exists "$aPath/include/$theCheckHeader"] } {
+        lappend ::CSF_OPT_INC "$aPath/include"
+        set hasHeader true
+        break
+      }
+    }
+    if { !$hasHeader } {
+      lappend anErrInc "Error: '$theCheckHeader' not found ($theName)"
+      set isFound "false"
+    }
+  }
+
+  foreach anArchIter {64 32} {
+    set aLibPath [wokdep:SearchLib "$theCheckLib" "$anArchIter"]
+    if { "$aLibPath" == "" } {
+      set hasLib false
+      foreach aFolderIter $theCheckFolders {
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{$aFolderIter}*] "$::VCVER" "$anArchIter" ]
+        set aLibPath [wokdep:SearchLib "$theCheckLib" "$anArchIter" "$aPath/lib"]
+        if { "$aLibPath" != "" } {
+          lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib"
+          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
+          set hasLib true
+          break
+        }
+      }
+      if { !$hasLib } {
+        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}$theCheckLib.${::SYS_LIB_SUFFIX}' not found ($theName)"
+        if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+      }
+    }
+
+    if { "$::tcl_platform(platform)" == "windows" } {
+      set aDllPath [wokdep:SearchBin "$theCheckLib.dll" "$anArchIter"]
+      if { "$aDllPath" == "" } {
+        set hasDll false
+        foreach aFolderIter $theCheckFolders {
+          set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{$aFolderIter}*] "$::VCVER" "$anArchIter" ]
+          set aDllPath [wokdep:SearchBin "$theCheckLib.dll" "$anArchIter" "$aPath/bin"]
+          if { "$aDllPath" != "" } {
+            lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
+            set hasDll true
+            break
+          } else {
+            set aDllPath [wokdep:SearchBin "$theCheckLib.dll" "$anArchIter" "$aPath/lib"]
+            if { "$aDllPath" != "" } {
+              lappend ::CSF_OPT_BIN$anArchIter "$aPath/lib"
+              set hasDll true
+              break
+            }
+          }
+        }
+        if { !$hasDll } {
+          lappend anErrBin$anArchIter "Error: '$theCheckLib.dll' not found ($theName)"
+          if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+        }
+      }
+    }
+  }
+
+  return "$isFound"
 }
 
 # Search Tcl/Tk libraries placement
@@ -423,7 +508,6 @@ proc wokdep:SearchFreeImage {theErrInc theErrLib32 theErrLib64 theErrBin32 theEr
 
   # binary distribution has another layout
   set aFImageDist     "Dist"
-  set aFImagePlusDist "Wrapper/FreeImagePlus/dist"
 
   set isFound "true"
   set aFImageHPath [wokdep:SearchHeader "FreeImage.h"]
@@ -433,19 +517,10 @@ proc wokdep:SearchFreeImage {theErrInc theErrLib32 theErrLib64 theErrBin32 theEr
       lappend ::CSF_OPT_INC "$aPath/include"
     } elseif { "$aPath" != "" && [file exists "$aPath/$aFImageDist/FreeImage.h"] } {
       lappend ::CSF_OPT_INC "$aPath/$aFImageDist"
-      if { [file exists "$aPath/$aFImagePlusDist/FreeImagePlus.h"] } {
-        lappend ::CSF_OPT_INC "$aPath/$aFImagePlusDist"
-      }
     } else {
       lappend anErrInc "Error: 'FreeImage.h' not found (FreeImage)"
       set isFound "false"
     }
-  }
-
-  set aFImagePlusHPath [wokdep:SearchHeader "FreeImagePlus.h"]
-  if { "$::tcl_platform(platform)" == "windows" && "$aFImagePlusHPath"  == "" } {
-    lappend anErrInc "Error: 'FreeImagePlus.h' not found (FreeImage)"
-    set isFound "false"
   }
 
   foreach anArchIter {64 32} {
@@ -459,10 +534,6 @@ proc wokdep:SearchFreeImage {theErrInc theErrLib32 theErrLib64 theErrBin32 theEr
         set aFImageLibPath [wokdep:SearchLib "freeimage" "$anArchIter" "$aPath/$aFImageDist"]
         if { "$aFImageLibPath" != "" } {
           lappend ::CSF_OPT_LIB$anArchIter "$aPath/$aFImageDist"
-          set aFImagePlusLibPath [wokdep:SearchLib "freeimageplus" "$anArchIter" "$aPath/$aFImagePlusDist"]
-          if { "$aFImagePlusLibPath"  != "" } {
-            lappend ::CSF_OPT_LIB$anArchIter "$aPath/$aFImagePlusDist"
-          }
         } else {
           lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}freeimage.${::SYS_LIB_SUFFIX}' not found (FreeImage)"
           if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
@@ -470,28 +541,18 @@ proc wokdep:SearchFreeImage {theErrInc theErrLib32 theErrLib64 theErrBin32 theEr
       }
     }
     if { "$::tcl_platform(platform)" == "windows" } {
-      set aFImagePlusLibPath [wokdep:SearchLib "freeimageplus" "$anArchIter"]
-      if { "$aFImagePlusLibPath"  == "" } {
-        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}freeimageplus.${::SYS_LIB_SUFFIX}' not found (FreeImage)"
-        if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
-      }
-
-      set aFImageDllPath     [wokdep:SearchBin "freeimage.dll"     "$anArchIter"]
-      set aFImagePlusDllPath [wokdep:SearchBin "freeimageplus.dll" "$anArchIter"]
-      if { "$aFImageDllPath" == "" || "$aFImagePlusDllPath" == "" } {
+      set aFImageDllPath [wokdep:SearchBin "freeimage.dll" "$anArchIter"]
+      if { "$aFImageDllPath" == "" } {
         set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{freeimage}*] "$::VCVER" "$anArchIter" ]
-        set aFImageDllPath     [wokdep:SearchBin "freeimage.dll"     "$anArchIter" "$aPath/bin"]
-        set aFImagePlusDllPath [wokdep:SearchBin "freeimageplus.dll" "$anArchIter" "$aPath/bin"]
-        if { "$aFImageDllPath" != "" && "$aFImagePlusDllPath" != "" } {
+        set aFImageDllPath [wokdep:SearchBin "freeimage.dll" "$anArchIter" "$aPath/bin"]
+        if { "$aFImageDllPath" != "" } {
           lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
         } else {
-          set aFImageDllPath     [wokdep:SearchBin "freeimage.dll"     "$anArchIter" "$aPath/$aFImageDist"]
-          set aFImagePlusDllPath [wokdep:SearchBin "freeimageplus.dll" "$anArchIter" "$aPath/$aFImagePlusDist"]
-          if { "$aFImageDllPath" != "" && "$aFImagePlusDllPath" != "" } {
+          set aFImageDllPath [wokdep:SearchBin "freeimage.dll" "$anArchIter" "$aPath/$aFImageDist"]
+          if { "$aFImageDllPath" != "" } {
             lappend ::CSF_OPT_BIN$anArchIter "$aPath/$aFImageDist"
-            lappend ::CSF_OPT_BIN$anArchIter "$aPath/$aFImagePlusDist"
           } else {
-            lappend anErrBin$anArchIter "Error: 'freeimage.dll' or 'freeimageplus.dll' not found (FreeImage)"
+            lappend anErrBin$anArchIter "Error: 'freeimage.dll' is not found (FreeImage)"
             if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
           }
         }
@@ -502,8 +563,8 @@ proc wokdep:SearchFreeImage {theErrInc theErrLib32 theErrLib64 theErrBin32 theEr
   return "$isFound"
 }
 
-# Search GL2PS library placement
-proc wokdep:SearchGL2PS {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64} {
+# Search FFmpeg framework placement
+proc wokdep:SearchFFmpeg {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64} {
   upvar $theErrInc   anErrInc
   upvar $theErrLib32 anErrLib32
   upvar $theErrLib64 anErrLib64
@@ -511,45 +572,28 @@ proc wokdep:SearchGL2PS {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin
   upvar $theErrBin64 anErrBin64
 
   set isFound "true"
-  set aGl2psHPath [wokdep:SearchHeader "gl2ps.h"]
-  if { "$aGl2psHPath"  == "" } {
-    set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{gl2ps}*] "$::VCVER" "$::ARCH" ]
-    if { "$aPath" != "" && [file exists "$aPath/include/gl2ps.h"] } {
+  set aFFmpegHPath [wokdep:SearchHeader "libavutil/avutil.h"]
+  if { "$aFFmpegHPath"  == "" } {
+    set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{ffmpeg}*] "$::VCVER" "$::ARCH" ]
+    if { "$aPath" != "" && [file exists "$aPath/include/libavutil/avutil.h"] } {
       lappend ::CSF_OPT_INC "$aPath/include"
     } else {
-      lappend anErrInc "Error: 'gl2ps.h' not found (GL2PS)"
+      lappend anErrInc "Error: 'libavutil/avutil.h' not found (FFmpeg)"
       set isFound "false"
     }
   }
 
   foreach anArchIter {64 32} {
-    set aGl2psLibPath [wokdep:SearchLib "gl2ps" "$anArchIter"]
-    if { "$aGl2psLibPath" == "" } {
-      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{gl2ps}*] "$::VCVER" "$anArchIter" ]
-      set aGl2psLibPath [wokdep:SearchLib "gl2ps" "$anArchIter" "$aPath/lib"]
-      if { "$aGl2psLibPath" != "" } {
+    set aFFmpegLibPath [wokdep:SearchLib "avutil" "$anArchIter"]
+    if { "$aFFmpegLibPath" == "" } {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{ffmpeg}*] "$::VCVER" "$anArchIter" ]
+      set aFFmpegLibPath [wokdep:SearchLib "avutil" "$anArchIter" "$aPath/lib"]
+      if { "$aFFmpegLibPath" != "" } {
         lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib"
+        lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
       } else {
-        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}gl2ps.${::SYS_LIB_SUFFIX}' not found (GL2PS)"
+        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}avutil.${::SYS_LIB_SUFFIX}' not found (FFmpeg)"
         if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
-      }
-    }
-    if { "$::tcl_platform(platform)" == "windows" } {
-      set aGl2psDllPath [wokdep:SearchBin "gl2ps.dll" "$anArchIter"]
-      if { "$aGl2psDllPath" == "" } {
-        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{gl2ps}*] "$::VCVER" "$anArchIter" ]
-        set aGl2psDllPath [wokdep:SearchBin "gl2ps.dll" "$anArchIter" "$aPath/bin"]
-        if { "$aGl2psDllPath" != "" } {
-          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
-        } else {
-          set aGl2psDllPath [wokdep:SearchBin "gl2ps.dll" "$anArchIter" "$aPath/lib"]
-          if { "$aGl2psDllPath" != "" } {
-            lappend ::CSF_OPT_BIN$anArchIter "$aPath/lib"
-          } else {
-            lappend anErrBin$anArchIter "Error: 'gl2ps.dll' not found (GL2PS)"
-            if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
-          }
-        }
       }
     }
   }
@@ -564,6 +608,11 @@ proc wokdep:SearchTBB {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
   upvar $theErrLib64 anErrLib64
   upvar $theErrBin32 anErrBin32
   upvar $theErrBin64 anErrBin64
+
+  # keep only two first digits in "vc141"
+  if { ! [regexp {^vc[0-9][0-9]} ${::VCVER} aVcLib] } {
+    set aVcLib ${::VCVER}
+  }
 
   set isFound "true"
   set aTbbHPath [wokdep:SearchHeader "tbb/scalable_allocator.h"]
@@ -585,8 +634,8 @@ proc wokdep:SearchTBB {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
 
     set aTbbLibPath [wokdep:SearchLib "tbb" "$anArchIter"]
     if { "$aTbbLibPath" == "" } {
-      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{tbb}*] "$::VCVER" "$anArchIter" ]
-      set aTbbLibPath [wokdep:SearchLib "tbb" "$anArchIter" "$aPath/lib/$aSubDir/${::VCVER}"]
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{tbb}*] $aVcLib "$anArchIter" ]
+      set aTbbLibPath [wokdep:SearchLib "tbb" "$anArchIter" "$aPath/lib/$aSubDir/$aVcLib"]
       if { "$aTbbLibPath" == "" } {
         # Set the path to the TBB library for Linux
         if { "$::tcl_platform(platform)" != "windows" } {
@@ -597,7 +646,7 @@ proc wokdep:SearchTBB {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
           lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib/$aSubDir"
         }
       } else {
-        lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib/$aSubDir/${::VCVER}"
+        lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib/$aSubDir/$aVcLib"
       }
       if { "$aTbbLibPath" == "" } {
         lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}tbb.${::SYS_LIB_SUFFIX}' not found (Intel TBB)"
@@ -607,10 +656,10 @@ proc wokdep:SearchTBB {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64
     if { "$::tcl_platform(platform)" == "windows" } {
       set aTbbDllPath [wokdep:SearchBin "tbb.dll" "$anArchIter"]
       if { "$aTbbDllPath" == "" } {
-        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{tbb}*] "$::VCVER" "$anArchIter" ]
-        set aTbbDllPath [wokdep:SearchBin "tbb.dll" "$anArchIter" "$aPath/bin/$aSubDir/${::VCVER}"]
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{tbb}*] $aVcLib "$anArchIter" ]
+        set aTbbDllPath [wokdep:SearchBin "tbb.dll" "$anArchIter" "$aPath/bin/$aSubDir/$aVcLib"]
         if { "$aTbbDllPath" != "" } {
-          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin/$aSubDir/${::VCVER}"
+          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin/$aSubDir/$aVcLib"
         } else {
           lappend anErrBin$anArchIter "Error: 'tbb.dll' not found (Intel TBB)"
           if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
@@ -657,6 +706,148 @@ proc wokdep:SearchOpenCL {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBi
       } else {
         lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}OpenCL.${::SYS_LIB_SUFFIX}' not found (OpenCL)"
         if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+      }
+    }
+  }
+
+  return "$isFound"
+}
+
+# Search EGL library placement
+proc wokdep:SearchEGL {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64} {
+  upvar $theErrInc   anErrInc
+  upvar $theErrLib32 anErrLib32
+  upvar $theErrLib64 anErrLib64
+  upvar $theErrBin32 anErrBin32
+  upvar $theErrBin64 anErrBin64
+
+  set isFound "true"
+  set aHeaderPath [wokdep:SearchHeader "EGL/egl.h"]
+  if { "$aHeaderPath"  == "" } {
+    set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{EGL}*] "$::VCVER" "$::ARCH" ]
+    if { "$aPath" == "" || ![file exists "$aPath/include/EGL/egl.h"] } {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$::ARCH" ]
+    }
+
+    if { "$aPath" != "" && [file exists "$aPath/include/EGL/egl.h"] } {
+      lappend ::CSF_OPT_INC "$aPath/include"
+    } else {
+      lappend anErrInc "Error: 'EGL/egl.h' not found (EGL)"
+      set isFound "false"
+    }
+  }
+
+  set aLibName "EGL"
+  if { "$::tcl_platform(platform)" == "windows" } {
+    # awkward exception
+    set aLibName "libEGL"
+  }
+
+  foreach anArchIter {64 32} {
+    set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter"]
+    if { "$aLibPath" == "" } {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{EGL}*] "$::VCVER" "$anArchIter" ]
+      set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter" "$aPath/lib"]
+      if { "$aLibPath" == "" } {
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$anArchIter" ]
+        set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter" "$aPath/lib"]
+      }
+
+      if { "$aLibPath" != "" } {
+        lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib"
+      } else {
+        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}${aLibName}.${::SYS_LIB_SUFFIX}' not found (EGL)"
+        if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+      }
+    }
+
+    if { "$::tcl_platform(platform)" == "windows" } {
+      set aDllPath [wokdep:SearchBin "libEGL.dll" "$anArchIter"]
+      if { "$aDllPath" == "" } {
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{EGL}*] "$::VCVER" "$anArchIter" ]
+        set aDllPath [wokdep:SearchBin "libEGL.dll" "$anArchIter" "$aPath/bin"]
+        if { "$aDllPath" == "" } {
+          set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$anArchIter" ]
+          set aDllPath [wokdep:SearchBin "libEGL.dll" "$anArchIter" "$aPath/bin"]
+        }
+
+        if { "$aDllPath" != "" } {
+          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
+        } else {
+          lappend anErrBin$anArchIter "Error: 'libEGL.dll' not found (EGL)"
+          if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+        }
+      }
+    }
+  }
+
+  return "$isFound"
+}
+
+# Search OpenGL ES 2.0 library placement
+proc wokdep:SearchGLES {theErrInc theErrLib32 theErrLib64 theErrBin32 theErrBin64} {
+  upvar $theErrInc   anErrInc
+  upvar $theErrLib32 anErrLib32
+  upvar $theErrLib64 anErrLib64
+  upvar $theErrBin32 anErrBin32
+  upvar $theErrBin64 anErrBin64
+
+  set isFound "true"
+  set aHeaderPath [wokdep:SearchHeader "GLES2/gl2.h"]
+  if { "$aHeaderPath"  == "" } {
+    set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{GLES}*] "$::VCVER" "$::ARCH" ]
+    if { "$aPath" == "" || ![file exists "$aPath/include/GLES2/gl2.h"] } {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$::ARCH" ]
+    }
+
+    if { "$aPath" != "" && [file exists "$aPath/include/GLES2/gl2.h"] } {
+      lappend ::CSF_OPT_INC "$aPath/include"
+    } else {
+      lappend anErrInc "Error: 'GLES2/gl2.h' not found (OpenGL ES 2.0)"
+      set isFound "false"
+    }
+  }
+
+  set aLibName "GLESv2"
+  if { "$::tcl_platform(platform)" == "windows" } {
+    # awkward exception
+    set aLibName "libGLESv2"
+  }
+
+  foreach anArchIter {64 32} {
+    set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter"]
+    if { "$aLibPath" == "" } {
+      set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{GLES}*] "$::VCVER" "$anArchIter" ]
+      set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter" "$aPath/lib"]
+      if { "$aLibPath" == "" } {
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$anArchIter" ]
+        set aLibPath [wokdep:SearchLib "$aLibName" "$anArchIter" "$aPath/lib"]
+      }
+
+      if { "$aLibPath" != "" } {
+        lappend ::CSF_OPT_LIB$anArchIter "$aPath/lib"
+      } else {
+        lappend anErrLib$anArchIter "Error: '${::SYS_LIB_PREFIX}${aLibName}.${::SYS_LIB_SUFFIX}' not found (OpenGL ES 2.0)"
+        if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+      }
+    }
+
+    if { "$::tcl_platform(platform)" == "windows" } {
+      set aDllPath [wokdep:SearchBin "libGLESv2.dll" "$anArchIter"]
+      if { "$aDllPath" == "" } {
+        set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{EGL}*] "$::VCVER" "$anArchIter" ]
+        set aDllPath [wokdep:SearchBin "libGLESv2.dll" "$anArchIter" "$aPath/bin"]
+        if { "$aDllPath" == "" } {
+          set aPath [wokdep:Preferred [glob -nocomplain -directory "$::PRODUCTS_PATH" -type d *{angle}*] "$::VCVER" "$anArchIter" ]
+          set aDllPath [wokdep:SearchBin "libGLESv2.dll" "$anArchIter" "$aPath/bin"]
+        }
+
+        if { "$aDllPath" != "" } {
+          lappend ::CSF_OPT_BIN$anArchIter "$aPath/bin"
+        } else {
+          lappend anErrBin$anArchIter "Error: 'libGLESv2.dll' not found (OpenGL ES 2.0)"
+          if { "$::ARCH" == "$anArchIter"} { set isFound "false" }
+        }
       }
     }
   }
@@ -946,13 +1137,13 @@ proc wokdep:SaveCustom {} {
 
     puts $aFile ""
     puts $aFile "rem Optional 3rd-parties switches"
-    puts $aFile "set HAVE_FREEIMAGE=$::HAVE_FREEIMAGE"
-    puts $aFile "set HAVE_GL2PS=$::HAVE_GL2PS"
-    puts $aFile "set HAVE_TBB=$::HAVE_TBB"
-    puts $aFile "set HAVE_OPENCL=$::HAVE_OPENCL"
-    puts $aFile "set HAVE_VTK=$::HAVE_VTK"
-    puts $aFile "set CHECK_QT4=$::CHECK_QT4"
-    puts $aFile "set CHECK_JDK=$::CHECK_JDK"
+    foreach anEnvIter $::THE_ENV_VARIABLES {
+      set aName ${anEnvIter}
+      set aValue [set ::${anEnvIter}]
+      if { "$aValue" != "" } {
+        puts $aFile "set ${aName}=$aValue"
+      }
+    }
 
     set aStringInc [join $::CSF_OPT_INC $::SYS_PATH_SPLITTER]
     puts $aFile ""
@@ -995,16 +1186,13 @@ proc wokdep:SaveCustom {} {
 
     puts $aFile ""
     puts $aFile "# Optional 3rd-parties switches"
-    puts $aFile "export HAVE_FREEIMAGE=$::HAVE_FREEIMAGE"
-    puts $aFile "export HAVE_GL2PS=$::HAVE_GL2PS"
-    puts $aFile "export HAVE_TBB=$::HAVE_TBB"
-    puts $aFile "export HAVE_OPENCL=$::HAVE_OPENCL"
-    puts $aFile "export HAVE_VTK=$::HAVE_VTK"
-    if { "$::tcl_platform(os)" == "Darwin" } {
-      puts $aFile "export MACOSX_USE_GLX=$::MACOSX_USE_GLX"
+    foreach anEnvIter $::THE_ENV_VARIABLES {
+      set aName ${anEnvIter}
+      set aValue [set ::${anEnvIter}]
+      if { "$aValue" != "" } {
+        puts $aFile "export ${aName}=${aValue}"
+      }
     }
-    puts $aFile "export CHECK_QT4=$::CHECK_QT4"
-    puts $aFile "export CHECK_JDK=$::CHECK_JDK"
 
     set aStringInc [join $::CSF_OPT_INC $::SYS_PATH_SPLITTER]
     puts $aFile ""

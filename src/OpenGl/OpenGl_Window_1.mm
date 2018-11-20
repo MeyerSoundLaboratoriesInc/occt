@@ -15,7 +15,9 @@
 
 #if defined(__APPLE__) && !defined(MACOSX_USE_GLX)
 
+#ifndef GL_GLEXT_LEGACY
 #define GL_GLEXT_LEGACY // To prevent inclusion of system glext.h on Mac OS X 10.6.8
+#endif
 
 #import <TargetConditionals.h>
 
@@ -31,8 +33,6 @@
 #endif
 
 #endif
-
-#include <InterfaceGraphic.hxx>
 
 #include <OpenGl_Window.hxx>
 #include <OpenGl_FrameBuffer.hxx>
@@ -93,7 +93,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     || ![EAGLContext setCurrentContext: aGLContext])
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: EAGLContext creation failed");
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
 
@@ -104,7 +104,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     if (![EAGLContext setCurrentContext: aGLContext])
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: EAGLContext can not be assigned");
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
 
@@ -162,7 +162,11 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
           {
             continue;
           }
+
+          // deprecated since macOS 10.12 without replacement
+          Standard_DISABLE_DEPRECATION_WARNINGS
           anAttribs[aLastAttrib++] = NSOpenGLPFAStereo;
+          Standard_ENABLE_DEPRECATION_WARNINGS
         }
 
         anAttribs[aLastAttrib] = 0;
@@ -185,7 +189,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     if (aGLContext == NULL)
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: NSOpenGLContext creation failed");
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
 
@@ -255,7 +259,25 @@ void OpenGl_Window::Resize()
   if (myWidthPt  == aWidthPt
    && myHeightPt == aHeightPt)
   {
+  #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
     return;
+  #else
+    // check backing store change (moving to another screen)
+    NSOpenGLContext* aGLCtx = myGlContext->myGContext;
+    NSView* aView = [aGLCtx view];
+    if (![aView respondsToSelector: @selector(convertSizeToBacking:)])
+    {
+      return;
+    }
+
+    NSRect aBounds = [aView bounds];
+    NSSize aRes    = [aView convertSizeToBacking: aBounds.size];
+    if (myWidth  == Standard_Integer(aRes.width)
+     && myHeight == Standard_Integer(aRes.height))
+    {
+      return;
+    }
+  #endif
   }
 
   myWidthPt  = aWidthPt;
@@ -301,7 +323,7 @@ void OpenGl_Window::Init()
     if (!aDefFbo->InitWithRB (myGlContext, myWidth, myHeight, GL_RGBA8, GL_DEPTH24_STENCIL8, aWinRBColor))
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: default FBO creation failed");
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
   }
@@ -310,7 +332,7 @@ void OpenGl_Window::Init()
     if (!aDefFbo->InitWrapper (myGlContext))
     {
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: default FBO wrapper creation failed");
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
 

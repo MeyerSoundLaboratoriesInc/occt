@@ -24,6 +24,9 @@
 #include <Standard_GUID.hxx>
 #include <Plugin_Macro.hxx>
 
+#include <PCDM_StorageDriver.hxx>
+#include <TDocStd_Application.hxx>
+
 static Standard_GUID StdRetrievalDriver ("ad696001-5b34-11d1-b5ba-00a0c9064368");
 
 //=======================================================================
@@ -43,8 +46,17 @@ Handle(Standard_Transient) StdDrivers::Factory (const Standard_GUID& aGUID)
     return model_rd;
   }
  
-  Standard_Failure::Raise ("StdDrivers : unknown GUID");
-  return NULL;
+  throw Standard_Failure("StdDrivers : unknown GUID");
+}
+
+//=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void StdDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("MDTV-Standard", "Standard OCAF Document", "std",
+                        new StdDrivers_DocumentRetrievalDriver, 0);
 }
 
 //=======================================================================
@@ -57,11 +69,6 @@ void StdDrivers::BindTypes (StdObjMgt_MapOfInstantiators& theMap)
   StdPersistent  ::BindTypes (theMap);
   ShapePersistent::BindTypes (theMap);
 }
-
-
-#ifdef _MSC_VER
-#pragma warning(disable:4190) /* disable warning on C++ type returned by C function; should be OK for C++ usage */
-#endif
 
 // Declare entry point PLUGINFACTORY
 PLUGIN (StdDrivers)

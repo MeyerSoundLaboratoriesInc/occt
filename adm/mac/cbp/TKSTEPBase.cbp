@@ -163,6 +163,9 @@
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionFormation.cxx" />
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionFormationRelationship.cxx" />
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionFormationWithSpecifiedSource.cxx" />
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionOrReference.cxx" />
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionReference.cxx" />
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionReferenceWithLocalRepresentation.cxx" />
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionRelationship.cxx" />
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionWithAssociatedDocuments.cxx" />
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductOrFormationOrDefinition.cxx" />
@@ -289,6 +292,8 @@
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionFormation.cxx" />
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionFormationRelationship.cxx" />
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionFormationWithSpecifiedSource.cxx" />
+		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionReference.cxx" />
+		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionReferenceWithLocalRepresentation.cxx" />
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionRelationship.cxx" />
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionWithAssociatedDocuments.cxx" />
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductRelatedProductCategory.cxx" />
@@ -320,6 +325,7 @@
 		<Unit filename="../../../src/StepRepr/StepRepr_BetweenShapeAspect.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_CentreOfSymmetry.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_CharacterizedDefinition.cxx" />
+		<Unit filename="../../../src/StepRepr/StepRepr_CharacterizedRepresentation.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_CompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_CompShAspAndDatumFeatAndShAsp.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_CompositeGroupShapeAspect.cxx" />
@@ -329,6 +335,8 @@
 		<Unit filename="../../../src/StepRepr/StepRepr_ConfigurationDesignItem.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_ConfigurationEffectivity.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_ConfigurationItem.cxx" />
+		<Unit filename="../../../src/StepRepr/StepRepr_ConstructiveGeometryRepresentation.cxx" />
+		<Unit filename="../../../src/StepRepr/StepRepr_ConstructiveGeometryRepresentationRelationship.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_ContinuosShapeAspect.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_DataEnvironment.cxx" />
 		<Unit filename="../../../src/StepRepr/StepRepr_DefinitionalRepresentation.cxx" />
@@ -395,6 +403,7 @@
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWAssemblyComponentUsageSubstitute.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWBetweenShapeAspect.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCentreOfSymmetry.cxx" />
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCharacterizedRepresentation.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCompShAspAndDatumFeatAndShAsp.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCompositeGroupShapeAspect.cxx" />
@@ -403,6 +412,8 @@
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConfigurationDesign.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConfigurationEffectivity.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConfigurationItem.cxx" />
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConstructiveGeometryRepresentation.cxx" />
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConstructiveGeometryRepresentationRelationship.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWContinuosShapeAspect.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWDataEnvironment.cxx" />
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWDefinitionalRepresentation.cxx" />

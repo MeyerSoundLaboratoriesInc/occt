@@ -17,7 +17,6 @@
 #ifndef _ShapeBuild_ReShape_HeaderFile
 #define _ShapeBuild_ReShape_HeaderFile
 
-#include <set>
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
@@ -28,6 +27,10 @@
 #include <ShapeExtend_Status.hxx>
 class TopoDS_Shape;
 
+// resolve name collisions with X11 headers
+#ifdef Status
+  #undef Status
+#endif
 
 class ShapeBuild_ReShape;
 DEFINE_STANDARD_HANDLE(ShapeBuild_ReShape, BRepTools_ReShape)
@@ -52,7 +55,7 @@ public:
   
   //! Returns an empty Reshape
   Standard_EXPORT ShapeBuild_ReShape();
-  
+
   //! Applies the substitutions requests to a shape
   //!
   //! <until> gives the level of type until which requests are taken
@@ -67,7 +70,7 @@ public:
   //! 2: Replace and Remove are both ignored
   //! If Replace/Remove are ignored or absent, the result as same
   //! type as the starting shape
-  Standard_EXPORT virtual TopoDS_Shape Apply (const TopoDS_Shape& shape, const TopAbs_ShapeEnum until, const Standard_Integer buildmode) Standard_OVERRIDE;
+  Standard_EXPORT virtual TopoDS_Shape Apply (const TopoDS_Shape& shape, const TopAbs_ShapeEnum until, const Standard_Integer buildmode);
   
   //! Applies the substitutions requests to a shape.
   //!
@@ -81,7 +84,7 @@ public:
   //! TopoDS_Wire or TopoDS_Compound containing TopoDS_Edges).
   //! If incompatible shape type is encountered, it is ignored
   //! and flag FAIL1 is set in Status.
-  Standard_EXPORT virtual TopoDS_Shape Apply(const TopoDS_Shape& shape, const TopAbs_ShapeEnum until = TopAbs_SHAPE) Standard_OVERRIDE;
+  Standard_EXPORT virtual TopoDS_Shape Apply (const TopoDS_Shape& shape, const TopAbs_ShapeEnum until = TopAbs_SHAPE) Standard_OVERRIDE;
   
   //! Returns a complete substitution status for a shape
   //! 0  : not recorded,   <newsh> = original <shape>
@@ -108,7 +111,7 @@ public:
 
 protected:
 
-	std::set<long long> shapes;
+
 
 
 private:

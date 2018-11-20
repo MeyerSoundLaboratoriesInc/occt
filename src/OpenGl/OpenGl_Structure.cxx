@@ -36,14 +36,14 @@ class OpenGl_BndBoxPrs : public OpenGl_Element
 public:
 
   //! Main constructor
-  OpenGl_BndBoxPrs (const Graphic3d_BndBox4f& theBndBox)
+  OpenGl_BndBoxPrs (const Graphic3d_BndBox3d& theBndBox)
   {
-    const float Xm = theBndBox.CornerMin().x();
-    const float Ym = theBndBox.CornerMin().y();
-    const float Zm = theBndBox.CornerMin().z();
-    const float XM = theBndBox.CornerMax().x();
-    const float YM = theBndBox.CornerMax().y();
-    const float ZM = theBndBox.CornerMax().z();
+    const float Xm = (float )theBndBox.CornerMin().x();
+    const float Ym = (float)theBndBox.CornerMin().y();
+    const float Zm = (float)theBndBox.CornerMin().z();
+    const float XM = (float)theBndBox.CornerMax().x();
+    const float YM = (float)theBndBox.CornerMax().y();
+    const float ZM = (float)theBndBox.CornerMax().z();
 
     myVerts[0]  = OpenGl_Vec3 (Xm, Ym, Zm);
     myVerts[1]  = OpenGl_Vec3 (Xm, Ym, ZM);
@@ -67,14 +67,20 @@ public:
   virtual void Render  (const Handle(OpenGl_Workspace)& theWorkspace) const
   {
   #if !defined(GL_ES_VERSION_2_0)
-    // Apply line aspect
-    const OpenGl_AspectLine*     anAspectLine = theWorkspace->AspectLine (Standard_True);
-    const Handle(OpenGl_Texture) aPrevTexture = theWorkspace->DisableTexture();
+    const Handle(OpenGl_Context)& aCtx = theWorkspace->GetGlContext();
+    if (aCtx->core11 == NULL)
+    {
+      return;
+    }
+
+    const Handle(OpenGl_TextureSet) aPrevTexture = aCtx->BindTextures (Handle(OpenGl_TextureSet)());
+    aCtx->BindProgram (Handle(OpenGl_ShaderProgram)());
+    aCtx->ShaderManager()->PushState (Handle(OpenGl_ShaderProgram)());
 
     glDisable (GL_LIGHTING);
 
     // Use highlight colors
-    theWorkspace->GetGlContext()->core11->glColor3fv ((theWorkspace->NamedStatus & OPENGL_NS_HIGHLIGHT) ? theWorkspace->HighlightColor->rgb : anAspectLine->Color().rgb);
+    aCtx->core11->glColor3fv (theWorkspace->LineColor().GetData());
 
     glEnableClientState (GL_VERTEX_ARRAY);
     glVertexPointer (3, GL_FLOAT, 0, (GLfloat* )&myVerts);
@@ -84,7 +90,7 @@ public:
     // restore aspects
     if (!aPrevTexture.IsNull())
     {
-      theWorkspace->EnableTexture (aPrevTexture);
+      aCtx->BindTextures (aPrevTexture);
     }
   #else
     (void )theWorkspace;
@@ -120,18 +126,13 @@ public:
 // =======================================================================
 OpenGl_Structure::OpenGl_Structure (const Handle(Graphic3d_StructureManager)& theManager)
 : Graphic3d_CStructure (theManager),
-  myAspectLine         (NULL),
-  myAspectFace         (NULL),
-  myAspectMarker       (NULL),
-  myAspectText         (NULL),
-  myHighlightColor     (NULL),
   myInstancedStructure (NULL),
   myIsRaytracable      (Standard_False),
   myModificationState  (0),
   myIsCulled           (Standard_True),
   myIsMirrored         (Standard_False)
 {
-  //
+  updateLayerTransformation();
 }
 
 // =======================================================================
@@ -144,39 +145,33 @@ OpenGl_Structure::~OpenGl_Structure()
 }
 
 // =======================================================================
-// function : UpdateAspects
+// function : SetZLayer
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::UpdateAspects()
+void OpenGl_Structure::SetZLayer (const Graphic3d_ZLayerId theLayerIndex)
 {
-  if (ContextLine.IsDef)
-    SetAspectLine (ContextLine);
-
-  if (ContextFillArea.IsDef)
-    SetAspectFace (ContextFillArea);
-
-  if (ContextMarker.IsDef)
-    SetAspectMarker (ContextMarker);
-
-  if (ContextText.IsDef)
-    SetAspectText (ContextText);
+  Graphic3d_CStructure::SetZLayer (theLayerIndex);
+  updateLayerTransformation();
 }
 
 // =======================================================================
-// function : UpdateTransformation
+// function : SetTransformation
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::UpdateTransformation()
+void OpenGl_Structure::SetTransformation (const Handle(Geom_Transformation)& theTrsf)
 {
-  const OpenGl_Mat4& aMat = Graphic3d_CStructure::Transformation;
-  Standard_ShortReal aDet =
-    aMat.GetValue(0, 0) * (aMat.GetValue(1, 1) * aMat.GetValue(2, 2) - aMat.GetValue(2, 1) * aMat.GetValue(1, 2)) -
-    aMat.GetValue(0, 1) * (aMat.GetValue(1, 0) * aMat.GetValue(2, 2) - aMat.GetValue(2, 0) * aMat.GetValue(1, 2)) +
-    aMat.GetValue(0, 2) * (aMat.GetValue(1, 0) * aMat.GetValue(2, 1) - aMat.GetValue(2, 0) * aMat.GetValue(1, 1));
+  myTrsf = theTrsf;
+  myIsMirrored = Standard_False;
+  if (!myTrsf.IsNull())
+  {
+    // Determinant of transform matrix less then 0 means that mirror transform applied.
+    const Standard_Real aDet = myTrsf->Value(1, 1) * (myTrsf->Value (2, 2) * myTrsf->Value (3, 3) - myTrsf->Value (3, 2) * myTrsf->Value (2, 3))
+                             - myTrsf->Value(1, 2) * (myTrsf->Value (2, 1) * myTrsf->Value (3, 3) - myTrsf->Value (3, 1) * myTrsf->Value (2, 3))
+                             + myTrsf->Value(1, 3) * (myTrsf->Value (2, 1) * myTrsf->Value (3, 2) - myTrsf->Value (3, 1) * myTrsf->Value (2, 2));
+    myIsMirrored = aDet < 0.0;
+  }
 
-  // Determinant of transform matrix less then 0 means that mirror transform applied.
-  myIsMirrored = aDet < 0.0f;
-
+  updateLayerTransformation();
   if (IsRaytracable())
   {
     ++myModificationState;
@@ -184,60 +179,34 @@ void OpenGl_Structure::UpdateTransformation()
 }
 
 // =======================================================================
-// function : SetAspectLine
+// function : SetTransformPersistence
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::SetAspectLine (const CALL_DEF_CONTEXTLINE &theAspect)
+void OpenGl_Structure::SetTransformPersistence (const Handle(Graphic3d_TransformPers)& theTrsfPers)
 {
-  if (!myAspectLine)
-  {
-    myAspectLine = new OpenGl_AspectLine();
-  }
-  myAspectLine->SetAspect (theAspect);
+  myTrsfPers = theTrsfPers;
+  updateLayerTransformation();
 }
 
 // =======================================================================
-// function : SetAspectFace
+// function : updateLayerTransformation
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::SetAspectFace (const CALL_DEF_CONTEXTFILLAREA& theAspect)
+void OpenGl_Structure::updateLayerTransformation()
 {
-  if (!myAspectFace)
+  gp_Trsf aRenderTrsf;
+  if (!myTrsf.IsNull())
   {
-    myAspectFace = new OpenGl_AspectFace();
+    aRenderTrsf = myTrsf->Trsf();
   }
-  myAspectFace->SetAspect (theAspect);
 
-  if (IsRaytracable())
+  const Graphic3d_ZLayerSettings& aLayer = myGraphicDriver->ZLayerSettings (myZLayer);
+  if (!aLayer.OriginTransformation().IsNull()
+    && myTrsfPers.IsNull())
   {
-    ++myModificationState;
+    aRenderTrsf.SetTranslationPart (aRenderTrsf.TranslationPart() - aLayer.Origin());
   }
-}
-
-// =======================================================================
-// function : SetAspectMarker
-// purpose  :
-// =======================================================================
-void OpenGl_Structure::SetAspectMarker (const CALL_DEF_CONTEXTMARKER& theAspect)
-{
-  if (!myAspectMarker)
-  {
-    myAspectMarker = new OpenGl_AspectMarker();
-  }
-  myAspectMarker->SetAspect (theAspect);
-}
-
-// =======================================================================
-// function : SetAspectText
-// purpose  :
-// =======================================================================
-void OpenGl_Structure::SetAspectText (const CALL_DEF_CONTEXTTEXT &theAspect)
-{
-  if (!myAspectText)
-  {
-    myAspectText = new OpenGl_AspectText();
-  }
-  myAspectText->SetAspect (theAspect);
+  aRenderTrsf.GetMat4 (myRenderTrsf);
 }
 
 // =======================================================================
@@ -254,32 +223,12 @@ void OpenGl_Structure::clearHighlightBox (const Handle(OpenGl_Context)& theGlCtx
 }
 
 // =======================================================================
-// function : HighlightWithColor
-// purpose  :
-// =======================================================================
-void OpenGl_Structure::HighlightWithColor (const Graphic3d_Vec3&  theColor,
-                                           const Standard_Boolean theToCreate)
-{
-  const Handle(OpenGl_Context)& aContext = GlDriver()->GetSharedContext();
-  if (theToCreate)
-    setHighlightColor   (aContext, theColor);
-  else
-    clearHighlightColor (aContext);
-}
-
-// =======================================================================
 // function : HighlightWithBndBox
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::HighlightWithBndBox (const Handle(Graphic3d_Structure)& theStruct,
-                                            const Standard_Boolean             theToCreate)
+void OpenGl_Structure::highlightWithBndBox (const Handle(Graphic3d_Structure)& theStruct)
 {
   const Handle(OpenGl_Context)& aContext = GlDriver()->GetSharedContext();
-  if (!theToCreate)
-  {
-    clearHighlightBox (aContext);
-    return;
-  }
 
   if (!myHighlightBox.IsNull())
   {
@@ -290,45 +239,51 @@ void OpenGl_Structure::HighlightWithBndBox (const Handle(Graphic3d_Structure)& t
     myHighlightBox = new OpenGl_Group (theStruct);
   }
 
-  CALL_DEF_CONTEXTLINE& aContextLine = myHighlightBox->ChangeContextLine();
-  aContextLine.IsDef    = 1;
-  aContextLine.Color    = HighlightColor;
-  aContextLine.LineType = Aspect_TOL_SOLID;
-  aContextLine.Width    = 1.0f;
-  myHighlightBox->UpdateAspectLine (Standard_True);
+  myHighlightBox->SetGroupPrimitivesAspect (new Graphic3d_AspectLine3d (myHighlightStyle->Color(), Aspect_TOL_SOLID, 1.0));
 
   OpenGl_BndBoxPrs* aBndBoxPrs = new OpenGl_BndBoxPrs (myBndBox);
   myHighlightBox->AddElement (aBndBoxPrs);
 }
 
 // =======================================================================
-// function : setHighlightColor
+// function : GraphicHighlight
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::setHighlightColor (const Handle(OpenGl_Context)& theGlCtx,
-                                          const Graphic3d_Vec3&         theColor)
+void OpenGl_Structure::GraphicHighlight (const Handle(Graphic3d_PresentationAttributes)& theStyle,
+                                         const Handle(Graphic3d_Structure)& theStruct)
 {
-  clearHighlightBox (theGlCtx);
-  if (myHighlightColor == NULL)
+  if (!myHighlightStyle.IsNull()
+    && myHighlightStyle->Method() == Aspect_TOHM_BOUNDBOX
+    && theStyle->Method() != Aspect_TOHM_BOUNDBOX)
   {
-    myHighlightColor = new TEL_COLOUR();
+    const Handle(OpenGl_Context)& aContext = GlDriver()->GetSharedContext();
+    clearHighlightBox (aContext);
   }
 
-  myHighlightColor->rgb[0] = theColor.r();
-  myHighlightColor->rgb[1] = theColor.g();
-  myHighlightColor->rgb[2] = theColor.b();
-  myHighlightColor->rgb[3] = 1.F;
+  myHighlightStyle = theStyle;
+
+  highlight = 1;
+  if (myHighlightStyle->Method() == Aspect_TOHM_BOUNDBOX)
+  {
+    highlightWithBndBox (theStruct);
+  }
 }
 
 // =======================================================================
-// function : clearHighlightColor
+// function : GraphicUnhighlight
 // purpose  :
 // =======================================================================
-void OpenGl_Structure::clearHighlightColor (const Handle(OpenGl_Context)& theGlCtx)
+void OpenGl_Structure::GraphicUnhighlight()
 {
-  clearHighlightBox(theGlCtx);
-  delete myHighlightColor;
-  myHighlightColor = NULL;
+  highlight = 0;
+
+  if (myHighlightStyle->Method() == Aspect_TOHM_BOUNDBOX)
+  {
+    const Handle(OpenGl_Context)& aContext = GlDriver()->GetSharedContext();
+    clearHighlightBox (aContext);
+  }
+
+  myHighlightStyle.Nullify();
 }
 
 // =======================================================================
@@ -349,16 +304,14 @@ void OpenGl_Structure::OnVisibilityChanged()
 // =======================================================================
 Standard_Boolean OpenGl_Structure::IsRaytracable() const
 {
-  if (!myGroups.IsEmpty())
+  if (!myGroups.IsEmpty()
+    && myIsRaytracable)
   {
-    return myIsRaytracable; // geometry structure
-  }
-  else if (myInstancedStructure != NULL)
-  {
-    return myInstancedStructure->IsRaytracable(); // instance structure
+    return Standard_True;
   }
 
-  return Standard_False; // has no any groups or structures
+  return myInstancedStructure != NULL
+     &&  myInstancedStructure->IsRaytracable();
 }
 
 // =======================================================================
@@ -367,7 +320,18 @@ Standard_Boolean OpenGl_Structure::IsRaytracable() const
 // =======================================================================
 void OpenGl_Structure::UpdateStateIfRaytracable (const Standard_Boolean toCheck) const
 {
-  myIsRaytracable = !toCheck || OpenGl_Raytrace::IsRaytracedStructure (this);
+  myIsRaytracable = !toCheck;
+  if (!myIsRaytracable)
+  {
+    for (OpenGl_Structure::GroupIterator anIter (myGroups); anIter.More(); anIter.Next())
+    {
+      if (anIter.Value()->IsRaytracable())
+      {
+        myIsRaytracable = Standard_True;
+        break;
+      }
+    }
+  }
 
   if (IsRaytracable())
   {
@@ -512,26 +476,6 @@ void OpenGl_Structure::renderGeometry (const Handle(OpenGl_Workspace)& theWorksp
 }
 
 // =======================================================================
-// function : renderClosedGeometry
-// purpose  :
-// =======================================================================
-void OpenGl_Structure::renderClosedGeometry (const Handle(OpenGl_Workspace)& theWorkspace) const
-{
-  if (myInstancedStructure != NULL)
-  {
-    myInstancedStructure->renderClosedGeometry (theWorkspace);
-  }
-
-  for (OpenGl_Structure::GroupIterator aGroupIter (myGroups); aGroupIter.More(); aGroupIter.Next())
-  {
-    if (aGroupIter.Value()->IsClosed())
-    {
-      aGroupIter.Value()->Render (theWorkspace);
-    }
-  }
-}
-
-// =======================================================================
 // function : Render
 // purpose  :
 // =======================================================================
@@ -546,61 +490,59 @@ void OpenGl_Structure::Render (const Handle(OpenGl_Workspace) &theWorkspace) con
   const Handle(OpenGl_Context)& aCtx = theWorkspace->GetGlContext();
 
   // Render named status
-  const Standard_Integer aNamedStatus = theWorkspace->NamedStatus;
-  if (highlight)
+  if (highlight && myHighlightBox.IsNull())
   {
-    theWorkspace->NamedStatus |= OPENGL_NS_HIGHLIGHT;
+    theWorkspace->SetHighlightStyle (myHighlightStyle);
   }
 
   // Apply local transformation
   aCtx->ModelWorldState.Push();
-  aCtx->ModelWorldState.SetCurrent (Transformation);
+  OpenGl_Mat4& aModelWorld = aCtx->ModelWorldState.ChangeCurrent();
+  aModelWorld = myRenderTrsf;
 
+  const Standard_Boolean anOldGlNormalize = aCtx->IsGlNormalizeEnabled();
+#if !defined(GL_ES_VERSION_2_0)
   // detect scale transform
-  const Standard_Boolean   anOldGlNormalize = aCtx->IsGlNormalizeEnabled();
-  const Standard_ShortReal aScaleX          = Transformation.GetRow (0).xyz().SquareModulus();
-  if (Abs (aScaleX - 1.f) > Precision::Confusion())
+  if (aCtx->core11 != NULL
+  && !myTrsf.IsNull())
   {
-    aCtx->SetGlNormalizeEnabled (Standard_True);
+    const Standard_Real aScale = myTrsf->ScaleFactor();
+    if (Abs (aScale - 1.0) > Precision::Confusion())
+    {
+      aCtx->SetGlNormalizeEnabled (Standard_True);
+    }
   }
+#endif
 
-  if (TransformPersistence.Flags)
+  if (!myTrsfPers.IsNull())
   {
-    OpenGl_Mat4 aProjection = aCtx->ProjectionState.Current();
-    OpenGl_Mat4 aWorldView  = aCtx->WorldViewState.Current();
-    TransformPersistence.Apply (aProjection, aWorldView, theWorkspace->Width(), theWorkspace->Height());
-
-    aCtx->ProjectionState.Push();
     aCtx->WorldViewState.Push();
-    aCtx->ProjectionState.SetCurrent (aProjection);
-    aCtx->WorldViewState.SetCurrent (aWorldView);
-    aCtx->ApplyProjectionMatrix();
+    OpenGl_Mat4& aWorldView = aCtx->WorldViewState.ChangeCurrent();
+    myTrsfPers->Apply (theWorkspace->View()->Camera(),
+                       aCtx->ProjectionState.Current(), aWorldView,
+                       aCtx->VirtualViewport()[2], aCtx->VirtualViewport()[3]);
+
+  #if !defined(GL_ES_VERSION_2_0)
+    if (!aCtx->IsGlNormalizeEnabled()
+      && aCtx->core11 != NULL)
+    {
+      const Standard_Real aScale = Graphic3d_TransformUtils::ScaleFactor<Standard_ShortReal> (aWorldView);
+      if (Abs (aScale - 1.0) > Precision::Confusion())
+      {
+        aCtx->SetGlNormalizeEnabled (Standard_True);
+      }
+    }
+  #endif
   }
 
   // Take into account transform persistence
   aCtx->ApplyModelViewMatrix();
 
-  // Apply aspects
-  const OpenGl_AspectLine *anAspectLine = theWorkspace->AspectLine (Standard_False);
-  const OpenGl_AspectFace *anAspectFace = theWorkspace->AspectFace (Standard_False);
-  const OpenGl_AspectMarker *anAspectMarker = theWorkspace->AspectMarker (Standard_False);
-  const OpenGl_AspectText *anAspectText = theWorkspace->AspectText (Standard_False);
-  if (myAspectLine)
-  {
-    theWorkspace->SetAspectLine (myAspectLine);
-  }
-  if (myAspectFace)
-  {
-    theWorkspace->SetAspectFace (myAspectFace);
-  }
-  if (myAspectMarker)
-  {
-    theWorkspace->SetAspectMarker (myAspectMarker);
-  }
-  if (myAspectText)
-  {
-    theWorkspace->SetAspectText (myAspectText);
-  }
+  // remember aspects
+  const OpenGl_AspectLine*   aPrevAspectLine   = theWorkspace->AspectLine();
+  const OpenGl_AspectFace*   aPrevAspectFace   = theWorkspace->AspectFace();
+  const OpenGl_AspectMarker* aPrevAspectMarker = theWorkspace->AspectMarker();
+  const OpenGl_AspectText*   aPrevAspectText   = theWorkspace->AspectText();
 
   // Apply correction for mirror transform
   if (myIsMirrored)
@@ -608,51 +550,105 @@ void OpenGl_Structure::Render (const Handle(OpenGl_Workspace) &theWorkspace) con
     aCtx->core11fwd->glFrontFace (GL_CW);
   }
 
-  // Apply highlight color
-  const TEL_COLOUR *aHighlightColor = theWorkspace->HighlightColor;
-  if (myHighlightColor)
-    theWorkspace->HighlightColor = myHighlightColor;
-
-  // Set up plane equations for non-structure transformed global model-view matrix
-  // List of planes to be applied to context state
-  NCollection_Handle<Graphic3d_SequenceOfHClipPlane> aUserPlanes;
-
   // Collect clipping planes of structure scope
-  if (!myClipPlanes.IsEmpty())
+  aCtx->ChangeClipping().SetLocalPlanes (aCtx, myClipPlanes);
+
+  // True if structure is fully clipped
+  bool isClipped = false;
+  bool hasDisabled = false;
+  if (aCtx->Clipping().IsClippingOrCappingOn())
   {
-    Graphic3d_SequenceOfHClipPlane::Iterator aClippingIter (myClipPlanes);
-    for (; aClippingIter.More(); aClippingIter.Next())
+    const Graphic3d_BndBox3d& aBBox = BoundingBox();
+    if (!myClipPlanes.IsNull()
+      && myClipPlanes->ToOverrideGlobal())
     {
-      const Handle(Graphic3d_ClipPlane)& aClipPlane = aClippingIter.Value();
-      if (!aClipPlane->IsOn())
-      {
-        continue;
-      }
-
-      if (aUserPlanes.IsNull())
-      {
-        aUserPlanes = new Graphic3d_SequenceOfHClipPlane();
-      }
-
-      aUserPlanes->Append (aClipPlane);
+      aCtx->ChangeClipping().DisableGlobal (aCtx);
+      hasDisabled = aCtx->Clipping().HasDisabled();
     }
-  }
-
-  if (!aUserPlanes.IsNull() && !aUserPlanes->IsEmpty())
-  {
-    // add planes at loaded view matrix state
-    aCtx->ChangeClipping().AddWorld (aCtx, *aUserPlanes);
-
-    // Set OCCT state uniform variables
-    if (!aCtx->ShaderManager()->IsEmpty())
+    else if (!myTrsfPers.IsNull())
     {
+      if (myTrsfPers->IsZoomOrRotate())
+      {
+        // Zoom/rotate persistence object lives in two worlds at the same time.
+        // Global clipping planes can not be trivially applied without being converted
+        // into local space of transformation persistence object.
+        // As more simple alternative - just clip entire object by its anchor point defined in the world space.
+        const gp_Pnt anAnchor = myTrsfPers->AnchorPoint();
+        for (OpenGl_ClippingIterator aPlaneIt (aCtx->Clipping()); aPlaneIt.More() && aPlaneIt.IsGlobal(); aPlaneIt.Next())
+        {
+          const Handle(Graphic3d_ClipPlane)& aPlane = aPlaneIt.Value();
+          if (!aPlane->IsOn())
+          {
+            continue;
+          }
+
+          // check for clipping
+          const Graphic3d_Vec4d& aPlaneEquation = aPlane->GetEquation();
+          const Graphic3d_Vec4d aCheckPnt (anAnchor.X(), anAnchor.Y(), anAnchor.Z(), 1.0);
+          if (aPlaneEquation.Dot (aCheckPnt) < 0.0) // vertex is outside the half-space
+          {
+            isClipped = true;
+            break;
+          }
+        }
+      }
+
+      aCtx->ChangeClipping().DisableGlobal (aCtx);
+      hasDisabled = aCtx->Clipping().HasDisabled();
+    }
+
+    // Set of clipping planes that do not intersect the structure,
+    // and thus can be disabled to improve rendering performance
+    if (aBBox.IsValid()
+     && myTrsfPers.IsNull())
+    {
+      for (OpenGl_ClippingIterator aPlaneIt (aCtx->Clipping()); aPlaneIt.More(); aPlaneIt.Next())
+      {
+        const Handle(Graphic3d_ClipPlane)& aPlane = aPlaneIt.Value();
+        if (aPlaneIt.IsDisabled())
+        {
+          continue;
+        }
+
+        // check for clipping
+        const Graphic3d_Vec4d& aPlaneEquation = aPlane->GetEquation();
+        const Graphic3d_Vec4d aMaxPnt (aPlaneEquation.x() > 0.0 ? aBBox.CornerMax().x() : aBBox.CornerMin().x(),
+                                       aPlaneEquation.y() > 0.0 ? aBBox.CornerMax().y() : aBBox.CornerMin().y(),
+                                       aPlaneEquation.z() > 0.0 ? aBBox.CornerMax().z() : aBBox.CornerMin().z(),
+                                       1.0);
+        if (aPlaneEquation.Dot (aMaxPnt) < 0.0) // max vertex is outside the half-space
+        {
+          isClipped = true;
+          break;
+        }
+
+        // check for no intersection (e.g. object is "entirely not clipped")
+        const Graphic3d_Vec4d aMinPnt (aPlaneEquation.x() > 0.0 ? aBBox.CornerMin().x() : aBBox.CornerMax().x(),
+                                       aPlaneEquation.y() > 0.0 ? aBBox.CornerMin().y() : aBBox.CornerMax().y(),
+                                       aPlaneEquation.z() > 0.0 ? aBBox.CornerMin().z() : aBBox.CornerMax().z(),
+                                       1.0);
+        if (aPlaneEquation.Dot (aMinPnt) > 0.0) // min vertex is inside the half-space
+        {
+          aCtx->ChangeClipping().SetEnabled (aCtx, aPlaneIt, Standard_False);
+          hasDisabled = true;
+        }
+      }
+    }
+
+    if ((!myClipPlanes.IsNull() && !myClipPlanes->IsEmpty())
+     || hasDisabled)
+    {
+      // Set OCCT state uniform variables
       aCtx->ShaderManager()->UpdateClippingState();
     }
   }
 
   // Render groups
   bool hasClosedPrims = false;
-  renderGeometry (theWorkspace, hasClosedPrims);
+  if (!isClipped)
+  {
+    renderGeometry (theWorkspace, hasClosedPrims);
+  }
 
   // Reset correction for mirror transform
   if (myIsMirrored)
@@ -662,50 +658,48 @@ void OpenGl_Structure::Render (const Handle(OpenGl_Workspace) &theWorkspace) con
 
   // Render capping for structure groups
   if (hasClosedPrims
-  && !aCtx->Clipping().Planes().IsEmpty())
+   && aCtx->Clipping().IsCappingOn())
   {
     OpenGl_CappingAlgo::RenderCapping (theWorkspace, *this);
   }
 
   // Revert structure clippings
-  if (!aUserPlanes.IsNull() && !aUserPlanes->IsEmpty())
+  if (hasDisabled)
   {
-    aCtx->ChangeClipping().Remove (aCtx, *aUserPlanes);
-
+    // enable planes that were previously disabled
+    aCtx->ChangeClipping().RestoreDisabled (aCtx);
+  }
+  aCtx->ChangeClipping().SetLocalPlanes (aCtx, Handle(Graphic3d_SequenceOfHClipPlane)());
+  if ((!myClipPlanes.IsNull() && !myClipPlanes->IsEmpty())
+    || hasDisabled)
+  {
     // Set OCCT state uniform variables
-    if (!aCtx->ShaderManager()->IsEmpty())
-    {
-      aCtx->ShaderManager()->RevertClippingState();
-    }
+    aCtx->ShaderManager()->RevertClippingState();
   }
 
   // Restore local transformation
   aCtx->ModelWorldState.Pop();
   aCtx->SetGlNormalizeEnabled (anOldGlNormalize);
-  if (TransformPersistence.Flags)
+  if (!myTrsfPers.IsNull())
   {
-    aCtx->ProjectionState.Pop();
     aCtx->WorldViewState.Pop();
-    aCtx->ApplyProjectionMatrix();
   }
 
-  // Restore highlight color
-  theWorkspace->HighlightColor = aHighlightColor;
-
   // Restore aspects
-  theWorkspace->SetAspectLine (anAspectLine);
-  theWorkspace->SetAspectFace (anAspectFace);
-  theWorkspace->SetAspectMarker (anAspectMarker);
-  theWorkspace->SetAspectText (anAspectText);
+  theWorkspace->SetAspectLine   (aPrevAspectLine);
+  theWorkspace->SetAspectFace   (aPrevAspectFace);
+  theWorkspace->SetAspectMarker (aPrevAspectMarker);
+  theWorkspace->SetAspectText   (aPrevAspectText);
 
   // Apply highlight box
   if (!myHighlightBox.IsNull())
   {
+    theWorkspace->SetHighlightStyle (myHighlightStyle);
     myHighlightBox->Render (theWorkspace);
   }
 
   // Restore named status
-  theWorkspace->NamedStatus = aNamedStatus;
+  theWorkspace->SetHighlightStyle (Handle(Graphic3d_PresentationAttributes)());
 }
 
 // =======================================================================
@@ -716,11 +710,8 @@ void OpenGl_Structure::Release (const Handle(OpenGl_Context)& theGlCtx)
 {
   // Release groups
   Clear (theGlCtx);
-  OpenGl_Element::Destroy (theGlCtx.operator->(), myAspectLine);
-  OpenGl_Element::Destroy (theGlCtx.operator->(), myAspectFace);
-  OpenGl_Element::Destroy (theGlCtx.operator->(), myAspectMarker);
-  OpenGl_Element::Destroy (theGlCtx.operator->(), myAspectText);
-  clearHighlightColor (theGlCtx);
+  clearHighlightBox (theGlCtx);
+  myHighlightStyle.Nullify();
 }
 
 // =======================================================================
@@ -732,22 +723,6 @@ void OpenGl_Structure::ReleaseGlResources (const Handle(OpenGl_Context)& theGlCt
   for (OpenGl_Structure::GroupIterator aGroupIter (myGroups); aGroupIter.More(); aGroupIter.Next())
   {
     aGroupIter.ChangeValue()->Release (theGlCtx);
-  }
-  if (myAspectLine != NULL)
-  {
-    myAspectLine->Release (theGlCtx.operator->());
-  }
-  if (myAspectFace != NULL)
-  {
-    myAspectFace->Release (theGlCtx.operator->());
-  }
-  if (myAspectMarker != NULL)
-  {
-    myAspectMarker->Release (theGlCtx.operator->());
-  }
-  if (myAspectText != NULL)
-  {
-    myAspectText->Release (theGlCtx.operator->());
   }
   if (!myHighlightBox.IsNull())
   {

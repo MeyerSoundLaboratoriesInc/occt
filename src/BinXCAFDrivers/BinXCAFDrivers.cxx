@@ -20,11 +20,11 @@
 #include <BinXCAFDrivers.hxx>
 #include <BinXCAFDrivers_DocumentRetrievalDriver.hxx>
 #include <BinXCAFDrivers_DocumentStorageDriver.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Plugin_Macro.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_GUID.hxx>
-#include <Standard_Transient.hxx>
+#include <TDocStd_Application.hxx>
 
 static Standard_GUID BinXCAFStorageDriver  ("a78ff496-a779-11d5-aab4-0050044b1af1");
 static Standard_GUID BinXCAFRetrievalDriver("a78ff497-a779-11d5-aab4-0050044b1af1");
@@ -56,16 +56,25 @@ const Handle(Standard_Transient)& BinXCAFDrivers::Factory(const Standard_GUID& t
   }
 
 
-  Standard_Failure::Raise ("XCAFBinDrivers : unknown GUID");
-  static Handle(Standard_Transient) aNullHandle;
-  return aNullHandle;
+  throw Standard_Failure("XCAFBinDrivers : unknown GUID");
+}
+
+//=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void BinXCAFDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("BinXCAF", "Binary XCAF Document", "xbf",
+                        new BinXCAFDrivers_DocumentRetrievalDriver, 
+                        new BinXCAFDrivers_DocumentStorageDriver);
 }
 
 //=======================================================================
 //function :
 //purpose  : 
 //=======================================================================
-Handle(BinMDF_ADriverTable) BinXCAFDrivers::AttributeDrivers(const Handle(CDM_MessageDriver)& aMsgDrv) {
+Handle(BinMDF_ADriverTable) BinXCAFDrivers::AttributeDrivers(const Handle(Message_Messenger)& aMsgDrv) {
   // Standard Drivers
   Handle(BinMDF_ADriverTable) aTable = BinDrivers::AttributeDrivers(aMsgDrv);
 

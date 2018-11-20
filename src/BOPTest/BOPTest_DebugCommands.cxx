@@ -36,10 +36,11 @@
 #include <BOPAlgo_BuilderFace.hxx>
 #include <BOPAlgo_BuilderSolid.hxx>
 
-#include <BOPCol_MapOfShape.hxx>
-#include <BOPCol_DataMapOfShapeShape.hxx>
-#include <BOPCol_DataMapOfShapeListOfShape.hxx>
+#include <TopTools_DataMapOfShapeShape.hxx>
+#include <TopTools_DataMapOfShapeListOfShape.hxx>
+#include <TopTools_MapOfShape.hxx>
 
+#include <IntTools_Context.hxx>
 
 static
   void GetTypeByName(const char* theName,
@@ -49,13 +50,13 @@ static
                      char* theName);
 
 template <class InterfType> static
-  void DumpInterfs(const BOPCol_NCVector<InterfType>& theVInterf,
+  void DumpInterfs(const NCollection_Vector<InterfType>& theVInterf,
                    Draw_Interpretor& di);
 
 template <class InterfType> static
   void SearchNewIndex(const char* theCType,
                       const Standard_Integer theInd,
-                      const BOPCol_NCVector<InterfType>& theVInterf,
+                      const NCollection_Vector<InterfType>& theVInterf,
                       Draw_Interpretor& di);
 static 
   Standard_Integer bopfinfo(Draw_Interpretor& di,
@@ -235,14 +236,15 @@ Standard_Integer bopiterator (Draw_Interpretor& di,
     return 1;
   }
   //
-  Standard_Boolean bFlag;
   Standard_Integer n1, n2;
   char buf[64], aST1[10], aST2[10];
   BOPDS_Iterator aIt;
   //
+  Handle(IntTools_Context) aCtx = new IntTools_Context();
+
   BOPDS_DS& aDS = *pDS;
   aIt.SetDS(&aDS);
-  aIt.Prepare();
+  aIt.Prepare(aCtx, BOPTest_Objects::UseOBB(), BOPTest_Objects::FuzzyValue());
   //
   if (n == 1) {
     // type has not been defined. show all pairs
@@ -252,12 +254,12 @@ Standard_Integer bopiterator (Draw_Interpretor& di,
     for (i = 0; i < 4; ++i) {
       GetNameByType(aT[i], aST1);
       //
-      for (j = 0; j < 4; ++j) {
+      for (j = i; j < 4; ++j) {
         GetNameByType(aT[j], aST2);
         //
         aIt.Initialize(aT[i], aT[j]);
         for (; aIt.More(); aIt.Next()) {
-          aIt.Value(n1, n2, bFlag);
+          aIt.Value(n1, n2);
           //
           Sprintf(buf, "%s/%s: (z%d z%d)\n", aST1, aST2, n1, n2);
           di << buf;
@@ -276,7 +278,7 @@ Standard_Integer bopiterator (Draw_Interpretor& di,
     //
     aIt.Initialize(aT1, aT2);
     for (; aIt.More(); aIt.Next()) {
-      aIt.Value(n1, n2, bFlag);
+      aIt.Value(n1, n2);
       //
       Sprintf(buf, "%s/%s: (z%d z%d)\n", aST1, aST2, n1, n2);
       di << buf;
@@ -427,13 +429,13 @@ Standard_Integer bopwho (Draw_Interpretor& di,
   //
   bFound = Standard_False;
   BOPDS_VectorOfInterfFF& aFFs = pDS->InterfFF();
-  aNb = aFFs.Extent();
+  aNb = aFFs.Length();
   for (i = 0; i < aNb; ++i) {
     const BOPDS_InterfFF& anInt = aFFs(i);
     anInt.Indices(n1, n2);
     //
     const BOPDS_VectorOfCurve& aVNC = anInt.Curves();
-    aNbC = aVNC.Extent();
+    aNbC = aVNC.Length();
     for (k = 0; k < aNbC; ++k) {
       const BOPDS_Curve& aNC = aVNC(k);
       const BOPDS_ListOfPaveBlock& aLPB = aNC.PaveBlocks(); 
@@ -458,7 +460,7 @@ Standard_Integer bopwho (Draw_Interpretor& di,
     //
     bFound = Standard_False;
     const BOPDS_VectorOfPoint& aVNP = anInt.Points();
-    aNbP = aVNP.Extent();
+    aNbP = aVNP.Length();
     for (k = 0; k < aNbP; ++k) {
       const BOPDS_Point& aNP = aVNP(k);
       nV1 = aNP.Index();
@@ -576,21 +578,6 @@ Standard_Integer bopindex (Draw_Interpretor& di,
     di << " Index: " << ind << "\n";
   }
   else {
-    Standard_Integer i1, i2;
-    //
-    i1 = pDS->NbSourceShapes();
-    i2 = pDS->NbShapes();
-    for (ind = i1; ind < i2; ++ind) {
-      const TopoDS_Shape& aSx = pDS->Shape(ind);
-      if (aSx.IsSame(aS)) {
-        di << " Index: " << ind << "\n";
-        bFound = Standard_True;
-        break;
-      }
-    }
-  }
-  //
-  if (!bFound) {
     di << " DS does not contain the shape\n";
   }
   //
@@ -680,7 +667,7 @@ Standard_Integer bopsc(Draw_Interpretor& di,
   //
   iCnt = 0;
   iPriz = 0;
-  aNb = aFFs.Extent();
+  aNb = aFFs.Length();
   for (j = 0; j < aNb; ++j) {
     const BOPDS_InterfFF& aFF = aFFs(j);
     if (n == 3) {
@@ -694,7 +681,7 @@ Standard_Integer bopsc(Draw_Interpretor& di,
     //
     iX = 0;
     const BOPDS_VectorOfCurve& aVNC = aFF.Curves();
-    aNbC = aVNC.Extent();
+    aNbC = aVNC.Length();
     for (k = 0; k < aNbC; ++k) {
       const BOPDS_Curve& aNC = aVNC(k);
       const BOPDS_ListOfPaveBlock& aLPB = aNC.PaveBlocks();
@@ -727,7 +714,7 @@ Standard_Integer bopsc(Draw_Interpretor& di,
     //
     iX = 0;
     const BOPDS_VectorOfPoint& aVNP = aFF.Points();
-    aNbP = aVNP.Extent();
+    aNbP = aVNP.Length();
     for (k = 0; k < aNbP; ++k) {
       const BOPDS_Point& aNP = aVNP(k);
       nSp = aNP.Index();
@@ -1034,7 +1021,7 @@ Standard_Integer bopfinfo(Draw_Interpretor& di,
   BOPDS_FaceInfo& aFI = pDS->ChangeFaceInfo(nF);
   //
   BOPDS_IndexedMapOfPaveBlock aMPB;
-  BOPCol_MapOfInteger aMI;
+  TColStd_MapOfInteger aMI;
   if (iPriz == 0) {
     strcpy(aText, "On");
     aMPB = aFI.ChangePaveBlocksOn();
@@ -1066,7 +1053,7 @@ Standard_Integer bopfinfo(Draw_Interpretor& di,
   //
   if (aMI.Extent()) {
     printf(" vertices %s:\n", aText);
-    BOPCol_MapIteratorOfMapOfInteger aItMI(aMI);
+    TColStd_MapIteratorOfMapOfInteger aItMI(aMI);
     for (; aItMI.More(); aItMI.Next()) {
       nV = aItMI.Value();
       printf(" %d", nV);
@@ -1119,7 +1106,7 @@ Standard_Integer bopfav(Draw_Interpretor& di,
     return 0;
   }
   //
-  BOPCol_ListOfInteger aLI;
+  TColStd_ListOfInteger aLI;
   pDS->AloneVertices(nF, aLI);
   if (!aLI.Extent()) {
     di << " no alone vertices found\n";
@@ -1127,7 +1114,7 @@ Standard_Integer bopfav(Draw_Interpretor& di,
   }
   //
   di << " alone vertices: \n";
-  BOPCol_ListIteratorOfListOfInteger aItLI(aLI);
+  TColStd_ListIteratorOfListOfInteger aItLI(aLI);
   for (; aItLI.More(); aItLI.Next()) {
     nV = aItLI.Value();
     di << nV << " ";
@@ -1163,7 +1150,7 @@ Standard_Integer bopimage(Draw_Interpretor& di,
   }
   //
   BOPAlgo_Builder& aBuilder = BOPTest_Objects::Builder();
-  const BOPCol_DataMapOfShapeListOfShape& anImages = aBuilder.Images();
+  const TopTools_DataMapOfShapeListOfShape& anImages = aBuilder.Images();
   if (!anImages.IsBound(aS)) {
     di << " no images found\n"; 
     return 0;
@@ -1176,8 +1163,8 @@ Standard_Integer bopimage(Draw_Interpretor& di,
   //
   aBB.MakeCompound(aC);
   //
-  const BOPCol_ListOfShape& aLSIm = anImages.Find(aS);
-  BOPCol_ListIteratorOfListOfShape aIt(aLSIm);
+  const TopTools_ListOfShape& aLSIm = anImages.Find(aS);
+  TopTools_ListIteratorOfListOfShape aIt(aLSIm);
   for (i = 0; aIt.More(); aIt.Next(), ++i) {
     const TopoDS_Shape& aSIm = aIt.Value();
     aBB.Add(aC, aSIm);
@@ -1216,20 +1203,34 @@ Standard_Integer boporigin(Draw_Interpretor& di,
     return 0;
   }
   //
-  char buf[32];
-  //
   BOPAlgo_Builder& aBuilder = BOPTest_Objects::Builder();
-  const BOPCol_DataMapOfShapeShape& aDMI = aBuilder.Origins();
+  const TopTools_DataMapOfShapeListOfShape& aDMI = aBuilder.Origins();
   if (!aDMI.IsBound(aS)) {
     di << " no origins found\n"; 
     return 0;
   }
   //
-  const TopoDS_Shape& aSx = aDMI.Find(aS);
-  //
+  char buf[32];
   sprintf(buf, "%s_or", a[1]);
-  DBRep::Set(buf, aSx);
   //
+  const TopTools_ListOfShape& aLSx = aDMI.Find(aS);
+  if (aLSx.Extent() == 1) {
+    DBRep::Set(buf, aLSx.First());
+    di << "1 origin found\n" << buf << "\n";
+    return 0;
+  }
+  //
+  TopoDS_Compound aCOr;
+  BRep_Builder().MakeCompound(aCOr);
+  //
+  TopTools_ListIteratorOfListOfShape aItLSx(aLSx);
+  for (; aItLSx.More(); aItLSx.Next()) {
+    BRep_Builder().Add(aCOr, aItLSx.Value());
+  }
+  //
+  DBRep::Set(buf, aCOr);
+  //
+  di << aLSx.Extent() << " origins found\n";
   di << buf << "\n";
   //
   return 0;
@@ -1261,7 +1262,7 @@ Standard_Integer bopfsd(Draw_Interpretor& di,
   }
   //
   BOPAlgo_Builder& aBuilder = BOPTest_Objects::Builder();
-  const BOPCol_DataMapOfShapeShape& aDMSD = aBuilder.ShapesSD();
+  const TopTools_DataMapOfShapeShape& aDMSD = aBuilder.ShapesSD();
   if (!aDMSD.IsBound(aS)) {
     di << " shape has no sd shape\n"; 
     return 0;
@@ -1274,7 +1275,7 @@ Standard_Integer bopfsd(Draw_Interpretor& di,
   //
   aBB.MakeCompound(aC);
   //
-  BOPCol_DataMapIteratorOfDataMapOfShapeShape aItSD;
+  TopTools_DataMapIteratorOfDataMapOfShapeShape aItSD;
   aItSD.Initialize(aDMSD);
   for (i = 0; aItSD.More(); aItSD.Next()) {
     const TopoDS_Shape& aSK = aItSD.Key();
@@ -1323,7 +1324,7 @@ Standard_Integer bopbface (Draw_Interpretor& di,
   }
   //
   TopoDS_Face aF;
-  BOPCol_ListOfShape aLE;
+  TopTools_ListOfShape aLE;
   Standard_Integer i;
   //
   TopoDS_Iterator aItS(aS);
@@ -1349,16 +1350,14 @@ Standard_Integer bopbface (Draw_Interpretor& di,
   aBF.SetFace(aF);
   aBF.SetShapes(aLE);
   aBF.Perform();
-  //
-  Standard_Integer iErr = aBF.ErrorStatus();
-  if (iErr != 0) {
-    di << " Error: " << iErr << "\n";
-    return 1;
+  BOPTest::ReportAlerts(aBF.GetReport());
+  if (aBF.HasErrors()) {
+    return 0;
   }
   //
   char buf[128];
-  const BOPCol_ListOfShape& aLFR = aBF.Areas();
-  BOPCol_ListIteratorOfListOfShape aIt(aLFR);
+  const TopTools_ListOfShape& aLFR = aBF.Areas();
+  TopTools_ListIteratorOfListOfShape aIt(aLFR);
   for (i = 1; aIt.More(); aIt.Next(), ++i) {
     const TopoDS_Shape& aFR = aIt.Value();
     sprintf(buf, "%s_%d", a[1], i);
@@ -1396,7 +1395,7 @@ Standard_Integer bopbsolid (Draw_Interpretor& di,
     return 1;
   }
   //
-  BOPCol_ListOfShape aLF;
+  TopTools_ListOfShape aLF;
   TopExp_Explorer aExp(aS, TopAbs_FACE);
   for (; aExp.More(); aExp.Next()) {
     const TopoDS_Shape& aF = aExp.Current();
@@ -1411,11 +1410,9 @@ Standard_Integer bopbsolid (Draw_Interpretor& di,
   BOPAlgo_BuilderSolid aBS;
   aBS.SetShapes(aLF);
   aBS.Perform();
-  //
-  Standard_Integer iErr = aBS.ErrorStatus();
-  if (iErr != 0) {
-    di << " Error: " << iErr << "\n";
-    return 1;
+  BOPTest::ReportAlerts(aBS.GetReport());
+  if (aBS.HasErrors()) {
+    return 0;
   }
   //
   Standard_Integer i;
@@ -1425,8 +1422,8 @@ Standard_Integer bopbsolid (Draw_Interpretor& di,
   aBB.MakeCompound(aSolids);
   //
   char buf[128];
-  const BOPCol_ListOfShape& aLSR = aBS.Areas();
-  BOPCol_ListIteratorOfListOfShape aIt(aLSR);
+  const TopTools_ListOfShape& aLSR = aBS.Areas();
+  TopTools_ListIteratorOfListOfShape aIt(aLSR);
   for (i = 1; aIt.More(); aIt.Next(), ++i) {
     const TopoDS_Shape& aSR = aIt.Value();
     sprintf(buf, "%s_%d", a[1], i);
@@ -1534,13 +1531,13 @@ void GetNameByType(const TopAbs_ShapeEnum& theType,
 //purpose  : 
 //=======================================================================
 template <class InterfType> void DumpInterfs
-  (const BOPCol_NCVector<InterfType>& theVInterf,
+  (const NCollection_Vector<InterfType>& theVInterf,
    Draw_Interpretor& di)
 {
   Standard_Integer i, aNb, n1, n2, nNew;
   char buf[64];
   //
-  aNb = theVInterf.Extent();
+  aNb = theVInterf.Length();
   if (aNb == 0) {
     di << "Not found\n";
     return;
@@ -1568,7 +1565,7 @@ template <class InterfType> void DumpInterfs
 template <class InterfType> void SearchNewIndex
   (const char* theCType,
    const Standard_Integer theInd,
-   const BOPCol_NCVector<InterfType>& theVInterf,
+   const NCollection_Vector<InterfType>& theVInterf,
    Draw_Interpretor& di)
 {
   char buf[64];
@@ -1576,7 +1573,7 @@ template <class InterfType> void SearchNewIndex
   Standard_Integer i, aNb, n1, n2, nNew;
   //
   bFound = Standard_False;
-  aNb = theVInterf.Extent();
+  aNb = theVInterf.Length();
   for (i = 0 ; i < aNb; ++i) {
     const InterfType& anInt = theVInterf(i);
     nNew = anInt.IndexNew();

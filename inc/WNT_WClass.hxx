@@ -18,20 +18,16 @@
 #define _WNT_WClass_HeaderFile
 
 #include <Standard.hxx>
-#include <Standard_Type.hxx>
 
-#include <Standard_CString.hxx>
+#if defined(_WIN32) && !defined(OCCT_UWP)
+
 #include <Aspect_Handle.hxx>
 #include <Standard_Address.hxx>
-#include <MMgt_TShared.hxx>
-#include <WNT_Uint.hxx>
+#include <Standard_CString.hxx>
 #include <Standard_Integer.hxx>
-class WNT_ClassDefinitionError;
-class WNT_Window;
-
-
-class WNT_WClass;
-DEFINE_STANDARD_HANDLE(WNT_WClass, MMgt_TShared)
+#include <Standard_Transient.hxx>
+#include <Standard_Type.hxx>
+#include <TCollection_AsciiString.hxx>
 
 //! This class defines a Windows NT window class.
 //! A window in Windows NT is always created based on a
@@ -52,52 +48,43 @@ DEFINE_STANDARD_HANDLE(WNT_WClass, MMgt_TShared)
 //! the Window class and do not use the WClass at all.
 //! We implemented this class for sake of flexibility of
 //! event processing.
-class WNT_WClass : public MMgt_TShared
+class WNT_WClass : public Standard_Transient
 {
-
+  friend class WNT_Window;
+  DEFINE_STANDARD_RTTIEXT(WNT_WClass, Standard_Transient)
 public:
-
   
   //! Creates a Windows NT window class and registers it.
-  Standard_EXPORT WNT_WClass(const Standard_CString aClassName, const Standard_Address aWndProc, const WNT_Uint& aStyle, const Standard_Integer aClassExtra = 0, const Standard_Integer aWindowExtra = 0, const Aspect_Handle aCursor = 0, const Aspect_Handle anIcon = 0, const Standard_CString aMenuName = 0);
-  
+  Standard_EXPORT WNT_WClass (const TCollection_AsciiString& theClassName,
+                              const Standard_Address theWndProc,
+                              const unsigned int theStyle,
+                              const Standard_Integer theClassExtra  = 0,
+                              const Standard_Integer theWindowExtra = 0,
+                              const Aspect_Handle theCursor = NULL,
+                              const Aspect_Handle theIcon   = NULL,
+                              const TCollection_AsciiString& theMenuName = TCollection_AsciiString());
+
   //! Destroys all resources attached to the class
   Standard_EXPORT ~WNT_WClass();
-  
+
   //! Returns address of window procedure.
-    Standard_Address WndProc() const;
-  
+  Standard_Address WndProc() const { return myWndProc; }
+
   //! Returns a class name.
-    Standard_CString Name() const;
-  
+  const TCollection_AsciiString& Name() const { return myClassName; }
+
   //! Returns a program instance handle.
-    Aspect_Handle Instance() const;
-
-friend class WNT_Window;
-
-
-  DEFINE_STANDARD_RTTIEXT(WNT_WClass,MMgt_TShared)
+  Aspect_Handle Instance() const { return myAppInstance; }
 
 protected:
 
-
-  Standard_CString lpszName;
-  Aspect_Handle hInstance;
-  Standard_Address lpfnWndProc;
-
-
-private:
-
-
-
+  TCollection_AsciiString myClassName;
+  Aspect_Handle           myAppInstance;
+  Standard_Address        myWndProc;
 
 };
 
+DEFINE_STANDARD_HANDLE(WNT_WClass, Standard_Transient)
 
-#include <WNT_WClass.lxx>
-
-
-
-
-
+#endif // _WIN32
 #endif // _WNT_WClass_HeaderFile

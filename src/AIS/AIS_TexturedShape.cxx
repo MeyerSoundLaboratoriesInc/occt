@@ -52,11 +52,8 @@ AIS_TexturedShape::AIS_TexturedShape (const TopoDS_Shape& theShape)
   myPredefTexture   (Graphic3d_NameOfTexture2D(0)),
   myToMapTexture    (Standard_True),
   myModulate        (Standard_True),
-  myUVOrigin        (0.0, 0.0),
   myIsCustomOrigin  (Standard_True),
-  myUVRepeat        (1.0, 1.0),
   myToRepeat        (Standard_True),
-  myUVScale         (1.0, 1.0),
   myToScale         (Standard_True),
   myToShowTriangles (Standard_False)
 {
@@ -237,8 +234,6 @@ void AIS_TexturedShape::UnsetColor()
     Quantity_Color aColor;
     AIS_GraphicTool::GetInteriorColor (myDrawer->Link(), aColor);
     anAreaAsp->SetInteriorColor (aColor);
-    aPrs->SetPrimitivesAspect (anAreaAsp);
-    aPrs->SetPrimitivesAspect (aLineAsp);
     // Check if aspect of given type is set for the group, 
     // because setting aspect for group with no already set aspect
     // can lead to loss of presentation data
@@ -386,16 +381,6 @@ void AIS_TexturedShape::updateAttributes (const Handle(Prs3d_Presentation)& theP
     {
       continue;
     }
-
-    if (aGroup->IsClosed())
-    {
-      myAspect->SuppressBackFace();
-    }
-    else
-    {
-      myAspect->AllowBackFace();
-    }
-
     aGroup->SetGroupPrimitivesAspect (myAspect);
   }
 }
@@ -409,8 +394,6 @@ void AIS_TexturedShape::Compute (const Handle(PrsMgr_PresentationManager3d)& /*t
                                  const Handle(Prs3d_Presentation)&           thePrs,
                                  const Standard_Integer                      theMode)
 {
-  thePrs->Clear();
-
   if (myshape.IsNull())
   {
     return;
@@ -440,35 +423,20 @@ void AIS_TexturedShape::Compute (const Handle(PrsMgr_PresentationManager3d)& /*t
   {
     case AIS_WireFrame:
     {
+      StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (myshape, myDrawer, Standard_True);
       StdPrs_WFShape::Add (thePrs, myshape, myDrawer);
       break;
     }
     case AIS_Shaded:
     case 3: // texture mapping on triangulation
     {
-      if (myDrawer->IsAutoTriangulation())
-      {
-        Standard_Real aPrevAngle;
-        Standard_Real aNewAngle;
-        Standard_Real aPrevCoeff;
-        Standard_Real aNewCoeff;
-
-        Standard_Boolean isOwnDeviationAngle       = OwnDeviationAngle (aNewAngle, aPrevAngle);
-        Standard_Boolean isOwnDeviationCoefficient = OwnDeviationCoefficient (aNewCoeff,aPrevCoeff);
-        if (((Abs (aNewAngle - aPrevAngle) > Precision::Angular()) && isOwnDeviationAngle) ||
-            ((Abs (aNewCoeff - aPrevCoeff) > Precision::Confusion()) && isOwnDeviationCoefficient))
-        {
-          BRepTools::Clean (myshape);
-        }
-      }
-
+      StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (myshape, myDrawer, Standard_True);
       if (myshape.ShapeType() > TopAbs_FACE)
       {
         StdPrs_WFShape::Add (thePrs, myshape, myDrawer);
         break;
       }
 
-      myDrawer->SetShadingAspectGlobal (Standard_False);
       if (IsInfinite())
       {
         StdPrs_WFShape::Add (thePrs, myshape, myDrawer);

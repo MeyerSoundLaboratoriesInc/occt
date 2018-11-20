@@ -21,7 +21,9 @@
 
 // Forward declaration
 class OpenGl_CappingAlgoFilter;
+class OpenGl_CappingPlaneResource;
 class OpenGl_Structure;
+
 DEFINE_STANDARD_HANDLE (OpenGl_CappingAlgoFilter, OpenGl_RenderFilter)
 
 //! Capping surface rendering algorithm.
@@ -36,15 +38,10 @@ public:
   Standard_EXPORT static void RenderCapping (const Handle(OpenGl_Workspace)& theWorkspace,
                                              const OpenGl_Structure&         theStructure);
 
-  //! Render infinite capping plane.
-  //! @param theWorkspace [in] the GL workspace, context state.
-  //! @param thePlane [in] the graphical plane, for which the capping surface is rendered.
-  Standard_EXPORT static void RenderPlane (const Handle(OpenGl_Workspace)& theWorkspace,
-                                           const Handle(Graphic3d_ClipPlane)& thePlane);
 };
 
 //! Graphical capping rendering algorithm filter.
-//! Filters out everything excepth shaded primitives.
+//! Filters out everything except shaded primitives.
 class OpenGl_CappingAlgoFilter : public OpenGl_RenderFilter
 {
 public:
@@ -52,10 +49,19 @@ public:
   //! Default constructor.
   OpenGl_CappingAlgoFilter() {}
 
+  //! Sets the current active filter in workspace.
+  //! @param thePrevFilter [in] the previously active filter that should have additive effect.
+  void SetPreviousFilter (const Handle(OpenGl_RenderFilter)& thePrevFitler) { myFilter = thePrevFitler; }
+
   //! Checks whether the element can be rendered or not.
   //! @param theElement [in] the element to check.
   //! @return True if element can be rendered.
-  virtual Standard_Boolean CanRender (const OpenGl_Element* theElement) Standard_OVERRIDE;
+  virtual Standard_Boolean ShouldRender (const Handle(OpenGl_Workspace)& theWorkspace,
+                                         const OpenGl_Element* theGlElement) Standard_OVERRIDE;
+
+private:
+
+  Handle(OpenGl_RenderFilter) myFilter; //!< Previous active filter that should be combined.
 
 public:
 

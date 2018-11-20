@@ -39,12 +39,14 @@
 #include <Precision.hxx>
 #include <LocalAnalysis.hxx>
 #include <LocalAnalysis_SurfaceContinuity.hxx>
+#include <Geom_SphericalSurface.hxx>
 #include <Geom_Surface.hxx>
 #include <Geom_Curve.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2d_Curve.hxx>
 #include <DrawTrSurf.hxx>
 #include <GeomAbs_Shape.hxx>
+#include <TCollection_AsciiString.hxx>
 #include <TopoDS.hxx>
 #include <TopExp.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
@@ -57,6 +59,7 @@
 
 #include <TopOpeBRepTool_PurgeInternalEdges.hxx>
 //#include <TopOpeBRepTool_FuseEdges.hxx>
+#include <BRepLib.hxx>
 #include <BRepLib_FuseEdges.hxx>
 
 #include <TopTools_HSequenceOfShape.hxx>
@@ -355,7 +358,7 @@ static Standard_Integer checkdiff(Draw_Interpretor& di,
       di << syntaxe << "\n";
       return 1;
     }
-    closedSolid=Draw::Atoi(a[narg-1]);
+    closedSolid = Draw::Atoi(a[narg-1]) != 0;
     resu = DBRep::Get(a[narg-2]);
     lastArg=narg-3;
     if (resu.IsNull()) {
@@ -365,7 +368,7 @@ static Standard_Integer checkdiff(Draw_Interpretor& di,
 	return 1;
       }
       geomCtrl=closedSolid;
-      closedSolid=Draw::Atoi(a[narg-2]);
+      closedSolid = Draw::Atoi(a[narg-2]) != 0;
       resu = DBRep::Get(a[narg-3]);
       lastArg=narg-4;
       if (resu.IsNull()) {
@@ -1000,9 +1003,9 @@ static Standard_Integer checkshape(Draw_Interpretor& theCommands,
       }
     }
   }
-  catch(Standard_Failure) {
+  catch(Standard_Failure const& anException) {
     theCommands<<"checkshape exception : ";
-    theCommands << Standard_Failure::Caught()->GetMessageString();
+    theCommands << anException.GetMessageString();
     theCommands<<"\n";
     return 1;
   }
@@ -1088,12 +1091,16 @@ static Standard_Integer shapeG1continuity (Draw_Interpretor& di, Standard_Intege
   nbeval = (Standard_Integer ) Draw::Atof( a[3]);
 
   switch(n)
-    { case 7  : epsG1 = Draw::Atof(a[6]);
-      case 6  : epsC0   = Draw::Atof(a[5]);
-      case 5  : epsnl    = Draw::Atof(a[4]);
-      case 4  : {} break;
-      default : return 1;
-    }
+  { 
+  case 7  : epsG1 = Draw::Atof(a[6]);
+    Standard_FALLTHROUGH
+  case 6  : epsC0 = Draw::Atof(a[5]);
+    Standard_FALLTHROUGH
+  case 5  : epsnl = Draw::Atof(a[4]);
+    Standard_FALLTHROUGH
+  case 4  : break;
+  default : return 1;
+  }
 
 
   Standard_Real pard1, parf1, U, Uf, deltaU, nb = 0;
@@ -1213,12 +1220,14 @@ static Standard_Integer shapeG0continuity (Draw_Interpretor& di, Standard_Intege
   nbeval = (Standard_Integer ) Draw::Atof( a[3]);
 
   switch(n)
-    { case 6  : epsC0   = Draw::Atof(a[5]);
-      case 5  : epsnl    = Draw::Atof(a[4]);
-      case 4  : {} break;
-      default : return 1;
-    }
-
+  { 
+  case 6  : epsC0   = Draw::Atof(a[5]);
+    Standard_FALLTHROUGH
+  case 5  : epsnl    = Draw::Atof(a[4]);
+    Standard_FALLTHROUGH
+  case 4  : break;
+  default : return 1;
+  }
 
   Standard_Real pard1, parf1, U, Uf, deltaU, nb = 0;
   Standard_Boolean isconti = Standard_True;
@@ -1334,15 +1343,20 @@ static Standard_Integer shapeG2continuity (Draw_Interpretor& di, Standard_Intege
   nbeval = (Standard_Integer ) Draw::Atof( a[3]);
 
   switch(n)
-    { 
-      case 9  :  maxlen   = Draw::Atof(a[8]);
-      case 8   : percent   = Draw::Atof(a[7]);      
-      case 7   : epsG1 = Draw::Atof(a[6]);
-      case 6  :  epsC0   = Draw::Atof(a[5]);
-      case 5  :  epsnl   = Draw::Atof(a[4]);
-      case 4  : {} break;
-      default : return 1;
-    }
+  { 
+  case 9  :  maxlen = Draw::Atof(a[8]);
+    Standard_FALLTHROUGH
+  case 8   : percent = Draw::Atof(a[7]);      
+    Standard_FALLTHROUGH
+  case 7   : epsG1 = Draw::Atof(a[6]);
+    Standard_FALLTHROUGH
+  case 6  :  epsC0 = Draw::Atof(a[5]);
+    Standard_FALLTHROUGH
+  case 5  :  epsnl = Draw::Atof(a[4]);
+    Standard_FALLTHROUGH
+  case 4  : break;
+  default : return 1;
+  }
 
 
   Standard_Real pard1, parf1, U, Uf, deltaU, nb = 0;
@@ -1579,7 +1593,75 @@ static Standard_Integer listfuseedge(Draw_Interpretor& di,
   return 0;
 }
 
+//=======================================================================
+//function : tolsphere
+//purpose  : 
+//=======================================================================
+static Standard_Integer tolsphere(Draw_Interpretor& di, Standard_Integer n, const char** a)
+{
+  if (n != 2)
+  {
+    di << "use toolsphere shape\n";
+    return 1;
+  }
 
+  TopoDS_Shape aS = DBRep::Get(a[1]);
+  if (aS.IsNull())
+  {
+    di << "No such shape " << a[1] << "\n";
+    return 1;
+  }
+
+  TopTools_IndexedMapOfShape aMapV;
+  TopExp::MapShapes(aS, TopAbs_VERTEX, aMapV);
+  for (Standard_Integer i = 1; i <= aMapV.Extent(); i++)
+  {
+    const TopoDS_Vertex& aV = TopoDS::Vertex(aMapV.FindKey(i));
+    Standard_Real aRadius = BRep_Tool::Tolerance(aV);
+    gp_Pnt aCenter = BRep_Tool::Pnt(aV);
+    Handle(Geom_Surface) aSph = new Geom_SphericalSurface(gp_Ax2(aCenter,gp::DZ()), aRadius);
+    TCollection_AsciiString aName(a[1]);
+    aName = aName + "_v" + i;
+    DrawTrSurf::Set(aName.ToCString(), aSph);
+    di << aName << " ";
+  }
+  return 0;
+}
+
+//=======================================================================
+//function : validrange
+//purpose  : 
+//=======================================================================
+static Standard_Integer validrange(Draw_Interpretor& di,
+  Standard_Integer narg, const char** a)
+{
+  if (narg < 2)
+  {
+    di << "usage: validrange edge [(out) u1 u2]";
+    return 1;
+  }
+
+  TopoDS_Edge aE = TopoDS::Edge(DBRep::Get(a[1],TopAbs_EDGE, true));
+  if (aE.IsNull())
+    return 1;
+
+  Standard_Real u1, u2;
+  if (BRepLib::FindValidRange(aE, u1, u2))
+  {
+    if (narg > 3)
+    {
+      Draw::Set(a[2], u1);
+      Draw::Set(a[3], u2);
+    }
+    else
+    {
+      di << u1 << " " << u2;
+    }
+  }
+  else
+    di << "edge has no valid range";
+  return 0;
+}
 
 //=======================================================================
 //function : CheckCommands
@@ -1667,5 +1749,13 @@ theCommands.Add("listfuseedge",
 		  "listfuseedge shape",
 		  __FILE__,
 		  listfuseedge,g);
+theCommands.Add("tolsphere", "toolsphere shape\n"
+                "\t\tshows vertex tolerances by drawing spheres",
+                __FILE__, tolsphere, g);
+theCommands.Add("validrange",
+                "validrange edge [(out) u1 u2]\n"
+                "\t\tcomputes valid range of the edge, and\n"
+                "\t\tprints first and last values or sets the variables u1 and u2",
+                __FILE__, validrange, g);
 }
 

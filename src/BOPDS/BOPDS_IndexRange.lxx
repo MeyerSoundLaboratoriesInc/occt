@@ -23,13 +23,6 @@
 {
 }
 //=======================================================================
-//function : ~
-//purpose  : 
-//=======================================================================
-  inline BOPDS_IndexRange::~BOPDS_IndexRange()
-{
-}
-//=======================================================================
 //function : SetFirst
 //purpose  : 
 //=======================================================================
@@ -86,7 +79,8 @@
 //function : Contains
 //purpose  : 
 //=======================================================================
-  inline Standard_Boolean BOPDS_IndexRange::Contains(const Standard_Integer aIndex)const
+inline Standard_Boolean BOPDS_IndexRange::Contains(const Standard_Integer aIndex)const
 {
-  return (Standard_Boolean)(aIndex>=myFirst && aIndex<=myLast);
+  return aIndex >= myFirst
+      && aIndex <= myLast;
 }

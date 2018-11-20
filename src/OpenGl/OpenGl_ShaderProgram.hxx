@@ -23,14 +23,13 @@
 #include <Graphic3d_ShaderObject.hxx>
 #include <Graphic3d_ShaderProgram.hxx>
 
-#include <InterfaceGraphic_tgl_all.hxx>
-
 #include <OpenGl_Vec.hxx>
 #include <OpenGl_Matrix.hxx>
+#include <OpenGl_NamedResource.hxx>
 #include <OpenGl_ShaderObject.hxx>
 
 class OpenGl_ShaderProgram;
-DEFINE_STANDARD_HANDLE(OpenGl_ShaderProgram, OpenGl_Resource)
+DEFINE_STANDARD_HANDLE(OpenGl_ShaderProgram, OpenGl_NamedResource)
 
 //! The enumeration of OCCT-specific OpenGL/GLSL variables.
 enum OpenGl_StateVariable
@@ -51,7 +50,6 @@ enum OpenGl_StateVariable
 
   // OpenGL clip planes state
   OpenGl_OCC_CLIP_PLANE_EQUATIONS,
-  OpenGl_OCC_CLIP_PLANE_SPACES,
   OpenGl_OCC_CLIP_PLANE_COUNT,
 
   // OpenGL light state
@@ -61,21 +59,24 @@ enum OpenGl_StateVariable
   OpenGl_OCC_LIGHT_AMBIENT,
 
   // Material state
-  OpenGl_OCCT_ACTIVE_SAMPLER,
   OpenGl_OCCT_TEXTURE_ENABLE,
   OpenGl_OCCT_DISTINGUISH_MODE,
   OpenGl_OCCT_FRONT_MATERIAL,
   OpenGl_OCCT_BACK_MATERIAL,
+  OpenGl_OCCT_ALPHA_CUTOFF,
   OpenGl_OCCT_COLOR,
 
+  // Weighted, Blended Order-Independent Transparency rendering state
+  OpenGl_OCCT_OIT_OUTPUT,
+  OpenGl_OCCT_OIT_DEPTH_FACTOR,
+
+  // Context-dependent state
   OpenGl_OCCT_TEXTURE_TRSF2D,
   OpenGl_OCCT_POINT_SIZE,
 
   // DON'T MODIFY THIS ITEM (insert new items before it)
   OpenGl_OCCT_NUMBER_OF_STATE_VARIABLES
 };
-
-class OpenGl_ShaderProgram;
 
 //! Interface for generic setter of user-defined uniform variables.
 struct OpenGl_SetterInterface
@@ -125,18 +126,18 @@ enum OpenGl_UniformStateType
   OpenGl_MODEL_WORLD_STATE,
   OpenGl_WORLD_VIEW_STATE,
   OpenGl_PROJECTION_STATE,
-  OpenGl_MATERIALS_STATE,
-  OpenGl_SURF_DETAIL_STATE
+  OpenGl_MATERIAL_STATE,
+  OpenGl_SURF_DETAIL_STATE,
+  OpenGL_OIT_STATE,
+  OpenGl_UniformStateType_NB
 };
 
-//! Total number of state types.
-const int MaxStateTypes = 6;
-
 //! Wrapper for OpenGL program object.
-class OpenGl_ShaderProgram : public OpenGl_Resource
+class OpenGl_ShaderProgram : public OpenGl_NamedResource
 {
   friend class OpenGl_View;
-
+  friend class OpenGl_ShaderManager;
+  DEFINE_STANDARD_RTTIEXT(OpenGl_ShaderProgram, OpenGl_NamedResource)
 public:
 
   //! Non-valid shader name.
@@ -176,6 +177,9 @@ public:
   //! Destroys shader program.
   Standard_EXPORT virtual void Release (OpenGl_Context* theCtx) Standard_OVERRIDE;
 
+  //! Returns estimated GPU memory usage - cannot be easily estimated.
+  virtual Standard_Size EstimatedDataSize() const Standard_OVERRIDE { return 0; }
+
   //! Attaches shader object to the program object.
   Standard_EXPORT Standard_Boolean AttachShader (const Handle(OpenGl_Context)&      theCtx,
                                                  const Handle(OpenGl_ShaderObject)& theShader);
@@ -210,14 +214,48 @@ public:
     return myProgramID;
   }
 
+public:
+
+  //! Return TRUE if program defines tessellation stage.
+  Standard_Boolean HasTessellationStage() const { return myHasTessShader; }
+
+  //! Return the length of array of light sources (THE_MAX_LIGHTS),
+  //! to be used for initialization occLightSources (OpenGl_OCC_LIGHT_SOURCE_PARAMS).
+  Standard_Integer NbLightsMax() const { return myNbLightsMax; }
+
+  //! Return the length of array of clipping planes (THE_MAX_CLIP_PLANES),
+  //! to be used for initialization occClipPlaneEquations (OpenGl_OCC_CLIP_PLANE_EQUATIONS).
+  Standard_Integer NbClipPlanesMax() const { return myNbClipPlanesMax; }
+
+  //! Return the length of array of Fragment Shader outputs (THE_NB_FRAG_OUTPUTS),
+  //! to be used for initialization occFragColorArray/occFragColorN.
+  Standard_Integer NbFragmentOutputs() const { return myNbFragOutputs; }
+
+  //! Return true if Fragment Shader should perform alpha test; FALSE by default.
+  Standard_Boolean HasAlphaTest() const { return myHasAlphaTest; }
+
+  //! Return true if Fragment Shader color should output the weighted OIT coverage; FALSE by default.
+  Standard_Boolean HasWeightOitOutput() const { return myHasWeightOitOutput; }
+
 private:
 
   //! Returns index of last modification of variables of specified state type.
-  Standard_EXPORT Standard_Size ActiveState (const OpenGl_UniformStateType theType) const;
+  Standard_Size ActiveState (const OpenGl_UniformStateType theType) const
+  {
+    return theType < OpenGl_UniformStateType_NB
+         ? myCurrentState[theType]
+         : 0;
+  }
 
   //! Updates index of last modification of variables of specified state type.
-  Standard_EXPORT void UpdateState (const OpenGl_UniformStateType theType,
-                                    const Standard_Size           theIndex);
+  void UpdateState (const OpenGl_UniformStateType theType,
+                    const Standard_Size           theIndex)
+  {
+    if (theType < OpenGl_UniformStateType_NB)
+    {
+      myCurrentState[theType] = theIndex;
+    }
+  }
 
 public:
 
@@ -509,12 +547,12 @@ public:
   //! Specifies the value of the sampler uniform variable.
   Standard_EXPORT Standard_Boolean SetSampler (const Handle(OpenGl_Context)& theCtx,
                                                const GLchar*                 theName,
-                                               const GLenum                  theTextureUnit);
+                                               const Graphic3d_TextureUnit   theTextureUnit);
 
   //! Specifies the value of the sampler uniform variable.
   Standard_EXPORT Standard_Boolean SetSampler (const Handle(OpenGl_Context)& theCtx,
                                                GLint                         theLocation,
-                                               const GLenum                  theTextureUnit);
+                                               const Graphic3d_TextureUnit   theTextureUnit);
 
 protected:
 
@@ -540,18 +578,19 @@ protected:
   OpenGl_ShaderList               myShaderObjects; //!< List of attached shader objects
   Handle(Graphic3d_ShaderProgram) myProxy;         //!< Proxy shader program (from application layer)
   Standard_Integer                myShareCount;    //!< program users count, initialized with 1 (already shared by one user)
+  Standard_Integer                myNbLightsMax;   //!< length of array of light sources (THE_MAX_LIGHTS)
+  Standard_Integer                myNbClipPlanesMax; //!< length of array of clipping planes (THE_MAX_CLIP_PLANES)
+  Standard_Integer                myNbFragOutputs; //!< length of array of Fragment Shader outputs (THE_NB_FRAG_OUTPUTS)
+  Standard_Boolean                myHasAlphaTest;  //!< flag indicating that Fragment Shader should perform alpha-test
+  Standard_Boolean                myHasWeightOitOutput; //!< flag indicating that Fragment Shader includes weighted OIT coverage
+  Standard_Boolean                myHasTessShader; //!< flag indicating that program defines tessellation stage
 
 protected:
 
-  Standard_Size myCurrentState[MaxStateTypes];  //!< defines last modification for variables of each state type
+  Standard_Size myCurrentState[OpenGl_UniformStateType_NB]; //!< defines last modification for variables of each state type
 
   //! Stores locations of OCCT state uniform variables.
   GLint myStateLocations[OpenGl_OCCT_NUMBER_OF_STATE_VARIABLES];
-
-public:
-
-  DEFINE_STANDARD_RTTIEXT(OpenGl_ShaderProgram,OpenGl_Resource)
-  friend class OpenGl_ShaderManager;
 
 };
 

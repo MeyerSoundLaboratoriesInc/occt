@@ -14,11 +14,10 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// Modified :   22/03/04 ; SAN : OCC4895 High-level interface for controlling polygon offsets 
+#include <AIS_InteractiveObject.hxx>
 
 #include <AIS_GraphicTool.hxx>
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_InteractiveObject.hxx>
 #include <Aspect_PolygonOffsetMode.hxx>
 #include <Bnd_Box.hxx>
 #include <Graphic3d_AspectFillArea3d.hxx>
@@ -50,26 +49,16 @@ IMPLEMENT_STANDARD_RTTIEXT(AIS_InteractiveObject,SelectMgr_SelectableObject)
 //function : AIS_InteractiveObject
 //purpose  : 
 //=======================================================================
-AIS_InteractiveObject::
-AIS_InteractiveObject(const PrsMgr_TypeOfPresentation3d aTypeOfPresentation3d):
-SelectMgr_SelectableObject(aTypeOfPresentation3d),
-myTransparency(0.),
-myOwnColor(Quantity_NOC_WHITE),
-myOwnMaterial(Graphic3d_NOM_DEFAULT),
-myHilightMode(-1),
-myOwnWidth(0.0),
-myInfiniteState(Standard_False),
-hasOwnColor(Standard_False),
-hasOwnMaterial(Standard_False),
-myCurrentFacingModel(Aspect_TOFM_BOTH_SIDE),
-myRecomputeEveryPrs(Standard_True),
-myCTXPtr(NULL),
-mySelPriority(-1),
-myDisplayMode (-1),
-mystate(0)
+AIS_InteractiveObject::AIS_InteractiveObject (const PrsMgr_TypeOfPresentation3d aTypeOfPresentation3d)
+: SelectMgr_SelectableObject (aTypeOfPresentation3d),
+  myCTXPtr (NULL),
+  myOwnWidth (0.0),
+  myCurrentFacingModel (Aspect_TOFM_BOTH_SIDE),
+  myInfiniteState (Standard_False),
+  hasOwnColor (Standard_False),
+  hasOwnMaterial (Standard_False),
+  myRecomputeEveryPrs (Standard_True)
 {
-  Handle (AIS_InteractiveContext) Bid;
-  myCTXPtr = Bid.operator->();
   SetCurrentFacingModel();
 }
 
@@ -113,31 +102,27 @@ Standard_Boolean  AIS_InteractiveObject::RecomputeEveryPrs() const
 //function : 
 //purpose  : 
 //=======================================================================
-Standard_Boolean AIS_InteractiveObject::HasInteractiveContext() const 
-{
-  Handle (AIS_InteractiveContext) aNull;
-  return  (myCTXPtr != aNull.operator->());
-}
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
 Handle(AIS_InteractiveContext) AIS_InteractiveObject::GetContext() const 
 {
   return myCTXPtr;
 }
 
 //=======================================================================
-//function : 
-//purpose  : 
+//function : SetContext
+//purpose  :
 //=======================================================================
-void AIS_InteractiveObject::SetContext(const Handle(AIS_InteractiveContext)& aCtx)
+void AIS_InteractiveObject::SetContext (const Handle(AIS_InteractiveContext)& theCtx)
 {
-  myCTXPtr = aCtx.operator->();
-  if( aCtx.IsNull())
+  if (myCTXPtr == theCtx.get())
+  {
     return;
-  myDrawer->Link(aCtx->DefaultDrawer());
+  }
+
+  myCTXPtr = theCtx.get();
+  if (!theCtx.IsNull())
+  {
+    myDrawer->Link (theCtx->DefaultDrawer());
+  }
 }
 
 //=======================================================================
@@ -161,42 +146,15 @@ void AIS_InteractiveObject::ClearOwner()
 }
 
 //=======================================================================
-//function : 
-//purpose  : 
+//function : SetDisplayMode
+//purpose  :
 //=======================================================================
-Standard_Boolean AIS_InteractiveObject::HasUsers() const 
+void AIS_InteractiveObject::SetDisplayMode (const Standard_Integer theMode)
 {
-  return (!myUsers.IsEmpty());
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-void AIS_InteractiveObject::AddUser(const Handle(Standard_Transient)& aUser)
-{
-  myUsers.Append(aUser);
-}
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-void AIS_InteractiveObject::ClearUsers()
-{
-  myUsers.Clear();
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-void AIS_InteractiveObject::SetDisplayMode(const Standard_Integer aMode)
-{
-  if( AcceptDisplayMode(aMode) )
-    myDisplayMode = aMode;
+  if (AcceptDisplayMode (theMode))
+  {
+    myDrawer->SetDisplayMode (theMode);
+  }
 }
 
 //=======================================================================
@@ -221,19 +179,9 @@ Aspect_TypeOfFacingModel AIS_InteractiveObject::CurrentFacingModel() const {
 //purpose  : 
 //=======================================================================
 
-void AIS_InteractiveObject::SetColor(const Quantity_NameOfColor aColor)
+void AIS_InteractiveObject::SetColor(const Quantity_Color& theColor)
 {
-  SetColor(Quantity_Color(aColor));
-}
-
-//=======================================================================
-//function : SetColor
-//purpose  : 
-//=======================================================================
-
-void AIS_InteractiveObject::SetColor(const Quantity_Color &aColor)
-{
-  myOwnColor = aColor;
+  myDrawer->SetColor (theColor);
   hasOwnColor = Standard_True;
 }
 
@@ -264,39 +212,31 @@ void AIS_InteractiveObject::UnsetWidth()
   myOwnWidth = 0.;
 }
 
-
 //=======================================================================
-//function : 
-//purpose  : 
+//function : Material
+//purpose  :
 //=======================================================================
-void AIS_InteractiveObject::SetMaterial(const Graphic3d_NameOfMaterial aName)
+Graphic3d_NameOfMaterial AIS_InteractiveObject::Material() const
 {
-  if( HasColor() || IsTransparent() || HasMaterial() )
-  {
-    myDrawer->ShadingAspect()->SetMaterial(aName);
-  }
-  else
-  {
-    myDrawer->SetShadingAspect(new Prs3d_ShadingAspect());
-    myDrawer->ShadingAspect()->SetMaterial(aName);
-  }
-  myOwnMaterial  = aName;
-  hasOwnMaterial = Standard_True;
+  return myDrawer->ShadingAspect()->Material().Name();
 }
 
 //=======================================================================
 //function : SetMaterial
-//purpose  : 
+//purpose  :
 //=======================================================================
 void AIS_InteractiveObject::SetMaterial (const Graphic3d_MaterialAspect& theMaterial)
 {
-  if (!HasColor() && !IsTransparent() && !HasMaterial())
+  if (!myDrawer->HasOwnShadingAspect())
   {
-    myDrawer->SetShadingAspect (new Prs3d_ShadingAspect);
+    myDrawer->SetShadingAspect (new Prs3d_ShadingAspect());
+    if (myDrawer->HasLink())
+    {
+      *myDrawer->ShadingAspect()->Aspect() = *myDrawer->Link()->ShadingAspect()->Aspect();
+    }
   }
 
   myDrawer->ShadingAspect()->SetMaterial (theMaterial);
-
   hasOwnMaterial = Standard_True;
 }
 
@@ -320,12 +260,12 @@ void AIS_InteractiveObject::UnsetMaterial()
 
     if (HasColor())
     {
-      SetColor (myOwnColor);
+      SetColor (myDrawer->Color());
     }
 
     if (IsTransparent())
     {
-      SetTransparency (myTransparency);
+      SetTransparency (myDrawer->Transparency());
     }
   }
   else
@@ -339,22 +279,20 @@ void AIS_InteractiveObject::UnsetMaterial()
 
 //=======================================================================
 //function : SetTransparency
-//purpose  : 
+//purpose  :
 //=======================================================================
-void AIS_InteractiveObject::SetTransparency(const Standard_Real aValue)
+void AIS_InteractiveObject::SetTransparency (const Standard_Real theValue)
 {
-  if(!HasColor() && !IsTransparent() && !HasMaterial())
+  if (!myDrawer->HasOwnShadingAspect())
   {
     myDrawer->SetShadingAspect(new Prs3d_ShadingAspect());
     if(myDrawer->HasLink())
       myDrawer->ShadingAspect()->SetMaterial(AIS_GraphicTool::GetMaterial(myDrawer->Link()));
   }
-  Graphic3d_MaterialAspect FMat = myDrawer->ShadingAspect()->Aspect()->FrontMaterial();
-  Graphic3d_MaterialAspect BMat = myDrawer->ShadingAspect()->Aspect()->BackMaterial();
-  FMat.SetTransparency(aValue); BMat.SetTransparency(aValue);
-  myDrawer->ShadingAspect()->Aspect()->SetFrontMaterial(FMat);
-  myDrawer->ShadingAspect()->Aspect()->SetBackMaterial(BMat);
-  myTransparency = aValue;
+
+  myDrawer->ShadingAspect()->Aspect()->ChangeFrontMaterial().SetTransparency (Standard_ShortReal(theValue));
+  myDrawer->ShadingAspect()->Aspect()->ChangeBackMaterial() .SetTransparency (Standard_ShortReal(theValue));
+  myDrawer->SetTransparency (Standard_ShortReal(theValue));
 }
 
 //=======================================================================
@@ -365,17 +303,14 @@ void AIS_InteractiveObject::UnsetTransparency()
 {
   if(HasColor() || HasMaterial() )
   {
-    Graphic3d_MaterialAspect FMat = myDrawer->ShadingAspect()->Aspect()->FrontMaterial();
-    Graphic3d_MaterialAspect BMat = myDrawer->ShadingAspect()->Aspect()->BackMaterial();
-    FMat.SetTransparency(0.); BMat.SetTransparency(0.);
-    myDrawer->ShadingAspect()->Aspect()->SetFrontMaterial(FMat);
-    myDrawer->ShadingAspect()->Aspect()->SetBackMaterial(BMat);
+    myDrawer->ShadingAspect()->Aspect()->ChangeFrontMaterial().SetTransparency (0.0f);
+    myDrawer->ShadingAspect()->Aspect()->ChangeBackMaterial() .SetTransparency (0.0f);
   }
   else{
     Handle (Prs3d_ShadingAspect) SA;
     myDrawer->SetShadingAspect(SA);
   }
-  myTransparency =0.0;
+  myDrawer->SetTransparency (0.0f);
 }
 //=======================================================================
 //function : Transparency
@@ -383,7 +318,7 @@ void AIS_InteractiveObject::UnsetTransparency()
 //=======================================================================
 Standard_Real AIS_InteractiveObject::Transparency() const 
 {
-  return (myTransparency<=0.05 ? 0 : myTransparency);
+  return (myDrawer->Transparency() <= 0.005f ? 0.0 : myDrawer->Transparency());
 // Graphic3d_MaterialAspect Mat = myDrawer->ShadingAspect()->Aspect()->FrontMaterial();
 // return Mat.Transparency();
 }
@@ -399,7 +334,7 @@ void AIS_InteractiveObject::UnsetAttributes()
   hasOwnColor    = Standard_False;
   hasOwnMaterial = Standard_False;
   myOwnWidth     = 0.0;
-  myTransparency = 0.0;
+  myDrawer->SetTransparency (0.0f);
 }
 
 //=======================================================================
@@ -464,8 +399,8 @@ void AIS_InteractiveObject::SetInfiniteState(const Standard_Boolean aFlag)
 //=======================================================================
 Standard_Boolean AIS_InteractiveObject::HasPresentation() const
 {
-  return !GetContext().IsNull()
-       && GetContext()->MainPrsMgr()->HasPresentation (this, myDisplayMode);
+  return HasInteractiveContext()
+      && myCTXPtr->MainPrsMgr()->HasPresentation (this, myDrawer->DisplayMode());
 }
 
 //=======================================================================
@@ -474,8 +409,14 @@ Standard_Boolean AIS_InteractiveObject::HasPresentation() const
 //=======================================================================
 Handle(Prs3d_Presentation) AIS_InteractiveObject::Presentation() const
 {
-  return HasPresentation()
-       ? GetContext()->MainPrsMgr()->Presentation (this, myDisplayMode)->Presentation()
+  if (!HasInteractiveContext())
+  {
+    return Handle(Prs3d_Presentation)();
+  }
+
+  Handle(PrsMgr_Presentation) aPrs = myCTXPtr->MainPrsMgr()->Presentation (this, myDrawer->DisplayMode(), false);
+  return !aPrs.IsNull()
+       ? aPrs->Presentation()
        : Handle(Prs3d_Presentation)();
 }
 
@@ -483,15 +424,14 @@ Handle(Prs3d_Presentation) AIS_InteractiveObject::Presentation() const
 //function : SetAspect 
 //purpose  : 
 //=======================================================================
-void AIS_InteractiveObject::SetAspect(const Handle(Prs3d_BasicAspect)& anAspect,
-				      const Standard_Boolean globalChange) {
+void AIS_InteractiveObject::SetAspect(const Handle(Prs3d_BasicAspect)& anAspect)
+{
 
   if( HasPresentation() ) {
     Handle(Prs3d_Presentation) prs = Presentation();
     { Handle(Prs3d_ShadingAspect) aspect =
 			Handle(Prs3d_ShadingAspect)::DownCast(anAspect);
       if( !aspect.IsNull() ) {
-        if( globalChange ) prs->SetPrimitivesAspect(aspect->Aspect());
         Prs3d_Root::CurrentGroup(prs)->SetGroupPrimitivesAspect(aspect->Aspect());
         return;
       }
@@ -499,7 +439,6 @@ void AIS_InteractiveObject::SetAspect(const Handle(Prs3d_BasicAspect)& anAspect,
     { Handle(Prs3d_LineAspect) aspect =
 			Handle(Prs3d_LineAspect)::DownCast(anAspect);
       if( !aspect.IsNull() ) {
-        if( globalChange ) prs->SetPrimitivesAspect(aspect->Aspect());
         Prs3d_Root::CurrentGroup(prs)->SetGroupPrimitivesAspect(aspect->Aspect());
         return;
       }
@@ -507,7 +446,6 @@ void AIS_InteractiveObject::SetAspect(const Handle(Prs3d_BasicAspect)& anAspect,
     { Handle(Prs3d_PointAspect) aspect =
 			Handle(Prs3d_PointAspect)::DownCast(anAspect);
       if( !aspect.IsNull() ) {
-        if( globalChange ) prs->SetPrimitivesAspect(aspect->Aspect());
         Prs3d_Root::CurrentGroup(prs)->SetGroupPrimitivesAspect(aspect->Aspect());
         return;
       }
@@ -515,7 +453,6 @@ void AIS_InteractiveObject::SetAspect(const Handle(Prs3d_BasicAspect)& anAspect,
     { Handle(Prs3d_TextAspect) aspect =
 			Handle(Prs3d_TextAspect)::DownCast(anAspect);
       if( !aspect.IsNull() ) {
-        if( globalChange ) prs->SetPrimitivesAspect(aspect->Aspect());
         Prs3d_Root::CurrentGroup(prs)->SetGroupPrimitivesAspect(aspect->Aspect());
         return;
       }
@@ -543,7 +480,6 @@ void AIS_InteractiveObject::SetPolygonOffsets(const Standard_Integer    aMode,
     if ( !aPrs3d.IsNull() ) {
       const Handle(Graphic3d_Structure)& aStruct = aPrs3d->Presentation();
       if( !aStruct.IsNull() ) {
-        aStruct->SetPrimitivesAspect( myDrawer->ShadingAspect()->Aspect() );
         // Workaround for issue 23115: Need to update also groups, because their
         // face aspect ALWAYS overrides the structure's.
         const Graphic3d_SequenceOfGroup& aGroups = aStruct->Groups();
@@ -556,12 +492,7 @@ void AIS_InteractiveObject::SetPolygonOffsets(const Standard_Integer    aMode,
             continue;
           }
 
-          Handle(Graphic3d_AspectFillArea3d) aFaceAsp = new Graphic3d_AspectFillArea3d();
-          Handle(Graphic3d_AspectLine3d)     aLineAsp = new Graphic3d_AspectLine3d();
-          Handle(Graphic3d_AspectMarker3d)   aPntAsp  = new Graphic3d_AspectMarker3d();
-          Handle(Graphic3d_AspectText3d)     aTextAsp = new Graphic3d_AspectText3d();
-          // TODO: Add methods for retrieving individual aspects from Graphic3d_Group
-          aGrp->GroupPrimitivesAspect(aLineAsp, aTextAsp, aPntAsp, aFaceAsp);
+          Handle(Graphic3d_AspectFillArea3d) aFaceAsp = aGrp->FillAreaAspect();
           aFaceAsp->SetPolygonOffsets(aMode, aFactor, aUnits);
           aGrp->SetGroupPrimitivesAspect(aFaceAsp);
         }
@@ -600,13 +531,13 @@ void AIS_InteractiveObject::PolygonOffsets(Standard_Integer&    aMode,
 //=======================================================================
 void AIS_InteractiveObject::BoundingBox (Bnd_Box& theBndBox)
 {
-  if (myDisplayMode == -1)
+  if (myDrawer->DisplayMode() == -1)
   {
     if (!myPresentations.IsEmpty())
     {
       const Handle(PrsMgr_Presentation)& aPrs3d = myPresentations.First().Presentation();
       const Handle(Graphic3d_Structure)& aStruct = aPrs3d->Presentation();
-      const Graphic3d_BndBox4f& aBndBox = aStruct->CStructure()->BoundingBox();
+      const Graphic3d_BndBox3d& aBndBox = aStruct->CStructure()->BoundingBox();
 
       if (!aBndBox.IsValid())
       {
@@ -614,12 +545,8 @@ void AIS_InteractiveObject::BoundingBox (Bnd_Box& theBndBox)
         return;
       }
 
-      theBndBox.Update (static_cast<Standard_Real> (aBndBox.CornerMin().x()),
-                        static_cast<Standard_Real> (aBndBox.CornerMin().y()),
-                        static_cast<Standard_Real> (aBndBox.CornerMin().z()),
-                        static_cast<Standard_Real> (aBndBox.CornerMax().x()),
-                        static_cast<Standard_Real> (aBndBox.CornerMax().y()),
-                        static_cast<Standard_Real> (aBndBox.CornerMax().z()));
+      theBndBox.Update (aBndBox.CornerMin().x(), aBndBox.CornerMin().y(), aBndBox.CornerMin().z(),
+                        aBndBox.CornerMax().x(), aBndBox.CornerMax().y(), aBndBox.CornerMax().z());
       return;
     }
     else
@@ -642,11 +569,11 @@ void AIS_InteractiveObject::BoundingBox (Bnd_Box& theBndBox)
   {
     for (Standard_Integer aPrsIter = 1; aPrsIter <= myPresentations.Length(); ++aPrsIter)
     {
-      if (myPresentations (aPrsIter).Mode() == myDisplayMode)
+      if (myPresentations (aPrsIter).Mode() == myDrawer->DisplayMode())
       {
         const Handle(PrsMgr_Presentation)& aPrs3d = myPresentations (aPrsIter).Presentation();
         const Handle(Graphic3d_Structure)& aStruct = aPrs3d->Presentation();
-        const Graphic3d_BndBox4f& aBndBox = aStruct->CStructure()->BoundingBox();
+        const Graphic3d_BndBox3d& aBndBox = aStruct->CStructure()->BoundingBox();
 
         if (!aBndBox.IsValid())
         {
@@ -654,12 +581,8 @@ void AIS_InteractiveObject::BoundingBox (Bnd_Box& theBndBox)
           return;
         }
 
-        theBndBox.Update (static_cast<Standard_Real> (aBndBox.CornerMin().x()),
-                          static_cast<Standard_Real> (aBndBox.CornerMin().y()),
-                          static_cast<Standard_Real> (aBndBox.CornerMin().z()),
-                          static_cast<Standard_Real> (aBndBox.CornerMax().x()),
-                          static_cast<Standard_Real> (aBndBox.CornerMax().y()),
-                          static_cast<Standard_Real> (aBndBox.CornerMax().z()));
+        theBndBox.Update (aBndBox.CornerMin().x(), aBndBox.CornerMin().y(), aBndBox.CornerMin().z(),
+                          aBndBox.CornerMax().x(), aBndBox.CornerMax().y(), aBndBox.CornerMax().z());
         return;
       }
     }
@@ -673,4 +596,51 @@ void AIS_InteractiveObject::BoundingBox (Bnd_Box& theBndBox)
 void AIS_InteractiveObject::SetIsoOnTriangulation (const Standard_Boolean theIsEnabled)
 {
   myDrawer->SetIsoOnTriangulation (theIsEnabled);
+}
+
+//=======================================================================
+//function : SynchronizeAspects
+//purpose  :
+//=======================================================================
+void AIS_InteractiveObject::SynchronizeAspects()
+{
+  for (PrsMgr_Presentations::Iterator aPrsIter (myPresentations); aPrsIter.More(); aPrsIter.Next())
+  {
+    const Handle(PrsMgr_Presentation)& aPrs3d = aPrsIter.ChangeValue().Presentation();
+    if (aPrs3d.IsNull()
+     || aPrs3d->Presentation().IsNull())
+    {
+      continue;
+    }
+
+    for (Graphic3d_SequenceOfGroup::Iterator aGroupIter (aPrs3d->Presentation()->Groups()); aGroupIter.More(); aGroupIter.Next())
+    {
+      Handle(Graphic3d_Group)& aGrp = aGroupIter.ChangeValue();
+      if (aGrp.IsNull())
+      {
+        continue;
+      }
+
+      Handle(Graphic3d_AspectLine3d)     aLineAspect   = aGrp->LineAspect();
+      Handle(Graphic3d_AspectFillArea3d) aFaceAspect   = aGrp->FillAreaAspect();
+      Handle(Graphic3d_AspectMarker3d)   aMarkerAspect = aGrp->MarkerAspect();
+      Handle(Graphic3d_AspectText3d)     aTextAspect   = aGrp->TextAspect();
+      if (!aLineAspect.IsNull())
+      {
+        aGrp->SetGroupPrimitivesAspect (aLineAspect);
+      }
+      if (!aFaceAspect.IsNull())
+      {
+        aGrp->SetGroupPrimitivesAspect (aFaceAspect);
+      }
+      if (!aMarkerAspect.IsNull())
+      {
+        aGrp->SetGroupPrimitivesAspect (aMarkerAspect);
+      }
+      if (!aTextAspect.IsNull())
+      {
+        aGrp->SetGroupPrimitivesAspect (aTextAspect);
+      }
+    }
+  }
 }

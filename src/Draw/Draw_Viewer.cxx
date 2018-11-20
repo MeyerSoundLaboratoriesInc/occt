@@ -14,11 +14,6 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// Updated by GG Tue Oct 22 16:22:10 1996
-//              reason : Try to compress the pixel image
-//                       in PseudoColor 8 planes format
-//              see : SaveView(filename)
-
 #include <Draw_Viewer.hxx>
 #include <Draw_View.hxx>
 
@@ -26,7 +21,7 @@
 #include <gp_Pnt2d.hxx>
 #include <Draw_Window.hxx>
 #include <Draw_Display.hxx>
-
+#include <TCollection_AsciiString.hxx>
 
 #define precpers 0.95
 #define ButtonPress 4
@@ -179,7 +174,7 @@ void Draw_Viewer::MakeView    (const Standard_Integer id,
 void Draw_Viewer::SetTitle (const Standard_Integer id, const char* name)
 {
   if (Draw_Batch) return;
-  if(myViews[id]) myViews[id]->SetTitle((char*)name);
+  if(myViews[id]) myViews[id]->SetTitle (name);
 }
 
 //=======================================================================
@@ -931,14 +926,13 @@ Draw_Display Draw_Viewer::MakeDisplay (const Standard_Integer id) const
   if (Draw_Batch) {Draw_Display dis;return dis;}
   curviewId = id;
   curview = myViews[id];
-  int GXcopy = 0x3;
   nbseg = 0;
   Draw_Color initcol(Draw_blanc);
   // to force setting the color
   currentcolor = Draw_Color(Draw_rouge);
   Draw_Display dis;
   dis.SetColor(initcol);
-  dis.SetMode(GXcopy);
+  dis.SetMode(0x3 /*GXcopy*/);
   return dis;
 }
 
@@ -946,12 +940,29 @@ Draw_Display Draw_Viewer::MakeDisplay (const Standard_Integer id) const
 //function : Select
 //purpose  :
 //=======================================================================
+
 void Draw_Viewer::Select (Standard_Integer& id, Standard_Integer& X, Standard_Integer& Y,
 			  Standard_Integer& Button, Standard_Boolean wait)
 {
   if (Draw_Batch) return;
+  id = X = Y = Button = 0;
+  Standard_Boolean hasView = Standard_False;
+  for (int aViewIter = 0; aViewIter < MAXVIEW; ++aViewIter)
+  {
+    if (myViews[aViewIter] != NULL
+     && myViews[aViewIter]->IsMapped())
+    {
+      hasView = Standard_True;
+      break;
+    }
+  }
+  if (!hasView)
+  {
+    std::cerr << "No selection is possible with no open views\n";
+    return;
+  }
   Flush();
-#if !defined(_WIN32) && !defined(__WIN32__) && (!defined(__APPLE__) || defined(MACOSX_USE_GLX))
+#if !defined(_WIN32) && (!defined(__APPLE__) || defined(MACOSX_USE_GLX))
   if (!wait) {
     if (id >=0 && id < MAXVIEW) {
       if (myViews[id]) myViews[id]->Wait(wait);

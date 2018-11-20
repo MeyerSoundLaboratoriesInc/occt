@@ -22,18 +22,6 @@ END_MESSAGE_MAP()
 
 CImportExportApp::CImportExportApp() : OCC_App()
 {
-  // Set the local system units
-  try
-  {
-    UnitsAPI::SetLocalSystem (UnitsAPI_MDTV);
-  }
-  catch (Standard_Failure)
-  {
-    AfxMessageBox (L"Fatal Error in units initialisation");
-  }
-
-  SampleName = "ImportExport"; //for about dialog
-  SetSamplePath (L"..\\..\\05_ImportExport");
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -46,7 +34,20 @@ CImportExportApp theApp;
 
 BOOL CImportExportApp::InitInstance()
 {
-	AfxEnableControlContainer();
+  // Set the local system units
+  try
+  {
+    UnitsAPI::SetLocalSystem (UnitsAPI_MDTV);
+  }
+  catch (Standard_Failure)
+  {
+    AfxMessageBox (L"Fatal Error in units initialisation");
+  }
+
+  SampleName = "ImportExport"; //for about dialog
+  SetSamplePath (L"..\\..\\05_ImportExport");
+
+  AfxEnableControlContainer();
 
 	// Standard initialization
 	// If you are not using these features and wish to reduce the size
@@ -115,8 +116,8 @@ void CImportExportApp::OnFileOpen()
 				  NULL );
   
 
-	CString initdir(((OCC_App*) AfxGetApp())->GetInitDataDir());
-	initdir += "\\Data";
+	CString initdir;
+	initdir.GetEnvironmentVariable (L"CSF_OCCTDataPath");
 
 	dlg.m_ofn.lpstrInitialDir = initdir;
 
@@ -134,19 +135,19 @@ void CImportExportApp::OnFileOpen()
 		// add to filter
 		strFilter += strFilterName;
 		ASSERT(!strFilter.IsEmpty());  // must have a file type name
-		strFilter += (TCHAR)'\0';  // next string please
-		strFilter += (TCHAR)'*';
+		strFilter += L'\0';  // next string please
+		strFilter += L'*';
 		strFilter += strFilterExt;
-		strFilter += (TCHAR)'\0';  // next string please
+		strFilter += L'\0';  // next string please
 		dlg.m_ofn.nMaxCustFilter++;		
 	}
 	// append the "*.*" all files filter
 	CString allFilter;
 	VERIFY(allFilter.LoadString(AFX_IDS_ALLFILTER));
 	strFilter += allFilter;
-	strFilter += (TCHAR)'\0';   // next string please
-	strFilter += _T("*.*");
-	strFilter += (TCHAR)'\0';   // last string
+	strFilter += L'\0';   // next string please
+	strFilter += L"*.*";
+	strFilter += L'\0';   // last string
 	dlg.m_ofn.nMaxCustFilter++;
 	dlg.m_ofn.lpstrFilter = strFilter;
 

@@ -35,8 +35,14 @@ public:
   //! Setup color of entire text.
   Standard_EXPORT virtual void SetColor (const Quantity_Color& theColor) Standard_OVERRIDE;
 
-  //! Setup color of entire text.
-  Standard_EXPORT virtual void SetColor (const Quantity_NameOfColor theColor) Standard_OVERRIDE;
+  //! Setup transparency within [0, 1] range.
+  Standard_EXPORT virtual void SetTransparency (const Standard_Real theValue) Standard_OVERRIDE;
+
+  //! Removes the transparency setting.
+  virtual void UnsetTransparency() Standard_OVERRIDE { SetTransparency (0.0); }
+
+  //! Material has no effect for text label.
+  virtual void SetMaterial (const Graphic3d_MaterialAspect& ) Standard_OVERRIDE {}
 
   //! Setup text.
   Standard_EXPORT void SetText (const TCollection_ExtendedString& theText);
@@ -80,6 +86,10 @@ public:
   //! Returns true if the current text placement mode uses text orientation in the model 3D space.
   Standard_EXPORT Standard_Boolean HasOrientation3D() const;
 
+  Standard_EXPORT void SetFlipping (const Standard_Boolean theIsFlipping);
+
+  Standard_EXPORT Standard_Boolean HasFlipping() const;
+
   //! Define the display type of the text.
   //!
   //! TODT_NORMAL     Default display. Text only.
@@ -111,6 +121,7 @@ protected:
   Font_FontAspect            myFontAspect;
   gp_Ax2                     myOrientation3D;
   Standard_Boolean           myHasOrientation3D;
+  Standard_Boolean           myHasFlipping;
 
 public:
 

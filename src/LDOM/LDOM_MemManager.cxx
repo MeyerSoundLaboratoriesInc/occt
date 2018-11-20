@@ -17,7 +17,7 @@
 #include <LDOMBasicString.hxx>
 
 
-IMPLEMENT_STANDARD_RTTIEXT(LDOM_MemManager,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(LDOM_MemManager,Standard_Transient)
 
 #define HASH_MASK 255
 #define MINIMAL_ROOM 3
@@ -99,7 +99,14 @@ void * LDOM_MemManager::MemBlock::AllocateAndCheck
 LDOM_MemManager::MemBlock::~MemBlock ()
 {
   delete [] myBlock;
-  delete myNext;
+  MemBlock* aNext = myNext;
+  while (aNext) 
+  {
+    MemBlock* aNextNext = aNext->myNext;
+    aNext->myNext = 0;
+    delete aNext;
+    aNext = aNextNext;
+  }
 }
 
 //=======================================================================

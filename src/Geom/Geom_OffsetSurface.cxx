@@ -49,6 +49,7 @@
 #include <GeomAbs_CurveType.hxx>
 #include <GeomAbs_IsoType.hxx>
 #include <GeomAbs_Shape.hxx>
+#include <GeomAdaptor_Surface.hxx>
 #include <GeomEvaluator_OffsetSurface.hxx>
 #include <gp.hxx>
 #include <gp_Dir.hxx>
@@ -205,7 +206,7 @@ void Geom_OffsetSurface::SetBasisSurface (const Handle(Geom_Surface)& S,
 
     // Raise exception if still C0
     if (isC0)
-      Standard_ConstructionError::Raise("Offset with no C1 Surface");
+      throw Standard_ConstructionError("Offset with no C1 Surface");
   }
 
   if(isTrimmed)
@@ -220,15 +221,15 @@ void Geom_OffsetSurface::SetBasisSurface (const Handle(Geom_Surface)& S,
   
   equivSurf = Surface();
 
-  if (basisSurf->IsKind(STANDARD_TYPE(Geom_BSplineSurface)) ||
-      basisSurf->IsKind(STANDARD_TYPE(Geom_BezierSurface)))
+  if (aCheckingSurf->IsKind(STANDARD_TYPE(Geom_BSplineSurface)) ||
+      aCheckingSurf->IsKind(STANDARD_TYPE(Geom_BezierSurface)))
   {
     // Tolerance en dur pour l'instant ,mais on devrait la proposer dans le constructeur
     // et la mettre en champ, on pourrait utiliser par exemple pour l'extraction d'iso 
     // et aussi pour les singularite. Pour les surfaces osculatrices, on l'utilise pour
     // detecter si une iso est degeneree.
     const Standard_Real Tol = Precision::Confusion(); //0.0001;
-    myOscSurf = new Geom_OsculatingSurface(basisSurf, Tol);
+    myOscSurf = new Geom_OsculatingSurface(aCheckingSurf, Tol);
   }
 
   // Surface value calculator
@@ -340,7 +341,7 @@ void Geom_OffsetSurface::D0 (const Standard_Real U, const Standard_Real V, gp_Pn
 {
 #ifdef CHECK  
   if (myBasisSurfContinuity == GeomAbs_C0)
-    Geom_UndefinedValue::Raise();
+    throw Geom_UndefinedValue();
 #endif
   if (equivSurf.IsNull())
     myEvaluator->D0(U, V, P);
@@ -360,7 +361,7 @@ void Geom_OffsetSurface::D1 (const Standard_Real U, const Standard_Real V,
 #ifdef CHECK  
   if (myBasisSurfContinuity == GeomAbs_C0 ||
       myBasisSurfContinuity == GeomAbs_C1)
-    Geom_UndefinedDerivative::Raise();
+    throw Geom_UndefinedDerivative();
 #endif
   if (equivSurf.IsNull())
     myEvaluator->D1(U, V, P, D1U, D1V);
@@ -382,7 +383,7 @@ void Geom_OffsetSurface::D2 (const Standard_Real U, const Standard_Real V,
   if (myBasisSurfContinuity == GeomAbs_C0 ||
       myBasisSurfContinuity == GeomAbs_C1 ||
       myBasisSurfContinuity == GeomAbs_C2)
-    Geom_UndefinedDerivative::Raise();
+    throw Geom_UndefinedDerivative();
 #endif
   if (equivSurf.IsNull())
     myEvaluator->D2(U, V, P, D1U, D1V, D2U, D2V, D2UV);
@@ -403,7 +404,7 @@ void Geom_OffsetSurface::D3 (const Standard_Real U, const Standard_Real V,
 {
 #ifdef CHECK  
   if (!(basisSurf->IsCNu (4) && basisSurf->IsCNv (4))) { 
-    Geom_UndefinedDerivative::Raise();
+    throw Geom_UndefinedDerivative();
   }
 #endif
   if (equivSurf.IsNull())
@@ -423,7 +424,7 @@ gp_Vec Geom_OffsetSurface::DN (const Standard_Real    U, const Standard_Real    
   Standard_RangeError_Raise_if (Nu < 0 || Nv < 0 || Nu + Nv < 1, " ");
 #ifdef CHECK  
   if (!(basisSurf->IsCNu (Nu) && basisSurf->IsCNv (Nv))) { 
-    Geom_UndefinedDerivative::Raise();
+    throw Geom_UndefinedDerivative();
   }
 #endif  
   gp_Vec D(0,0,0);
@@ -456,7 +457,7 @@ public:
     Standard_Integer *ErrorCode);
 
 private:
-  Handle(Geom_Surface) CurrentSurface;
+  GeomAdaptor_Surface CurrentSurface;
   Standard_Real IsoPar;
 };
 
@@ -469,14 +470,14 @@ void Geom_OffsetSurface_UIsoEvaluator::Evaluate(Standard_Integer *,/*Dimension*/
 { 
   gp_Pnt P;
   if (*DerivativeRequest == 0) {
-    P = CurrentSurface->Value(IsoPar,*Parameter);
+    P = CurrentSurface.Value(IsoPar,*Parameter);
     Result[0] = P.X();
     Result[1] = P.Y();
     Result[2] = P.Z();
   }
   else {
     gp_Vec DU,DV;
-    CurrentSurface->D1(IsoPar,*Parameter,P,DU,DV);
+    CurrentSurface.D1(IsoPar,*Parameter,P,DU,DV);
     Result[0] = DV.X();
     Result[1] = DV.Y();
     Result[2] = DV.Z();

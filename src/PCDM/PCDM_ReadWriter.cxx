@@ -16,7 +16,6 @@
 
 
 #include <CDM_Document.hxx>
-#include <CDM_MessageDriver.hxx>
 #include <PCDM.hxx>
 #include <PCDM_DOMHeaderParser.hxx>
 #include <PCDM_ReadWriter.hxx>
@@ -61,7 +60,7 @@ void PCDM_ReadWriter::Open (Storage_BaseDriver&                 aDriver,
       break;
     }
     aMsg << (char)0;
-    Standard_Failure::Raise(aMsg);
+    throw Standard_Failure(aMsg.str().c_str());
   }
 }
 
@@ -166,12 +165,16 @@ TCollection_ExtendedString PCDM_ReadWriter::FileFormat (Standard_IStream& theISt
 {
   TCollection_ExtendedString aFormat;
 
-  Storage_BaseDriver* aFileDriver;
+  Storage_BaseDriver* aFileDriver = 0L;
   if (PCDM::FileDriverType (theIStream, aFileDriver) == PCDM_TOFD_XmlFile)
   {
     return ::TryXmlDriverType (theIStream);
   }
- 
+  if (!aFileDriver)
+  {
+    // type is not recognized, return empty string
+    return aFormat;
+  }
 
   aFileDriver->ReadCompleteInfo (theIStream, theData);
 

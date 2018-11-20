@@ -26,8 +26,10 @@
 #include <Standard_Boolean.hxx>
 #include <TopTools_DataMapOfShapeShape.hxx>
 #include <Standard_Integer.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Real.hxx>
+#include <TopTools_SequenceOfShape.hxx>
+
 class TopoDS_Shape;
 class TopoDS_Wire;
 class TopoDS_Face;
@@ -37,10 +39,10 @@ class TopoDS_Vertex;
 
 
 class LocOpe_WiresOnShape;
-DEFINE_STANDARD_HANDLE(LocOpe_WiresOnShape, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(LocOpe_WiresOnShape, Standard_Transient)
 
 
-class LocOpe_WiresOnShape : public MMgt_TShared
+class LocOpe_WiresOnShape : public Standard_Transient
 {
 
 public:
@@ -49,6 +51,11 @@ public:
   Standard_EXPORT LocOpe_WiresOnShape(const TopoDS_Shape& S);
   
   Standard_EXPORT void Init (const TopoDS_Shape& S);
+
+  //! Add splitting edges or wires for whole initial shape
+  //! withot additional specification edge->face, edge->edge
+  //! This method puts edge on the corresponding faces from initial shape
+  Standard_EXPORT Standard_Boolean Add(const TopTools_SequenceOfShape& theEdges);
   
   //! Set the flag of check internal intersections
   //! default value is True (to check)
@@ -105,7 +112,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(LocOpe_WiresOnShape,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(LocOpe_WiresOnShape,Standard_Transient)
 
 protected:
 

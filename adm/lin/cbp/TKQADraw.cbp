@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -91,6 +93,7 @@
 			<Add library="TKXDESTEP" />
 			<Add library="TKXSDRAW" />
 			<Add library="TKSTL" />
+			<Add library="TKXml" />
 		</Linker>
 		<Unit filename="../../../src/QABugs/QABugs.cxx" />
 		<Unit filename="../../../src/QABugs/QABugs_1.cxx" />
@@ -113,7 +116,6 @@
 		<Unit filename="../../../src/QABugs/QABugs_7.cxx" />
 		<Unit filename="../../../src/QABugs/QABugs_8.cxx" />
 		<Unit filename="../../../src/QABugs/QABugs_9.cxx" />
-		<Unit filename="../../../src/QABugs/QABugs_MyText.cxx" />
 		<Unit filename="../../../src/QABugs/QABugs_PresentableObject.cxx" />
 		<Unit filename="../../../src/QADNaming/QADNaming.cxx" />
 		<Unit filename="../../../src/QADNaming/QADNaming_BasicCommands.cxx" />
@@ -130,39 +132,5 @@
 		<Unit filename="../../../src/QANCollection/QANCollection_Perf.cxx" />
 		<Unit filename="../../../src/QANCollection/QANCollection_Stl.cxx" />
 		<Unit filename="../../../src/QANCollection/QANCollection_Test.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_BooleanOperation.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_BooleanOperationFeat.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Box.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Chamfer.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Common.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Cut.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Cylinder.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Fillet.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Fuse.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Gluing.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_ImportShape.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Intersection.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Limitation.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Loader.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_LoaderParent.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Prism.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Revol.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Sphere.cxx" />
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_TopNaming.cxx" />
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming.cxx" />
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming_FeatureCommands.cxx" />
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming_PrimitiveCommands.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_SDFaces.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_shell.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_util.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_vertex.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_wire.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Intersection.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Limitation.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_ReShaper.cxx" />
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Tools.cxx" />
 	</Project>
 </CodeBlocks_project_file>

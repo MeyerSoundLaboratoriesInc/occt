@@ -5,7 +5,6 @@
 #include "ParamsFacesPage.h"
 #include "DimensionDlg.h"
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_LocalContext.hxx>
 #include <AIS_LengthDimension.hxx>
 #include <AIS_AngleDimension.hxx>
 
@@ -43,40 +42,40 @@ END_MESSAGE_MAP()
 void CParamsFacesPage::OnBnClickedFacesbtn1()
 {
   // Check if face is selected
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_FACE)
   {
     AfxMessageBox(_T("Choose the face and press the button again"),
                     MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  // Workaround for AIS_LocalContext::SelectedShape()
-  myFirstFace = TopoDS::Face (CDimensionDlg::SelectedShape());
-  //myFirstFace = TopoDS::Face (myAISContext->LocalContext()->SelectedShape());
+  myFirstFace = TopoDS::Face (myAISContext->SelectedShape());
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_True);
 }
 
 void CParamsFacesPage::OnBnClickedFacesbtn2()
 {
+  const Standard_Integer aSelectionMode = AIS_Shape::SelectionMode (TopAbs_FACE);
+
   // Check if face is selected
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_FACE)
   {
     AfxMessageBox(_T("Choose the face and press the button again"),
                     MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  // Workaround for AIS_LocalContext::SelectedShape()
-  mySecondFace = TopoDS::Face (CDimensionDlg::SelectedShape());
-  //mySecondFace = TopoDS::Face (myAISContext->LocalContext()->SelectedShape());
-  myAISContext->LocalContext()->ClearSelected();
+  mySecondFace = TopoDS::Face (myAISContext->SelectedShape());
+  myAISContext->ClearSelected (Standard_False);
 
   CDimensionDlg *aDimDlg = (CDimensionDlg*)(GetParentOwner());
 
-  myAISContext->CloseAllContexts();
+  myAISContext->Deactivate (aSelectionMode);
 
   Handle(Prs3d_DimensionAspect) anAspect = new Prs3d_DimensionAspect();
   anAspect->MakeArrows3d (Standard_False);
@@ -105,7 +104,7 @@ void CParamsFacesPage::OnBnClickedFacesbtn2()
     }
 
     anAngleDim->SetFlyout (aDimDlg->GetFlyout());
-    myAISContext->Display (anAngleDim);
+    myAISContext->Display (anAngleDim, Standard_True);
   }
   else
   {
@@ -118,9 +117,8 @@ void CParamsFacesPage::OnBnClickedFacesbtn2()
       aLenDim->SetDisplayUnits (aDimDlg->GetUnits());
     }
 
-    myAISContext->Display (aLenDim);
+    myAISContext->Display (aLenDim, Standard_True);
   }
 
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_FACE);
+  myAISContext->Activate (aSelectionMode);
 }

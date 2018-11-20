@@ -2,31 +2,31 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{D03F088D-01A1-0EEE-089E-0015EC9F4B6B}</UniqueIdentifier>
+      <UniqueIdentifier>{4F958F3E-01BF-0E47-0406-C7721F158A8E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepBasic">
-      <UniqueIdentifier>{105EA20B-0A88-01AE-03CB-88F8546785D9}</UniqueIdentifier>
+      <UniqueIdentifier>{3B785E95-068C-08D3-051A-72B0098355FB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepBasic">
-      <UniqueIdentifier>{8484F333-03F1-048B-0611-A2DCF1577902}</UniqueIdentifier>
+      <UniqueIdentifier>{81EDB2D1-122D-0125-062F-A4903BF94BC6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepRepr">
-      <UniqueIdentifier>{C98B9CCE-041F-01BB-0F1C-3C04784973D7}</UniqueIdentifier>
+      <UniqueIdentifier>{DDEB0827-0F3B-0CF6-10A7-5A11CA4617BB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepRepr">
-      <UniqueIdentifier>{5431A228-0F5B-1676-0010-12A2024A3C1C}</UniqueIdentifier>
+      <UniqueIdentifier>{C00DB8FC-1981-0148-0017-7B97A9220B45}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepGeom">
-      <UniqueIdentifier>{B090FD3F-12A4-1684-0489-9D97864709D0}</UniqueIdentifier>
+      <UniqueIdentifier>{12037F1A-0CD1-0D60-0B72-62D18CAB7775}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepGeom">
-      <UniqueIdentifier>{D55286E1-0CFC-01D3-14E4-9D3CBFFF574E}</UniqueIdentifier>
+      <UniqueIdentifier>{2FC37E7C-02B8-02EA-0807-95EE1C43892F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepShape">
-      <UniqueIdentifier>{BCE64C4B-0CD8-11C3-152C-34495BBBFB1C}</UniqueIdentifier>
+      <UniqueIdentifier>{E38F290C-1572-0F1A-04E9-6992DC28E7CA}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepShape">
-      <UniqueIdentifier>{62F669D1-0CA6-099D-1705-1C4EC47728FE}</UniqueIdentifier>
+      <UniqueIdentifier>{897FE192-0B2A-09E1-0725-8C2A2021A14F}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -340,6 +340,15 @@
       <Filter>Source files\StepBasic</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionFormationWithSpecifiedSource.cxx">
+      <Filter>Source files\StepBasic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionOrReference.cxx">
+      <Filter>Source files\StepBasic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionReference.cxx">
+      <Filter>Source files\StepBasic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionReferenceWithLocalRepresentation.cxx">
       <Filter>Source files\StepBasic</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepBasic\StepBasic_ProductDefinitionRelationship.cxx">
@@ -720,6 +729,12 @@
     <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionFormationWithSpecifiedSource.cxx">
       <Filter>Source files\RWStepBasic</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionReference.cxx">
+      <Filter>Source files\RWStepBasic</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionReferenceWithLocalRepresentation.cxx">
+      <Filter>Source files\RWStepBasic</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepBasic\RWStepBasic_RWProductDefinitionRelationship.cxx">
       <Filter>Source files\RWStepBasic</Filter>
     </ClCompile>
@@ -813,6 +828,9 @@
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CharacterizedDefinition.cxx">
       <Filter>Source files\StepRepr</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CharacterizedRepresentation.cxx">
+      <Filter>Source files\StepRepr</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_CompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
       <Filter>Source files\StepRepr</Filter>
     </ClCompile>
@@ -838,6 +856,12 @@
       <Filter>Source files\StepRepr</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConfigurationItem.cxx">
+      <Filter>Source files\StepRepr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConstructiveGeometryRepresentation.cxx">
+      <Filter>Source files\StepRepr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ConstructiveGeometryRepresentationRelationship.cxx">
       <Filter>Source files\StepRepr</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepRepr\StepRepr_ContinuosShapeAspect.cxx">
@@ -1038,6 +1062,9 @@
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCentreOfSymmetry.cxx">
       <Filter>Source files\RWStepRepr</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCharacterizedRepresentation.cxx">
+      <Filter>Source files\RWStepRepr</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWCompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
       <Filter>Source files\RWStepRepr</Filter>
     </ClCompile>
@@ -1060,6 +1087,12 @@
       <Filter>Source files\RWStepRepr</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConfigurationItem.cxx">
+      <Filter>Source files\RWStepRepr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConstructiveGeometryRepresentation.cxx">
+      <Filter>Source files\RWStepRepr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWConstructiveGeometryRepresentationRelationship.cxx">
       <Filter>Source files\RWStepRepr</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepRepr\RWStepRepr_RWContinuosShapeAspect.cxx">

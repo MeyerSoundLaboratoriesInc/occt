@@ -12,19 +12,22 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <TCollection_AsciiString.hxx>
 
+#include <NCollection_UtfIterator.hxx>
 #include <Standard.hxx>
 #include <Standard_NegativeValue.hxx>
 #include <Standard_NullObject.hxx>
 #include <Standard_NumericError.hxx>
 #include <Standard_OutOfRange.hxx>
-#include <TCollection_AsciiString.hxx>
 #include <TCollection_ExtendedString.hxx>
 #include <TCollection_HAsciiString.hxx>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+
 // Shortcuts to standard allocate and reallocate functions
 static inline Standard_PCharacter Allocate(const Standard_Size aLength)
 {
@@ -56,35 +59,39 @@ TCollection_AsciiString::TCollection_AsciiString()
 // ----------------------------------------------------------------------------
 // Create an asciistring from a Standard_CString
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(const Standard_CString astring)
-  : mystring(0), mylength(0)
+TCollection_AsciiString::TCollection_AsciiString (const Standard_CString theString)
+: mystring(0),
+  mylength(0)
 {
-  if (astring) {
-    mylength = Standard_Integer( strlen(astring) );
-    mystring = Allocate(mylength+1);
-    strncpy(mystring,astring,mylength);
-    mystring[mylength] = '\0';
+  if (theString == NULL)
+  {
+    throw Standard_NullObject ("TCollection_AsciiString(): NULL pointer passed to constructor");
   }
-  else {
-    Standard_NullObject::Raise("TCollection_AsciiString : parameter 'astring'");
-  }
+
+  mylength = Standard_Integer (strlen (theString));
+  mystring = Allocate (mylength + 1);
+  memcpy (mystring, theString, mylength);
+  mystring[mylength] = '\0';
 }
+
 
 // ----------------------------------------------------------------------------
 // Create an asciistring from a Standard_CString
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(const Standard_CString astring,
-                                                 const Standard_Integer aLen )
-  : mystring(0), mylength(aLen)
+TCollection_AsciiString::TCollection_AsciiString (const Standard_CString theString,
+                                                  const Standard_Integer theLen)
+: mystring (NULL),
+  mylength (0)
 {
-  if (astring) {
-    mystring = Allocate(mylength+1);
-    strncpy( mystring , astring , mylength );
-    mystring [ mylength ] = '\0' ;
+  if (theString == NULL)
+  {
+    throw Standard_NullObject ("TCollection_AsciiString(): NULL pointer passed to constructor");
   }
-  else {
-    Standard_NullObject::Raise("TCollection_AsciiString : parameter 'astring'");
-  }
+
+  for (; mylength < theLen && theString[mylength] != '\0'; ++mylength) {}
+  mystring = Allocate (mylength + 1);
+  memcpy (mystring, theString, mylength);
+  mystring[mylength] = '\0';
 }
 
 // ----------------------------------------------------------------------------
@@ -127,7 +134,7 @@ TCollection_AsciiString::TCollection_AsciiString(const Standard_Integer aValue)
   char t [13];
   mylength = Sprintf( t,"%d",aValue);
   mystring = Allocate(mylength+1);
-  strncpy( mystring , t , mylength );
+  memcpy (mystring, t, mylength);
   mystring[mylength] = '\0';
 }
 
@@ -140,77 +147,80 @@ TCollection_AsciiString::TCollection_AsciiString(const Standard_Real aValue)
   char t [50];
   mylength = Sprintf( t,"%g",aValue);
   mystring = Allocate(mylength+1);
-  strncpy( mystring , t , mylength );
+  memcpy (mystring, t, mylength);
   mystring[mylength] = '\0';
 }
 
 // ----------------------------------------------------------------------------
 // Create an asciistring from an asciistring
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(const TCollection_AsciiString& astring)
-     : mystring(0)
+TCollection_AsciiString::TCollection_AsciiString (const TCollection_AsciiString& theString)
+: mystring (Allocate (theString.mylength + 1)),
+  mylength (theString.mylength)
 {
-  mylength = astring.mylength;
-  mystring = Allocate(mylength+1);
-  if ( mylength )
-    strncpy(mystring,astring.mystring,mylength);
+  if (mylength != 0)
+  {
+    memcpy (mystring, theString.mystring, mylength);
+  }
   mystring[mylength] = '\0';
 }
 
 // ----------------------------------------------------------------------------
 // Create an asciistring from a character
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(
-                         const TCollection_AsciiString& astring ,
-                         const Standard_Character other )
-     : mystring(0)
+TCollection_AsciiString::TCollection_AsciiString (const TCollection_AsciiString& theString,
+                                                  const Standard_Character theChar)
+: mystring (NULL),
+  mylength (theString.mylength + 1)
 {
-  mylength = astring.mylength + 1 ;
-  mystring = Allocate(mylength+1);
-  if ( astring.mylength ) {
-    strncpy( mystring , astring.mystring , astring.mylength ) ;
+  mystring = Allocate (mylength + 1);
+  if (theString.mylength != 0)
+  {
+    memcpy (mystring, theString.mystring, theString.mylength);
   }
-  mystring[mylength-1] = other ;
-  mystring[mylength] = '\0' ;
+  mystring[mylength - 1] = theChar;
+  mystring[mylength] = '\0';
 }
 
 // ----------------------------------------------------------------------------
 // Create an asciistring from an asciistring
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(
-                         const TCollection_AsciiString& astring ,
-                         const Standard_CString other )
-     : mystring(0)
+TCollection_AsciiString::TCollection_AsciiString (const TCollection_AsciiString& theString1,
+                                                  const Standard_CString theString2)
+: mystring (0)
 {
-  Standard_Integer otherlength = Standard_Integer( other ? strlen( other ) : 0 );
-  mylength = astring.mylength + otherlength ;
-  mystring = Allocate(mylength+1);
-  if ( astring.mylength ) {
-    strncpy( mystring , astring.mystring , astring.mylength ) ;
+  const Standard_Integer aStr2Len = Standard_Integer (theString2 ? strlen (theString2) : 0);
+  mylength = theString1.mylength + aStr2Len;
+  mystring = Allocate (mylength + 1);
+  if (theString1.mylength != 0)
+  {
+    memcpy (mystring, theString1.mystring, theString1.mylength);
   }
-  if ( otherlength ) {
-    strncpy( mystring + astring.mylength, other, otherlength );
+  if (aStr2Len != 0)
+  {
+    memcpy (mystring + theString1.mylength, theString2, aStr2Len);
   }
-  mystring[ mylength ] = '\0';
+  mystring[mylength] = '\0';
 }
 
 // ----------------------------------------------------------------------------
 // Create an asciistring from an asciistring
 // ----------------------------------------------------------------------------
-TCollection_AsciiString::TCollection_AsciiString(
-                         const TCollection_AsciiString& astring ,
-                         const TCollection_AsciiString& other )
-     : mystring(0)
+TCollection_AsciiString::TCollection_AsciiString (const TCollection_AsciiString& theString1,
+                                                  const TCollection_AsciiString& theString2)
+: mystring (0),
+  mylength (theString1.mylength + theString2.mylength)
 {
-  mylength = astring.mylength + other.mylength ;
-  mystring = Allocate(mylength+1);
-  if ( astring.mylength ) {
-    strncpy( mystring , astring.mystring , astring.mylength ) ;
+  mystring = Allocate (mylength + 1);
+  if (theString1.mylength)
+  {
+    memcpy (mystring, theString1.mystring, theString1.mylength);
   }
-  if ( other.mylength ) {
-    strncpy( mystring + astring.mylength, other.mystring , other.mylength ) ;
+  if (theString2.mylength != 0)
+  {
+    memcpy (mystring + theString1.mylength, theString2.mystring, theString2.mylength);
   }
-  mystring[mylength] = '\0' ;
+  mystring[mylength] = '\0';
 }
 
 //---------------------------------------------------------------------------
@@ -218,9 +228,10 @@ TCollection_AsciiString::TCollection_AsciiString(
 //---------------------------------------------------------------------------
 TCollection_AsciiString::TCollection_AsciiString(const TCollection_ExtendedString& astring,
                                                  const Standard_Character replaceNonAscii) 
-     : mystring(0)
+: mystring (0)
 {
-  if (replaceNonAscii || astring.IsAscii()) {
+  if (replaceNonAscii)
+  {
     mylength = astring.Length(); 
     mystring = Allocate(mylength+1);
     for(int i = 0; i < mylength; i++) {
@@ -234,6 +245,27 @@ TCollection_AsciiString::TCollection_AsciiString(const TCollection_ExtendedStrin
     mylength = astring.LengthOfCString();
     mystring = Allocate(mylength+1);
     astring.ToUTF8CString(mystring);
+  }
+}
+
+//---------------------------------------------------------------------------
+//  Create an TCollection_AsciiString from a Standard_WideChar
+//---------------------------------------------------------------------------
+TCollection_AsciiString::TCollection_AsciiString (const Standard_WideChar* theStringUtf)
+: mystring (NULL),
+  mylength (0)
+{
+  for (NCollection_UtfWideIter anIter (theStringUtf); *anIter != 0; ++anIter)
+  {
+    mylength += anIter.AdvanceBytesUtf8();
+  }
+
+  mystring = Allocate (mylength + 1);
+  mystring[mylength] = '\0';
+  NCollection_UtfWideIter anIterRead (theStringUtf);
+  for (Standard_Utf8Char* anIterWrite = mystring; *anIterRead != 0; ++anIterRead)
+  {
+    anIterWrite = anIterRead.GetUtf(anIterWrite);
   }
 }
 
@@ -273,33 +305,34 @@ void TCollection_AsciiString::AssignCat(const Standard_Character other)
 // ----------------------------------------------------------------------------
 // AssignCat
 // ----------------------------------------------------------------------------
-void TCollection_AsciiString::AssignCat(const Standard_CString other)
+void TCollection_AsciiString::AssignCat (const Standard_CString theOther)
 {
-  if (other) {
-    Standard_Integer otherlength = Standard_Integer( strlen( other ));
-    if ( otherlength ) {
-      Standard_Integer newlength = mylength+otherlength;
-      mystring = Reallocate (mystring, newlength + 1);
-      strncpy( mystring + mylength, other, otherlength+1 );
-      mylength = newlength;
-    }
+  if (theOther == NULL)
+  {
+    throw Standard_NullObject("TCollection_AsciiString::Operator += parameter other");
   }
-  else {
-    Standard_NullObject::Raise("TCollection_AsciiString::Operator += parameter other");
+
+  Standard_Integer anOtherLen = Standard_Integer (strlen (theOther));
+  if (anOtherLen != 0)
+  {
+    const Standard_Integer aNewLen = mylength + anOtherLen;
+    mystring = Reallocate (mystring, aNewLen + 1);
+    memcpy (mystring + mylength, theOther, anOtherLen + 1);
+    mylength = aNewLen;
   }
 }
 
 // ----------------------------------------------------------------------------
 // AssignCat
 // ----------------------------------------------------------------------------
-void TCollection_AsciiString::AssignCat(const TCollection_AsciiString& other)
+void TCollection_AsciiString::AssignCat (const TCollection_AsciiString& theOther)
 {
-
-  if (other.mylength) {
-    Standard_Integer newlength = mylength+other.mylength;
-    mystring = Reallocate (mystring, newlength + 1);
-    strncpy( mystring + mylength, other.mystring, other.mylength+1 );
-    mylength = newlength;
+  if (theOther.mylength != 0)
+  {
+    const Standard_Integer aNewLen = mylength + theOther.mylength;
+    mystring = Reallocate (mystring, aNewLen + 1);
+    memcpy (mystring + mylength, theOther.mystring, theOther.mylength + 1);
+    mylength = aNewLen;
   }
 }
 
@@ -325,7 +358,7 @@ void TCollection_AsciiString::Center(const Standard_Integer Width ,
     RightJustify(Width,Filler);
   }
   else if (Width < 0) {
-    Standard_NegativeValue::Raise();
+    throw Standard_NegativeValue();
   }
 }
 
@@ -369,7 +402,7 @@ void TCollection_AsciiString::Copy(const Standard_CString fromwhere)
   if (fromwhere) {
     mylength = Standard_Integer( strlen( fromwhere ));
     mystring = Reallocate (mystring, mylength + 1);
-    strncpy( mystring, fromwhere, mylength+1 );
+    memcpy (mystring, fromwhere, mylength + 1);
   }
   else {
     mylength = 0;
@@ -385,7 +418,7 @@ void TCollection_AsciiString::Copy(const TCollection_AsciiString& fromwhere)
   if (fromwhere.mystring) {
     mylength = fromwhere.mylength;
     mystring = Reallocate (mystring, mylength + 1);
-    strncpy( mystring, fromwhere.mystring, mylength+1 );
+    memcpy (mystring, fromwhere.mystring, mylength + 1);
   }
   else {
     mylength = 0;
@@ -394,9 +427,18 @@ void TCollection_AsciiString::Copy(const TCollection_AsciiString& fromwhere)
 }
 
 // ----------------------------------------------------------------------------
+// Swap
+// ----------------------------------------------------------------------------
+void TCollection_AsciiString::Swap (TCollection_AsciiString& theOther)
+{
+  std::swap (mystring, theOther.mystring);
+  std::swap (mylength, theOther.mylength);
+}
+
+// ----------------------------------------------------------------------------
 // Destroy
 // ----------------------------------------------------------------------------
-void TCollection_AsciiString::Destroy()
+TCollection_AsciiString::~TCollection_AsciiString()
 {
   if (mystring) 
     Free (mystring);
@@ -418,8 +460,7 @@ Standard_Integer TCollection_AsciiString::FirstLocationInSet
         if (mystring[i] == Set.mystring[j]) return i+1;
     return 0;
   }
-  Standard_OutOfRange::Raise();
-  return 0;
+  throw Standard_OutOfRange();
 }
 
 // ----------------------------------------------------------------------------
@@ -441,8 +482,7 @@ Standard_Integer TCollection_AsciiString::FirstLocationNotInSet
     }
     return 0;
   }
-  Standard_OutOfRange::Raise();
-  return 0;
+  throw Standard_OutOfRange();
 }
 
 //----------------------------------------------------------------------------
@@ -451,10 +491,8 @@ Standard_Integer TCollection_AsciiString::FirstLocationNotInSet
 void TCollection_AsciiString::Insert(const Standard_Integer where,
                                      const Standard_Character what)
 {
-  if (where > mylength + 1 ) Standard_OutOfRange::Raise
-        ("TCollection_AsciiString::Insert : Parameter where is too big");
-  if (where < 1)             Standard_OutOfRange::Raise
-        ("TCollection_AsciiString::Insert : Parameter where is too small");
+  if (where > mylength + 1 ) throw Standard_OutOfRange("TCollection_AsciiString::Insert : Parameter where is too big");
+  if (where < 1)             throw Standard_OutOfRange("TCollection_AsciiString::Insert : Parameter where is too small");
   
   mystring = Reallocate (mystring, mylength + 2);
   if (where != mylength +1) {
@@ -490,8 +528,8 @@ void TCollection_AsciiString::Insert(const Standard_Integer where,
     }
   }
   else {
-    Standard_OutOfRange::Raise("TCollection_AsciiString::Insert : "
-                               "Parameter where is invalid");
+    throw Standard_OutOfRange("TCollection_AsciiString::Insert : "
+                              "Parameter where is invalid");
   }
 }
 
@@ -521,8 +559,8 @@ void TCollection_AsciiString::Insert(const Standard_Integer where,
     }
   }
   else {
-    Standard_OutOfRange::Raise("TCollection_AsciiString::Insert : "
-                               "Parameter where is too big");
+    throw Standard_OutOfRange("TCollection_AsciiString::Insert : "
+                              "Parameter where is too big");
   }
 }
 
@@ -532,7 +570,7 @@ void TCollection_AsciiString::Insert(const Standard_Integer where,
 void TCollection_AsciiString::InsertAfter(const Standard_Integer Index,
                                           const TCollection_AsciiString& what)
 {
-   if (Index < 0 || Index > mylength) Standard_OutOfRange::Raise();
+   if (Index < 0 || Index > mylength) throw Standard_OutOfRange();
    Insert(Index+1,what);
 }
 
@@ -542,7 +580,7 @@ void TCollection_AsciiString::InsertAfter(const Standard_Integer Index,
 void TCollection_AsciiString::InsertBefore(const Standard_Integer Index,
                                            const TCollection_AsciiString& what)
 {
-   if (Index < 1 || Index > mylength) Standard_OutOfRange::Raise();
+   if (Index < 1 || Index > mylength) throw Standard_OutOfRange();
    Insert(Index,what);
 }
 
@@ -555,9 +593,8 @@ Standard_Boolean TCollection_AsciiString::IsEqual
   if (other) {
     return ( strncmp( other, mystring, mylength+1 ) == 0 );
   }
-  Standard_NullObject::Raise("TCollection_AsciiString::Operator == "
+  throw Standard_NullObject("TCollection_AsciiString::Operator == "
                              "Parameter 'other'");
-  return Standard_False;
 }
 
 // ----------------------------------------------------------------------------
@@ -571,11 +608,31 @@ Standard_Boolean TCollection_AsciiString::IsEqual
 }
 
 // ----------------------------------------------------------------------------
-// IsEmpty
+// IsSameString
 // ----------------------------------------------------------------------------
-Standard_Boolean TCollection_AsciiString::IsEmpty() const
+Standard_Boolean TCollection_AsciiString::IsSameString (const TCollection_AsciiString& theString1,
+                                                        const TCollection_AsciiString& theString2,
+                                                        const Standard_Boolean theIsCaseSensitive)
 {
-  return (mylength == 0);
+  const Standard_Integer aSize1 = theString1.Length();
+  if (aSize1 != theString2.Length())
+  {
+    return Standard_False;
+  }
+
+  if (theIsCaseSensitive)
+  {
+    return (strncmp (theString1.ToCString(), theString2.ToCString(), aSize1) == 0);
+  }
+
+  for (Standard_Integer aCharIter = 1; aCharIter <= aSize1; ++aCharIter)
+  {
+    if (toupper (theString1.Value (aCharIter)) != toupper (theString2.Value (aCharIter)))
+    {
+      return Standard_False;
+    }
+  }
+  return Standard_True;
 }
 
 // ----------------------------------------------------------------------------
@@ -587,9 +644,8 @@ Standard_Boolean TCollection_AsciiString::IsDifferent
   if (other) {
     return ( strncmp( other, mystring, mylength+1 ) != 0 );
   }
-  Standard_NullObject::Raise("TCollection_AsciiString::Operator != "
+  throw Standard_NullObject("TCollection_AsciiString::Operator != "
                             "Parameter 'other'");
-  return Standard_False;
 }
 
 // ----------------------------------------------------------------------------
@@ -612,9 +668,8 @@ Standard_Boolean TCollection_AsciiString::IsLess
   if (other) {
     return ( strncmp( mystring, other, mylength+1 ) < 0 );
   }
-  Standard_NullObject::Raise("TCollection_AsciiString::Operator < "
-                             "Parameter 'other'");
-  return Standard_False;
+  throw Standard_NullObject("TCollection_AsciiString::Operator < "
+                            "Parameter 'other'");
 }
 
 // ----------------------------------------------------------------------------
@@ -635,9 +690,8 @@ Standard_Boolean TCollection_AsciiString::IsGreater
   if (other) {
     return ( strncmp( mystring, other, mylength+1 ) > 0 );
   }
-  Standard_NullObject::Raise("TCollection_AsciiString::Operator > "
-                             "Parameter 'other'");
-  return Standard_False;
+  throw Standard_NullObject("TCollection_AsciiString::Operator > "
+                            "Parameter 'other'");
 }
 
 // ----------------------------------------------------------------------------
@@ -650,6 +704,34 @@ Standard_Boolean TCollection_AsciiString::IsGreater
 }
 
 // ----------------------------------------------------------------------------
+// StartsWith
+// ----------------------------------------------------------------------------
+Standard_Boolean TCollection_AsciiString::StartsWith (const TCollection_AsciiString& theStartString) const
+{
+  if (this == &theStartString)
+  {
+    return true;
+  }
+
+  return mylength >= theStartString.mylength
+      && strncmp (theStartString.mystring, mystring, theStartString.mylength) == 0;
+}
+
+// ----------------------------------------------------------------------------
+// EndsWith
+// ----------------------------------------------------------------------------
+Standard_Boolean TCollection_AsciiString::EndsWith (const TCollection_AsciiString& theEndString) const
+{
+  if (this == &theEndString)
+  {
+    return true;
+  }
+
+  return mylength >= theEndString.mylength
+      && strncmp (theEndString.mystring, mystring + mylength - theEndString.mylength, theEndString.mylength) == 0;
+}
+
+// ----------------------------------------------------------------------------
 // IntegerValue
 // ----------------------------------------------------------------------------
 Standard_Integer TCollection_AsciiString::IntegerValue()const
@@ -658,8 +740,7 @@ Standard_Integer TCollection_AsciiString::IntegerValue()const
   Standard_Integer value = (Standard_Integer)strtol(mystring,&ptr,10); 
   if (ptr != mystring) return value;
 
-  Standard_NumericError::Raise("TCollection_AsciiString::IntegerValue");
-  return 0;
+  throw Standard_NumericError("TCollection_AsciiString::IntegerValue");
 }
 
 // ----------------------------------------------------------------------------
@@ -724,7 +805,7 @@ void TCollection_AsciiString::LeftJustify(const Standard_Integer Width,
      mystring[mylength] = '\0';
    }
    else if (Width < 0) {
-     Standard_NegativeValue::Raise();
+     throw Standard_NegativeValue();
    }
 }
 
@@ -746,8 +827,7 @@ Standard_Integer TCollection_AsciiString::Location
      }
      return 0 ;
    }
-   Standard_OutOfRange::Raise();
-   return 0 ;
+   throw Standard_OutOfRange();
 }
 
 //------------------------------------------------------------------------
@@ -779,8 +859,7 @@ Standard_Integer TCollection_AsciiString::Location
     if (Find) return l+2;
     else      return 0;
   }
-  Standard_OutOfRange::Raise();
-  return 0;
+  throw Standard_OutOfRange();
 }
 
 // ----------------------------------------------------------------------------
@@ -809,8 +888,7 @@ Standard_Real TCollection_AsciiString::RealValue()const
   Standard_Real value = Strtod(mystring,&ptr);
   if (ptr != mystring) return value;
 
-  Standard_NumericError::Raise("TCollection_AsciiString::RealValue");
-  return value;
+  throw Standard_NumericError("TCollection_AsciiString::RealValue");
 }
 
 // ----------------------------------------------------------------------------
@@ -828,7 +906,7 @@ void TCollection_AsciiString::Read(Standard_IStream& astream)
   // put to string
   mylength = Standard_Integer( strlen( buffer ));
   mystring = Reallocate (mystring, mylength + 1);
-  strncpy(mystring,buffer,mylength);
+  memcpy (mystring, buffer, mylength);
   mystring[mylength] = '\0';
 }
 
@@ -908,9 +986,9 @@ void TCollection_AsciiString::Remove (const Standard_Integer where,
    mystring[mylength] = '\0';
  }
  else {
-  Standard_OutOfRange::Raise("TCollection_AsciiString::Remove: "
-                             "Too many characters to erase or invalid "
-                             "starting value.");
+  throw Standard_OutOfRange("TCollection_AsciiString::Remove: "
+                            "Too many characters to erase or invalid "
+                            "starting value.");
  }
 }
 
@@ -945,7 +1023,7 @@ void TCollection_AsciiString::RightJustify(const Standard_Integer Width,
     mystring[mylength] = '\0';
   }
   else if (Width < 0) {
-    Standard_NegativeValue::Raise();
+    throw Standard_NegativeValue();
   }
 }
 
@@ -1037,16 +1115,18 @@ Standard_Integer TCollection_AsciiString::SearchFromEnd
 // ----------------------------------------------------------------------------
 // SetValue
 // ----------------------------------------------------------------------------
-void TCollection_AsciiString::SetValue(const Standard_Integer where,
-                                       const Standard_Character what)
+void TCollection_AsciiString::SetValue (const Standard_Integer theWhere,
+                                        const Standard_Character theWhat)
 {
-  if (where > 0 && where <= mylength) {
-    mystring[where-1] = what;
+  if (theWhere <= 0 || theWhere > mylength)
+  {
+    throw Standard_OutOfRange ("TCollection_AsciiString::SetValue(): out of range location");
   }
-  else {
-    Standard_OutOfRange::Raise("TCollection_AsciiString::SetValue : "
-                               "parameter where");
+  else if (theWhat == '\0')
+  {
+    throw Standard_OutOfRange ("TCollection_AsciiString::SetValue(): NULL terminator is passed");
   }
+  mystring[theWhere - 1] = theWhat;
 }
 
 // ----------------------------------------------------------------------------
@@ -1067,8 +1147,8 @@ void TCollection_AsciiString::SetValue(const Standard_Integer where,
    mystring[mylength] = '\0';
  }
  else {
-   Standard_OutOfRange::Raise("TCollection_AsciiString::SetValue : "
-                              "parameter where");
+   throw Standard_OutOfRange("TCollection_AsciiString::SetValue : "
+                             "parameter where");
  }
 }
 
@@ -1091,8 +1171,8 @@ void TCollection_AsciiString::SetValue(const Standard_Integer where,
    mystring[mylength] = '\0';
  }
  else {
-   Standard_OutOfRange::Raise("TCollection_AsciiString::SetValue : "
-                              "parameter where");
+   throw Standard_OutOfRange("TCollection_AsciiString::SetValue : "
+                             "parameter where");
  }
 }
 
@@ -1108,7 +1188,7 @@ void TCollection_AsciiString::Split(const Standard_Integer where,
     Trunc(where);
     return ;
   }
-  Standard_OutOfRange::Raise("TCollection_AsciiString::Split index");
+  throw Standard_OutOfRange("TCollection_AsciiString::Split index");
   return ;
 }
 
@@ -1123,9 +1203,7 @@ TCollection_AsciiString TCollection_AsciiString::Split
     Trunc(where);
     return res;
   }
-  Standard_OutOfRange::Raise("TCollection_AsciiString::Split index");
-  TCollection_AsciiString res;
-  return res;
+  throw Standard_OutOfRange("TCollection_AsciiString::Split index");
 }
 
 // ----------------------------------------------------------------------------
@@ -1138,10 +1216,13 @@ void TCollection_AsciiString::SubString(const Standard_Integer FromIndex,
 {
 
   if (ToIndex > mylength || FromIndex <= 0 || FromIndex > ToIndex )
-    Standard_OutOfRange::Raise();
+  {
+    throw Standard_OutOfRange();
+  }
+
   Standard_Integer newlength = ToIndex-FromIndex+1;
   res.mystring =Reallocate (res.mystring, newlength + 1);
-  strncpy( res.mystring, mystring + FromIndex - 1, newlength );
+  memcpy (res.mystring, mystring + FromIndex - 1, newlength);
   res.mystring[newlength] = '\0';
   res.mylength = newlength;
   return ;
@@ -1166,8 +1247,8 @@ TCollection_AsciiString TCollection_AsciiString::Token
                                          const Standard_Integer whichone) const
 {
   if (!separators)
-    Standard_NullObject::Raise("TCollection_AsciiString::Token : "
-                               "parameter 'separators'");
+    throw Standard_NullObject("TCollection_AsciiString::Token : "
+                              "parameter 'separators'");
 
   Standard_Integer theOne ;
   Standard_Integer StringIndex = 0 ;
@@ -1220,8 +1301,8 @@ TCollection_AsciiString TCollection_AsciiString::Token
 void TCollection_AsciiString::Trunc(const Standard_Integer ahowmany)
 {
   if (ahowmany < 0 || ahowmany > mylength)
-    Standard_OutOfRange::Raise("TCollection_AsciiString::Trunc : "
-                               "parameter 'ahowmany'");
+    throw Standard_OutOfRange("TCollection_AsciiString::Trunc : "
+                              "parameter 'ahowmany'");
   mylength = ahowmany;
   mystring[mylength] = '\0';
 }
@@ -1255,6 +1336,5 @@ Standard_Character TCollection_AsciiString::Value
  if (where > 0 && where <= mylength) {
    return mystring[where-1];
  }
- Standard_OutOfRange::Raise("TCollection_AsciiString::Value : parameter where");
- return '\0';
+ throw Standard_OutOfRange("TCollection_AsciiString::Value : parameter where");
 }

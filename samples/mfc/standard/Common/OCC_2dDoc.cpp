@@ -22,13 +22,7 @@ OCC_2dDoc::OCC_2dDoc() : OCC_BaseDoc()
     ((OCC_App*)AfxGetApp())->GetGraphicDriver();
 
   // create the Viewer
-  TCollection_ExtendedString aName ("Viewer 2D");
-  TCollection_AsciiString aDomain ("My Domain");
-
-  myViewer = new V3d_Viewer (aGraphicDriver,
-                             aName.ToExtString(),
-                             aDomain.ToCString());
-
+  myViewer = new V3d_Viewer (aGraphicDriver);
   myViewer->SetDefaultLights();
   myViewer->SetLightOn();
   myViewer->SetDefaultViewProj (V3d_Zpos);
@@ -66,12 +60,12 @@ void OCC_2dDoc::MoveEvent(const Standard_Integer theMouseX,
                           const Standard_Integer theMouseY,
                           const Handle(V3d_View)& theView)
 {
-  myAISContext->MoveTo (theMouseX, theMouseY, theView);
+  myAISContext->MoveTo (theMouseX, theMouseY, theView, Standard_True);
 }
 
 void OCC_2dDoc::ShiftMoveEvent(const Standard_Integer theMouseX,
                                const Standard_Integer theMouseY,
                                const Handle(V3d_View)& theView)
 {
-  myAISContext->MoveTo (theMouseX, theMouseY, theView);
+  myAISContext->MoveTo (theMouseX, theMouseY, theView, Standard_True);
 }

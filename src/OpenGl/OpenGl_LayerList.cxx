@@ -13,15 +13,129 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-#include <OpenGl_GlCore11.hxx>
+#include <OpenGl_GlCore15.hxx>
 
+#include <BVH_LinearBuilder.hxx>
+#include <OpenGl_FrameBuffer.hxx>
 #include <OpenGl_LayerList.hxx>
+#include <OpenGl_ShaderManager.hxx>
 #include <OpenGl_Structure.hxx>
+#include <OpenGl_VertexBuffer.hxx>
+#include <OpenGl_View.hxx>
 #include <OpenGl_Workspace.hxx>
 
-#include <InterfaceGraphic_Graphic3d.hxx>
-#include <InterfaceGraphic.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
+
+namespace
+{
+  //! Auxiliary class extending sequence iterator with index.
+  class OpenGl_IndexedLayerIterator : public OpenGl_SequenceOfLayers::Iterator
+  {
+  public:
+    //! Main constructor.
+    OpenGl_IndexedLayerIterator (const OpenGl_SequenceOfLayers& theSeq)
+    : OpenGl_SequenceOfLayers::Iterator (theSeq),
+      myIndex (theSeq.Lower()) {}
+
+    //! Return index of current position.
+    Standard_Integer Index() const { return myIndex; }
+
+    //! Move to the next position.
+    void Next()
+    {
+      OpenGl_SequenceOfLayers::Iterator::Next();
+      ++myIndex;
+    }
+
+  private:
+    Standard_Integer myIndex;
+  };
+
+  //! Iterator through layers with filter.
+  class OpenGl_FilteredIndexedLayerIterator
+  {
+  public:
+    //! Main constructor.
+    OpenGl_FilteredIndexedLayerIterator (const OpenGl_SequenceOfLayers& theSeq,
+                                         Standard_Integer theDefaultLayerIndex,
+                                         Standard_Boolean theToDrawImmediate,
+                                         OpenGl_LayerFilter theLayersToProcess)
+    : myIter (theSeq),
+      myDefaultLayerIndex (theDefaultLayerIndex),
+      myLayersToProcess (theLayersToProcess),
+      myToDrawImmediate (theToDrawImmediate)
+    {
+      next();
+    }
+
+    //! Return true if iterator points to the valid value.
+    bool More() const { return myIter.More(); }
+
+    //! Return layer at current position.
+    const OpenGl_Layer& Value() const { return *myIter.Value(); }
+
+    //! Return index of current position.
+    Standard_Integer Index() const { return myIter.Index(); }
+
+    //! Go to the next item.
+    void Next()
+    {
+      myIter.Next();
+      next();
+    }
+
+  private:
+    //! Look for the nearest item passing filters.
+    void next()
+    {
+      for (; myIter.More(); myIter.Next())
+      {
+        if (myIter.Value()->IsImmediate() != myToDrawImmediate)
+        {
+          continue;
+        }
+
+        switch (myLayersToProcess)
+        {
+          case OpenGl_LF_All:
+          {
+            break;
+          }
+          case OpenGl_LF_Upper:
+          {
+            if (myIter.Index() <= myDefaultLayerIndex)
+            {
+              continue;
+            }
+            break;
+          }
+          case OpenGl_LF_Bottom:
+          {
+            if (myIter.Index() >= myDefaultLayerIndex)
+            {
+              continue;
+            }
+            break;
+          }
+          case OpenGl_LF_Default:
+          {
+            if (myIter.Index() != myDefaultLayerIndex)
+            {
+              continue;
+            }
+            break;
+          }
+        }
+        return;
+      }
+    }
+  private:
+    OpenGl_IndexedLayerIterator myIter;
+    Standard_Integer            myDefaultLayerIndex;
+    OpenGl_LayerFilter          myLayersToProcess;
+    Standard_Boolean            myToDrawImmediate;
+  };
+}
 
 //=======================================================================
 //function : OpenGl_LayerList
@@ -29,25 +143,34 @@
 //=======================================================================
 
 OpenGl_LayerList::OpenGl_LayerList (const Standard_Integer theNbPriorities)
-: myNbPriorities (theNbPriorities),
+: myBVHBuilder (new BVH_LinearBuilder<Standard_Real, 3> (BVH_Constants_LeafNodeSizeSingle, BVH_Constants_MaxTreeDepth)),
+  myDefaultLayerIndex (0),
+  myNbPriorities (theNbPriorities),
   myNbStructures (0),
-  myImmediateNbStructures (0)
+  myImmediateNbStructures (0),
+  myModifStateOfRaytraceable (0),
+  myRenderOpaqueFilter (new OpenGl_OpaqueFilter()),
+  myRenderTranspFilter (new OpenGl_TransparentFilter())
 {
   // insert default priority layers
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (Graphic3d_ZLayerId_BotOSD,  myLayers.Upper());
 
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (Graphic3d_ZLayerId_Default, myLayers.Upper());
 
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (Graphic3d_ZLayerId_Top,     myLayers.Upper());
 
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (Graphic3d_ZLayerId_Topmost, myLayers.Upper());
 
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (Graphic3d_ZLayerId_TopOSD,  myLayers.Upper());
+
+  myDefaultLayerIndex = myLayerIds.Find (Graphic3d_ZLayerId_Default);
+
+  myTransparentToProcess.Allocate (myLayers.Length());
 }
 
 //=======================================================================
@@ -57,6 +180,19 @@ OpenGl_LayerList::OpenGl_LayerList (const Standard_Integer theNbPriorities)
 
 OpenGl_LayerList::~OpenGl_LayerList()
 {
+}
+
+//=======================================================================
+//function : SetFrustumCullingBVHBuilder
+//purpose  :
+//=======================================================================
+void OpenGl_LayerList::SetFrustumCullingBVHBuilder (const Handle(Select3D_BVHBuilder3d)& theBuilder)
+{
+  myBVHBuilder = theBuilder;
+  for (OpenGl_SequenceOfLayers::Iterator anIts (myLayers); anIts.More(); anIts.Next())
+  {
+    anIts.ChangeValue()->SetFrustumCullingBVHBuilder (theBuilder);
+  }
 }
 
 //=======================================================================
@@ -72,8 +208,10 @@ void OpenGl_LayerList::AddLayer (const Graphic3d_ZLayerId theLayerId)
   }
 
   // add the new layer
-  myLayers.Append (OpenGl_Layer (myNbPriorities));
+  myLayers.Append (new OpenGl_Layer (myNbPriorities, myBVHBuilder));
   myLayerIds.Bind (theLayerId, myLayers.Length());
+
+  myTransparentToProcess.Allocate (myLayers.Length());
 }
 
 //=======================================================================
@@ -82,7 +220,7 @@ void OpenGl_LayerList::AddLayer (const Graphic3d_ZLayerId theLayerId)
 //=======================================================================
 OpenGl_Layer& OpenGl_LayerList::Layer (const Graphic3d_ZLayerId theLayerId)
 {
-  return myLayers.ChangeValue (myLayerIds.Find (theLayerId));
+  return *myLayers.ChangeValue (myLayerIds.Find (theLayerId));
 }
 
 //=======================================================================
@@ -91,7 +229,7 @@ OpenGl_Layer& OpenGl_LayerList::Layer (const Graphic3d_ZLayerId theLayerId)
 //=======================================================================
 const OpenGl_Layer& OpenGl_LayerList::Layer (const Graphic3d_ZLayerId theLayerId) const
 {
-  return myLayers.Value (myLayerIds.Find (theLayerId));
+  return *myLayers.Value (myLayerIds.Find (theLayerId));
 }
 
 //=======================================================================
@@ -110,21 +248,26 @@ void OpenGl_LayerList::RemoveLayer (const Graphic3d_ZLayerId theLayerId)
   const Standard_Integer aRemovePos = myLayerIds.Find (theLayerId);
   
   // move all displayed structures to first layer
-  const OpenGl_Layer& aLayerToMove = myLayers.Value (aRemovePos);
-  myLayers.ChangeFirst().Append (aLayerToMove);
+  {
+    const OpenGl_Layer& aLayerToMove = *myLayers.Value (aRemovePos);
+    myLayers.ChangeFirst()->Append (aLayerToMove);
+  }
 
   // remove layer
   myLayers.Remove (aRemovePos);
   myLayerIds.UnBind (theLayerId);
 
   // updated sequence indexes in map
-  OpenGl_LayerSeqIds::Iterator aMapIt (myLayerIds);
-  for ( ; aMapIt.More (); aMapIt.Next ())
+  for (OpenGl_LayerSeqIds::Iterator aMapIt (myLayerIds); aMapIt.More(); aMapIt.Next())
   {
-    Standard_Integer& aSeqIdx = aMapIt.ChangeValue ();
+    Standard_Integer& aSeqIdx = aMapIt.ChangeValue();
     if (aSeqIdx > aRemovePos)
       aSeqIdx--;
   }
+
+  myDefaultLayerIndex = myLayerIds.Find (Graphic3d_ZLayerId_Default);
+
+  myTransparentToProcess.Allocate (myLayers.Length());
 }
 
 //=======================================================================
@@ -142,10 +285,10 @@ void OpenGl_LayerList::AddStructure (const OpenGl_Structure*  theStruct,
   Standard_Integer aSeqPos = myLayers.Lower();
   myLayerIds.Find (theLayerId, aSeqPos);
 
-  OpenGl_Layer& aLayer = myLayers.ChangeValue (aSeqPos);
+  OpenGl_Layer& aLayer = *myLayers.ChangeValue (aSeqPos);
   aLayer.Add (theStruct, thePriority, isForChangePriority);
   ++myNbStructures;
-  if (aLayer.LayerSettings().IsImmediate)
+  if (aLayer.IsImmediate())
   {
     ++myImmediateNbStructures;
   }
@@ -167,7 +310,7 @@ void OpenGl_LayerList::RemoveStructure (const OpenGl_Structure* theStructure)
   Standard_Integer aSeqPos = myLayers.Lower();
   myLayerIds.Find (aLayerId, aSeqPos);
 
-  OpenGl_Layer&    aLayer    = myLayers.ChangeValue (aSeqPos);
+  OpenGl_Layer&    aLayer    = *myLayers.ChangeValue (aSeqPos);
   Standard_Integer aPriority = -1;
 
   // remove structure from associated list
@@ -176,25 +319,25 @@ void OpenGl_LayerList::RemoveStructure (const OpenGl_Structure* theStructure)
   if (aLayer.Remove (theStructure, aPriority))
   {
     --myNbStructures;
-    if (aLayer.LayerSettings().IsImmediate)
+    if (aLayer.IsImmediate())
     {
       --myImmediateNbStructures;
     }
 
-    if (theStructure->IsRaytracable())
+    if (aLayerId == Graphic3d_ZLayerId_Default
+     && theStructure->IsRaytracable())
     {
-      ++myModificationState;
+      ++myModifStateOfRaytraceable;
     }
 
     return;
   }
 
   // scan through layers and remove it
-  Standard_Integer aSeqId = 1;
-  for (OpenGl_SequenceOfLayers::Iterator anIts (myLayers); anIts.More(); anIts.Next(), ++aSeqId)
+  for (OpenGl_IndexedLayerIterator anIts (myLayers); anIts.More(); anIts.Next())
   {
-    OpenGl_Layer& aLayerEx = anIts.ChangeValue();
-    if (aSeqPos == aSeqId)
+    OpenGl_Layer& aLayerEx = *anIts.ChangeValue();
+    if (aSeqPos == anIts.Index())
     {
       continue;
     }
@@ -202,14 +345,15 @@ void OpenGl_LayerList::RemoveStructure (const OpenGl_Structure* theStructure)
     if (aLayerEx.Remove (theStructure, aPriority))
     {
       --myNbStructures;
-      if (aLayerEx.LayerSettings().IsImmediate)
+      if (aLayerEx.IsImmediate())
       {
         --myImmediateNbStructures;
       }
 
-      if (theStructure->IsRaytracable())
+      if (anIts.Index() == myDefaultLayerIndex
+       && theStructure->IsRaytracable())
       {
-        ++myModificationState;
+        ++myModifStateOfRaytraceable;
       }
       return;
     }
@@ -224,7 +368,7 @@ void OpenGl_LayerList::InvalidateBVHData (const Graphic3d_ZLayerId theLayerId)
 {
   Standard_Integer aSeqPos = myLayers.Lower();
   myLayerIds.Find (theLayerId, aSeqPos);
-  OpenGl_Layer& aLayer = myLayers.ChangeValue (aSeqPos);
+  OpenGl_Layer& aLayer = *myLayers.ChangeValue (aSeqPos);
   aLayer.InvalidateBVHData();
 }
 
@@ -239,15 +383,21 @@ void OpenGl_LayerList::ChangeLayer (const OpenGl_Structure*  theStructure,
 {
   Standard_Integer aSeqPos = myLayers.Lower();
   myLayerIds.Find (theOldLayerId, aSeqPos);
-  OpenGl_Layer&    aLayer    = myLayers.ChangeValue (aSeqPos);
+  OpenGl_Layer&    aLayer    = *myLayers.ChangeValue (aSeqPos);
   Standard_Integer aPriority = -1;
 
   // take priority and remove structure from list found by <theOldLayerId>
   // if the structure is not found there, scan through all other layers
-  if (aLayer.Remove (theStructure, aPriority, Standard_True))
+  if (aLayer.Remove (theStructure, aPriority, Standard_False))
   {
+    if (theOldLayerId == Graphic3d_ZLayerId_Default
+     && theStructure->IsRaytracable())
+    {
+      ++myModifStateOfRaytraceable;
+    }
+
     --myNbStructures;
-    if (aLayer.LayerSettings().IsImmediate)
+    if (aLayer.IsImmediate())
     {
       --myImmediateNbStructures;
     }
@@ -259,20 +409,25 @@ void OpenGl_LayerList::ChangeLayer (const OpenGl_Structure*  theStructure,
   }
 
   // scan through layers and remove it
-  Standard_Integer aSeqId = 1;
-  for (OpenGl_SequenceOfLayers::Iterator anIts (myLayers); anIts.More(); anIts.Next(), ++aSeqId)
+  for (OpenGl_IndexedLayerIterator anIts (myLayers); anIts.More(); anIts.Next())
   {
-    if (aSeqPos == aSeqId)
+    if (aSeqPos == anIts.Index())
     {
       continue;
     }
   
     // try to remove structure and get priority value from this layer
-    OpenGl_Layer& aLayerEx = anIts.ChangeValue();
+    OpenGl_Layer& aLayerEx = *anIts.ChangeValue();
     if (aLayerEx.Remove (theStructure, aPriority, Standard_True))
     {
+      if (anIts.Index() == myDefaultLayerIndex
+       && theStructure->IsRaytracable())
+      {
+        ++myModifStateOfRaytraceable;
+      }
+
       --myNbStructures;
-      if (aLayerEx.LayerSettings().IsImmediate)
+      if (aLayerEx.IsImmediate())
       {
         --myImmediateNbStructures;
       }
@@ -295,13 +450,13 @@ void OpenGl_LayerList::ChangePriority (const OpenGl_Structure*  theStructure,
 {
   Standard_Integer aSeqPos = myLayers.Lower();
   myLayerIds.Find (theLayerId, aSeqPos);
-  OpenGl_Layer&    aLayer        = myLayers.ChangeValue (aSeqPos);
+  OpenGl_Layer&    aLayer        = *myLayers.ChangeValue (aSeqPos);
   Standard_Integer anOldPriority = -1;
 
   if (aLayer.Remove (theStructure, anOldPriority, Standard_True))
   {
     --myNbStructures;
-    if (aLayer.LayerSettings().IsImmediate)
+    if (aLayer.IsImmediate())
     {
       --myImmediateNbStructures;
     }
@@ -310,19 +465,18 @@ void OpenGl_LayerList::ChangePriority (const OpenGl_Structure*  theStructure,
     return;
   }
 
-  Standard_Integer aSeqId = 1;
-  for (OpenGl_SequenceOfLayers::Iterator anIts (myLayers); anIts.More(); anIts.Next(), ++aSeqId)
+  for (OpenGl_IndexedLayerIterator anIts (myLayers); anIts.More(); anIts.Next())
   {
-    if (aSeqPos == aSeqId)
+    if (aSeqPos == anIts.Index())
     {
       continue;
     }
 
-    OpenGl_Layer& aLayerEx = anIts.ChangeValue();
+    OpenGl_Layer& aLayerEx = *anIts.ChangeValue();
     if (aLayerEx.Remove (theStructure, anOldPriority, Standard_True))
     {
       --myNbStructures;
-      if (aLayerEx.LayerSettings().IsImmediate)
+      if (aLayerEx.IsImmediate())
       {
         --myImmediateNbStructures;
       }
@@ -341,9 +495,9 @@ void OpenGl_LayerList::SetLayerSettings (const Graphic3d_ZLayerId        theLaye
                                          const Graphic3d_ZLayerSettings& theSettings)
 {
   OpenGl_Layer& aLayer = Layer (theLayerId);
-  if (aLayer.LayerSettings().IsImmediate != theSettings.IsImmediate)
+  if (aLayer.LayerSettings().IsImmediate() != theSettings.IsImmediate())
   {
-    if (theSettings.IsImmediate)
+    if (theSettings.IsImmediate())
     {
       myImmediateNbStructures += aLayer.NbStructures();
     }
@@ -356,59 +510,360 @@ void OpenGl_LayerList::SetLayerSettings (const Graphic3d_ZLayerId        theLaye
 }
 
 //=======================================================================
+//function : UpdateCulling
+//purpose  :
+//=======================================================================
+void OpenGl_LayerList::UpdateCulling (const Handle(OpenGl_Workspace)& theWorkspace,
+                                      const Standard_Boolean theToDrawImmediate)
+{
+  const Standard_Integer aViewId = theWorkspace->View()->Identification();
+  const OpenGl_BVHTreeSelector& aSelector = theWorkspace->View()->BVHTreeSelector();
+  for (OpenGl_IndexedLayerIterator anIts (myLayers); anIts.More(); anIts.Next())
+  {
+    OpenGl_Layer& aLayer = *anIts.ChangeValue();
+    if (aLayer.IsImmediate() != theToDrawImmediate)
+    {
+      continue;
+    }
+
+    aLayer.UpdateCulling (aViewId, aSelector, theWorkspace->IsCullingEnabled());
+  }
+}
+
+//=======================================================================
 //function : Render
 //purpose  :
 //=======================================================================
 void OpenGl_LayerList::Render (const Handle(OpenGl_Workspace)& theWorkspace,
                                const Standard_Boolean          theToDrawImmediate,
-                               const OpenGl_LayerFilter        theLayersToProcess) const
+                               const OpenGl_LayerFilter        theLayersToProcess,
+                               OpenGl_FrameBuffer*             theReadDrawFbo,
+                               OpenGl_FrameBuffer*             theOitAccumFbo) const
 {
-  OpenGl_GlobalLayerSettings aDefaultSettings;
+  // Remember global settings for glDepth function and write mask.
+  OpenGl_GlobalLayerSettings aPrevSettings;
 
   const Handle(OpenGl_Context)& aCtx = theWorkspace->GetGlContext();
-  aCtx->core11fwd->glGetIntegerv (GL_DEPTH_FUNC,      &aDefaultSettings.DepthFunc);
-  aCtx->core11fwd->glGetBooleanv (GL_DEPTH_WRITEMASK, &aDefaultSettings.DepthMask);
+  aCtx->core11fwd->glGetIntegerv (GL_DEPTH_FUNC,      &aPrevSettings.DepthFunc);
+  aCtx->core11fwd->glGetBooleanv (GL_DEPTH_WRITEMASK, &aPrevSettings.DepthMask);
+  OpenGl_GlobalLayerSettings aDefaultSettings = aPrevSettings;
 
-  Standard_Integer aSeqId = myLayers.Lower(), aMainId = myLayerIds.Find (Graphic3d_ZLayerId_Default);
-  for (OpenGl_SequenceOfLayers::Iterator anIts (myLayers); anIts.More(); anIts.Next(), ++aSeqId)
+  // Two render filters are used to support transparency draw. Opaque filter accepts
+  // only non-transparent OpenGl elements of a layer and counts number of skipped
+  // transparent ones. If the counter has positive value the layer is added into
+  // transparency post-processing stack. At the end of drawing or once the depth
+  // buffer is to be cleared the layers in the stack should be drawn using
+  // blending and depth mask settings and another transparency filter which accepts
+  // only transparent OpenGl elements of a layer. The stack <myTransparentToProcess>
+  // was preallocated before going into this method and has enough space to keep
+  // maximum number of references to layers, therefore it will not increase memory
+  // fragmentation during regular rendering.
+  const Handle(OpenGl_RenderFilter) aPrevFilter = theWorkspace->GetRenderFilter();
+  myRenderOpaqueFilter->SetPreviousFilter (aPrevFilter);
+  myRenderTranspFilter->SetPreviousFilter (aPrevFilter);
+  theWorkspace->SetRenderFilter (myRenderOpaqueFilter);
+
+  myTransparentToProcess.Clear();
+
+  OpenGl_LayerStack::iterator aStackIter (myTransparentToProcess.Origin());
+  Standard_Integer aClearDepthLayerPrev = -1, aClearDepthLayer = -1;
+  const bool toPerformDepthPrepass = theWorkspace->View()->RenderingParams().ToEnableDepthPrepass
+                                  && aPrevSettings.DepthMask == GL_TRUE;
+  const Handle(Graphic3d_LightSet) aLightsBack = aCtx->ShaderManager()->LightSourceState().LightSources();
+  for (OpenGl_FilteredIndexedLayerIterator aLayerIterStart (myLayers, myDefaultLayerIndex, theToDrawImmediate, theLayersToProcess); aLayerIterStart.More();)
   {
-    if (theLayersToProcess == OpenGl_LF_Bottom)
+    bool hasSkippedDepthLayers = false;
+    for (int aPassIter = toPerformDepthPrepass ? 0 : 2; aPassIter < 3; ++aPassIter)
     {
-      if (aSeqId >= aMainId) continue;
-    }
-    else if (theLayersToProcess == OpenGl_LF_Upper)
-    {
-      if (aSeqId <= aMainId) continue;
-    }
-    else if (theLayersToProcess == OpenGl_LF_Default)
-    {
-      if (aSeqId != aMainId) continue;
+      if (aPassIter == 0)
+      {
+        aCtx->SetColorMask (false);
+        aCtx->ShaderManager()->UpdateLightSourceStateTo (Handle(Graphic3d_LightSet)());
+        aDefaultSettings.DepthFunc = aPrevSettings.DepthFunc;
+        aDefaultSettings.DepthMask = GL_TRUE;
+      }
+      else if (aPassIter == 1)
+      {
+        if (!hasSkippedDepthLayers)
+        {
+          continue;
+        }
+        aCtx->SetColorMask (true);
+        aCtx->ShaderManager()->UpdateLightSourceStateTo (aLightsBack);
+        aDefaultSettings = aPrevSettings;
+      }
+      else if (aPassIter == 2)
+      {
+        aCtx->SetColorMask (true);
+        aCtx->ShaderManager()->UpdateLightSourceStateTo (aLightsBack);
+        if (toPerformDepthPrepass)
+        {
+          aDefaultSettings.DepthFunc = GL_EQUAL;
+          aDefaultSettings.DepthMask = GL_FALSE;
+        }
+      }
+
+      OpenGl_FilteredIndexedLayerIterator aLayerIter (aLayerIterStart);
+      for (; aLayerIter.More(); aLayerIter.Next())
+      {
+        const OpenGl_Layer& aLayer = aLayerIter.Value();
+
+        // make sure to clear depth of previous layers even if layer has no structures
+        if (aLayer.LayerSettings().ToClearDepth())
+        {
+          aClearDepthLayer = aLayerIter.Index();
+        }
+        if (aLayer.IsCulled())
+        {
+          continue;
+        }
+        else if (aClearDepthLayer > aClearDepthLayerPrev)
+        {
+          // At this point the depth buffer may be set to clear by previous configuration of layers or configuration of the current layer.
+          // Additional rendering pass to handle transparent elements of recently drawn layers require use of current depth
+          // buffer so we put remaining layers for processing as one bunch before erasing the depth buffer.
+          if (aPassIter == 2)
+          {
+            aLayerIterStart = aLayerIter;
+          }
+          else
+          {
+            aClearDepthLayer = -1;
+          }
+          break;
+        }
+        else if (aPassIter == 0
+             && !aLayer.LayerSettings().ToRenderInDepthPrepass())
+        {
+          hasSkippedDepthLayers = true;
+          continue;
+        }
+        else if (aPassIter == 1
+              && aLayer.LayerSettings().ToRenderInDepthPrepass())
+        {
+          continue;
+        }
+
+        // Render opaque OpenGl elements of a layer and count the number of skipped.
+        // If a layer has skipped (e.g. transparent) elements it should be added into
+        // the transparency post-processing stack.
+        myRenderOpaqueFilter->SetSkippedCounter (0);
+
+        aLayer.Render (theWorkspace, aDefaultSettings);
+
+        if (aPassIter != 0
+         && myRenderOpaqueFilter->NbSkipped() > 0)
+        {
+          myTransparentToProcess.Push (&aLayer);
+        }
+      }
+      if (aPassIter == 2
+      && !aLayerIter.More())
+      {
+        aLayerIterStart = aLayerIter;
+      }
     }
 
-    const OpenGl_Layer& aLayer = anIts.Value();
-    if (aLayer.NbStructures() < 1)
+    if (!myTransparentToProcess.IsEmpty())
     {
-      continue;
+      renderTransparent (theWorkspace, aStackIter, aPrevSettings, theReadDrawFbo, theOitAccumFbo);
     }
-    else if (theToDrawImmediate)
+    if (aClearDepthLayer > aClearDepthLayerPrev)
     {
-      if (!aLayer.LayerSettings().IsImmediate)
+      aClearDepthLayerPrev = aClearDepthLayer;
+      glDepthMask (GL_TRUE);
+      glClear (GL_DEPTH_BUFFER_BIT);
+    }
+  }
+
+  aCtx->core11fwd->glDepthMask (aPrevSettings.DepthMask);
+  aCtx->core11fwd->glDepthFunc (aPrevSettings.DepthFunc);
+
+  theWorkspace->SetRenderFilter (aPrevFilter);
+}
+
+//=======================================================================
+//function : renderTransparent
+//purpose  : Render transparent objects using blending operator.
+//=======================================================================
+void OpenGl_LayerList::renderTransparent (const Handle(OpenGl_Workspace)&   theWorkspace,
+                                          OpenGl_LayerStack::iterator&      theLayerIter,
+                                          const OpenGl_GlobalLayerSettings& theGlobalSettings,
+                                          OpenGl_FrameBuffer*               theReadDrawFbo,
+                                          OpenGl_FrameBuffer*               theOitAccumFbo) const
+{
+  // Blended order-independent transparency algorithm require several preconditions
+  // to be enabled. It should be requested by user, at least two outputs from
+  // fragment shader should be supported by GPU, so is the given framebuffer
+  // should contain two additional color buffers to handle accumulated color channels,
+  // blended alpha channel and weight factors - these accumulation buffers are required
+  // to implement commuting blend operator (at least OpenGl 2.0 should be available).
+  const bool isEnabledOit = theOitAccumFbo != NULL
+                         && theOitAccumFbo->NbColorBuffers() >= 2
+                         && theOitAccumFbo->ColorTexture (0)->IsValid()
+                         && theOitAccumFbo->ColorTexture (1)->IsValid();
+
+  // Check if current iterator has already reached the end of the stack.
+  // This should happen if no additional layers has been added to
+  // the processing stack after last transparency pass.
+  if (theLayerIter == myTransparentToProcess.Back())
+  {
+    return;
+  }
+
+  const Handle(OpenGl_Context) aCtx            = theWorkspace->GetGlContext();
+  const Handle(OpenGl_ShaderManager)& aManager = aCtx->ShaderManager();
+  OpenGl_View* aView = theWorkspace->View();
+  const float aDepthFactor =  aView != NULL ? aView->RenderingParams().OitDepthFactor : 0.0f;
+
+  theWorkspace->SetRenderFilter (myRenderTranspFilter);
+
+  aCtx->core11fwd->glEnable (GL_BLEND);
+
+  if (isEnabledOit)
+  {
+    aManager->SetOitState (true, aDepthFactor);
+
+    theOitAccumFbo->BindBuffer (aCtx);
+
+    static const Standard_Integer aDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT0 + 1 };
+    aCtx->SetDrawBuffers (2, aDrawBuffers);
+    aCtx->core11fwd->glClearColor (0.0f, 0.0f, 0.0f, 1.0f);
+    aCtx->core11fwd->glClear (GL_COLOR_BUFFER_BIT);
+    aCtx->core15fwd->glBlendFuncSeparate (GL_ONE, GL_ONE, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+  }
+  else
+  {
+    aCtx->core11fwd->glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  }
+
+  // During blended order-independent transparency pass the depth test
+  // should be enabled to discard fragments covered by opaque geometry
+  // and depth writing should be disabled, because transparent fragments
+  // overal each other with non unitary coverage factor.
+  OpenGl_GlobalLayerSettings aGlobalSettings = theGlobalSettings;
+  aGlobalSettings.DepthMask   = GL_FALSE;
+  aCtx->core11fwd->glDepthMask (GL_FALSE);
+
+  for (; theLayerIter != myTransparentToProcess.Back(); ++theLayerIter)
+  {
+    (*theLayerIter)->Render (theWorkspace, aGlobalSettings);
+  }
+
+  // Revert state of rendering.
+  if (isEnabledOit)
+  {
+    aManager->SetOitState (false, aDepthFactor);
+    theOitAccumFbo->UnbindBuffer (aCtx);
+    if (theReadDrawFbo)
+    {
+      theReadDrawFbo->BindBuffer (aCtx);
+    }
+
+    static const Standard_Integer aDrawBuffers[] = { GL_COLOR_ATTACHMENT0 };
+    aCtx->SetDrawBuffers (1, aDrawBuffers);
+  }
+
+  theWorkspace->SetRenderFilter (myRenderOpaqueFilter);
+  if (isEnabledOit)
+  {
+    const Standard_Boolean isMSAA = theReadDrawFbo && theReadDrawFbo->NbSamples() > 0;
+    OpenGl_VertexBuffer*   aVerts = theWorkspace->View()->initBlitQuad (Standard_False);
+    if (aVerts->IsValid() && aManager->BindOitCompositingProgram (isMSAA))
+    {
+      aCtx->core11fwd->glDepthFunc (GL_ALWAYS);
+      aCtx->core11fwd->glDepthMask (GL_FALSE);
+
+      // Bind full screen quad buffer and framebuffer resources.
+      aVerts->BindVertexAttrib (aCtx, Graphic3d_TOA_POS);
+
+      const Handle(OpenGl_TextureSet) aTextureBack = aCtx->BindTextures (Handle(OpenGl_TextureSet)());
+
+      theOitAccumFbo->ColorTexture (0)->Bind (aCtx, Graphic3d_TextureUnit_0);
+      theOitAccumFbo->ColorTexture (1)->Bind (aCtx, Graphic3d_TextureUnit_1);
+
+      // Draw full screen quad with special shader to compose the buffers.
+      aCtx->core11fwd->glBlendFunc (GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
+      aCtx->core11fwd->glDrawArrays (GL_TRIANGLE_STRIP, 0, 4);
+
+      // Unbind OpenGL texture objects and shader program.
+      aVerts->UnbindVertexAttrib (aCtx, Graphic3d_TOA_POS);
+      theOitAccumFbo->ColorTexture (0)->Unbind (aCtx, Graphic3d_TextureUnit_0);
+      theOitAccumFbo->ColorTexture (1)->Unbind (aCtx, Graphic3d_TextureUnit_1);
+      aCtx->BindProgram (NULL);
+
+      if (!aTextureBack.IsNull())
       {
-        continue;
+        aCtx->BindTextures (aTextureBack);
       }
     }
     else
     {
-      if (aLayer.LayerSettings().IsImmediate)
+      aCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                         "Initialization of OIT compositing pass has failed.\n"
+                         "  Blended order-independent transparency will not be available.\n");
+      if (aView != NULL)
       {
-        continue;
+        Standard_Boolean& aOITFlag = isMSAA ? aView->myToDisableOITMSAA : aView->myToDisableOIT;
+        aOITFlag = Standard_True;
       }
     }
-
-    // render layer
-    aLayer.Render (theWorkspace, aDefaultSettings);
   }
 
-  aCtx->core11fwd->glDepthMask (aDefaultSettings.DepthMask);
-  aCtx->core11fwd->glDepthFunc (aDefaultSettings.DepthFunc);
+  aCtx->core11fwd->glDisable (GL_BLEND);
+  aCtx->core11fwd->glBlendFunc (GL_ONE, GL_ZERO);
+  aCtx->core11fwd->glDepthMask (theGlobalSettings.DepthMask);
+  aCtx->core11fwd->glDepthFunc (theGlobalSettings.DepthFunc);
+}
+
+//=======================================================================
+//class    : OpenGl_OpaqueFilter
+//function : ShouldRender
+//purpose  : Checks whether the element should be rendered or skipped.
+//=======================================================================
+Standard_Boolean OpenGl_LayerList::OpenGl_OpaqueFilter::ShouldRender (const Handle(OpenGl_Workspace)& theWorkspace,
+                                                                      const OpenGl_Element*           theGlElement)
+{
+  if (!myFilter.IsNull()
+   && !myFilter->ShouldRender (theWorkspace, theGlElement))
+  {
+    return Standard_False;
+  }
+
+  if (!theGlElement->IsFillDrawMode())
+  {
+    return Standard_True;
+  }
+
+  if (OpenGl_Context::CheckIsTransparent (theWorkspace->AspectFace(),
+                                          theWorkspace->HighlightStyle()))
+  {
+    ++mySkippedCounter;
+    return Standard_False;
+  }
+
+  return Standard_True;
+}
+
+//=======================================================================
+//class    : OpenGl_TransparentFilter
+//function : ShouldRender
+//purpose  : Checks whether the element should be rendered or skipped.
+//=======================================================================
+Standard_Boolean OpenGl_LayerList::OpenGl_TransparentFilter::ShouldRender (const Handle(OpenGl_Workspace)& theWorkspace,
+                                                                           const OpenGl_Element*           theGlElement)
+{
+  if (!myFilter.IsNull()
+   && !myFilter->ShouldRender (theWorkspace, theGlElement))
+  {
+    return Standard_False;
+  }
+
+  if (!theGlElement->IsFillDrawMode())
+  {
+    return dynamic_cast<const OpenGl_AspectFace*> (theGlElement) != NULL;
+  }
+
+  return OpenGl_Context::CheckIsTransparent (theWorkspace->AspectFace(),
+                                             theWorkspace->HighlightStyle());
 }

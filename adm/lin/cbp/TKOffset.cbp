@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -95,7 +97,10 @@
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Interval.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeLoops.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeOffset.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeOffset_1.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeSimpleOffset.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Offset.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_SimpleOffset.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Tool.cxx" />
 		<Unit filename="../../../src/BiTgte/BiTgte_Blend.cxx" />
 		<Unit filename="../../../src/BiTgte/BiTgte_CurveOnEdge.cxx" />

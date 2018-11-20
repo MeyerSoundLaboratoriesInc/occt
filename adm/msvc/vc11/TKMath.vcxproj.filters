@@ -2,55 +2,52 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{B297038D-03BD-0A69-179E-E12A78AB6296}</UniqueIdentifier>
+      <UniqueIdentifier>{16970001-0FD6-0AD2-073C-FE1A6D78F7F3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\math">
-      <UniqueIdentifier>{D5857B72-089D-0200-01D2-DD8C311F18B3}</UniqueIdentifier>
+      <UniqueIdentifier>{DE832CC7-098C-045E-0C6A-74D741E0139E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ElCLib">
-      <UniqueIdentifier>{8E967FE3-1514-155A-11DD-653B210D280C}</UniqueIdentifier>
+      <UniqueIdentifier>{27EFA5FE-0739-09BA-15A8-D978D28B2B1F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ElSLib">
-      <UniqueIdentifier>{C02BDAB7-113F-0DE1-1026-AC62D68D1092}</UniqueIdentifier>
+      <UniqueIdentifier>{BC07AEA9-0241-0B49-048D-5B4F08A1BBD8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BSplCLib">
-      <UniqueIdentifier>{3B165AB3-0821-1059-0F27-69AD4AF01308}</UniqueIdentifier>
+      <UniqueIdentifier>{3366D8BA-192D-0C27-1695-7C95E2544E1F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BSplSLib">
-      <UniqueIdentifier>{71A473BE-0035-15D2-05C7-657110E20050}</UniqueIdentifier>
+      <UniqueIdentifier>{D4DE9FB6-187D-14E2-090C-20DA96EEDB90}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\PLib">
-      <UniqueIdentifier>{82B5E127-0471-0251-1770-EAFEC1FB7076}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\Precision">
-      <UniqueIdentifier>{94537AFF-141B-0A4D-04BA-2F6640E22BC0}</UniqueIdentifier>
+      <UniqueIdentifier>{910A80F4-0E8B-036B-1563-170B8EF7B56D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Poly">
-      <UniqueIdentifier>{A66C8E12-16E8-0EE2-0D06-18BC7DFEEB86}</UniqueIdentifier>
+      <UniqueIdentifier>{A82766FB-094A-024F-16BF-5C1E14BAE26B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\CSLib">
-      <UniqueIdentifier>{18CBC04E-05CC-0A9B-024C-175B4067D297}</UniqueIdentifier>
+      <UniqueIdentifier>{66F12086-009F-0804-06F1-24CCF40BB411}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Convert">
-      <UniqueIdentifier>{32F856A4-1841-1066-0CFA-A896F54ECC65}</UniqueIdentifier>
+      <UniqueIdentifier>{5AE86D35-11AE-078F-0CE5-AF16FA0DA599}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Bnd">
-      <UniqueIdentifier>{4D31ED00-0A4A-0377-1002-7AACB9E1D5A1}</UniqueIdentifier>
+      <UniqueIdentifier>{F2EEB5D1-03E6-0CD3-01CB-A0340DB97DCF}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BVH">
-      <UniqueIdentifier>{904DE49E-16EB-18F9-1294-53294DBC915F}</UniqueIdentifier>
+      <UniqueIdentifier>{F2D6BFDF-160D-124D-0DDE-D4BEEE4336AB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\gp">
-      <UniqueIdentifier>{EC30DFA7-0393-09A4-02FE-5613CE2E58D7}</UniqueIdentifier>
+      <UniqueIdentifier>{BA1EF194-0674-140E-12CE-821D56540214}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopLoc">
-      <UniqueIdentifier>{CABB8F6D-1535-18EB-0979-85AC8D037A7B}</UniqueIdentifier>
+      <UniqueIdentifier>{54AB39BB-0E37-1545-0C52-8F508FF1E130}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Expr">
-      <UniqueIdentifier>{5E5E4807-0260-1604-06E6-F59078DFE679}</UniqueIdentifier>
+      <UniqueIdentifier>{F726B280-13E2-1524-0041-D96CB26F5A27}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ExprIntrp">
-      <UniqueIdentifier>{9424D8CF-197B-0002-0690-180C78DAACCB}</UniqueIdentifier>
+      <UniqueIdentifier>{87CA27BE-1677-11CB-17CF-180F1A87965F}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -114,9 +111,6 @@
     <ClCompile Include="..\..\..\src\math\math_FunctionSetRoot.cxx">
       <Filter>Source files\math</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_FunctionSetWithDerivatives.cxx">
-      <Filter>Source files\math</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_FunctionWithDerivative.cxx">
       <Filter>Source files\math</Filter>
     </ClCompile>
@@ -157,12 +151,6 @@
       <Filter>Source files\math</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_MultipleVarFunction.cxx">
-      <Filter>Source files\math</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_MultipleVarFunctionWithGradient.cxx">
-      <Filter>Source files\math</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\math\math_MultipleVarFunctionWithHessian.cxx">
       <Filter>Source files\math</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\math\math_NewtonFunctionRoot.cxx">
@@ -245,9 +233,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\PLib\PLib_JacobiPolynomial.cxx">
       <Filter>Source files\PLib</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Precision\Precision.cxx">
-      <Filter>Source files\Precision</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Poly\Poly.cxx">
       <Filter>Source files\Poly</Filter>
@@ -364,6 +349,12 @@
       <Filter>Source files\Bnd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Bnd\Bnd_Box2d.cxx">
+      <Filter>Source files\Bnd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Bnd\Bnd_OBB.cxx">
+      <Filter>Source files\Bnd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Bnd\Bnd_Range.cxx">
       <Filter>Source files\Bnd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Bnd\Bnd_Sphere.cxx">

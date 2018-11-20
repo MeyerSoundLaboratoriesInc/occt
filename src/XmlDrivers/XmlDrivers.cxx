@@ -14,10 +14,10 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Plugin_Macro.hxx>
 #include <Standard_GUID.hxx>
-#include <Standard_Transient.hxx>
+#include <TDocStd_Application.hxx>
 #include <XmlDrivers.hxx>
 #include <XmlDrivers_DocumentRetrievalDriver.hxx>
 #include <XmlDrivers_DocumentStorageDriver.hxx>
@@ -61,9 +61,18 @@ const Handle(Standard_Transient)& XmlDrivers::Factory(const Standard_GUID& theGU
     return model_rd;
   }
  
-  Standard_Failure::Raise ("XmlDrivers : unknown GUID");
-  static Handle(Standard_Transient) aNullHandle;
-  return aNullHandle;
+  throw Standard_Failure("XmlDrivers : unknown GUID");
+}
+
+//=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void XmlDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("XmlOcaf", "Xml OCAF Document", "xml",
+                        new XmlDrivers_DocumentRetrievalDriver, 
+                        new XmlDrivers_DocumentStorageDriver ("Copyright: Open Cascade, 2001-2002"));
 }
 
 //=======================================================================
@@ -71,7 +80,7 @@ const Handle(Standard_Transient)& XmlDrivers::Factory(const Standard_GUID& theGU
 //purpose  : 
 //=======================================================================
 Handle(XmlMDF_ADriverTable) XmlDrivers::AttributeDrivers
-                (const Handle(CDM_MessageDriver)& theMessageDriver)
+                (const Handle(Message_Messenger)& theMessageDriver)
 {
   Handle(XmlMDF_ADriverTable) aTable = new XmlMDF_ADriverTable();
   //

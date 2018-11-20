@@ -4,23 +4,28 @@
 #include "Transparency.h"
 #include "Material.h"
 
+#include <Standard_WarningsDisable.hxx>
 #include <QStatusBar>
 #include <QApplication>
 #include <QColor>
 #include <QColorDialog>
+#include <Standard_WarningsRestore.hxx>
 
 #include <Aspect_DisplayConnection.hxx>
 #include <AIS_InteractiveObject.hxx>
 #include <Graphic3d_NameOfMaterial.hxx>
 #include <OpenGl_GraphicDriver.hxx>
+#if !defined(_WIN32) && !defined(__WIN32__) && (!defined(__APPLE__) || defined(MACOSX_USE_GLX))
+#include <OSD_Environment.hxx>
+#endif
 #include <TCollection_AsciiString.hxx>
 
 // =======================================================================
 // function : Viewer
 // purpose  :
 // =======================================================================
-Handle(V3d_Viewer) DocumentCommon::Viewer (const Standard_ExtString theName,
-                                           const Standard_CString theDomain,
+Handle(V3d_Viewer) DocumentCommon::Viewer (const Standard_ExtString ,
+                                           const Standard_CString ,
                                            const Standard_Real theViewSize,
                                            const V3d_TypeOfOrientation theViewProj,
                                            const Standard_Boolean theComputedMode,
@@ -32,23 +37,17 @@ Handle(V3d_Viewer) DocumentCommon::Viewer (const Standard_ExtString theName,
   {
     Handle(Aspect_DisplayConnection) aDisplayConnection;
 #if !defined(_WIN32) && !defined(__WIN32__) && (!defined(__APPLE__) || defined(MACOSX_USE_GLX))
-    aDisplayConnection = new Aspect_DisplayConnection (qgetenv ("DISPLAY").constData());
+    aDisplayConnection = new Aspect_DisplayConnection (OSD_Environment ("DISPLAY").Value());
 #endif
     aGraphicDriver = new OpenGl_GraphicDriver (aDisplayConnection);
   }
 
-  return new V3d_Viewer (aGraphicDriver,
-                         theName,
-                         theDomain,
-                         theViewSize,
-                         theViewProj,
-                         Quantity_NOC_GRAY30,
-                         V3d_ZBUFFER,
-                         V3d_GOURAUD,
-                         V3d_WAIT,
-                         theComputedMode,
-                         theDefaultComputedMode,
-                         V3d_TEX_NONE);
+  Handle(V3d_Viewer) aViewer = new V3d_Viewer (aGraphicDriver);
+  aViewer->SetDefaultViewSize (theViewSize);
+  aViewer->SetDefaultViewProj (theViewProj);
+  aViewer->SetComputedMode (theComputedMode);
+  aViewer->SetDefaultComputedMode (theDefaultComputedMode);
+  return aViewer;
 }
 
 DocumentCommon::DocumentCommon( const int theIndex, ApplicationCommonWindow* app )
@@ -165,8 +164,8 @@ void DocumentCommon::fitAll()
 void DocumentCommon::onWireframe()
 {
     QApplication::setOverrideCursor( Qt::WaitCursor );
-    for( myContext->InitCurrent(); myContext->MoreCurrent(); myContext->NextCurrent() )
-        myContext->SetDisplayMode( myContext->Current(), 0, false );
+    for( myContext->InitSelected(); myContext->MoreSelected(); myContext->NextSelected() )
+        myContext->SetDisplayMode( myContext->SelectedInteractive(), 0, false );
     myContext->UpdateCurrentViewer();
     getApplication()->onSelectionChanged();
     QApplication::restoreOverrideCursor();
@@ -175,8 +174,8 @@ void DocumentCommon::onWireframe()
 void DocumentCommon::onShading()
 {
     QApplication::setOverrideCursor( Qt::WaitCursor );
-    for( myContext->InitCurrent(); myContext->MoreCurrent(); myContext->NextCurrent() )
-        myContext->SetDisplayMode( myContext->Current(), 1, false );
+    for( myContext->InitSelected(); myContext->MoreSelected(); myContext->NextSelected() )
+        myContext->SetDisplayMode( myContext->SelectedInteractive(), 1, false );
     myContext->UpdateCurrentViewer();
     getApplication()->onSelectionChanged();
     QApplication::restoreOverrideCursor();
@@ -185,13 +184,14 @@ void DocumentCommon::onShading()
 void DocumentCommon::onColor()
 {
     QColor aColor ;
-    Quantity_Color aShapeColor;
-    myContext->InitCurrent();
-    Handle(AIS_InteractiveObject) Current = myContext->Current() ;
+    myContext->InitSelected();
+    Handle(AIS_InteractiveObject) Current = myContext->SelectedInteractive() ;
     if ( Current->HasColor () )
     {
-        aShapeColor = myContext->Color( Current );
-        aColor.setRgb( aShapeColor.Red() * 255, aShapeColor.Green() * 255, aShapeColor.Blue() * 255 );
+        Quantity_Color aShapeColor;
+        myContext->Color( Current, aShapeColor );
+        aColor.setRgb( (Standard_Integer)(aShapeColor.Red() * 255), (Standard_Integer)(aShapeColor.Green() * 255),
+                       (Standard_Integer)(aShapeColor.Blue() * 255));
     }
     else
         aColor.setRgb( 255, 255, 255 );
@@ -201,15 +201,17 @@ void DocumentCommon::onColor()
     {
         Quantity_Color color( aRetColor.red() / 255., aRetColor.green() / 255.,
                         aRetColor.blue() / 255., Quantity_TOC_RGB );
-        for (; myContext->MoreCurrent(); myContext->NextCurrent() )
-            myContext->SetColor( myContext->Current(), color.Name() );
+        for (; myContext->MoreSelected(); myContext->NextSelected() )
+            myContext->SetColor( myContext->SelectedInteractive(), color, Standard_False);
+        myContext->UpdateCurrentViewer();
     }
 }
 
 void DocumentCommon::onMaterial( int theMaterial )
 {
-    for ( myContext->InitCurrent(); myContext->MoreCurrent (); myContext->NextCurrent () )
-        myContext->SetMaterial( myContext->Current(), (Graphic3d_NameOfMaterial)theMaterial );
+    for ( myContext->InitSelected(); myContext->MoreSelected (); myContext->NextSelected () )
+        myContext->SetMaterial( myContext->SelectedInteractive(), (Graphic3d_NameOfMaterial)theMaterial, Standard_False);
+    myContext->UpdateCurrentViewer();
 }
 
 void DocumentCommon::onMaterial()
@@ -221,8 +223,9 @@ void DocumentCommon::onMaterial()
 
 void DocumentCommon::onTransparency( int theTrans )
 {
-    for( myContext->InitCurrent(); myContext->MoreCurrent(); myContext->NextSelected() )
-        myContext->SetTransparency( myContext->Current(), ((Standard_Real)theTrans) / 10.0 );
+    for( myContext->InitSelected(); myContext->MoreSelected(); myContext->NextSelected() )
+        myContext->SetTransparency (myContext->SelectedInteractive(), ((Standard_Real)theTrans) / 10.0, Standard_False);
+    myContext->UpdateCurrentViewer();
 }
 
 void DocumentCommon::onTransparency()
@@ -235,7 +238,7 @@ void DocumentCommon::onTransparency()
 void DocumentCommon::onDelete()
 {
     myContext->EraseSelected (Standard_False);
-    myContext->ClearSelected();
+    myContext->ClearSelected (Standard_False);
     myContext->UpdateCurrentViewer();
     getApplication()->onSelectionChanged();
 }

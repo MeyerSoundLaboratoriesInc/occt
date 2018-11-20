@@ -79,13 +79,17 @@
 			<Add library="TKXDESTEP" />
 			<Add library="TKDCAF" />
 			<Add library="TKViewerTest" />
+			<Add library="TKBinXCAF" />
+			<Add library="TKXmlXCAF" />
 		</Linker>
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Colors.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Common.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_GDTs.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Layers.cxx" />
+		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Notes.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Props.cxx" />
 		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Shapes.cxx" />
+		<Unit filename="../../../src/XDEDRAW/XDEDRAW_Views.cxx" />
 	</Project>
 </CodeBlocks_project_file>

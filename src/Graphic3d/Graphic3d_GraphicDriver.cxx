@@ -16,15 +16,14 @@
 
 #include <Graphic3d_GraphicDriver.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_GraphicDriver,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_GraphicDriver,Standard_Transient)
 
 // =======================================================================
 // function : Graphic3d_GraphicDriver
 // purpose  :
 // =======================================================================
 Graphic3d_GraphicDriver::Graphic3d_GraphicDriver (const Handle(Aspect_DisplayConnection)& theDisp)
-: myDisplayConnection (theDisp),
-  myDeviceLostFlag    (Standard_False)
+: myDisplayConnection (theDisp)
 {
   //
 }
@@ -39,19 +38,19 @@ const Handle(Aspect_DisplayConnection)& Graphic3d_GraphicDriver::GetDisplayConne
 }
 
 // =======================================================================
-// function : IsDeviceLost
+// function : NewIdentification
 // purpose  :
 // =======================================================================
-Standard_Boolean Graphic3d_GraphicDriver::IsDeviceLost() const
+Standard_Integer Graphic3d_GraphicDriver::NewIdentification()
 {
-  return myDeviceLostFlag;
+  return myStructGenId.Next();
 }
 
 // =======================================================================
-// function : ResetDeviceLostFlag
+// function : RemoveIdentification
 // purpose  :
 // =======================================================================
-void Graphic3d_GraphicDriver::ResetDeviceLostFlag()
+void Graphic3d_GraphicDriver::RemoveIdentification(const Standard_Integer theId)
 {
-  myDeviceLostFlag = Standard_False;
+  myStructGenId.Free(theId);
 }

@@ -13,10 +13,10 @@
 
 #include <StdLPersistent_Data.hxx>
 #include <StdObjMgt_ReadData.hxx>
+#include <StdObjMgt_WriteData.hxx>
 
 #include <TDF_Data.hxx>
 #include <TDF_Attribute.hxx>
-
 
 //! Create a transient label tree from persistent data
 class StdLPersistent_Data::Parser
@@ -43,10 +43,12 @@ public:
       // read persistent attribute
       Handle(StdObjMgt_Persistent)& aPAttrib = myAttribIter.ChangeValue();
       myAttribIter.Next();
-
       // create transient attribute and add it to the label
-      if (aPAttrib)
-        theLabel.AddAttribute (aPAttrib->CreateAttribute());
+      if (aPAttrib) {
+        Handle (TDF_Attribute) anAtt = aPAttrib->CreateAttribute();
+        anAtt->SetID();
+        theLabel.AddAttribute (anAtt);
+      }
     }
 
     // Read child labels count
@@ -78,6 +80,15 @@ private:
 void StdLPersistent_Data::Read (StdObjMgt_ReadData& theReadData)
 {
   theReadData >> myVersion >> myLabels >> myAttributes;
+}
+
+//=======================================================================
+//function : Write
+//purpose  : Write persistent data to a file
+//=======================================================================
+void StdLPersistent_Data::Write (StdObjMgt_WriteData& theWriteData) const
+{
+  theWriteData << myVersion << myLabels << myAttributes;
 }
 
 //=======================================================================

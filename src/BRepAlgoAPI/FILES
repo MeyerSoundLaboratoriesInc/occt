@@ -10,7 +10,11 @@ BRepAlgoAPI_Common.cxx
 BRepAlgoAPI_Common.hxx
 BRepAlgoAPI_Cut.cxx
 BRepAlgoAPI_Cut.hxx
+BRepAlgoAPI_Defeaturing.cxx
+BRepAlgoAPI_Defeaturing.hxx
 BRepAlgoAPI_Fuse.cxx
 BRepAlgoAPI_Fuse.hxx
 BRepAlgoAPI_Section.cxx
 BRepAlgoAPI_Section.hxx
+BRepAlgoAPI_Splitter.cxx
+BRepAlgoAPI_Splitter.hxx

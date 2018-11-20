@@ -13,7 +13,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "07D5045D0CB3193013DA0826"
+               BlueprintIdentifier = "1142085A193A0DEB10C00CD1"
                BuildableName = "libTKOffset.dylib"
                BlueprintName = "TKOffset"
                ReferencedContainer = "container:TKOffset.xcodeproj">

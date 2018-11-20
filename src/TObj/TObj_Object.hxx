@@ -35,11 +35,11 @@ class TCollection_HExtendedString;
 #include <TColStd_HArray1OfExtendedString.hxx>
 
 class TObj_Object;
-DEFINE_STANDARD_HANDLE(TObj_Object,MMgt_TShared)
+DEFINE_STANDARD_HANDLE(TObj_Object,Standard_Transient)
 
 //! Basis class for transient objects in OCAF-based models
 
-class TObj_Object : public MMgt_TShared
+class TObj_Object : public Standard_Transient
 {
  public:
   enum TypeFlags     //!< Flags that define type-specific behaviour of objects
@@ -97,15 +97,13 @@ class TObj_Object : public MMgt_TShared
   //! If the flag theSetName is true (default) the object is assign the default name
   //! that is generated using the father partition object if any.
   Standard_EXPORT TObj_Object (const TDF_Label& theLabel,
-                                   const Standard_Boolean theSetName = Standard_True);
+                               const Standard_Boolean theSetName = Standard_True);
 
   //! The special constructor intended for implementation of persistence
   //! mechanism. See class TObj_Persistence for more details.
   //! The first argument is used only to avoid confusion with
   //! other constructors.
-  Standard_EXPORT TObj_Object (const TObj_Persistence *,
-                                   const TDF_Label& theLabel)
-    : myLabel(theLabel) {}
+  TObj_Object (const TObj_Persistence *, const TDF_Label& theLabel) : myLabel(theLabel) {}
 
   //! This method is called from persistence to initialize the object fields,
   //! so successors that have transient fields must initialize them in initFields(),
@@ -182,7 +180,7 @@ class TObj_Object : public MMgt_TShared
 
   //! Returns name for copy
   //! default implementation returns the same name
-  virtual Standard_EXPORT Handle(TCollection_HExtendedString) GetNameForClone
+  virtual Handle(TCollection_HExtendedString) GetNameForClone
     ( const Handle(TObj_Object)& ) const
   { return GetName(); }
 
@@ -272,7 +270,7 @@ class TObj_Object : public MMgt_TShared
   //! Invokes from TObj_TReference::BeforeForget().
   //! theLabel - label on that reference become removed
   //! Default implementation is empty
-  virtual Standard_EXPORT void BeforeForgetReference( const TDF_Label& /*theLabel*/ )
+  virtual void BeforeForgetReference( const TDF_Label& /*theLabel*/ )
   {}
 
  public:
@@ -627,7 +625,7 @@ class TObj_Object : public MMgt_TShared
 
  public:
   //! CASCADE RTTI
-  DEFINE_STANDARD_RTTIEXT(TObj_Object,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(TObj_Object,Standard_Transient)
 };
 
 //! Define handle in separate file

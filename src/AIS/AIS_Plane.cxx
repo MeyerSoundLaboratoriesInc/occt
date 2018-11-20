@@ -14,9 +14,9 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <AIS_Plane.hxx>
 
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_Plane.hxx>
 #include <Aspect_TypeOfLine.hxx>
 #include <DsgPrs_ShadedPlanePresentation.hxx>
 #include <DsgPrs_XYZPlanePresentation.hxx>
@@ -111,7 +111,6 @@ myIsXYZPlane(Standard_False),
 myTypeOfSensitivity (Select3D_TOS_BOUNDARY)
 {
   InitDrawerAttributes();
-  SetHilightMode(0);
 }
 
 //=======================================================================
@@ -130,8 +129,6 @@ myTypeOfSensitivity (Select3D_TOS_BOUNDARY)
 {
   InitDrawerAttributes();
   ComputeFields();
-  SetHilightMode(0);
-
 }
 
 
@@ -238,8 +235,6 @@ void AIS_Plane::Compute(const Handle(PrsMgr_PresentationManager3d)& ,
 			const Handle(Prs3d_Presentation)& aPresentation, 
 			const Standard_Integer aMode)
 {
-  aPresentation->Clear();
-
   ComputeFields();
   aPresentation->SetInfiniteState(myInfiniteState);
   myDrawer->PlaneAspect()->EdgesAspect()->SetWidth(myCurrentMode == 0? 1 : 3);
@@ -417,9 +412,9 @@ void AIS_Plane::UnsetSize()
                                                                new Prs3d_DatumAspect();
 
     myDrawer->PlaneAspect()->SetPlaneLength(PA->PlaneXLength(),PA->PlaneYLength());
-    myDrawer->DatumAspect()->SetAxisLength(DA->FirstAxisLength(),
-					   DA->SecondAxisLength(),
-					   DA->ThirdAxisLength());
+    myDrawer->DatumAspect()->SetAxisLength(DA->AxisLength(Prs3d_DP_XAxis),
+					   DA->AxisLength(Prs3d_DP_YAxis),
+					   DA->AxisLength(Prs3d_DP_ZAxis));
   }
   
   myHasOwnSize = Standard_False;
@@ -440,18 +435,10 @@ Standard_Boolean AIS_Plane::Size(Standard_Real& X,Standard_Real& Y) const
   return Abs(X-Y)<=Precision::Confusion();
 }
 
-
 //=======================================================================
 //function : SetColor
 //purpose  : 
 //=======================================================================
-
-
-void AIS_Plane::SetColor(const Quantity_NameOfColor aCol)
-{
-  SetColor(Quantity_Color(aCol));
-}
-
 void AIS_Plane::SetColor(const Quantity_Color &aCol)
 {
   // if the plane already has its proper size, there is an already created planeaspect 
@@ -472,9 +459,9 @@ void AIS_Plane::SetColor(const Quantity_Color &aCol)
   }
   
   PA->EdgesAspect()->SetColor(aCol);
-  DA->FirstAxisAspect()->SetColor(aCol);
-  DA->SecondAxisAspect()->SetColor(aCol);
-  DA->ThirdAxisAspect()->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_XAxis)->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_YAxis)->SetColor(aCol);
+  DA->LineAspect(Prs3d_DP_ZAxis)->SetColor(aCol);
 
   if(!yenavaitPA)
     myDrawer->SetPlaneAspect(PA);
@@ -484,7 +471,7 @@ void AIS_Plane::SetColor(const Quantity_Color &aCol)
   myDrawer->ShadingAspect()->SetColor(aCol);
   
   hasOwnColor=Standard_True;
-  myOwnColor = aCol;
+  myDrawer->SetColor (aCol);
 }
 //=======================================================================
 //function : SetColor
@@ -501,15 +488,12 @@ void AIS_Plane::UnsetColor()
   else{
     const Handle(Prs3d_PlaneAspect) PA = myDrawer->HasLink() ? myDrawer->Link()->PlaneAspect() :
                                                                new Prs3d_PlaneAspect();
-//    const Handle(Prs3d_DatumAspect)& DA = myDrawer->Link()->DatumAspect();
-    Quantity_Color C;Aspect_TypeOfLine T;Standard_Real W;
-    PA->EdgesAspect()->Aspect()->Values(C,T,W);
-    Quantity_NameOfColor Col = C.Name();
+    Quantity_Color Col = PA->EdgesAspect()->Aspect()->Color();
     myDrawer->PlaneAspect()->EdgesAspect()->SetColor(Col);
     
-    myDrawer->DatumAspect()->FirstAxisAspect()->SetColor(Col);
-    myDrawer->DatumAspect()->SecondAxisAspect()->SetColor(Col);
-    myDrawer->DatumAspect()->ThirdAxisAspect()->SetColor(Col);
+    myDrawer->DatumAspect()->LineAspect(Prs3d_DP_XAxis)->SetColor(Col);
+    myDrawer->DatumAspect()->LineAspect(Prs3d_DP_YAxis)->SetColor(Col);
+    myDrawer->DatumAspect()->LineAspect(Prs3d_DP_ZAxis)->SetColor(Col);
   }
  
  
@@ -573,9 +557,9 @@ void AIS_Plane::ComputeFields()
     oX.Coord(x1,y1,z1);
     oY.Coord(x2,y2,z2);
     oZ.Coord(x3,y3,z3);
-    Standard_Real DS1 = DA->FirstAxisLength();
-    Standard_Real DS2 = DA->SecondAxisLength();
-    Standard_Real DS3 = DA->ThirdAxisLength();
+    Standard_Real DS1 = DA->AxisLength(Prs3d_DP_XAxis);
+    Standard_Real DS2 = DA->AxisLength(Prs3d_DP_YAxis);
+    Standard_Real DS3 = DA->AxisLength(Prs3d_DP_ZAxis);
 //    gp_Pnt aPt2,aPt3;
 
     switch (myTypeOfPlane) {
@@ -618,18 +602,15 @@ void AIS_Plane::ComputeFields()
 
 void AIS_Plane::InitDrawerAttributes()
 {
-
   Handle(Prs3d_ShadingAspect) shasp = new Prs3d_ShadingAspect();
   shasp->SetMaterial(Graphic3d_NOM_PLASTIC);
   shasp->SetColor(Quantity_NOC_GRAY40);
   myDrawer->SetShadingAspect(shasp);
   Handle(Graphic3d_AspectFillArea3d) asf = shasp->Aspect();
   Graphic3d_MaterialAspect asp = asf->FrontMaterial();
-  asp.SetTransparency(0.8);
+  asp.SetTransparency (0.8f);
   asf->SetFrontMaterial(asp);
   asf->SetBackMaterial(asp);
-
-
 }
 
 //=======================================================================

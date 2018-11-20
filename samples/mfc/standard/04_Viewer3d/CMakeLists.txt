@@ -21,8 +21,6 @@ set (Viewer3d_HEADER_FILES ${Viewer3d_SRC_DIR}/BoxRadius.h
                            ${Viewer3d_SRC_DIR}/Viewer3dApp.h
                            ${Viewer3d_SRC_DIR}/Viewer3dDoc.h
                            ${Viewer3d_SRC_DIR}/Viewer3dView.h
-                           ${Viewer3d_SRC_DIR}/ZClippingDlg.h
-                           ${Viewer3d_SRC_DIR}/ZCueingDlg.h
                            ${Viewer3d_SRC_DIR}/State.h
                            ${Viewer3d_RESOURCE_DIR}/resource.h
                            ${Viewer3d_RESOURCE_DIR}/resource.hm)
@@ -39,9 +37,7 @@ set (Viewer3d_SOURCE_FILES ${Viewer3d_SRC_DIR}/BoxRadius.cpp
                            ${Viewer3d_SRC_DIR}/TrihedronDlg.cpp
                            ${Viewer3d_SRC_DIR}/Viewer3dApp.cpp
                            ${Viewer3d_SRC_DIR}/Viewer3dDoc.cpp
-                           ${Viewer3d_SRC_DIR}/Viewer3dView.cpp
-                           ${Viewer3d_SRC_DIR}/ZClippingDlg.cpp
-                           ${Viewer3d_SRC_DIR}/ZCueingDlg.cpp)
+                           ${Viewer3d_SRC_DIR}/Viewer3dView.cpp)
 
 set (Viewer3d_RESOURCE_FILES ${Viewer3d_RESOURCE_DIR}/Viewer3d.rc
                              ${Viewer3d_RESOURCE_DIR}/AISToolbar.bmp
@@ -61,17 +57,17 @@ add_executable (Viewer3d WIN32 ${Viewer3d_SOURCE_FILES}
                                ${COMMON_WINMAIN_FILE}
                                ${Viewer3d_RESOURCE_FILES})
 
-set_property (TARGET Viewer3d PROPERTY FOLDER Samples)
+set_property (TARGET Viewer3d PROPERTY FOLDER "Samples/mfc")
 
 if (SINGLE_GENERATOR)
-  install (TARGETS Viewer3d DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}")
+  install (TARGETS Viewer3d DESTINATION "${INSTALL_DIR_BIN}")
 else()
   install (TARGETS Viewer3d
            CONFIGURATIONS Release RelWithDebInfo
-           DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}")
+           DESTINATION "${INSTALL_DIR_BIN}")
   install (TARGETS Viewer3d
            CONFIGURATIONS Debug
-           DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_BIN}d")
+           DESTINATION "${INSTALL_DIR_BIN}d")
 endif()
 
 include_directories (${CMAKE_BINARY_DIR}/inc

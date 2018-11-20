@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_Real.hxx>
 #include <TDataXtd_Constraint.hxx>
@@ -70,7 +70,7 @@ IMPLEMENT_DOMSTRING (ConOffsetString,        "offset")
 //purpose  : Constructor
 //=======================================================================
 XmlMDataXtd_ConstraintDriver::XmlMDataXtd_ConstraintDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : XmlMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -110,7 +110,7 @@ Standard_Boolean XmlMDataXtd_ConstraintDriver::Paste
         ("XmlMDataXtd_ConstraintDriver: "
          "Cannot retrieve reference on Integer attribute from \"")
           + aDOMStr + "\"";
-      WriteMessage (aMsgString);
+      myMessageDriver->Send (aMsgString, Message_Fail);
       return Standard_False;
     }
     if (aNb > 0)
@@ -138,7 +138,7 @@ Standard_Boolean XmlMDataXtd_ConstraintDriver::Paste
       aMsgString = TCollection_ExtendedString
         ("XmlMDataXtd_ConstraintDriver: Cannot retrieve reference on first Geometry from \"")
           + aDOMStr + "\"";
-      WriteMessage (aMsgString);
+      myMessageDriver->Send (aMsgString, Message_Fail);
       return Standard_False;
     }
     Standard_Integer i = 1;
@@ -169,7 +169,7 @@ Standard_Boolean XmlMDataXtd_ConstraintDriver::Paste
       aMsgString = TCollection_ExtendedString
         ("XmlMDataXtd_ConstraintDriver: Cannot retrieve reference on Plane from \"")
           + aDOMStr + "\"";
-      WriteMessage (aMsgString);
+      myMessageDriver->Send (aMsgString, Message_Fail);
       return Standard_False;
     }
     Handle(TNaming_NamedShape) aTPlane;
@@ -344,8 +344,7 @@ static TDataXtd_ConstraintEnum ConstraintTypeEnum (const XmlObjMgt_DOMString& th
     else if (theString.equals (::ConOffsetString()))
       aResult = TDataXtd_OFFSET;
     else
-      Standard_DomainError::Raise
-        ("TDataXtd_ConstraintEnum; string value without enum term equivalence");
+      throw Standard_DomainError("TDataXtd_ConstraintEnum; string value without enum term equivalence");
   }
   return aResult;
 }
@@ -388,8 +387,6 @@ static const XmlObjMgt_DOMString& ConstraintTypeString (const TDataXtd_Constrain
   case TDataXtd_OFFSET         : return ::ConOffsetString();
     
   default:
-    Standard_DomainError::Raise("TDataXtd_ConstraintEnum; enum term unknown");
+    throw Standard_DomainError("TDataXtd_ConstraintEnum; enum term unknown");
   }
-  static XmlObjMgt_DOMString aNullString;
-  return aNullString; // To avoid compilation error message.
 }

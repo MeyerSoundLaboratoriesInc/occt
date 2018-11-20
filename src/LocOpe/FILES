@@ -31,9 +31,6 @@ LocOpe_GluedShape.hxx
 LocOpe_Gluer.cxx
 LocOpe_Gluer.hxx
 LocOpe_Gluer.lxx
-LocOpe_HBuilder.cxx
-LocOpe_HBuilder.hxx
-LocOpe_HBuilder.lxx
 LocOpe_LinearForm.cxx
 LocOpe_LinearForm.hxx
 LocOpe_LinearForm.lxx
@@ -41,9 +38,7 @@ LocOpe_Operation.hxx
 LocOpe_Pipe.cxx
 LocOpe_Pipe.hxx
 LocOpe_Pipe.lxx
-LocOpe_PntFace.cxx
 LocOpe_PntFace.hxx
-LocOpe_PntFace.lxx
 LocOpe_Prism.cxx
 LocOpe_Prism.hxx
 LocOpe_Revol.cxx

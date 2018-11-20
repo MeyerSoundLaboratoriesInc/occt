@@ -76,9 +76,17 @@
 		<Unit filename="../../../src/StdPersistent/StdPersistent_Naming.cxx" />
 		<Unit filename="../../../src/StdPersistent/StdPersistent_PPrsStd.cxx" />
 		<Unit filename="../../../src/StdPersistent/StdPersistent_TopLoc.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_BacketOfPersistent.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_Data.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_HeaderData.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_Root.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_RootData.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_TypeData.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_BRep.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom.cxx" />
+		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d_Curve.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom_Curve.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom_Surface.cxx" />

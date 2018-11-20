@@ -30,10 +30,16 @@ protected:
   {
   public:
     //! Read persistent data from a file.
-    Standard_EXPORT virtual void Read (StdObjMgt_ReadData&) {}
+    virtual void Read (StdObjMgt_ReadData&) {}
+    //! Write persistent data to a file.
+    virtual void Write (StdObjMgt_WriteData&) const {}
+    //! Gets persistent child objects
+    inline void PChildren(StdObjMgt_Persistent::SequenceOfPersistent&) const {}
+    //! Returns persistent type name
+    Standard_CString PName() const;
 
     //! Import transient attribuite from the persistent data
-    Standard_EXPORT virtual void ImportAttribute() {}
+    virtual void ImportAttribute() {}
   };
 
 public:
@@ -41,5 +47,17 @@ public:
   typedef instance<TDataStd_Tick>      Tick;
   typedef instance<TDataStd_NoteBook>  NoteBook;
 };
+
+template<>
+inline Standard_CString StdLPersistent_Void::instance<TDataStd_Directory>::PName() const
+  { return "PDataStd_Directory"; }
+
+template<>
+inline Standard_CString StdLPersistent_Void::instance<TDataStd_Tick>::PName() const
+  { return "PDataStd_Tick"; }
+
+template<>
+inline Standard_CString StdLPersistent_Void::instance<TDataStd_NoteBook>::PName() const
+  { return "PDataStd_Notebook"; }
 
 #endif

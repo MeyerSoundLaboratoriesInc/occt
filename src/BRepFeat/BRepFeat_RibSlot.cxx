@@ -17,6 +17,7 @@
 
 #include <Bnd_Box.hxx>
 #include <BRep_Tool.hxx>
+#include <BRep_Builder.hxx>
 #include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgo.hxx>
 #include <BRepAlgoAPI_BooleanOperation.hxx>
@@ -73,7 +74,6 @@
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Vertex.hxx>
-#include <TopOpeBRepBuild_HBuilder.hxx>
 #include <TopTools_DataMapIteratorOfDataMapOfShapeListOfShape.hxx>
 #include <TopTools_DataMapIteratorOfDataMapOfShapeShape.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
@@ -81,10 +81,6 @@
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 
-//modified by NIZNHY-PKV Fri Mar 22 16:48:13 2002 f
-//#include <BRepAlgo_Cut.hxx>
-//#include <BRepAlgo_Fuse.hxx>
-//modified by NIZNHY-PKV Fri Mar 22 16:48:16 2002 t
 #ifdef OCCT_DEBUG
 extern Standard_Boolean BRepFeat_GettraceFEAT();
 extern Standard_Boolean BRepFeat_GettraceFEATRIB();
@@ -361,88 +357,6 @@ void BRepFeat_RibSlot::UpdateDescendants(const LocOpe_Gluer& G)
     }
   }
 }
-
-//=======================================================================
-//function : UpdateDescendants
-//purpose  : 
-//=======================================================================
-  void BRepFeat_RibSlot::UpdateDescendants  (const Handle(TopOpeBRepBuild_HBuilder)& B,
-                                             const TopoDS_Shape& S,
-                                             const Standard_Boolean SkipFace)
-{
-  TopTools_DataMapIteratorOfDataMapOfShapeListOfShape itdm;
-  TopTools_ListIteratorOfListOfShape it,it2;
-  TopTools_MapIteratorOfMapOfShape itm;
-  TopExp_Explorer exp;
-
-  for (itdm.Initialize(myMap);itdm.More();itdm.Next()) {
-    const TopoDS_Shape& orig = itdm.Key();
-    if (SkipFace && orig.ShapeType() == TopAbs_FACE) {
-      continue;
-    }
-    TopTools_MapOfShape newdsc;
-    for (it.Initialize(itdm.Value());it.More();it.Next()) {
-      const TopoDS_Shape& sh = it.Value();
-      if(sh.ShapeType() != TopAbs_FACE) continue;
-      const TopoDS_Face& fdsc = TopoDS::Face(it.Value()); 
-      for (exp.Init(S,TopAbs_FACE);exp.More();exp.Next()) {
-        if (exp.Current().IsSame(fdsc)) { // preserved
-          newdsc.Add(fdsc);
-          break;
-        }
-      }
-      if (!exp.More()) {
-        if (B->IsSplit(fdsc, TopAbs_OUT)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_OUT));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsSplit(fdsc, TopAbs_IN)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_IN));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsSplit(fdsc, TopAbs_ON)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_ON));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_OUT)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_OUT));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_IN)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_IN));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_ON)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_ON));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-      }
-    }
-    myMap.ChangeFind(orig).Clear();
-    for (itm.Initialize(newdsc); itm.More(); itm.Next()) {
-       // check the belonging to the shape...
-      for (exp.Init(S,TopAbs_FACE);exp.More();exp.Next()) {
-        if (exp.Current().IsSame(itm.Key())) {
-          myMap.ChangeFind(orig).Append(itm.Key());
-          break;
-        }
-      }
-    }
-  }
-}
-
 
 
 //=======================================================================
@@ -743,7 +657,7 @@ TopoDS_Face BRepFeat_RibSlot::ChoiceOfFaces(TopTools_ListOfShape& faces,
     if(!ASI.IsDone()) continue;
     for(Standard_Integer jj = 1; jj<=Counter; jj++) {
       if(ASI.NbPoints(jj) >= 1) {
-        Standard_Real app = ASI.Point(jj,1).Parameter();//modified by NIZNHY-PKV Fri Mar 22 17:05:23 2002 pp
+        Standard_Real app = ASI.Point(jj,1).Parameter();
         if(app >= 0 &&  app < Par) {
           Par = app;
           FFF = f;
@@ -875,7 +789,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
         faces.Clear();
         Map.Clear();
         for(; ex4.More(); ex4.Next()) {
-          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());//modified by NIZNHY-PKV Fri Mar 22 17:06:04 2002 fx instead f
+          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());
           if ( !Map.Add(fx)) continue;
           ex5.Init(ex4.Current(), TopAbs_EDGE);
           for(; ex5.More(); ex5.Next()) {
@@ -899,7 +813,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
         faces.Clear();
         Map.Clear();
         for(; ex4.More(); ex4.Next()) {
-          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());//modified by NIZNHY-PKV Fri Mar 22 17:06:36 2002 fx instead of f
+          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());
           if ( !Map.Add(fx)) continue;
           ex5.Init(ex4.Current(), TopAbs_VERTEX);
           for(; ex5.More(); ex5.Next()) {
@@ -931,7 +845,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
         faces.Clear();
         Map.Clear();
         for(; ex4.More(); ex4.Next()) {
-          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());//modified by NIZNHY-PKV Fri Mar 22 17:06:36 2002 fx instead of f
+          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());
           if ( !Map.Add(fx)) continue;
           ex5.Init(ex4.Current(), TopAbs_EDGE);
           for(; ex5.More(); ex5.Next()) {
@@ -956,7 +870,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
         faces.Clear();
         Map.Clear();
         for(; ex4.More(); ex4.Next()) {
-          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());//modified by NIZNHY-PKV Fri Mar 22 17:06:36 2002 fx instead of f
+          const TopoDS_Face& fx = TopoDS::Face(ex4.Current());
           if ( !Map.Add(fx)) continue;
           ex5.Init(ex4.Current(), TopAbs_VERTEX);
           for(; ex5.More(); ex5.Next()) {
@@ -1130,7 +1044,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
               TopExp_Explorer ex2;
               ex2.Init(mySbase, TopAbs_FACE);
               for(; ex2.More(); ex2.Next()) {
-                TopoDS_Face fx = TopoDS::Face(ex2.Current());//modified by NIZNHY-PKV Fri Mar 22 17:16:44 2002 fx/f
+                TopoDS_Face fx = TopoDS::Face(ex2.Current());
                 TopExp_Explorer ex3;
                 ex3.Init(fx, TopAbs_EDGE);
                 for(; ex3.More(); ex3.Next()) {
@@ -1150,7 +1064,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
               TopExp_Explorer ex2;
               ex2.Init(mySbase, TopAbs_FACE);
               for(; ex2.More(); ex2.Next()) {
-                TopoDS_Face fx = TopoDS::Face(ex2.Current());//modified by NIZNHY-PKV Fri Mar 22 17:13:08 2002 fx/f
+                TopoDS_Face fx = TopoDS::Face(ex2.Current());
                 TopExp_Explorer ex3;
                 ex3.Init(fx, TopAbs_VERTEX);
                 for(; ex3.More(); ex3.Next()) {
@@ -1183,7 +1097,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
               TopExp_Explorer ex2;
               ex2.Init(mySbase, TopAbs_FACE);
               for(; ex2.More(); ex2.Next()) {
-                TopoDS_Face fx = TopoDS::Face(ex2.Current());//modified by NIZNHY-PKV Fri Mar 22 17:12:06 2002 fx/f
+                TopoDS_Face fx = TopoDS::Face(ex2.Current());
                 TopExp_Explorer ex3;
                 ex3.Init(fx, TopAbs_EDGE);
                 for(; ex3.More(); ex3.Next()) {
@@ -1203,7 +1117,7 @@ Standard_Boolean BRepFeat_RibSlot::ExtremeFaces(const Standard_Boolean RevolRib,
               TopExp_Explorer ex2;
               ex2.Init(mySbase, TopAbs_FACE);
               for(; ex2.More(); ex2.Next()) {
-                TopoDS_Face fx = TopoDS::Face(ex2.Current());//modified by NIZNHY-PKV Fri Mar 22 17:11:36 2002 fx/f
+                TopoDS_Face fx = TopoDS::Face(ex2.Current());
                 TopExp_Explorer ex3;
                 ex3.Init(fx, TopAbs_VERTEX);
                 for(; ex3.More(); ex3.Next()) {
@@ -1610,13 +1524,10 @@ Standard_Boolean BRepFeat_RibSlot::SlidingProfile(TopoDS_Face& Prof,
     gp_Pnt2d checkpnt2d(u, v);
     if(Cl.Perform(checkpnt2d, Standard_True) == TopAbs_OUT) {
 // If face is not the correct part of BndFace take the complementary
-      //modified by NIZNHY-PKV Fri Mar 22 16:46:20 2002 f
-      //BRepAlgo_Cut c(BndFace, fac);     
       BRepAlgoAPI_Cut c(BndFace, fac);     
-      //modified by NIZNHY-PKV Fri Mar 22 16:46:23 2002 t
       TopExp_Explorer exp(c.Shape(), TopAbs_WIRE);
       const TopoDS_Wire& w = TopoDS::Wire(exp.Current());
-      BRepLib_MakeFace ffx(w);//modified by NIZNHY-PKV Fri Mar 22 17:10:43 2002 ffx/ff
+      BRepLib_MakeFace ffx(w);
       Prof = TopoDS::Face(ffx.Shape());
     }
     else {
@@ -2299,16 +2210,10 @@ Standard_Boolean BRepFeat_RibSlot::NoSlidingProfile(TopoDS_Face& Prof,
     ElSLib::Parameters(myPln->Pln(), CheckPnt, u, v);
     gp_Pnt2d checkpnt2d(u, v);
     if(Cl.Perform(checkpnt2d, Standard_True) == TopAbs_OUT) {
-      //modified by NIZNHY-PKV Fri Mar 22 16:47:06 2002 f
-      //BRepAlgo_Cut c(BndFace, fac);     
       BRepAlgoAPI_Cut c(BndFace, fac);     
-      //modified by NIZNHY-PKV Fri Mar 22 16:47:09 2002 t
       TopExp_Explorer exp(c.Shape(), TopAbs_WIRE);
-      //modified by NIZNHY-PKV Fri Mar 22 16:47:23 2002 f
-      //UpdateDescendants(c.Builder(), c.Shape(), Standard_False);
       UpdateDescendants(c, c.Shape(), Standard_False);
-      //modified by NIZNHY-PKV Fri Mar 22 16:47:28 2002 t
-      const TopoDS_Wire& ww = TopoDS::Wire(exp.Current());//modified by NIZNHY-PKV Fri Mar 22 17:10:16 2002 ww/w
+      const TopoDS_Wire& ww = TopoDS::Wire(exp.Current());
       BRepLib_MakeFace ff(ww);
       Prof = TopoDS::Face(ff.Shape());
     }
@@ -2330,7 +2235,6 @@ Standard_Boolean BRepFeat_RibSlot::NoSlidingProfile(TopoDS_Face& Prof,
   return ProfileOK;
 }
 
-//modified by NIZNHY-PKV Thu Mar 21 18:43:18 2002 f
 //=======================================================================
 //function : UpdateDescendants
 //purpose  : 
@@ -2387,4 +2291,3 @@ Standard_Boolean BRepFeat_RibSlot::NoSlidingProfile(TopoDS_Face& Prof,
     }
   }
 }
-//modified by NIZNHY-PKV Thu Mar 21 18:43:36 2002 t

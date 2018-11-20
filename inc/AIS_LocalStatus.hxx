@@ -17,28 +17,29 @@
 #ifndef _AIS_LocalStatus_HeaderFile
 #define _AIS_LocalStatus_HeaderFile
 
+#include <Prs3d_Drawer.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
-
 #include <Standard_Boolean.hxx>
 #include <Standard_Integer.hxx>
 #include <TColStd_ListOfInteger.hxx>
-#include <Quantity_NameOfColor.hxx>
-#include <MMgt_TShared.hxx>
-class Standard_Transient;
 
-
-class AIS_LocalStatus;
-DEFINE_STANDARD_HANDLE(AIS_LocalStatus, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(AIS_LocalStatus, Standard_Transient)
 
 //! Stored Info about temporary objects.
-class AIS_LocalStatus : public MMgt_TShared
+class AIS_LocalStatus : public Standard_Transient
 {
-
+  DEFINE_STANDARD_RTTIEXT(AIS_LocalStatus, Standard_Transient)
 public:
 
-  
-  Standard_EXPORT AIS_LocalStatus(const Standard_Boolean IsTemporary = Standard_True, const Standard_Boolean Decompose = Standard_False, const Standard_Integer DisplayMode = -1, const Standard_Integer SelectionMode = -1, const Standard_Integer HilightMode = 0, const Standard_Boolean SubIntensity = 0, const Quantity_NameOfColor TheHiCol = Quantity_NOC_WHITE);
+  Standard_EXPORT AIS_LocalStatus (const Standard_Boolean theIsTemporary = Standard_True,
+                                   const Standard_Boolean theIsToDecompose = Standard_False,
+                                   const Standard_Integer theDisplayMode = -1,
+                                   const Standard_Integer theSelectionMode = -1,
+                                   const Standard_Integer theHilightMode = 0,
+                                   const Standard_Boolean theIsSubIntensity = 0,
+                                   const Handle(Prs3d_Drawer)& theStyle = Handle(Prs3d_Drawer)());
   
     Standard_Boolean Decomposed() const;
   
@@ -54,7 +55,10 @@ public:
   
     Standard_Boolean IsSubIntensityOn() const;
   
-    Quantity_NameOfColor HilightColor() const;
+  const Handle(Prs3d_Drawer)& HilightStyle() const
+  {
+    return myHiStyle;
+  }
   
     void SetDecomposition (const Standard_Boolean astatus);
   
@@ -76,7 +80,10 @@ public:
   
     void SetHilightMode (const Standard_Integer aMode);
   
-    void SetHilightColor (const Quantity_NameOfColor aHiCol);
+  void SetHilightStyle (const Handle(Prs3d_Drawer)& theStyle)
+  {
+    myHiStyle = theStyle;
+  }
   
     void SubIntensityOn();
   
@@ -86,19 +93,7 @@ public:
   
     const Handle(Standard_Transient)& PreviousState() const;
 
-
-
-
-  DEFINE_STANDARD_RTTIEXT(AIS_LocalStatus,MMgt_TShared)
-
-protected:
-
-
-
-
 private:
-
-
   Standard_Boolean myDecomposition;
   Standard_Boolean myIsTemporary;
   Standard_Integer myDMode;
@@ -106,17 +101,10 @@ private:
   Standard_Integer myHMode;
   TColStd_ListOfInteger mySModes;
   Standard_Boolean mySubIntensity;
-  Quantity_NameOfColor myHiCol;
   Handle(Standard_Transient) myPreviousState;
-
-
+  Handle(Prs3d_Drawer) myHiStyle;
 };
 
-
 #include <AIS_LocalStatus.lxx>
-
-
-
-
 
 #endif // _AIS_LocalStatus_HeaderFile

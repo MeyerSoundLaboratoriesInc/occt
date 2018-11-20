@@ -104,8 +104,6 @@ void AIS_MinRadiusDimension::Compute(const Handle(PrsMgr_PresentationManager3d)&
 				     const Handle(Prs3d_Presentation)& aPresentation, 
 				     const Standard_Integer /*aMode*/)
 {
-  aPresentation->Clear();
-
 //  if( myAutomaticPosition )
     //{ //ota : recompute ellipse always
   ComputeGeometry();
@@ -128,7 +126,7 @@ void AIS_MinRadiusDimension::Compute(const Handle(PrsMgr_PresentationManager3d)&
 void  AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)& aProjector,
                                       const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)& aProjector, const Handle(Prs3d_Presentation)& aPresentation)");
+// throw Standard_NotImplemented("AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)& aProjector, const Handle(Prs3d_Presentation)& aPresentation)");
  PrsMgr_PresentableObject::Compute( aProjector , aPresentation ) ;
 }
 
@@ -141,7 +139,7 @@ void AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)& aProjector,
                                      const Handle(Geom_Transformation)& aTransformation,
                                      const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
+// throw Standard_NotImplemented("AIS_MinRadiusDimension::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
  PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation ) ;
 }
 

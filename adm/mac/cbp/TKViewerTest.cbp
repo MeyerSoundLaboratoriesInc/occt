@@ -58,7 +58,7 @@
 			<Add option="-framework Tcl" />
 			<Add option="-framework Tk" />
 			<Add option="-framework OpenGL" />
-			<Add option="-framework Appkit" />
+			<Add option="-framework AppKit" />
 			<Add option="-framework IOKit" />
 			<Add library="objc" />
 			<Add library="freetype" />
@@ -85,7 +85,6 @@
 		</Linker>
 		<Unit filename="../../../src/ViewerTest/ViewerTest.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_AutoUpdater.cxx" />
-		<Unit filename="../../../src/ViewerTest/ViewerTest_AviCommands.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_CmdParser.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_EventManager.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_FilletCommands.cxx" />

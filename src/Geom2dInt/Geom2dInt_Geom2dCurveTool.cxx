@@ -22,6 +22,7 @@
 #include <GeomAbs_CurveType.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Vec2d.hxx>
+#include <Precision.hxx>
 
 //============================================================
 Standard_Integer Geom2dInt_Geom2dCurveTool::NbSamples (const Adaptor2d_Curve2d& C,
@@ -31,15 +32,22 @@ Standard_Integer Geom2dInt_Geom2dCurveTool::NbSamples (const Adaptor2d_Curve2d& 
   GeomAbs_CurveType typC = C.GetType();
   Standard_Integer nbs = C.NbSamples();
 
-  if(typC == GeomAbs_BSplineCurve) { 
+  if(typC == GeomAbs_BSplineCurve)
+  {
     Standard_Real t=C.LastParameter()-C.FirstParameter();
-    Standard_Real t1=U1-U0;
-    if(t1<0.0) t1=-t1;
-    nbs = C.NbKnots();
-    nbs*= C.Degree();
-    Standard_Real anb = t1/t * nbs;
-    nbs = (Standard_Integer)anb;
-    if(nbs < 4) nbs=4;
+    if(t > Precision::PConfusion())
+    {
+      Standard_Real t1 = U1 - U0;
+      if(t1 < 0.0) t1 = -t1;
+      nbs = C.NbKnots();
+      nbs*= C.Degree();
+      Standard_Real anb = t1 / t * nbs;
+      nbs = (Standard_Integer)anb;
+
+      Standard_Integer aMinPntNb = Max(C.Degree() + 1, 4);
+      if(nbs < aMinPntNb)
+        nbs = aMinPntNb;
+    }
   }
   else if (typC == GeomAbs_Circle)
   {

@@ -17,8 +17,9 @@
 #ifndef SelectMgr_SequenceOfOwner_HeaderFile
 #define SelectMgr_SequenceOfOwner_HeaderFile
 
-#include <SelectMgr_EntityOwner.hxx>
 #include <NCollection_Sequence.hxx>
+
+class SelectMgr_EntityOwner;
 
 typedef NCollection_Sequence<Handle(SelectMgr_EntityOwner)> SelectMgr_SequenceOfOwner;
 

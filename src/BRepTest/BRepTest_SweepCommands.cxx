@@ -15,6 +15,9 @@
 // commercial license or contractual agreement.
 
 #include <BRepTest.hxx>
+
+#include <BRepTest_Objects.hxx>
+
 #include <DBRep.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Draw_Appli.hxx>
@@ -43,6 +46,7 @@
 #include <TColgp_Array1OfPnt2d.hxx>
 
 static BRepOffsetAPI_MakePipeShell* Sweep= 0;
+static BRepOffsetAPI_ThruSections* Generator = 0;
 
 #include <stdio.h>
 #include <Geom_Curve.hxx>
@@ -200,6 +204,11 @@ static Standard_Integer geompipe(Draw_Interpretor& ,
     rotate = (Draw::Atoi(a[k++])==1);
   GeomFill_Pipe aPipe(ProfileCurve,aAdaptCurve,cStart,ByACR,rotate);
   aPipe.Perform(Standard_True);
+  if (!aPipe.IsDone())
+  {
+    cout << "GeomFill_Pipe cannot make a surface" << endl;
+    return 1;
+  }
   Handle(Geom_Surface) Sur=aPipe.Surface();
   TopoDS_Face F;
   if(!Sur.IsNull())
@@ -318,19 +327,19 @@ Standard_Integer gener(Draw_Interpretor&, Standard_Integer n, const char** a)
 
   TopoDS_Shape Shape; 
 
-  BRepFill_Generator Generator;
+  BRepFill_Generator aGenerator;
   
   for ( Standard_Integer i = 2; i<= n-1 ; i++) {
     Shape = DBRep::Get(a[i],TopAbs_WIRE);
     if ( Shape.IsNull()) 
       return 1;
 
-    Generator.AddWire(TopoDS::Wire(Shape));
+    aGenerator.AddWire(TopoDS::Wire(Shape));
   }
 
-  Generator.Perform();
+  aGenerator.Perform();
 
-  TopoDS_Shell Shell = Generator.Shell();
+  TopoDS_Shell Shell = aGenerator.Shell();
   
   DBRep::Set(a[1], Shell);
 
@@ -363,7 +372,12 @@ Standard_Integer thrusections(Draw_Interpretor&, Standard_Integer n, const char*
   Standard_Boolean issolid = ( Draw::Atoi(a[index]) == 1 );
   Standard_Boolean isruled = ( Draw::Atoi(a[index+1]) == 1 );
 
-  BRepOffsetAPI_ThruSections Generator(issolid,isruled);
+  if (Generator != 0)
+  {
+    delete Generator; 
+    Generator = 0;
+  }
+  Generator = new BRepOffsetAPI_ThruSections(issolid,isruled);
   
   Standard_Integer NbEdges = 0;
   Standard_Boolean IsFirstWire = Standard_False;
@@ -372,7 +386,7 @@ Standard_Integer thrusections(Draw_Interpretor&, Standard_Integer n, const char*
     Shape = DBRep::Get(a[i], TopAbs_WIRE);
     if (!Shape.IsNull())
       {
-	Generator.AddWire(TopoDS::Wire(Shape));
+	Generator->AddWire(TopoDS::Wire(Shape));
 	if (!IsFirstWire)
 	  IsFirstWire = Standard_True;
 	else
@@ -383,7 +397,7 @@ Standard_Integer thrusections(Draw_Interpretor&, Standard_Integer n, const char*
 	Shape = DBRep::Get(a[i], TopAbs_VERTEX);
 	IsWire = Standard_False;
 	if (!Shape.IsNull())
-	  Generator.AddVertex(TopoDS::Vertex(Shape));
+	  Generator->AddVertex(TopoDS::Vertex(Shape));
 	else
 	  return 1;
       }
@@ -402,17 +416,20 @@ Standard_Integer thrusections(Draw_Interpretor&, Standard_Integer n, const char*
   }
 
   check = (check || !samenumber);
-  Generator.CheckCompatibility(check);
+  Generator->CheckCompatibility(check);
 
-  Generator.Build();
+  Generator->Build();
 
-  if (Generator.IsDone()) {
-    TopoDS_Shape Shell = Generator.Shape();
+  if (Generator->IsDone()) {
+    TopoDS_Shape Shell = Generator->Shape();
     DBRep::Set(a[index-1], Shell);
+    // Save history of the lofting
+    BRepTest_Objects::SetHistory(Generator->Wires(), *Generator);
   }
   else {
     cout << "Algorithm is not done" << endl;
   }
+
   return 0;
 }
 
@@ -529,7 +546,7 @@ static Standard_Integer setsweep(Draw_Interpretor& di,
      else
 	{  
 	  TopoDS_Shape Guide = DBRep::Get(a[2],TopAbs_WIRE);
-          Standard_Integer CurvilinearEquivalence = Draw::Atoi(a[3]);
+          Standard_Boolean CurvilinearEquivalence = Draw::Atoi(a[3]) != 0;
           Standard_Integer KeepContact = Draw::Atoi(a[4]);
           Sweep->SetMode(TopoDS::Wire(Guide),
                          CurvilinearEquivalence,
@@ -577,11 +594,12 @@ static Standard_Integer addsweep(Draw_Interpretor& di,
   Handle(Law_Interpol) thelaw;
 
   Section = DBRep::Get(a[1], TopAbs_SHAPE);
-  if (Section.ShapeType() != TopAbs_WIRE &&
-      Section.ShapeType() != TopAbs_VERTEX)
+  if (Section.IsNull() ||
+      (Section.ShapeType() != TopAbs_WIRE &&
+       Section.ShapeType() != TopAbs_VERTEX))
     {
       //cout << a[1] <<"is not a wire and is not a vertex!" << endl;
-      di << a[1] <<"is not a wire and is not a vertex!\n";
+      di << a[1] <<" is not a wire and is not a vertex!\n";
       return 1;
     }
 
@@ -740,7 +758,6 @@ static Standard_Integer buildsweep(Draw_Interpretor& di,
       //cout << "BuildSweep : One section can not be in contact with the guide" << endl;
       di << "BuildSweep : One section can not be in contact with the guide\n";
     }
-    return 1;
   }
   else {
     if (mksolid) {
@@ -751,8 +768,30 @@ static Standard_Integer buildsweep(Draw_Interpretor& di,
     }
     result = Sweep->Shape();
     DBRep::Set(a[1],result);
+    // Save history of sweep
+    TopTools_ListOfShape aProfiles;
+    Sweep->Profiles(aProfiles);
+    BRepTest_Objects::SetHistory(aProfiles, *Sweep);
   }
 
+  return 0;
+}
+
+//=======================================================================
+//function : errorsweep
+//purpose  : returns the summary error on resulting surfaces
+//           reached by Sweep
+//=======================================================================
+static Standard_Integer errorsweep(Draw_Interpretor& di,
+                                   Standard_Integer, const char**)
+{
+  if (!Sweep->IsDone())
+  {
+    di << "Sweep is not done\n";
+    return 1;
+  }
+  Standard_Real ErrorOnSurfaces = Sweep->ErrorOnSurface();
+  di << "Tolerance on surfaces = " << ErrorOnSurfaces << "\n";
   return 0;
 }
 
@@ -874,7 +913,6 @@ void  BRepTest::SweepCommands(Draw_Interpretor& theCommands)
 
   theCommands.Add("thrusections", "thrusections [-N] result issolid isruled shape1 shape2 [..shape..], the option -N means no check on wires, shapes must be wires or vertices (only first or last)",
 		  __FILE__,thrusections,g);
-
   
   theCommands.Add("mksweep", "mksweep wire",
 		  __FILE__,mksweep,g);
@@ -890,8 +928,11 @@ void  BRepTest::SweepCommands(Draw_Interpretor& theCommands)
 		  "deletesweep wire, To delete a section",
 		  __FILE__,deletesweep,g);
 
-  theCommands.Add("buildsweep", "builsweep [r] [option] [Tol] , no args to get help"
+ theCommands.Add("buildsweep", "builsweep [r] [option] [Tol] , no args to get help",
 		  __FILE__,buildsweep,g);
+
+ theCommands.Add("errorsweep", "errorsweep: returns the summary error on resulting surfaces reached by Sweep",
+		  __FILE__,errorsweep,g);
 
   theCommands.Add("simulsweep", "simulsweep r [n] [option]"
 		  __FILE__,simulsweep,g);

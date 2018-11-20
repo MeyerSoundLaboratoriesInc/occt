@@ -36,7 +36,7 @@ public:
   //! Creates instances of all available selecting volume types
   Standard_EXPORT SelectMgr_SelectingVolumeManager (Standard_Boolean theToAllocateFrustums = Standard_True);
 
-  Standard_EXPORT virtual ~SelectMgr_SelectingVolumeManager() {};
+  virtual ~SelectMgr_SelectingVolumeManager() {};
 
   //! IMPORTANT: Scaling makes sense only for frustum built on a single point!
   //!            Note that this method does not perform any checks on type of the frustum.
@@ -46,12 +46,18 @@ public:
   //! There are no default parameters, but in case if:
   //!    - transformation only is needed: @theScaleFactor must be initialized as any negative value;
   //!    - scale only is needed: @theTrsf must be set to gp_Identity.
+  //! Builder is an optional argument that represents corresponding settings for re-constructing transformed
+  //! frustum from scratch. Can be null if reconstruction is not expected furthermore.
   Standard_EXPORT virtual SelectMgr_SelectingVolumeManager ScaleAndTransform (const Standard_Integer theScaleFactor,
-                                                                              const gp_Trsf& theTrsf);
+                                                                              const gp_GTrsf& theTrsf,
+                                                                              const Handle(SelectMgr_FrustumBuilder)& theBuilder = NULL) const;
 
   Standard_EXPORT virtual Standard_Integer GetActiveSelectionType() const Standard_OVERRIDE;
 
   Standard_EXPORT void SetActiveSelectionType (const SelectionType& theType);
+
+  //! Returns current camera definition.
+  const Handle(Graphic3d_Camera)& Camera() const { return mySelectingVolumes[Frustum]->Camera(); }
 
   //! Updates camera projection and orientation matrices in all selecting volumes
   Standard_EXPORT void SetCamera (const Handle(Graphic3d_Camera) theCamera);
@@ -67,6 +73,8 @@ public:
 
   //! @return current world view transformation common for all selecting volumes
   Standard_EXPORT const Graphic3d_Mat4d& WorldViewMatrix() const;
+
+  Standard_EXPORT void WindowSize (Standard_Integer& theWidth, Standard_Integer& theHeight) const;
 
   //! @return current camera world view projection transformation state common for all selecting volumes
   Standard_EXPORT const Graphic3d_WorldViewProjState& WorldViewProjState() const;
@@ -146,8 +154,8 @@ public:
   //! screen point and given point theCOG
   Standard_EXPORT virtual Standard_Real DistToGeometryCenter (const gp_Pnt& theCOG) Standard_OVERRIDE;
 
-  //! Calculates the point on a view ray that was detected during the run of selection algo by given depth. Is valid for point
-  //! selection only
+  //! Calculates the point on a view ray that was detected during the run of selection algo by given depth.
+  //! Throws exception if active selection type is not Point.
   Standard_EXPORT virtual gp_Pnt DetectedPoint (const Standard_Real theDepth) const Standard_OVERRIDE;
 
   //! Checks if the point of sensitive in which selection was detected belongs
@@ -162,22 +170,61 @@ public:
 
   Standard_EXPORT virtual Standard_Boolean IsOverlapAllowed() const Standard_OVERRIDE;
 
+  //! Return view clipping planes.
+  const Handle(Graphic3d_SequenceOfHClipPlane)& ViewClipping() const { return myViewClipPlanes; }
+
   //! Valid for point selection only!
   //! Computes depth range for global (defined for the whole view) clipping planes.
-  Standard_EXPORT void SetViewClipping (const Graphic3d_SequenceOfHClipPlane& thePlanes);
+  Standard_EXPORT void SetViewClipping (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes);
+
+  //! Set if view clipping plane is enabled or not.
+  //! @return previous flag value
+  Standard_EXPORT Standard_Boolean SetViewClippingEnabled (const Standard_Boolean theToEnable);
 
   //! A set of helper functions that return rectangular selecting frustum data
   Standard_EXPORT const gp_Pnt* GetVertices() const;
 
-  Standard_EXPORT gp_Pnt GetNearPnt() const;
+  //! Valid only for point and rectangular selection.
+  //! Returns projection of 2d mouse picked point or projection
+  //! of center of 2d rectangle (for point and rectangular selection
+  //! correspondingly) onto near view frustum plane
+  Standard_EXPORT virtual gp_Pnt GetNearPickedPnt() const Standard_OVERRIDE;
 
-  Standard_EXPORT gp_Pnt GetFarPnt() const;
+  //! Valid only for point and rectangular selection.
+  //! Returns projection of 2d mouse picked point or projection
+  //! of center of 2d rectangle (for point and rectangular selection
+  //! correspondingly) onto far view frustum plane
+  Standard_EXPORT virtual gp_Pnt GetFarPickedPnt() const Standard_OVERRIDE;
+
+  //! Returns active selecting volume that was built during last
+  //! run of OCCT selection mechanism
+  Handle(SelectMgr_BaseFrustum) ActiveVolume() const
+  {
+    if (myActiveSelectionType == Unknown)
+      return Handle(SelectMgr_BaseFrustum)();
+
+    return mySelectingVolumes[myActiveSelectionType / 2];
+  }
+
+  //! Stores plane equation coefficients (in the following form:
+  //! Ax + By + Cz + D = 0) to the given vector
+  virtual void GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const Standard_OVERRIDE
+  {
+    if (myActiveSelectionType == Unknown)
+    {
+      thePlaneEquations.Clear();
+      return;
+    }
+
+    return mySelectingVolumes[myActiveSelectionType / 2]->GetPlanes (thePlaneEquations);
+  }
 
 private:
   enum { Frustum, FrustumSet, VolumeTypesNb };       //!< Defines the amount of available selecting volumes
 
-  NCollection_Handle<SelectMgr_BaseFrustum> mySelectingVolumes[VolumeTypesNb];      //!< Array of selecting volumes
-  Standard_Boolean                          myToAllowOverlap;      //!< Defines if partially overlapped entities will me detected or not
+  Handle(SelectMgr_BaseFrustum)          mySelectingVolumes[VolumeTypesNb]; //!< Array of selecting volumes
+  Handle(Graphic3d_SequenceOfHClipPlane) myViewClipPlanes;                  //!< view clipping planes
+  Standard_Boolean                       myToAllowOverlap;                  //!< Defines if partially overlapped entities will me detected or not
 };
 
 #endif

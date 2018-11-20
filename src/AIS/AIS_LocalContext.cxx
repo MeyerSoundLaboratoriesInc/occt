@@ -23,7 +23,6 @@
 #include <AIS_ListOfInteractive.hxx>
 #include <AIS_LocalContext.hxx>
 #include <AIS_LocalStatus.hxx>
-#include <AIS_Selection.hxx>
 #include <AIS_Shape.hxx>
 #include <Aspect_TypeOfMarker.hxx>
 #include <Graphic3d_Structure.hxx>
@@ -49,18 +48,7 @@
 #include <V3d_Viewer.hxx>
 
 #include <stdio.h>
-IMPLEMENT_STANDARD_RTTIEXT(AIS_LocalContext,MMgt_TShared)
-
-static TCollection_AsciiString AIS_Local_SelName(const Standard_Address address,
-                                                 const Standard_Integer anIndex)
-{
-//  TCollection_AsciiString SelName;
-  char string[100];
-  sprintf(string,"%p_%d", address, anIndex);	// works under any system 
-  TCollection_AsciiString SelName(string);
-  return SelName;
-}
-
+IMPLEMENT_STANDARD_RTTIEXT(AIS_LocalContext,Standard_Transient)
 
 //=======================================================================
 //function : AIS_LocalContext
@@ -85,12 +73,18 @@ myMainVS(aCtx->MainSelector()),
 myFilters(new SelectMgr_OrFilter()),
 myAutoHilight(Standard_True),
 myMapOfOwner (new SelectMgr_IndexedMapOfOwner()),
+mySelection(new AIS_Selection()),
 mylastindex(0),
 mylastgood(0),
 myCurDetected(0),
-myAISCurDetected(0)
-
+myAISCurDetected(0),
+mySubintStyle (new Prs3d_Drawer())
 {
+  mySubintStyle->Link (aCtx->SelectionStyle());
+  mySubintStyle->SetColor        (aCtx->SelectionStyle()->Color());
+  mySubintStyle->SetTransparency (aCtx->SelectionStyle()->Transparency());
+  mySubintStyle->SetMethod       (aCtx->SelectionStyle()->Method());
+
   // bind self to AIS_InteractiveContext::myLocalContexts. Further, the
   // constructor executes logic that implies that the context is already
   // created and mapped.
@@ -98,8 +92,6 @@ myAISCurDetected(0)
 
   myMainVS->ResetSelectionActivationStatus();
   myMainPM = aCtx->MainPrsMgr();
-  mySelName = AIS_Local_SelName(this, Index);
-  AIS_Selection::CreateSelection(mySelName.ToCString());
 
   mySM->Add(myMainVS);
   if(myLoadDisplayed) LoadContextObjects();
@@ -210,9 +202,8 @@ Load(const Handle(AIS_InteractiveObject)& anInteractive,
 {
   if (myActiveObjects.IsBound (anInteractive))
   {
-    if (anInteractive->HasSelection (ActivationMode))
+    if (const Handle(SelectMgr_Selection)& aSel = anInteractive->Selection (ActivationMode))
     {
-      const Handle(SelectMgr_Selection)& aSel = anInteractive->Selection (ActivationMode);
       if (aSel->GetSelectionState() != SelectMgr_SOS_Activated)
       {
         if (!myMainVS->Contains (anInteractive))
@@ -274,7 +265,7 @@ ClearPrs(const Handle(AIS_InteractiveObject)& anInteractive,
   if(STAT->IsSubIntensityOn()) {
     STAT->SubIntensityOff();
     if(STAT->HilightMode()==aMode)
-      myMainPM->Unhighlight(anInteractive,STAT->HilightMode());
+      myMainPM->Unhighlight(anInteractive);
   }
   myMainPM->Clear(anInteractive,aMode); // correction connexions 23/09/97
   jobdone = Standard_True;
@@ -297,7 +288,7 @@ Erase(const Handle(AIS_InteractiveObject)& anInteractive)
   //Display step
   if(STAT->IsSubIntensityOn()) {
     STAT->SubIntensityOff();
-    myMainPM->Unhighlight(anInteractive,STAT->HilightMode());
+    myMainPM->Unhighlight (anInteractive);
   }
 
   Standard_Boolean status(Standard_False);
@@ -306,7 +297,9 @@ Erase(const Handle(AIS_InteractiveObject)& anInteractive)
     if(IsSelected(anInteractive))
       AddOrRemoveSelected(anInteractive);
     if(myMainPM->IsHighlighted(anInteractive,STAT->HilightMode()))
-      myMainPM->Unhighlight(anInteractive,STAT->HilightMode());
+    {
+      myMainPM->Unhighlight (anInteractive);
+    }
     myMainPM->SetVisibility (anInteractive, STAT->DisplayMode(), Standard_False);
     STAT->SetDisplayMode(-1);
     status = Standard_True;
@@ -383,48 +376,95 @@ void AIS_LocalContext::Clear(const AIS_ClearMode aType)
     ClearDetected();
   }
 }
-//=======================================================================
-//function : ActivateMode
-//purpose  : 
-//=======================================================================
 
-void AIS_LocalContext::ActivateMode(const Handle(AIS_InteractiveObject)& aSelectable,
-				       const Standard_Integer aMode)
+//=======================================================================
+//function : SetSelectionModeActive
+//purpose  :
+//=======================================================================
+void AIS_LocalContext::SetSelectionModeActive (const Handle(AIS_InteractiveObject)& theObj,
+                                               const Standard_Integer theMode,
+                                               const Standard_Boolean theIsActive,
+                                               const AIS_SelectionModesConcurrency theActiveFilter)
 {
-  if(!myActiveObjects.IsBound(aSelectable)) return;
-//  if(myActiveObjects(aSelectable)->SelectionMode()!=aMode)
-//    mySM->Deactivate(aSelectable,aMode,myMainVS);
-  if(aMode != -1){
-    myActiveObjects(aSelectable)->AddSelectionMode(aMode);
-    mySM->Activate(aSelectable,aMode,myMainVS);
+  const Handle(AIS_LocalStatus)* aStat = myActiveObjects.Seek (theObj);
+  if (aStat == NULL)
+  {
+    return;
   }
-}
-//=======================================================================
-//function : ActivateMode
-//purpose  : 
-//=======================================================================
 
-void AIS_LocalContext::DeactivateMode(const Handle(AIS_InteractiveObject)& aSelectable,
-					 const Standard_Integer aMode)
-{
-  if(!myActiveObjects.IsBound(aSelectable)) return;
-  
-  if(aMode==-1) return;
-  
-  myActiveObjects(aSelectable)->RemoveSelectionMode(aMode);
-  mySM->Deactivate(aSelectable,aMode,myMainVS);
-}
-//=======================================================================
-//function : ActivateMode
-//purpose  : 
-//=======================================================================
+  if (!theIsActive
+   || (theMode == -1
+    && theActiveFilter == AIS_SelectionModesConcurrency_Single))
+  {
+    if (theMode == -1)
+    {
+      for (TColStd_ListIteratorOfListOfInteger aModeIter ((*aStat)->SelectionModes()); aModeIter.More(); aModeIter.Next())
+      {
+        mySM->Deactivate (theObj, aModeIter.Value(), myMainVS);
+      }
+      (*aStat)->ClearSelectionModes();
+    }
+    else
+    {
+      mySM->Deactivate (theObj, theMode, myMainVS);
+      (*aStat)->RemoveSelectionMode (theMode);
+    }
+    return;
+  }
+  else if (theMode == -1)
+  {
+    return;
+  }
+  else if ((*aStat)->SelectionModes().Size() == 1
+        && (*aStat)->SelectionModes().First() == theMode)
+  {
+    return;
+  }
 
-void AIS_LocalContext::Deactivate(const Handle(AIS_InteractiveObject)& aSelectable)
-{
-  if(!myActiveObjects.IsBound(aSelectable)) return;
-  
-  mySM->Deactivate(aSelectable, -1, myMainVS);
-  myActiveObjects(aSelectable)->ClearSelectionModes();
+  switch (theActiveFilter)
+  {
+    case AIS_SelectionModesConcurrency_Single:
+    {
+      for (TColStd_ListIteratorOfListOfInteger aModeIter ((*aStat)->SelectionModes()); aModeIter.More(); aModeIter.Next())
+      {
+        mySM->Deactivate (theObj, aModeIter.Value(), myMainVS);
+      }
+      (*aStat)->ClearSelectionModes();
+      break;
+    }
+    case AIS_SelectionModesConcurrency_GlobalOrLocal:
+    {
+      const Standard_Integer aGlobSelMode = theObj->GlobalSelectionMode();
+      TColStd_ListOfInteger aRemovedModes;
+      for (TColStd_ListIteratorOfListOfInteger aModeIter ((*aStat)->SelectionModes()); aModeIter.More(); aModeIter.Next())
+      {
+        if ((theMode == aGlobSelMode && aModeIter.Value() != aGlobSelMode)
+          || (theMode != aGlobSelMode && aModeIter.Value() == aGlobSelMode))
+        {
+          mySM->Deactivate (theObj, aModeIter.Value(), myMainVS);
+          aRemovedModes.Append (aModeIter.Value());
+        }
+      }
+      if (aRemovedModes.Size() == (*aStat)->SelectionModes().Size())
+      {
+        (*aStat)->ClearSelectionModes();
+      }
+      else
+      {
+        for (TColStd_ListIteratorOfListOfInteger aModeIter (aRemovedModes); aModeIter.More(); aModeIter.Next())
+        {
+          (*aStat)->RemoveSelectionMode (aModeIter.Value());
+        }
+      }
+      break;
+    }
+    case AIS_SelectionModesConcurrency_Multiple:
+    {
+      break;
+    }
+  }
+  mySM->Activate (theObj, theMode, myMainVS);
+  (*aStat)->AddSelectionMode (theMode);
 }
 
 //=======================================================================
@@ -462,11 +502,10 @@ Standard_Boolean AIS_LocalContext::Remove(const Handle(AIS_InteractiveObject)& a
   {
     if (Att->IsSubIntensityOn())
     {
-      myMainPM->Unhighlight (aSelectable, Att->HilightMode());
+      myMainPM->Unhighlight (aSelectable);
     }
 
     myMainPM->Erase (aSelectable, Att->DisplayMode());
-    myMainPM->Clear (aSelectable, Att->DisplayMode());
     if (myMainPM->IsDisplayed (aSelectable, Att->HilightMode()))
     {
       myMainPM->Erase (aSelectable, Att->HilightMode());
@@ -475,7 +514,7 @@ Standard_Boolean AIS_LocalContext::Remove(const Handle(AIS_InteractiveObject)& a
   // If subintensity used
   else if (Att->IsSubIntensityOn())
   {
-    myCTX->SubIntensityOff (aSelectable);
+    myCTX->SubIntensityOff (aSelectable, Standard_False);
   }
 
   // Deactivate stored selection modes
@@ -626,18 +665,11 @@ void AIS_LocalContext::Terminate (const Standard_Boolean theToUpdate)
   // clear the selector...
   myMainVS->Clear();
   
-
-  AIS_Selection::SetCurrentSelection(mySelName.ToCString());
-  Handle(AIS_Selection) S = AIS_Selection::CurrentSelection();
-  Handle(Standard_Transient) Tr;
-  for(S->Init();S->More();S->Next()){
-    Tr = S->Value();
-    Handle(SelectMgr_EntityOwner)::DownCast (Tr)->SetSelected (Standard_False);
+  for (AIS_NListOfEntityOwner::Iterator aSelIter (mySelection->Objects()); aSelIter.More(); aSelIter.Next())
+  {
+    aSelIter.Value()->SetSelected (Standard_False);
   }
-
-      
-  AIS_Selection::Select();
-  AIS_Selection::Remove(mySelName.ToCString());
+  mySelection->Clear();
 
   Handle(V3d_View) aDummyView;
   myMainVS->ClearSensitive (aDummyView);
@@ -657,11 +689,14 @@ void AIS_LocalContext::Terminate (const Standard_Boolean theToUpdate)
 void AIS_LocalContext::SubIntensityOn(const Handle(AIS_InteractiveObject)& anObject)
 {
   if(!myActiveObjects.IsBound(anObject)) return;
+  mySubintStyle->SetColor (myCTX->SubIntensityColor());
   
   const Handle(AIS_LocalStatus)& Att = myActiveObjects(anObject);
 
-  if(Att->IsTemporary()) 
-    myMainPM->Color(anObject,myCTX->SubIntensityColor(),Att->DisplayMode());
+  if(Att->IsTemporary())
+  {
+    myMainPM->Color (anObject, mySubintStyle, Att->DisplayMode());
+  }
   
   Att->SubIntensityOn();
 }
@@ -698,7 +733,7 @@ void AIS_LocalContext::Hilight(const  Handle(AIS_InteractiveObject)& anObject)
     
   }
   const Handle(AIS_LocalStatus)& Att = myActiveObjects(anObject);
-  myMainPM->Color(anObject,myCTX->HilightColor(),Att->HilightMode());
+  myMainPM->Color(anObject, myCTX->getHiStyle (anObject, anObject->GlobalSelOwner()), Att->HilightMode());
   Att->SubIntensityOn();
 }
 //=======================================================================
@@ -706,21 +741,19 @@ void AIS_LocalContext::Hilight(const  Handle(AIS_InteractiveObject)& anObject)
 //purpose  : 
 //=======================================================================
 
-void AIS_LocalContext::Hilight(const  Handle(AIS_InteractiveObject)& anObject,
-			       const Quantity_NameOfColor Col)
+void AIS_LocalContext::Hilight (const Handle(AIS_InteractiveObject)& theObj,
+                                const Handle(Prs3d_Drawer)& theStyle)
 {
-  if(!myActiveObjects.IsBound(anObject)){
-    Standard_Integer HiMod = anObject->HasHilightMode()? anObject->HilightMode() : 0; 
-    Handle(AIS_LocalStatus) Att = new AIS_LocalStatus(Standard_True,
-						      Standard_False,
-						      -1,-1,HiMod);
-    myActiveObjects.Bind(anObject,Att);
-    
+  if (!myActiveObjects.IsBound (theObj))
+  {
+    Handle(AIS_LocalStatus) aStatus = new AIS_LocalStatus
+      (Standard_True, Standard_False, -1, -1, theObj->HasHilightMode() ? theObj->HilightMode() : 0);
+    myActiveObjects.Bind (theObj, aStatus);
   }
-  const Handle(AIS_LocalStatus)& Att = myActiveObjects(anObject);
-  myMainPM->Color(anObject,Col,Att->HilightMode());
-  Att->SubIntensityOn();
-  Att->SetHilightColor(Col);
+  const Handle(AIS_LocalStatus)& aStatus = myActiveObjects (theObj);
+  myMainPM->Color (theObj, theStyle, aStatus->HilightMode());
+  aStatus->SubIntensityOn();
+  aStatus->SetHilightStyle (theStyle);
 }
 
 //=======================================================================
@@ -734,17 +767,19 @@ void AIS_LocalContext::Unhilight(const Handle(AIS_InteractiveObject)& anObject)
   
   // chieck if by hazard the object is somewhere else...
   Standard_Integer Indx;
+  Standard_DISABLE_DEPRECATION_WARNINGS
   Standard_Boolean IsSomeWhereElse  = 
     myCTX->IsInLocal(anObject,Indx) && Indx != myCTX->IndexOfCurrentLocal();
+  Standard_ENABLE_DEPRECATION_WARNINGS
   
   const Handle(AIS_LocalStatus)& Att = myActiveObjects(anObject);
-  myMainPM->Unhighlight(anObject,Att->HilightMode());
+  myMainPM->Unhighlight (anObject);
   if(Att->IsTemporary() && Att->DisplayMode()==-1)
     if(!IsSomeWhereElse)
       myMainPM->SetVisibility (anObject, Att->HilightMode(), Standard_False);
 
   Att->SubIntensityOff();
-  Att->SetHilightColor(Quantity_NOC_WHITE);
+  Att->SetHilightStyle (Handle(Prs3d_Drawer)());
 }
 
 
@@ -770,19 +805,18 @@ Standard_Boolean AIS_LocalContext::IsHilighted(const Handle(AIS_InteractiveObjec
   return myActiveObjects(anObject)->IsSubIntensityOn();
 }
 
-Standard_Boolean AIS_LocalContext::IsHilighted(const Handle(AIS_InteractiveObject)& anObject,
-					       Standard_Boolean& WithColor,
-					       Quantity_NameOfColor& HiCol) const 
+Standard_Boolean AIS_LocalContext::HighlightStyle (const Handle(AIS_InteractiveObject)& theObject,
+                                                   Handle(Prs3d_Drawer)& theStyle) const
 {
-  if(!myActiveObjects.IsBound(anObject)) return Standard_False;
-  if( myActiveObjects(anObject)->IsSubIntensityOn()){
-    HiCol = myActiveObjects(anObject)->HilightColor();
-    if(HiCol==Quantity_NOC_WHITE)
-      WithColor = Standard_True;
-    else
-      WithColor = Standard_False;
+  if (!myActiveObjects.IsBound (theObject))
+    return Standard_False;
+
+  if (myActiveObjects (theObject)->IsSubIntensityOn())
+  {
+    theStyle = myActiveObjects (theObject)->HilightStyle();
     return Standard_True;
   }
+
   return Standard_False;
 }
 
@@ -876,24 +910,26 @@ const Handle(AIS_LocalStatus)& AIS_LocalContext::Status(const Handle(AIS_Interac
 
 void AIS_LocalContext::LoadContextObjects()
 {
-  AIS_ListIteratorOfListOfInteractive It;
-  if(myLoadDisplayed) {
-    AIS_ListOfInteractive LL;
-    myCTX->DisplayedObjects(LL,Standard_True);
-    Handle(AIS_LocalStatus) Att;
-    for (It.Initialize(LL);It.More();It.Next()){
-      const Handle(AIS_InteractiveObject)& anObj = It.Value();
-      Att= new AIS_LocalStatus();
-      Att->SetDecomposition((anObj->AcceptShapeDecomposition() && myAcceptStdMode));
-      Att->SetTemporary(Standard_False);
-      Att->SetHilightMode(anObj->HasHilightMode()? anObj->HilightMode(): 0);
-      for (anObj->Init(); anObj->More(); anObj->Next())
-      {
-        const Handle(SelectMgr_Selection)& aSel = anObj->CurrentSelection();
-        aSel->SetSelectionState (SelectMgr_SOS_Deactivated);
-      }
-      myActiveObjects.Bind(anObj,Att);
+  if (!myLoadDisplayed)
+  {
+    return;
+  }
+
+  AIS_ListOfInteractive LL;
+  myCTX->DisplayedObjects(LL,Standard_True);
+  for (AIS_ListIteratorOfListOfInteractive It (LL); It.More(); It.Next())
+  {
+    const Handle(AIS_InteractiveObject)& anObj = It.Value();
+    Handle(AIS_LocalStatus) Att = new AIS_LocalStatus();
+    Att->SetDecomposition((anObj->AcceptShapeDecomposition() && myAcceptStdMode));
+    Att->SetTemporary(Standard_False);
+    Att->SetHilightMode(anObj->HasHilightMode()? anObj->HilightMode(): 0);
+    for (SelectMgr_SequenceOfSelection::Iterator aSelIter (anObj->Selections()); aSelIter.More(); aSelIter.Next())
+    {
+      const Handle(SelectMgr_Selection)& aSel = aSelIter.Value();
+      aSel->SetSelectionState (SelectMgr_SOS_Deactivated);
     }
+    myActiveObjects.Bind(anObj,Att);
   }
 }
 
@@ -993,22 +1029,27 @@ void AIS_LocalContext::ClearObjects()
       // if object is temporary the presentations managed by myMainPM are removed
       AIS_DisplayStatus TheDS = myCTX->DisplayStatus(SO);
       
-      if(TheDS != AIS_DS_Displayed){
-	if(myMainPM->IsDisplayed(SO,CurAtt->DisplayMode())){
-	  if(CurAtt->IsSubIntensityOn()&&
-	     myMainPM->IsHighlighted(SO,CurAtt->HilightMode()))
-	    myMainPM->Unhighlight(SO,CurAtt->HilightMode());
-	  myMainPM->Erase(SO,CurAtt->DisplayMode());
-	}
-	
-	if(CurAtt->IsTemporary()){
-	  myMainPM->Erase(SO,CurAtt->DisplayMode());}
-//	  myMainPM->Clear(SO,CurAtt->DisplayMode());}
+      if(TheDS != AIS_DS_Displayed)
+      {
+        if (myMainPM->IsDisplayed(SO,CurAtt->DisplayMode()))
+        {
+          if (CurAtt->IsSubIntensityOn() && myMainPM->IsHighlighted (SO, CurAtt->HilightMode()))
+          {
+            myMainPM->Unhighlight (SO);
+          }
+          myMainPM->Erase (SO, CurAtt->DisplayMode());
+        }
+
+        if (CurAtt->IsTemporary())
+        {
+          myMainPM->Erase (SO, CurAtt->DisplayMode());
+          //myMainPM->Clear(SO,CurAtt->DisplayMode());
+        }
       }
       else {
 	if (CurAtt->IsSubIntensityOn())
         {
-          myCTX->SubIntensityOff(SO);
+          myCTX->SubIntensityOff(SO, Standard_False);
         }
 	Standard_Integer DiMo = SO->HasDisplayMode()?
 	  SO->DisplayMode():myCTX->DisplayMode();

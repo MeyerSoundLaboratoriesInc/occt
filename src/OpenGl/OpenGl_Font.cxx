@@ -80,6 +80,20 @@ void OpenGl_Font::Release (OpenGl_Context* theCtx)
 }
 
 // =======================================================================
+// function : EstimatedDataSize
+// purpose  :
+// =======================================================================
+Standard_Size OpenGl_Font::EstimatedDataSize() const
+{
+  Standard_Size aSize = 0;
+  for (NCollection_Vector<Handle(OpenGl_Texture)>::Iterator aTexIter (myTextures); aTexIter.More(); aTexIter.Next())
+  {
+    aSize += aTexIter.Value()->EstimatedDataSize();
+  }
+  return aSize;
+}
+
+// =======================================================================
 // function : Init
 // purpose  :
 // =======================================================================
@@ -129,15 +143,15 @@ bool OpenGl_Font::createTexture (const Handle(OpenGl_Context)& theCtx)
   aParams->SetFilter      (Graphic3d_TOTF_BILINEAR);
   aParams->SetAnisoFilter (Graphic3d_LOTA_OFF);
 
-  myTextures.Append (new OpenGl_Texture (aParams));
+  myTextures.Append (new OpenGl_Texture (myKey + "_texture" + myTextures.Size(), aParams));
   Handle(OpenGl_Texture)& aTexture = myTextures.ChangeLast();
 
   Image_PixMap aBlackImg;
-  if (!aBlackImg.InitZero (Image_PixMap::ImgAlpha, Standard_Size(aTextureSizeX), Standard_Size(aTextureSizeY))
+  if (!aBlackImg.InitZero (Image_Format_Alpha, Standard_Size(aTextureSizeX), Standard_Size(aTextureSizeY))
    || !aTexture->Init (theCtx, aBlackImg, Graphic3d_TOT_2D)) // myTextureFormat
   {
     TCollection_ExtendedString aMsg;
-    aMsg += "New texture intialization of size ";
+    aMsg += "New texture initialization of size ";
     aMsg += aTextureSizeX;
     aMsg += "x";
     aMsg += aTextureSizeY;

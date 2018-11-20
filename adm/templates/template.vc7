@@ -22,7 +22,7 @@
 				AdditionalIncludeDirectories="__TKINC__;$(CSF_OPT_INC)"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="NDEBUG;No_Exception;$(CSF_DEFINES)__TKDEFS__"
+				PreprocessorDefinitions="NDEBUG;No_Exception;$(CSF_DEFINES)"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -36,7 +36,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="__TKDEP__ opengl32.lib glu32.lib ws2_32.lib vfw32.lib odbc32.lib odbccp32.lib"
+				AdditionalDependencies="__TKDEP__ opengl32.lib ws2_32.lib odbc32.lib odbccp32.lib"
 				OutputFile=".\..\..\..\win32\vc7\bin\__TKNAM__.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -62,7 +62,7 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				AdditionalIncludeDirectories="..\..\..\inc;$(CSF_OPT_INC)"
-				PreprocessorDefinitions="NDEBUG;No_Exception;$(CSF_DEFINES)__TKDEFS__"
+				PreprocessorDefinitions="NDEBUG;No_Exception;$(CSF_DEFINES)"
 				Culture="1036"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>
@@ -89,7 +89,7 @@
 				AdditionalIncludeDirectories="__TKINC__;$(CSF_OPT_INC)"
 				Optimization="0"
 				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="_DEBUG;$(CSF_DEFINES)__TKDEFS__"
+				PreprocessorDefinitions="_DEBUG;$(CSF_DEFINES)"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				PrecompiledHeaderFile=".\..\..\..\win32\vc7\objd\__TKNAM__\__TKNAM__.pch"
@@ -105,7 +105,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="__TKDEP__ opengl32.lib glu32.lib ws2_32.lib vfw32.lib odbc32.lib odbccp32.lib"
+				AdditionalDependencies="__TKDEP__ opengl32.lib ws2_32.lib odbc32.lib odbccp32.lib"
 				OutputFile=".\..\..\..\win32\vc7\bind\__TKNAM__.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -131,7 +131,7 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				AdditionalIncludeDirectories="..\..\..\inc;$(CSF_OPT_INC)"
-				PreprocessorDefinitions="_DEBUG;$(CSF_DEFINES)__TKDEFS__"
+				PreprocessorDefinitions="_DEBUG;$(CSF_DEFINES)"
 				Culture="1036"/>
 			<Tool
 				Name="VCWebServiceProxyGeneratorTool"/>

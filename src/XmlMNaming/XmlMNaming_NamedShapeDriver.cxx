@@ -16,7 +16,7 @@
 //AGV 150202: Changed prototype LDOM_Node::getOwnerDocument()
 
 #include <BRepTools.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <LDOM_OSStream.hxx>
 #include <LDOM_Text.hxx>
 #include <Standard_SStream.hxx>
@@ -64,7 +64,7 @@ IMPLEMENT_DOMSTRING (EvolReplaceString,   "replace")
 //=======================================================================
 
 XmlMNaming_NamedShapeDriver::XmlMNaming_NamedShapeDriver
-                        (const Handle(CDM_MessageDriver)& theMessageDriver)
+                        (const Handle(Message_Messenger)& theMessageDriver)
      : XmlMDF_ADriver (theMessageDriver, NULL),
   myShapeSet (Standard_False) // triangles mode
 {}
@@ -121,7 +121,7 @@ Standard_Boolean XmlMNaming_NamedShapeDriver::Paste
   Standard_Integer upper = NewPShapes.Upper();
   if (OldPShapes.Upper() > upper) upper = OldPShapes.Upper();
 
-  for (Standard_Integer i = lower; i <= upper; i++)
+  for (Standard_Integer i = upper; i >= lower; --i)
   {
     const XmlMNaming_Shape1 aNewPShape  = NewPShapes.Value(i);
     const XmlMNaming_Shape1 anOldPShape = OldPShapes.Value(i);
@@ -129,7 +129,7 @@ Standard_Boolean XmlMNaming_NamedShapeDriver::Paste
     if ( evol != TNaming_PRIMITIVE && anOldPShape.Element() != NULL )
     {
       if (::doTranslate (anOldPShape, anOldShape, aShapeSet)) {
-        WriteMessage ("NamedShapeDriver: Error reading a shape from array");
+        myMessageDriver->Send ("NamedShapeDriver: Error reading a shape from array", Message_Fail);
         return Standard_False;
       }
     }
@@ -137,7 +137,7 @@ Standard_Boolean XmlMNaming_NamedShapeDriver::Paste
     if (evol != TNaming_DELETE && aNewPShape.Element() != NULL )
     {
       if (::doTranslate (aNewPShape, aNewShape, aShapeSet)) {
-        WriteMessage ("NamedShapeDriver: Error reading a shape from array");
+        myMessageDriver->Send ("NamedShapeDriver: Error reading a shape from array", Message_Fail);
         return Standard_False;
       }
     }
@@ -166,7 +166,7 @@ Standard_Boolean XmlMNaming_NamedShapeDriver::Paste
       //      aBld.Replace(anOldShape,aNewShape);
       //      break;
     default:
-      Standard_DomainError::Raise("TNaming_Evolution; enum term unknown");
+      throw Standard_DomainError("TNaming_Evolution; enum term unknown");
     }
     anOldShape.Nullify();
     aNewShape.Nullify();
@@ -252,10 +252,8 @@ static const XmlObjMgt_DOMString& EvolutionString(const TNaming_Evolution i)
     case TNaming_SELECTED     : return ::EvolSelectedString();
     case TNaming_REPLACE      : return ::EvolModifyString();  //    case TNaming_REPLACE      : return ::EvolReplaceString(); for compatibility
   default:
-    Standard_DomainError::Raise("TNaming_Evolution; enum term unknown");
+    throw Standard_DomainError("TNaming_Evolution; enum term unknown");
   }
-  static XmlObjMgt_DOMString aNullString;
-  return aNullString; // To avoid compilation error message.
 }
 
 //=======================================================================
@@ -278,8 +276,7 @@ static TNaming_Evolution EvolutionEnum (const XmlObjMgt_DOMString& theString)
     else if (theString.equals (::EvolReplaceString()))
       aResult = TNaming_MODIFY; // for compatibility //TNaming_REPLACE;
     else
-      Standard_DomainError::Raise
-        ("TNaming_Evolution; string value without enum term equivalence");
+      throw Standard_DomainError("TNaming_Evolution; string value without enum term equivalence");
   }
   return aResult;
 }

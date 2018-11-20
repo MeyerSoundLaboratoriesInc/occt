@@ -16,73 +16,70 @@
 #ifndef OpenGl_AspectMarker_Header
 #define OpenGl_AspectMarker_Header
 
-#include <InterfaceGraphic_Graphic3d.hxx>
 #include <Aspect_TypeOfMarker.hxx>
-#include <Graphic3d_CAspectMarker.hxx>
+#include <Graphic3d_AspectMarker3d.hxx>
 #include <TCollection_AsciiString.hxx>
 
 #include <OpenGl_Element.hxx>
+#include <OpenGl_TextureSet.hxx>
 
 class OpenGl_PointSprite;
 class OpenGl_ShaderProgram;
 
+//! The element holding Graphic3d_AspectMarker3d.
 class OpenGl_AspectMarker : public OpenGl_Element
 {
 public:
 
+  //! Empty constructor.
   Standard_EXPORT OpenGl_AspectMarker();
 
-  //! Copy parameters
-  Standard_EXPORT void SetAspect (const CALL_DEF_CONTEXTMARKER& theAspect);
+  //! Create and assign parameters.
+  Standard_EXPORT OpenGl_AspectMarker (const Handle(Graphic3d_AspectMarker3d)& theAspect);
 
-  //! @return marker color
-  const TEL_COLOUR& Color() const
-  {
-    return myColor;
-  }
+  //! Return the aspect.
+  const Handle(Graphic3d_AspectMarker3d)& Aspect() const { return myAspect; }
 
-  //! @return maker type
-  Aspect_TypeOfMarker Type() const
-  {
-    return myType;
-  }
-
-  //! @return marker scale
-  Standard_ShortReal Scale() const
-  {
-    return myScale;
-  }
+  //! Assign new aspect.
+  Standard_EXPORT void SetAspect (const Handle(Graphic3d_AspectMarker3d)& theAspect);
 
   //! @return marker size
-  Standard_ShortReal MarkerSize() const
-  {
-    return myMarkerSize;
-  }
+  Standard_ShortReal MarkerSize() const { return myMarkerSize; }
 
   //! Init and return OpenGl point sprite resource.
   //! @return point sprite texture.
-  const Handle(OpenGl_PointSprite)& SpriteRes (const Handle(OpenGl_Context)& theCtx) const
+  const Handle(OpenGl_TextureSet)& SpriteRes (const Handle(OpenGl_Context)& theCtx) const
   {
     if (!myResources.IsSpriteReady())
     {
-      myResources.BuildSprites (theCtx, myMarkerImage, myType, myScale, myColor, myMarkerSize);
+      myResources.BuildSprites (theCtx,
+                                myAspect->GetMarkerImage(),
+                                myAspect->Type(),
+                                myAspect->Scale(),
+                                myAspect->ColorRGBA(),
+                                myMarkerSize);
       myResources.SetSpriteReady();
     }
 
-    return myResources.Sprite;
+    return myResources.Sprite();
   }
 
   //! Init and return OpenGl highlight point sprite resource.
   //! @return point sprite texture for highlight.
-  const Handle(OpenGl_PointSprite)& SpriteHighlightRes (const Handle(OpenGl_Context)& theCtx) const
+  const Handle(OpenGl_TextureSet)& SpriteHighlightRes (const Handle(OpenGl_Context)& theCtx) const
   {
     if (!myResources.IsSpriteReady())
     {
-      myResources.BuildSprites (theCtx, myMarkerImage, myType, myScale, myColor, myMarkerSize);
+      myResources.BuildSprites (theCtx,
+                                myAspect->GetMarkerImage(),
+                                myAspect->Type(),
+                                myAspect->Scale(),
+                                myAspect->ColorRGBA(),
+                                myMarkerSize);
       myResources.SetSpriteReady();
     }
 
-    return myResources.SpriteA;
+    return myResources.SpriteA();
   }
 
   //! Init and return OpenGl shader program resource.
@@ -91,77 +88,85 @@ public:
   {
     if (!myResources.IsShaderReady())
     {
-      myResources.BuildShader (theCtx, myShaderProgram);
+      myResources.BuildShader (theCtx, myAspect->ShaderProgram());
       myResources.SetShaderReady();
     }
 
-    return myResources.ShaderProgram;
+    return myResources.ShaderProgram();
   }
 
   Standard_EXPORT virtual void Render  (const Handle(OpenGl_Workspace)& theWorkspace) const;
   Standard_EXPORT virtual void Release (OpenGl_Context* theContext);
 
-protected: //! @name ordinary aspect properties
-
-  TEL_COLOUR                      myColor;
-  Aspect_TypeOfMarker             myType;
-  Standard_ShortReal              myScale;
-  mutable Standard_ShortReal      myMarkerSize;
-  Handle(Graphic3d_MarkerImage)   myMarkerImage;
-  Handle(Graphic3d_ShaderProgram) myShaderProgram;
-
-protected: //! @name OpenGl resources
+protected:
 
   //! OpenGl resources
   mutable struct Resources
   {
   public:
 
-    Resources() :
-        SpriteKey (""),
-        SpriteAKey (""),
-        myIsSpriteReady (Standard_False),
-        myIsShaderReady (Standard_False) {}
+    //! Empty constructor.
+    Resources()
+    : myIsSpriteReady (Standard_False),
+      myIsShaderReady (Standard_False) {}
+
+    const Handle(OpenGl_TextureSet)&    Sprite()  const { return mySprite; }
+    const Handle(OpenGl_TextureSet)&    SpriteA() const { return mySpriteA; }
+    const Handle(OpenGl_ShaderProgram)& ShaderProgram() const { return myShaderProgram; }
 
     Standard_Boolean IsSpriteReady() const { return myIsSpriteReady; }
     Standard_Boolean IsShaderReady() const { return myIsShaderReady; }
     void SetSpriteReady() { myIsSpriteReady = Standard_True; }
     void SetShaderReady() { myIsShaderReady = Standard_True; }
-    void ResetSpriteReadiness() { myIsSpriteReady = Standard_False; }
-    void ResetShaderReadiness() { myIsShaderReady = Standard_False; }
 
+    //! Update texture resource up-to-date state.
+    Standard_EXPORT void UpdateTexturesRediness (const Handle(Graphic3d_AspectMarker3d)& theAspect,
+                                                 Standard_ShortReal& theMarkerSize);
+
+    //! Update shader resource up-to-date state.
+    Standard_EXPORT void UpdateShaderRediness (const Handle(Graphic3d_AspectMarker3d)& theAspect);
+
+    //! Release texture resource.
+    Standard_EXPORT void ReleaseTextures (OpenGl_Context* theCtx);
+
+    //! Release shader resource.
+    Standard_EXPORT void ReleaseShaders (OpenGl_Context* theCtx);
+
+    //! Build texture resources.
     Standard_EXPORT void BuildSprites (const Handle(OpenGl_Context)&        theCtx,
                                        const Handle(Graphic3d_MarkerImage)& theMarkerImage,
                                        const Aspect_TypeOfMarker            theType,
                                        const Standard_ShortReal             theScale,
-                                       const TEL_COLOUR&                    theColor,
+                                       const Graphic3d_Vec4&                theColor,
                                        Standard_ShortReal&                  theMarkerSize);
 
+    //! Build shader resources.
     Standard_EXPORT void BuildShader (const Handle(OpenGl_Context)&          theCtx,
                                       const Handle(Graphic3d_ShaderProgram)& theShader);
 
-    Standard_EXPORT void SpriteKeys (const Handle(Graphic3d_MarkerImage)& theMarkerImage,
-                                     const Aspect_TypeOfMarker            theType,
-                                     const Standard_ShortReal             theScale,
-                                     const TEL_COLOUR&                    theColor,
-                                     TCollection_AsciiString&             theKey,
-                                     TCollection_AsciiString&             theKeyA);
+  private:
 
-    Handle(OpenGl_PointSprite)   Sprite;
-    TCollection_AsciiString      SpriteKey;
-
-    Handle(OpenGl_PointSprite)   SpriteA;
-    TCollection_AsciiString      SpriteAKey;
-
-    Handle(OpenGl_ShaderProgram) ShaderProgram;
-    TCollection_AsciiString      ShaderProgramId;
+    //! Generate resource keys for a sprite.
+    static void spriteKeys (const Handle(Graphic3d_MarkerImage)& theMarkerImage,
+                            const Aspect_TypeOfMarker            theType,
+                            const Standard_ShortReal             theScale,
+                            const Graphic3d_Vec4&                theColor,
+                            TCollection_AsciiString&             theKey,
+                            TCollection_AsciiString&             theKeyA);
 
   private:
 
-    Standard_Boolean myIsSpriteReady;
-    Standard_Boolean myIsShaderReady;
+    Handle(OpenGl_TextureSet)      mySprite;
+    Handle(OpenGl_TextureSet)      mySpriteA;
+    Handle(OpenGl_ShaderProgram)   myShaderProgram;
+    TCollection_AsciiString        myShaderProgramId;
+    Standard_Boolean               myIsSpriteReady;
+    Standard_Boolean               myIsShaderReady;
 
   } myResources;
+
+  Handle(Graphic3d_AspectMarker3d) myAspect;
+  mutable Standard_ShortReal       myMarkerSize;
 
 public:
 

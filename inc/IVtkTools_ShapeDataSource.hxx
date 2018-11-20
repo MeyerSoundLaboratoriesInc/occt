@@ -19,17 +19,19 @@
 #include <IVtkTools.hxx>
 #include <IVtkOCC_Shape.hxx>
 #include <IVtkVTK_ShapeData.hxx>
-#include <vtkInformationIdTypeKey.h>
 #include <vtkPolyDataAlgorithm.h>
-#include <vtkType.h>
-#include <vtkSmartPointer.h>
 
 class vtkIdTypeArray;
 class vtkPolyData;
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4251) // avoid warning C4251: "class needs to have dll-interface..."
+#endif
+
 //! @class IVtkTools_ShapeDataSource.
 //! @brief VTK data source for OCC shapes polygonal data.
-class IVtkTools_EXPORT IVtkTools_ShapeDataSource : public vtkPolyDataAlgorithm
+class Standard_EXPORT IVtkTools_ShapeDataSource : public vtkPolyDataAlgorithm
 {
 public:
 
@@ -91,14 +93,14 @@ protected: //! @name Internals
 protected:
 
   IVtkTools_ShapeDataSource();
-  ~IVtkTools_ShapeDataSource();
+  virtual ~IVtkTools_ShapeDataSource();
 
 private:
 
   IVtkTools_ShapeDataSource (const IVtkTools_ShapeDataSource&);
   IVtkTools_ShapeDataSource& operator= (const IVtkTools_ShapeDataSource&);
 
-private:
+protected:
 
   IVtkOCC_Shape::Handle myOccShape; //!< Shape wrapper used as an input.
   IVtkVTK_ShapeData::Handle myPolyData; //!< Polygonal representation of shape.
@@ -115,5 +117,9 @@ private:
   Standard_Boolean myIsTransformOnly;
 
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // __IVTKTOOLS_SHAPEDATA_H__

@@ -20,7 +20,7 @@
 #include <TDocStd_Document.hxx>
 #include <TDocStd_MultiTransactionManager.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(TDocStd_MultiTransactionManager,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(TDocStd_MultiTransactionManager,Standard_Transient)
 
 //=======================================================================
 //function : TDocStd_MultiTransactionManager
@@ -108,7 +108,7 @@ void TDocStd_MultiTransactionManager::OpenCommand() {
             "Can't start new application transaction while a "
             "previous one is not commited or aborted" << endl;
 #endif
-    Standard_Failure::Raise("Can't start new application transaction"
+    throw Standard_Failure("Can't start new application transaction"
                             "while a previous one is not commited or aborted");
   }
   myOpenTransaction = Standard_True;

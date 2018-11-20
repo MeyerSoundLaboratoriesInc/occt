@@ -75,6 +75,12 @@
 			<Add library="TKCAF" />
 			<Add library="TKVCAF" />
 			<Add library="TKViewerTest" />
+			<Add library="TKStd" />
+			<Add library="TKStdL" />
+			<Add library="TKBin" />
+			<Add library="TKBinL" />
+			<Add library="TKXml" />
+			<Add library="TKXmlL" />
 		</Linker>
 		<Unit filename="../../../src/DDF/DDF.cxx" />
 		<Unit filename="../../../src/DDF/DDF_AttributeBrowser.cxx" />
@@ -91,6 +97,7 @@
 		<Unit filename="../../../src/DDocStd/DDocStd_DocumentCommands.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_DrawDocument.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_MTMCommands.cxx" />
+		<Unit filename="../../../src/DDocStd/DDocStd_ShapeSchemaCommands.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_ToolsCommands.cxx" />
 		<Unit filename="../../../src/DNaming/DNaming.cxx" />
 		<Unit filename="../../../src/DNaming/DNaming_BasicCommands.cxx" />

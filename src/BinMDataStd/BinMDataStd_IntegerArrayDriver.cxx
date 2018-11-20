@@ -17,7 +17,7 @@
 #include <BinMDataStd.hxx>
 #include <BinMDataStd_IntegerArrayDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
 #include <TDataStd_IntegerArray.hxx>
@@ -30,7 +30,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_IntegerArrayDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataStd_IntegerArrayDriver::BinMDataStd_IntegerArrayDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_IntegerArray)->Name())
 {
 }
@@ -62,7 +62,7 @@ Standard_Boolean BinMDataStd_IntegerArrayDriver::Paste
   if (aLength <= 0)
     return Standard_False;
 
-  Handle(TDataStd_IntegerArray) anAtt =
+  const Handle(TDataStd_IntegerArray) anAtt =
     Handle(TDataStd_IntegerArray)::DownCast(theTarget);
   anAtt->Init(aFirstInd, aLastInd);
   TColStd_Array1OfInteger& aTargetArray = anAtt->Array()->ChangeArray1();
@@ -74,13 +74,15 @@ Standard_Boolean BinMDataStd_IntegerArrayDriver::Paste
     if (! (theSource >> aDeltaValue))
       return Standard_False;
     else
-      aDelta = (Standard_Boolean)aDeltaValue;
+      aDelta = (aDeltaValue != 0);
   }
 #ifdef OCCT_DEBUG
   else if(BinMDataStd::DocumentVersion() == -1)
     cout << "Current DocVersion field is not initialized. "  <<endl;
 #endif
   anAtt->SetDelta(aDelta);
+
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return Standard_True; 
 }
 
@@ -103,5 +105,9 @@ void BinMDataStd_IntegerArrayDriver::Paste
   theTarget << aFirstInd << aLastInd;
   Standard_Integer *aPtr = (Standard_Integer *) &aSourceArray(aFirstInd);
   theTarget.PutIntArray (aPtr, aLength);
-  theTarget << (Standard_Byte)anAtt->GetDelta(); 
+  theTarget << (Standard_Byte)(anAtt->GetDelta() ? 1 : 0);
+
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_IntegerArray::GetID()) 
+    theTarget << anAtt->ID();
 }

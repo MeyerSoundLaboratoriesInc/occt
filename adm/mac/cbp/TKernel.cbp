@@ -57,11 +57,11 @@
 		<Linker>
 			<Add library="tbb" />
 			<Add library="tbbmalloc" />
+			<Add library="dl" />
 		</Linker>
 		<Unit filename="../../../src/FSD/FSD_BinaryFile.cxx" />
 		<Unit filename="../../../src/FSD/FSD_CmpFile.cxx" />
 		<Unit filename="../../../src/FSD/FSD_File.cxx" />
-		<Unit filename="../../../src/MMgt/MMgt_TShared.cxx" />
 		<Unit filename="../../../src/OSD/OSD.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Chronometer.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Directory.cxx" />
@@ -77,9 +77,10 @@
 		<Unit filename="../../../src/OSD/OSD_MemInfo.cxx" />
 		<Unit filename="../../../src/OSD/OSD_OpenFile.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Parallel.cxx" />
+		<Unit filename="../../../src/OSD/OSD_Parallel_TBB.cxx" />
+		<Unit filename="../../../src/OSD/OSD_Parallel_Threads.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Path.cxx" />
 		<Unit filename="../../../src/OSD/OSD_PerfMeter.cxx" />
-		<Unit filename="../../../src/OSD/OSD_Printer.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Process.cxx" />
 		<Unit filename="../../../src/OSD/OSD_Protection.cxx" />
 		<Unit filename="../../../src/OSD/OSD_SharedLibrary.cxx" />
@@ -87,10 +88,8 @@
 		<Unit filename="../../../src/OSD/OSD_Timer.cxx" />
 		<Unit filename="../../../src/OSD/OSD_WNT.cxx" />
 		<Unit filename="../../../src/OSD/OSD_signal.cxx" />
-		<Unit filename="../../../src/OSD/OSD_signal_WNT.cxx" />
 		<Unit filename="../../../src/Plugin/Plugin.cxx" />
 		<Unit filename="../../../src/Quantity/Quantity_Color.cxx" />
-		<Unit filename="../../../src/Quantity/Quantity_Convert.cxx" />
 		<Unit filename="../../../src/Quantity/Quantity_Date.cxx" />
 		<Unit filename="../../../src/Quantity/Quantity_Period.cxx" />
 		<Unit filename="../../../src/Resource/Resource_ConvertUnicode.c">
@@ -100,10 +99,10 @@
 		<Unit filename="../../../src/Resource/Resource_Manager.cxx" />
 		<Unit filename="../../../src/Resource/Resource_Unicode.cxx" />
 		<Unit filename="../../../src/Standard/Standard.cxx" />
+		<Unit filename="../../../src/Standard/Standard_ArrayStreamBuffer.cxx" />
 		<Unit filename="../../../src/Standard/Standard_CLocaleSentry.cxx" />
 		<Unit filename="../../../src/Standard/Standard_CString.cxx" />
 		<Unit filename="../../../src/Standard/Standard_ErrorHandler.cxx" />
-		<Unit filename="../../../src/Standard/Standard_ErrorHandlerCallback.cxx" />
 		<Unit filename="../../../src/Standard/Standard_ExtString.cxx" />
 		<Unit filename="../../../src/Standard/Standard_Failure.cxx" />
 		<Unit filename="../../../src/Standard/Standard_GUID.cxx" />
@@ -115,11 +114,10 @@
 		<Unit filename="../../../src/Standard/Standard_OutOfMemory.cxx" />
 		<Unit filename="../../../src/Standard/Standard_Persistent.cxx" />
 		<Unit filename="../../../src/Standard/Standard_Real.cxx" />
-		<Unit filename="../../../src/Standard/Standard_SStream.cxx" />
 		<Unit filename="../../../src/Standard/Standard_ShortReal.cxx" />
+		<Unit filename="../../../src/Standard/Standard_Strtod.cxx" />
 		<Unit filename="../../../src/Standard/Standard_Transient.cxx" />
 		<Unit filename="../../../src/Standard/Standard_Type.cxx" />
-		<Unit filename="../../../src/Standard/Standard_UUID.cxx" />
 		<Unit filename="../../../src/Standard/Standard_math.cxx" />
 		<Unit filename="../../../src/Storage/Storage.cxx" />
 		<Unit filename="../../../src/Storage/Storage_BaseDriver.cxx" />
@@ -133,9 +131,7 @@
 		<Unit filename="../../../src/Storage/Storage_Schema.cxx" />
 		<Unit filename="../../../src/Storage/Storage_TypeData.cxx" />
 		<Unit filename="../../../src/Storage/Storage_TypedCallBack.cxx" />
-		<Unit filename="../../../src/Storage/Storage_stCONSTclCOM.cxx" />
 		<Unit filename="../../../src/TColStd/TColStd_HPackedMapOfInteger.cxx" />
-		<Unit filename="../../../src/TColStd/TColStd_MapIteratorOfPackedMapOfInteger.cxx" />
 		<Unit filename="../../../src/TColStd/TColStd_PackedMapOfInteger.cxx" />
 		<Unit filename="../../../src/TCollection/TCollection.cxx" />
 		<Unit filename="../../../src/TCollection/TCollection_AsciiString.cxx" />
@@ -164,12 +160,6 @@
 		<Unit filename="../../../src/Units/Units_UnitsLexicon.cxx" />
 		<Unit filename="../../../src/Units/Units_UnitsSystem.cxx" />
 		<Unit filename="../../../src/UnitsAPI/UnitsAPI.cxx" />
-		<Unit filename="../../../src/Dico/Dico_DictionaryOfInteger_0.cxx" />
-		<Unit filename="../../../src/Dico/Dico_DictionaryOfTransient_0.cxx" />
-		<Unit filename="../../../src/Dico/Dico_IteratorOfDictionaryOfInteger_0.cxx" />
-		<Unit filename="../../../src/Dico/Dico_IteratorOfDictionaryOfTransient_0.cxx" />
-		<Unit filename="../../../src/Dico/Dico_StackItemOfDictionaryOfInteger_0.cxx" />
-		<Unit filename="../../../src/Dico/Dico_StackItemOfDictionaryOfTransient_0.cxx" />
 		<Unit filename="../../../src/NCollection/NCollection_AccAllocator.cxx" />
 		<Unit filename="../../../src/NCollection/NCollection_AlignedAllocator.cxx" />
 		<Unit filename="../../../src/NCollection/NCollection_BaseAllocator.cxx" />
@@ -183,6 +173,7 @@
 		<Unit filename="../../../src/NCollection/NCollection_UtfString.cxx" />
 		<Unit filename="../../../src/NCollection/NCollection_WinHeapAllocator.cxx" />
 		<Unit filename="../../../src/Message/Message.cxx" />
+		<Unit filename="../../../src/Message/Message_Alert.cxx" />
 		<Unit filename="../../../src/Message/Message_Algorithm.cxx" />
 		<Unit filename="../../../src/Message/Message_Messenger.cxx" />
 		<Unit filename="../../../src/Message/Message_Msg.cxx" />
@@ -192,5 +183,6 @@
 		<Unit filename="../../../src/Message/Message_ProgressIndicator.cxx" />
 		<Unit filename="../../../src/Message/Message_ProgressScale.cxx" />
 		<Unit filename="../../../src/Message/Message_ProgressSentry.cxx" />
+		<Unit filename="../../../src/Message/Message_Report.cxx" />
 	</Project>
 </CodeBlocks_project_file>

@@ -2,19 +2,19 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{D4BC0B88-0D32-1495-0B34-D344E750A879}</UniqueIdentifier>
+      <UniqueIdentifier>{BCF6CF4E-01EE-0000-03E4-2E208B5A8E7C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepOffsetAPI">
-      <UniqueIdentifier>{64DA9114-0B22-02D8-0B99-586C8E3F02B6}</UniqueIdentifier>
+      <UniqueIdentifier>{40A5F404-0663-0B60-13A0-7E77C7E9E8A5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Draft">
-      <UniqueIdentifier>{CB2779D8-0695-0415-0677-E78EDB53FB83}</UniqueIdentifier>
+      <UniqueIdentifier>{A8AB2837-063C-04F8-074E-CBB129DBFEBE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepOffset">
-      <UniqueIdentifier>{A589F120-037E-031C-00C5-43E633BE41CB}</UniqueIdentifier>
+      <UniqueIdentifier>{3193E14E-074F-020B-10FB-4D1B8D4C05BC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BiTgte">
-      <UniqueIdentifier>{D1AE3370-1356-11E2-0B27-3BB5C51AC126}</UniqueIdentifier>
+      <UniqueIdentifier>{0C8F55C9-1071-0199-05B2-F177FDFC8510}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -96,7 +96,16 @@
     <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_MakeOffset.cxx">
       <Filter>Source files\BRepOffset</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_MakeOffset_1.cxx">
+      <Filter>Source files\BRepOffset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_MakeSimpleOffset.cxx">
+      <Filter>Source files\BRepOffset</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_Offset.cxx">
+      <Filter>Source files\BRepOffset</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_SimpleOffset.cxx">
       <Filter>Source files\BRepOffset</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepOffset\BRepOffset_Tool.cxx">

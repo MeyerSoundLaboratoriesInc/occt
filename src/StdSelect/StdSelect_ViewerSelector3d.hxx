@@ -25,7 +25,9 @@
 #include <Graphic3d_SequenceOfHClipPlane.hxx>
 #include <SelectMgr_ViewerSelector.hxx>
 #include <SelectMgr_Selection.hxx>
+#include <StdSelect_TypeOfSelectionImage.hxx>
 #include <NCollection_Handle.hxx>
+#include <V3d_ImageDumpOptions.hxx>
 
 class Graphic3d_Group;
 class Graphic3d_Structure;
@@ -48,7 +50,7 @@ public:
   Standard_EXPORT void SetPixelTolerance (const Standard_Integer theTolerance);
 
   //! Returns the pixel tolerance.
-  inline Standard_Integer PixelTolerance() const;
+  Standard_Integer PixelTolerance() const { return myTolerances.Tolerance(); }
 
   //! Picks the sensitive entity at the pixel coordinates of
   //! the mouse <theXPix> and <theYPix>. The selector looks for touched areas and owners.
@@ -69,6 +71,18 @@ public:
   Standard_EXPORT void Pick (const TColgp_Array1OfPnt2d& thePolyline,
                              const Handle(V3d_View)& theView);
 
+  //! Dump of detection results into image.
+  //! This method performs axis picking for each pixel in the image
+  //! and generates a color depending on picking results and selection image type.
+  //! @param theImage       result image, should be initialized
+  //! @param theView        3D view defining camera position
+  //! @param theType        type of image to define
+  //! @param thePickedIndex index of picked entity (1 means topmost)
+  Standard_EXPORT Standard_Boolean ToPixMap (Image_PixMap&                        theImage,
+                                             const Handle(V3d_View)&              theView,
+                                             const StdSelect_TypeOfSelectionImage theType,
+                                             const Standard_Integer               thePickedIndex = 1);
+
   //! Displays sensitives in view <theView>.
   Standard_EXPORT void DisplaySensitive (const Handle(V3d_View)& theView);
   
@@ -83,18 +97,21 @@ public:
 
   DEFINE_STANDARD_RTTIEXT(StdSelect_ViewerSelector3d,SelectMgr_ViewerSelector)
 
-private:
+protected:
 
-  void ComputeSensitivePrs (const Handle(Graphic3d_Structure)& theStructure,
-                            const Handle(SelectMgr_Selection)& theSel,
-                            const gp_Trsf& theLoc,
-                            const Graphic3d_TransformPers& theTransPers);
+  Standard_EXPORT void computeSensitivePrs (const Handle(Graphic3d_Structure)& theStructure,
+                                            const Handle(SelectMgr_Selection)& theSel,
+                                            const gp_Trsf& theLoc,
+                                            const Handle(Graphic3d_TransformPers)& theTrsfPers);
+
+  //! Update z-layers order map.
+  Standard_EXPORT void updateZLayers (const Handle(V3d_View)& theView);
+
+protected:
 
   Graphic3d_SequenceOfStructure myStructs;
 };
 
 DEFINE_STANDARD_HANDLE(StdSelect_ViewerSelector3d, SelectMgr_ViewerSelector)
-
-#include <StdSelect_ViewerSelector3d.lxx>
 
 #endif

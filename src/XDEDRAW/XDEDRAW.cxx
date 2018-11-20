@@ -50,17 +50,18 @@
 #include <TDF_LabelSequence.hxx>
 #include <TDF_Reference.hxx>
 #include <TDF_Tool.hxx>
+#include <TDocStd_Application.hxx>
 #include <TDocStd_Document.hxx>
 #include <TDocStd_Owner.hxx>
 #include <TNaming_NamedShape.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TPrsStd_AISPresentation.hxx>
 #include <TPrsStd_AISViewer.hxx>
+#include <TPrsStd_DriverTable.hxx>
 #include <TPrsStd_NamedShapeDriver.hxx>
 #include <V3d_View.hxx>
 #include <V3d_Viewer.hxx>
 #include <ViewerTest.hxx>
-#include <XCAFApp_Application.hxx>
 #include <XCAFDoc.hxx>
 #include <XCAFDoc_Area.hxx>
 #include <XCAFDoc_Centroid.hxx>
@@ -85,16 +86,16 @@
 #include <XDEDRAW_Props.hxx>
 #include <XDEDRAW_Shapes.hxx>
 #include <XDEDRAW_GDTs.hxx>
+#include <XDEDRAW_Views.hxx>
+#include <XDEDRAW_Notes.hxx>
 #include <XSDRAW.hxx>
 #include <XSDRAWIGES.hxx>
 #include <XSDRAWSTEP.hxx>
 
+#include <BinXCAFDrivers.hxx>
+#include <XmlXCAFDrivers.hxx>
+
 #include <stdio.h>
-#define ZVIEW_SIZE 1000000.0
-// avoid warnings on 'extern "C"' functions returning C++ classes
-#ifdef _MSC_VER
-#pragma warning(4:4190)
-#endif
 
 //=======================================================================
 // Section: General commands
@@ -110,9 +111,7 @@ static Standard_Integer newDoc (Draw_Interpretor& di, Standard_Integer argc, con
 
   Handle(TDocStd_Document) D;
   Handle(DDocStd_DrawDocument) DD;
-  Handle(TDocStd_Application) A;
-
-  if (!DDocStd::Find(A)) return 1;
+  Handle(TDocStd_Application) A = DDocStd::GetApplication();
 
   if (!DDocStd::GetDocument(argv[1],D,Standard_False)) {
     A->NewDocument(  "BinXCAF"  ,D);
@@ -135,8 +134,7 @@ static Standard_Integer newDoc (Draw_Interpretor& di, Standard_Integer argc, con
 static Standard_Integer saveDoc (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
   Handle(TDocStd_Document) D;
-  Handle(TDocStd_Application) A;
-  if (!DDocStd::Find(A)) return 1;
+  Handle(TDocStd_Application) A = DDocStd::GetApplication();
 
   if (argc == 1) {
     if (A->NbDocuments() < 1) return 1;
@@ -146,16 +144,46 @@ static Standard_Integer saveDoc (Draw_Interpretor& di, Standard_Integer argc, co
     if (!DDocStd::GetDocument(argv[1],D)) return 1;
   }
 
-  if (argc == 3 ) {
+  PCDM_StoreStatus aStatus = PCDM_SS_Doc_IsNull;
+  if (argc == 3)
+  {
     TCollection_ExtendedString path (argv[2]);
-    A->SaveAs(D,path);
-    return 0;
+    aStatus = A->SaveAs (D, path);
   }
-  if (!D->IsSaved()) {
-    di << "this document has never been saved\n";
+  else if (!D->IsSaved())
+  {
+    std::cout << "Storage error: this document has never been saved\n";
     return 1;
   }
-  A->Save(D);
+  else
+  {
+    aStatus = A->Save(D);
+  }
+
+  switch (aStatus)
+  {
+    case PCDM_SS_OK:
+      break;
+    case PCDM_SS_DriverFailure:
+      di << "Storage error: driver failure\n";
+      break;
+    case PCDM_SS_WriteFailure:
+      di << "Storage error: write failure\n";
+      break;
+    case PCDM_SS_Failure:
+      di << "Storage error: general failure\n";
+      break;
+    case PCDM_SS_Doc_IsNull:
+      di << "Storage error: document is NULL\n";
+      break;
+    case PCDM_SS_No_Obj:
+      di << "Storage error: no object\n";
+      break;
+    case PCDM_SS_Info_Section_Error:
+      di << "Storage error: section error\n";
+      break;
+  }
+
   return 0;
 }
 
@@ -167,10 +195,7 @@ static Standard_Integer openDoc (Draw_Interpretor& di, Standard_Integer argc, co
 {
   Handle(TDocStd_Document) D;
   Handle(DDocStd_DrawDocument) DD;
-  Handle(TDocStd_Application) A;
-
-  if ( !DDocStd::Find(A) )
-    return 1;
+  Handle(TDocStd_Application) A = DDocStd::GetApplication();
 
   if ( argc != 3 )
   {
@@ -279,21 +304,49 @@ static void StatAssembly(const TDF_Label L,
     NbAreaProp++;
   }
   Handle(XCAFDoc_ColorTool) CTool = XCAFDoc_DocumentTool::ColorTool(aDoc->Main());
-  Quantity_Color col;
+  Handle(XCAFDoc_LayerTool) LTool = XCAFDoc_DocumentTool::LayerTool(aDoc->Main());
+  Quantity_ColorRGBA col;
   Standard_Boolean IsColor = Standard_False;
+  Standard_Boolean IsByLayer = Standard_False;
   if(CTool->GetColor(L,XCAFDoc_ColorGen,col))
     IsColor = Standard_True;
   else if(CTool->GetColor(L,XCAFDoc_ColorSurf,col))
     IsColor = Standard_True;
   else if(CTool->GetColor(L,XCAFDoc_ColorCurv,col))
     IsColor = Standard_True;
-  if(IsColor) {
-    TCollection_AsciiString Entry1;
-    Entry1 = col.StringName(col.Name());
-    if(PrintStructMode) di<<"Color("<<Entry1.ToCString()<<") ";
-    NbShapesWithColor++;
+  else if(CTool->IsColorByLayer(L))
+    IsByLayer = Standard_True;
+  if(IsColor || IsByLayer) {
+    if(IsByLayer)
+    {
+      Handle(TColStd_HSequenceOfExtendedString) aLayerS;
+      LTool->GetLayers(L, aLayerS);
+      // Currently for DXF pnly, thus
+      // only 1 Layer should be.
+      if(aLayerS->Length() == 1)
+      {
+        TDF_Label aLayer = LTool->FindLayer (aLayerS->First());
+        Quantity_ColorRGBA aColor;
+        if (CTool->GetColor (aLayer, XCAFDoc_ColorGen, aColor))
+        {
+          TCollection_AsciiString aColorName = aColor.GetRGB().StringName(aColor.GetRGB().Name());
+          di<<"Color(" << aColorName.ToCString() << ") ";
+        }
+        else
+        {
+          di<<"Color(ByLayer) ";
+        }
+      }
+      NbShapesWithColor++;
+    }
+    else
+    {
+      TCollection_AsciiString Entry1;
+      Entry1 = col.GetRGB().StringName(col.GetRGB().Name());
+      if(PrintStructMode) di<<"Color("<<Entry1.ToCString()<<" "<<col.Alpha()<<") ";
+      NbShapesWithColor++;
+    }
   }
-  Handle(XCAFDoc_LayerTool) LTool = XCAFDoc_DocumentTool::LayerTool(aDoc->Main());
   Handle(TColStd_HSequenceOfExtendedString) aLayerS;
   LTool->GetLayers(L, aLayerS);
   if(!aLayerS.IsNull() && aLayerS->Length()>0) {
@@ -488,11 +541,6 @@ static Standard_Integer show (Draw_Interpretor& di, Standard_Integer argc, const
     aDocViewer = TPrsStd_AISViewer::New (aRoot, ViewerTest::GetAISContext());
   }
 
-  //szv:CAX-TRJ7 c2-pe-214.stp was clipped
-  aDocViewer->GetInteractiveContext()->CurrentViewer()->InitActiveViews();
-  aDocViewer->GetInteractiveContext()->CurrentViewer()->ActiveView()->SetZSize(ZVIEW_SIZE);
-  //DDF::ReturnLabel(di,viewer->Label());
-
   // collect sequence of labels to display
   Handle(XCAFDoc_ShapeTool) shapes = XCAFDoc_DocumentTool::ShapeTool (aDoc->Main());
   TDF_LabelSequence seq;
@@ -552,10 +600,11 @@ static Standard_Integer xwd (Draw_Interpretor& di, Standard_Integer argc, const 
     return 1;
   }
 
-  Handle(V3d_Viewer) viewer = IC->CurrentViewer();
-  viewer->InitActiveViews();
-  if ( viewer->MoreActiveViews() ) {
-    viewer->ActiveView()->Dump ( argv[2] );
+  Handle(V3d_Viewer) aViewer = IC->CurrentViewer();
+  V3d_ListOfViewIterator aViewIter = aViewer->ActiveViewIterator();
+  if (aViewIter.More())
+  {
+    aViewIter.Value()->Dump ( argv[2] );
   }
   else {
     di << "Cannot find an active view in a viewer " << argv[1] << "\n";
@@ -703,10 +752,10 @@ static Standard_Integer XAttributeValue (Draw_Interpretor& di, Standard_Integer 
   }
   else if ( att->IsKind(STANDARD_TYPE(XCAFDoc_Color)) ) {
     Handle(XCAFDoc_Color) val = Handle(XCAFDoc_Color)::DownCast ( att );
-    Quantity_Color C = val->GetColor();
+    Quantity_ColorRGBA C = val->GetColorRGBA();
     char string[260];
-    Sprintf ( string, "%s (%g, %g, %g)", C.StringName ( C.Name() ),
-	      C.Red(), C.Green(), C.Blue() );
+    Sprintf ( string, "%s (%g, %g, %g, %g)", C.GetRGB().StringName ( C.GetRGB().Name() ),
+      C.GetRGB().Red(), C.GetRGB().Green(), C.GetRGB().Blue(), C.Alpha());
     di << string;
   }
   else if ( att->IsKind(STANDARD_TYPE(XCAFDoc_DimTol)) ) {
@@ -770,6 +819,18 @@ static Standard_Integer XAttributeValue (Draw_Interpretor& di, Standard_Integer 
     }
     else if ( att->ID() == XCAFDoc::GeomToleranceRefGUID() ){
       type = "GeomTolerance Link";
+    }
+    else if ( att->ID() == XCAFDoc::DatumRefGUID() ){
+      type = "Datum Link";
+    }
+    else if (att->ID() == XCAFDoc::ViewRefShapeGUID()){
+      type = "View Shape Link";
+    }
+    else if (att->ID() == XCAFDoc::ViewRefGDTGUID()){
+      type = "View GD&T Link";
+    }
+    else if (att->ID() == XCAFDoc::ViewRefPlaneGUID()) {
+      type = "View Clipping Plane Link";
     }
     else return 0;
 
@@ -959,11 +1020,11 @@ static Standard_Integer XShowFaceBoundary (Draw_Interpretor& di,
   const Handle(Prs3d_Drawer)& aDrawer = anInteractive->Attributes ();
 
   // default attributes
-  Quantity_Parameter aRed      = 0.0;
-  Quantity_Parameter aGreen    = 0.0;
-  Quantity_Parameter aBlue     = 0.0;
-  Standard_Real      aWidth    = 1.0;
-  Aspect_TypeOfLine  aLineType = Aspect_TOL_SOLID;
+  Standard_Real aRed   = 0.0;
+  Standard_Real aGreen = 0.0;
+  Standard_Real aBlue  = 0.0;
+  Standard_Real aWidth = 1.0;
+  Aspect_TypeOfLine aLineType = Aspect_TOL_SOLID;
   
   // turn boundaries on/off
   Standard_Boolean isBoundaryDraw = (Draw::Atoi (argv[3]) == 1);
@@ -987,13 +1048,9 @@ static Standard_Integer XShowFaceBoundary (Draw_Interpretor& di,
   // select appropriate line type
   if (argc == 9)
   {
-    switch (Draw::Atoi (argv[8]))
+    if (!ViewerTest::ParseLineType (argv[8], aLineType))
     {
-      case 1: aLineType = Aspect_TOL_DASH;    break;
-      case 2: aLineType = Aspect_TOL_DOT;     break;
-      case 3: aLineType = Aspect_TOL_DOTDASH; break;
-      default:
-        aLineType = Aspect_TOL_SOLID;
+      std::cout << "Syntax error: unknown line type '" << argv[8] << "'\n";
     }
   }
 
@@ -1004,7 +1061,7 @@ static Standard_Integer XShowFaceBoundary (Draw_Interpretor& di,
 
   aDrawer->SetFaceBoundaryAspect (aBoundaryAspect);
 
-  aContext->Redisplay (anInteractive);
+  aContext->Redisplay (anInteractive, Standard_True);
   
   return 0;
 }
@@ -1026,10 +1083,10 @@ static Standard_Integer testDoc (Draw_Interpretor&,
   if( shape.IsNull())
     return 1;
  
-  Handle(XCAFApp_Application) A = XCAFApp_Application::GetApplication();
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
  
   Handle(TDocStd_Document) aD1 = new TDocStd_Document("BinXCAF");
-  aD1->Open(A);
+  aD1->Open(anApp);
   
   TCollection_AsciiString  aViewName ("Driver1/DummyDocument/View1");
   ViewerTest::ViewerInit (0, 0, 0, 0, aViewName.ToCString(), "");
@@ -1069,26 +1126,24 @@ static Standard_Integer testDoc (Draw_Interpretor&,
 
 void XDEDRAW::Init(Draw_Interpretor& di)
 {
-
   static Standard_Boolean initactor = Standard_False;
-  if (initactor) return;  initactor = Standard_True;
+  if (initactor)
+  {
+    return;
+  }
+  initactor = Standard_True;
 
   // Load static variables for STEPCAF (ssv; 16.08.2012)
   STEPCAFControl_Controller::Init();
 
-  // OCAF *** szy: use <pload> command
+  // Initialize XCAF formats
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
+  BinXCAFDrivers::DefineFormat(anApp);
+  XmlXCAFDrivers::DefineFormat(anApp);
 
-//  DDF::AllCommands(di);
-//  DNaming::AllCommands(di);
-//  DDataStd::AllCommands(di);
-//  DPrsStd::AllCommands(di);
-  //DFunction::AllCommands(di);
-//  DDocStd::AllCommands(di);
-
-//  ViewerTest::Commands (di); *** szy: use <pload> command
-
-  // init XCAF application (if not yet done)
-  XCAFApp_Application::GetApplication();
+  // Register driver in global table for displaying XDE documents 
+  // in 3d viewer using OCAF mechanics
+  TPrsStd_DriverTable::Get()->AddDriver (XCAFPrs_Driver::GetID(), new XCAFPrs_Driver);
 
   //=====================================
   // General commands
@@ -1144,6 +1199,8 @@ void XDEDRAW::Init(Draw_Interpretor& di)
   XDEDRAW_Layers::InitCommands ( di );
   XDEDRAW_Props::InitCommands ( di );
   XDEDRAW_GDTs::InitCommands ( di );
+  XDEDRAW_Views::InitCommands(di);
+  XDEDRAW_Notes::InitCommands(di);
   XDEDRAW_Common::InitCommands ( di );//moved from EXE
 
 }

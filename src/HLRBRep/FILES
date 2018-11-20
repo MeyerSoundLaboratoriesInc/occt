@@ -9,12 +9,8 @@ HLRBRep_Array1OfFData.hxx
 HLRBRep_BCurveTool.cxx
 HLRBRep_BCurveTool.hxx
 HLRBRep_BCurveTool.lxx
-HLRBRep_BiPnt2D.cxx
 HLRBRep_BiPnt2D.hxx
-HLRBRep_BiPnt2D.lxx
-HLRBRep_BiPoint.cxx
 HLRBRep_BiPoint.hxx
-HLRBRep_BiPoint.lxx
 HLRBRep_BSurfaceTool.cxx
 HLRBRep_BSurfaceTool.hxx
 HLRBRep_BSurfaceTool.lxx
@@ -22,7 +18,6 @@ HLRBRep_CInter.hxx
 HLRBRep_CInter_0.cxx
 HLRBRep_CLProps.hxx
 HLRBRep_CLProps_0.cxx
-HLRBRep_CLPropsATool.cxx
 HLRBRep_CLPropsATool.hxx
 HLRBRep_CLPropsATool.lxx
 HLRBRep_Curve.cxx
@@ -67,7 +62,6 @@ HLRBRep_InternalAlgo.cxx
 HLRBRep_InternalAlgo.hxx
 HLRBRep_Intersector.cxx
 HLRBRep_Intersector.hxx
-HLRBRep_LineTool.cxx
 HLRBRep_LineTool.hxx
 HLRBRep_LineTool.lxx
 HLRBRep_ListIteratorOfListOfBPnt2D.hxx
@@ -92,7 +86,6 @@ HLRBRep_ShapeToHLR.cxx
 HLRBRep_ShapeToHLR.hxx
 HLRBRep_SLProps.hxx
 HLRBRep_SLProps_0.cxx
-HLRBRep_SLPropsATool.cxx
 HLRBRep_SLPropsATool.hxx
 HLRBRep_SLPropsATool.lxx
 HLRBRep_Surface.cxx

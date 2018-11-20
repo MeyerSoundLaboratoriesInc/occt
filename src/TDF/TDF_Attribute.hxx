@@ -21,7 +21,7 @@
 
 #include <TDF_LabelNodePtr.hxx>
 #include <Standard_Integer.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Boolean.hxx>
 #include <Standard_OStream.hxx>
 #include <TDF_AttributeIndexedMap.hxx>
@@ -43,7 +43,7 @@ class TDF_IDFilter;
 
 
 class TDF_Attribute;
-DEFINE_STANDARD_HANDLE(TDF_Attribute, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(TDF_Attribute, Standard_Transient)
 
 //! A class each application has to implement. It is
 //! used to contain the application data.
@@ -132,7 +132,7 @@ DEFINE_STANDARD_HANDLE(TDF_Attribute, MMgt_TShared)
 //! attribute values states.  These methods must be
 //! implemented by end use inheriting classes, to
 //! profit from the delta services.
-class TDF_Attribute : public MMgt_TShared
+class TDF_Attribute : public Standard_Transient
 {
 
 public:
@@ -140,7 +140,14 @@ public:
   
   //! Returns the ID of the attribute.
   Standard_EXPORT virtual const Standard_GUID& ID() const = 0;
-  
+
+  //! Sets specific ID of the attribute (supports several attributes 
+  //! of one type at the same label feature).
+  virtual void SetID (const Standard_GUID& /*theGuid*/) {}
+
+  //! Sets default ID defined in nested class (to be used for attributes having User ID feature).
+  virtual void SetID() {}
+
   //! Returns   the   label to which  the   attribute is
   //! attached. If the  label is not  included in a  DF,
   //! the label is null. See Label.
@@ -373,7 +380,7 @@ friend class TDF_AttributeIterator;
 friend class TDF_DeltaOnForget;
 
 
-  DEFINE_STANDARD_RTTIEXT(TDF_Attribute,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(TDF_Attribute,Standard_Transient)
 
 protected:
 

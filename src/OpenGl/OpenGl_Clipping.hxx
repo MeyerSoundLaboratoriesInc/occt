@@ -16,16 +16,12 @@
 #ifndef _OpenGl_Clipping_H__
 #define _OpenGl_Clipping_H__
 
-#include <Aspect_GenId.hxx>
-#include <Graphic3d_ClipPlane.hxx>
 #include <Graphic3d_SequenceOfHClipPlane.hxx>
-#include <NCollection_DataMap.hxx>
-#include <NCollection_Handle.hxx>
+#include <NCollection_Vector.hxx>
 #include <Standard_TypeDef.hxx>
-#include <OpenGl_Matrix.hxx>
 
 class OpenGl_Context;
-class OpenGl_Workspace;
+class OpenGl_ClippingIterator;
 
 //! This class contains logics related to tracking and modification of clipping plane
 //! state for particular OpenGl context. It contains information about enabled
@@ -34,15 +30,6 @@ class OpenGl_Workspace;
 //! class.
 class OpenGl_Clipping
 {
-public:
-
-  //! Enumerates supported equation coordinate spaces.
-  enum EquationCoords
-  {
-    EquationCoords_View,
-    EquationCoords_World
-  };
-
 public: //! @name general methods
 
   //! Default constructor.
@@ -52,56 +39,55 @@ public: //! @name general methods
   //! @param theMaxPlanes [in] number of clipping planes supported by OpenGl context.
   Standard_EXPORT void Init (const Standard_Integer theMaxPlanes);
 
-public: //! @name non-modifying getters
+  //! Setup list of global (for entire view) clipping planes
+  //! and clears local plane list if it was not released before.
+  Standard_EXPORT void Reset (const Handle(OpenGl_Context)& theGlCtx,
+                              const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes);
 
-  //! Check whether the clipping plane has been added to the current context state.
-  //! @param thePlane [in] the plane to check.
-  //! @return True if plane is set.
-  inline Standard_Boolean Contains (const Handle(Graphic3d_ClipPlane)& thePlane) const
-  {
-    return myPlaneStates.IsBound (thePlane);
-  }
-
-  //! Get clip planes defined for context.
-  //! @return sequence of set clipping planes.
-  inline const Graphic3d_SequenceOfHClipPlane& Planes() const
-  {
-    return myPlanes;
-  }
-
-  //! @return kind of equation coordinate space used for the clip plane.
-  inline EquationCoords GetEquationSpace (const Handle(Graphic3d_ClipPlane)& thePlane) const
-  {
-    return myPlaneStates.Find (thePlane).CoordSpace;
-  }
-
-  //! Check whether the clipping plane has been set and enabled for the current context state.
-  //! @param thePlane [in] the plane to check.
-  //! @return True if plane is enabled.
-  inline Standard_Boolean IsEnabled (const Handle(Graphic3d_ClipPlane)& thePlane) const
-  {
-    return myPlaneStates.Find (thePlane).IsEnabled;
-  }
+  //! Setup list of local (for current object) clipping planes.
+  Standard_EXPORT void SetLocalPlanes (const Handle(OpenGl_Context)& theGlCtx,
+                                       const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes);
 
   //! @return true if there are enabled clipping planes (NOT capping)
-  inline Standard_Boolean IsClippingOn() const
-  {
-    return myNbClipping > 0;
-  }
+  Standard_Boolean IsClippingOn() const { return myNbClipping > 0; }
 
   //! @return true if there are enabled capping planes
-  inline Standard_Boolean IsCappingOn() const
-  {
-    return myNbCapping > 0;
-  }
+  Standard_Boolean IsCappingOn() const { return myNbCapping > 0; }
 
   //! @return true if there are enabled clipping or capping planes
-  inline Standard_Boolean IsClippingOrCappingOn() const
-  {
-    return (myNbClipping + myNbCapping) > 0;
-  }
+  Standard_Boolean IsClippingOrCappingOn() const { return (myNbClipping + myNbCapping) > 0; }
 
-public: //! @name clipping state modification commands
+  //! @return number of enabled clipping + capping planes
+  Standard_Integer NbClippingOrCappingOn() const { return myNbClipping + myNbCapping; }
+
+public: //! @name advanced method for disabling defined planes
+
+  //! Return true if some clipping planes have been temporarily disabled.
+  Standard_Boolean HasDisabled() const { return myNbDisabled > 0; }
+
+  //! Disable plane temporarily.
+  Standard_EXPORT Standard_Boolean SetEnabled (const Handle(OpenGl_Context)&  theGlCtx,
+                                               const OpenGl_ClippingIterator& thePlane,
+                                               const Standard_Boolean         theIsEnabled);
+
+  //! Temporarily disable all planes from the global (view) list, keep only local (object) list.
+  Standard_EXPORT void DisableGlobal (const Handle(OpenGl_Context)& theGlCtx);
+
+  //! Restore all temporarily disabled planes.
+  //! Does NOT affect constantly disabled planes Graphic3d_ClipPlane::IsOn().
+  Standard_EXPORT void RestoreDisabled (const Handle(OpenGl_Context)& theGlCtx);
+
+  //! Temporarily disable all planes except specified one.
+  //! Does not affect already disabled planes.
+  Standard_EXPORT void DisableAllExcept (const Handle(OpenGl_Context)&  theGlCtx,
+                                         const OpenGl_ClippingIterator& thePlane);
+
+  //! Enable back planes disabled by ::DisableAllExcept().
+  //! Keeps only specified plane enabled.
+  Standard_EXPORT void EnableAllExcept (const Handle(OpenGl_Context)&  theGlCtx,
+                                        const OpenGl_ClippingIterator& thePlane);
+
+protected: //! @name clipping state modification commands
 
   //! Add planes to the context clipping at the specified system of coordinates.
   //! This methods loads appropriate transformation matrix from workspace to
@@ -113,121 +99,88 @@ public: //! @name clipping state modification commands
   //! Otherwise the method just redirects to addLazy().
   //!
   //! @param theGlCtx [in] context to access the matrices
-  //! @param theCoordSpace [in] the equation definition space
   //! @param thePlanes [in/out] the list of planes to be added
   //! The list then provides information on which planes were really added to clipping state.
   //! This list then can be used to fall back to previous state.
-  Standard_EXPORT void add (const Handle(OpenGl_Context)&   theGlCtx,
-                            const EquationCoords&           theCoordSpace,
-                            Graphic3d_SequenceOfHClipPlane& thePlanes);
-
-  //! Add planes to the context clipping at the specified system of coordinates.
-  //! This method assumes that appropriate matrix is already set in context state.
-  //! If the number of the passed planes exceeds capabilities of OpenGl, the last planes
-  //! are simply ignored.
-  //! @param thePlanes [in/out] the list of planes to be added.
-  //! The list then provides information on which planes were really added to clipping state.
-  //! This list then can be used to fall back to previous state.
-  //! @param theCoordSpace [in] the equation definition space.
-  Standard_EXPORT void addLazy (const Handle(OpenGl_Context)&   theGlCtx,
-                                const EquationCoords&           theCoordSpace,
-                                Graphic3d_SequenceOfHClipPlane& thePlanes);
+  Standard_EXPORT void add (const Handle(OpenGl_Context)& theGlCtx,
+                            const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes,
+                            const Standard_Integer theStartIndex);
 
   //! Remove the passed set of clipping planes from the context state.
   //! @param thePlanes [in] the planes to remove from list.
-  Standard_EXPORT void Remove (const Handle(OpenGl_Context)&         theGlCtx,
-                               const Graphic3d_SequenceOfHClipPlane& thePlanes);
-
-  //! Enable or disable clipping plane in the OpenGl context.
-  //! @param thePlane [in] the plane to affect.
-  //! @param theIsEnabled [in] the state of the plane.
-  Standard_EXPORT void SetEnabled (const Handle(OpenGl_Context)&      theGlCtx,
-                                   const Handle(Graphic3d_ClipPlane)& thePlane,
-                                   const Standard_Boolean             theIsEnabled);
-
-public: //! @name Short-cuts
-
-  //! Add planes to the context clipping at the view system of coordinates.
-  //! If the number of the passed planes exceeds capabilities of OpenGl, the last planes
-  //! are simply ignored.
-  //! @param theGlCtx [in] context to access the matrices
-  //! @param thePlanes [in/out] the list of planes to be added
-  //! The list then provides information on which planes were really added to clipping state.
-  //! This list then can be used to fall back to previous state.
-  inline void AddView (const Handle(OpenGl_Context)&   theGlCtx,
-                       Graphic3d_SequenceOfHClipPlane& thePlanes)
-  {
-    add (theGlCtx, EquationCoords_View, thePlanes);
-  }
-
-  //! Add planes to the context clipping at the world system of coordinates.
-  //! If the number of the passed planes exceeds capabilities of OpenGl, the last planes
-  //! are simply ignored.
-  //! @param theGlCtx [in] context to access the matrices
-  //! @param thePlanes [in/out] the list of planes to be added
-  //! The list then provides information on which planes were really added to clipping state.
-  //! This list then can be used to fall back to previous state.
-  inline void AddWorld (const Handle(OpenGl_Context)&   theGlCtx,
-                        Graphic3d_SequenceOfHClipPlane& thePlanes)
-  {
-    add (theGlCtx, EquationCoords_World, thePlanes);
-  }
-
-  //! Add planes to the context clipping at the world system of coordinates.
-  //! If the number of the passed planes exceeds capabilities of OpenGl, the last planes
-  //! are simply ignored.
-  //! @param thePlanes [in/out] the list of planes to be added
-  //! The list then provides information on which planes were really added to clipping state.
-  //! This list then can be used to fall back to previous state.
-  inline void AddWorldLazy (const Handle(OpenGl_Context)&   theGlCtx,
-                            Graphic3d_SequenceOfHClipPlane& thePlanes)
-  {
-    addLazy (theGlCtx, EquationCoords_World, thePlanes);
-  }
-
-  //! Remove all of the planes from context state.
-  inline void RemoveAll (const Handle(OpenGl_Context)& theGlCtx)
-  {
-    Remove (theGlCtx, Planes());
-  }
+  Standard_EXPORT void remove (const Handle(OpenGl_Context)& theGlCtx,
+                               const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes,
+                               const Standard_Integer theStartIndex);
 
 private:
 
-  struct PlaneProps
-  {
-    // declare default constructor
-    // to allow compilation of template collections
-    PlaneProps() {}
-    PlaneProps (const EquationCoords theCoords,
-                const Standard_Integer theID,
-                const Standard_Boolean theIsEnabled)
-    {
-      CoordSpace = theCoords;
-      ContextID  = theID;
-      IsEnabled  = theIsEnabled;
-    }
-
-    EquationCoords   CoordSpace;
-    Standard_Integer ContextID;
-    Standard_Boolean IsEnabled;
-  };
-
-private:
-
-  typedef NCollection_DataMap<Handle(Graphic3d_ClipPlane), PlaneProps> OpenGl_MapOfPlaneStates;
-  typedef NCollection_Handle<Aspect_GenId> OpenGl_EmptyPlaneIds;
-
-  Graphic3d_SequenceOfHClipPlane myPlanes;        //!< defined clipping planes
-  OpenGl_MapOfPlaneStates        myPlaneStates;   //!< map of clip planes bound for the props
-  OpenGl_EmptyPlaneIds           myEmptyPlaneIds; //!< generator of empty ids
-  Standard_Boolean               myNbClipping;    //!< number of enabled clipping-only planes (NOT capping)
-  Standard_Boolean               myNbCapping;     //!< number of enabled capping  planes
+  Handle(Graphic3d_SequenceOfHClipPlane)   myPlanesGlobal;   //!< global clipping planes
+  Handle(Graphic3d_SequenceOfHClipPlane)   myPlanesLocal;    //!< object clipping planes
+  NCollection_Vector<Standard_Boolean>     myDisabledPlanes; //!< ids of disabled planes
+  NCollection_Vector<Standard_Boolean>     mySkipFilter;     //!< ids of planes that were disabled before calling ::DisableAllExcept()
+  Standard_Integer                         myNbClipping;     //!< number of enabled clipping-only planes (NOT capping)
+  Standard_Integer                         myNbCapping;      //!< number of enabled capping  planes
+  Standard_Integer                         myNbDisabled;     //!< number of defined but disabled planes
 
 private:
 
   //! Copying allowed only within Handles
   OpenGl_Clipping            (const OpenGl_Clipping& );
   OpenGl_Clipping& operator= (const OpenGl_Clipping& );
+
+  friend class OpenGl_ClippingIterator;
+};
+
+//! The iterator through clipping planes.
+class OpenGl_ClippingIterator
+{
+public:
+
+  //! Main constructor.
+  Standard_EXPORT OpenGl_ClippingIterator(const OpenGl_Clipping& theClipping);
+
+  //! Return true if iterator points to the valid clipping plane.
+  bool More() const { return myIter1.More() || myIter2.More(); }
+
+  //! Go to the next clipping plane.
+  void Next()
+  {
+    ++myCurrIndex;
+    if (myIter1.More())
+    {
+      myIter1.Next();
+    }
+    else
+    {
+      myIter2.Next();
+    }
+  }
+
+  //! Return true if plane has been temporarily disabled
+  //! either by Graphic3d_ClipPlane->IsOn() property or by temporary filter.
+  bool IsDisabled() const { return myDisabled->Value (myCurrIndex) || !Value()->IsOn(); }
+
+  //! Return the plane at current iterator position.
+  const Handle(Graphic3d_ClipPlane)& Value() const
+  {
+    return myIter1.More()
+         ? myIter1.Value()
+         : myIter2.Value();
+  }
+
+  //! Return true if plane from the global (view) list.
+  bool IsGlobal() const { return myIter1.More(); }
+
+  //! Return the plane index.
+  Standard_Integer PlaneIndex() const { return myCurrIndex; }
+
+private:
+
+  Graphic3d_SequenceOfHClipPlane::Iterator myIter1;
+  Graphic3d_SequenceOfHClipPlane::Iterator myIter2;
+  const NCollection_Vector<Standard_Boolean>* myDisabled;
+  Standard_Integer myCurrIndex;
+
 };
 
 #endif

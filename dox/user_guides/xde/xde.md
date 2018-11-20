@@ -13,7 +13,7 @@ Data types such as colors, layers, assembly descriptions and validation properti
 
 Finally, the XDE provides reader and writer tools for reading and writing the data supported by XCAF to and from IGES and STEP files. 
 
-@figure{/user_guides/xde/images/646_xde_11_400.png,"Shape imported using XDE"}
+@figure{/user_guides/xde/images/646_xde_11_400.png,"Shape imported using XDE",240}
 
 The XDE component requires @ref occt_user_guides__shape_healing "Shape Healing" toolkit for operation. 
 
@@ -39,12 +39,10 @@ The Document used by XDE usually starts as a *TDocStd_Document*.
 XDE supports assemblies by separating shape definitions and their locations. Shapes are simple OCAF objects without a location definition. An assembly consists of several components. Each of these components references one and the same specified shape with different locations. All this provides an increased flexibility in working on multi-level assemblies. 
 
 For example, a mechanical assembly can be defined as follows: 
-@image html /user_guides/xde/images/xde_image003.png "Assembly Description"
-@image latex /user_guides/xde/images/xde_image003.png "Assembly Description"
+@figure{/user_guides/xde/images/xde_image003.png,"Assembly Description",240}
 
 
-@image html /user_guides/xde/images/xde_image004.png "Assembly View"
-@image latex /user_guides/xde/images/xde_image004.png "Assembly View"
+@figure{/user_guides/xde/images/xde_image004.png,"Assembly View",240}
 
 
 XDE defines the specific organization of the assembly content. Shapes are stored on sub-labels of label 0:1:1. There can be one or more roots (called free shapes) whether they are true trees or simple shapes. A shape can be considered to be an Assembly (such as AS1 under 0:1:1:1 in Figure1) if it is defined with Components (sub-shapes, located or not). 
@@ -56,8 +54,7 @@ Validation properties are geometric characteristics of Shapes (volume, centroid,
 
 Advanced Data Exchange supports both reading and writing of validation properties, and provides a tool to check them. 
 
-@image html /user_guides/xde/images/xde_image005.png "Validation Property Descriptions" 
-@image latex /user_guides/xde/images/xde_image005.png "Validation Property Descriptions" 
+@figure{/user_guides/xde/images/xde_image005.png,"Validation Property Descriptions",240}
 
 Check logs contain deviations of computed values from the values stored in a STEP file. A typical example appears as follows: 
 
@@ -84,7 +81,7 @@ In our example, it can be seen that no errors were detected for either area, vol
 
 XDE supports reading and writing the names of shapes to and from IGES and STEP file formats. This functionality can be switched off if you do not need this type of data, thereby reducing the size of the document. 
 
-@figure{/user_guides/xde/images/614_xde_04_400.png, "Instance Names"}
+@figure{/user_guides/xde/images/614_xde_04_400.png,"Instance Names",360}
 
 @subsection occt_xde_1_6 Colors and Layers
 XDE can read and write colors and layers assigned to shapes or their subparts (down to the level of faces and edges) to and from both IGES and STEP formats. Three types of colors are defined in the enumeration *XCAFDoc_ColorType*: 
@@ -92,8 +89,61 @@ XDE can read and write colors and layers assigned to shapes or their subparts (d
   * surface color <i>(XCAFDoc_ColorSurf)</i>
   * curve color <i>(XCAFDoc_ColorCurv)</i>
   
- @figure{/user_guides/xde/images/xde_image006.png, "Colors and Layers"}
+ @figure{/user_guides/xde/images/xde_image006.png,"Colors and Layers",240}
 
+@subsection occt_xde_1_7 Geometric Dimensions & Tolerances (GD\&T)
+
+GD\&T are a type of Product and Manufacturing Information (PMI) that can be either computed automatically by a CAD system,
+or entered manually by the user. For detailed information use <a href="https://www.cax-if.org/documents/rec_pracs_pmi_v40.pdf">CAx-IF Recommended Practices
+for the Representation and Presentation of Product Manufacturing Information (PMI) (AP242)</a>
+
+XDE can read and write GD\&T data of the following types:
+* dimensions, such as distance, length, radius and so on;
+* geometric tolerances;
+* datums, i.e theoretically exact geometric references, such as point, line or plane, to which toleranced features are related.
+
+XDE supports two presentations of GD\&T data:
+* semantic presentation, i.e. data is stored in a machine-consumable way and includes all information required to understand the
+  specification without the aid of any presentation elements;
+* tessellated presentation, i.e. data is displayed in a human-readable way.
+
+@subsection occt_xde_1_8 Clipping planes
+
+XDE supports reading from STEP and storing named planes used for clipping. 
+Currently, XDE supports saving of clipping planes in XBF format only.
+
+XDE provides capabilities for adding, editing and removing clipping planes.
+
+@subsection occt_xde_1_9 Saved views
+
+XDE supports reading from STEP views. Views allow saving information about camera parameters (position, direction, zoom factor, etc.)
+and visible shapes, PMIs, used clipping planes and notes. Currently, XDE supports saving of clipping planes in XBF format only.
+
+XDE provides the following view management capabilities:
+  * add/remove views;
+  * set view camera parameters;
+  * set visible shapes, PMIs, used clipping planes and notes.
+
+@subsection occt_xde_1_10 Custom notes
+ 
+Custom notes is a kind of application-specific data attached to assembly items, their attributes and sub-shapes. Basically, there are simple textual comments, binary data and other application-specific data. Each note is provided with a timestamp and the user who created it.
+
+Notes API provides the following functionality:
+  * Returns the total number of notes and annotated items;
+  * Returns labels for all notes and annotated items;
+  * Creates notes:
+    - Comment note from a text string;
+    - Binary data note from a file or byte array;
+  * Checks if an assembly item is annotated;
+  * Finds a label for the annotated item;
+  * Returns all note labels for the annotated item;
+  * Adds a note to item(s):
+    - Assembly item;
+    - Assembly item attribute;
+    - Assembly item subshape index;
+  * Removes note(s) from an annotated assembly item; orphan note(s) might be deleted optionally (items without linked notes will be deleted automatically);
+  * Deletes note(s) and removes them from annotated items;
+  * Gets / deletes orphan notes.
 
 @section occt_xde_2 Working with XDE
 
@@ -156,14 +206,16 @@ You can then query or edit this Assembly node, the Main Item or another one (*my
 
 **Note** that for the examples in the rest of this guide, *myAssembly* is always presumed to be accessed this way, so this information will not be repeated.
 
-@subsubsection occt_xde_2_2_3 Updating the Assembly after Filling or Editing
+@subsubsection occt_xde_2_2_3 Updating the Assemblies after Filling or Editing
 Some actions in this chapter affect the content of the document, considered as an Assembly. As a result, you will sometimes need to update various representations (including the compounds). 
 
 To update the representations, use: 
 ~~~~~
-myAssembly->UpdateAssembly(aLabel); 
+myAssembly->UpdateAssemblies(); 
 ~~~~~
-Since this call is always used by the editing functions, you need not apply it for such functions. However, you will need this call if special edits, not using XCAF functions, are used on the document. 
+This call performs a top-down update of the Assembly compounds stored in the document.
+
+**Note** that you have to run this method manually to actualize your Assemblies after any low-level modifications on shapes.
 
 @subsubsection occt_xde_2_2_4 Adding or Setting Top Level Shapes
 
@@ -483,9 +535,9 @@ XCAFDoc_Volume::Set ( aLabel, volume );
 
 XDE can read and write colors and layers assigned to shapes or their subparts (down to level of faces and edges) to and from both IGES and STEP formats. 
 
-@figure{/user_guides/xde/images/239_xde_12_400.png,"Motor Head"}
+@figure{/user_guides/xde/images/239_xde_12_400.png,"Motor Head",240}
 
-In an XDE document, colors are managed by the class *XCAFDoc_ColorTool*. This is done with the same principles as for ShapeTool with Shapes, and with the same capability of having a tool on the Main Label, or on any sub-label. The Property itself is defined as an *XCAFDoc_Color*, sub-class of *TDF_Attribute*.
+In an XDE document, colors are managed by the class *XCAFDoc_ColorTool*. It works basing on the same principles as ShapeTool works with Shapes. This tool can be provided on the Main Label or on any sub-label. The Property itself is defined as an *XCAFDoc_Color*, sub-class of *TDF_Attribute*.
  
 Colors are stored in a child of the starting document label: it is the second level (0.1.2), while Shapes are at the first level. Each color then corresponds to a dedicated label, the property itself is a Quantity_Color, which has a name and value for Red, Green, Blue. A Color may be attached to Surfaces (flat colors) or to Curves (wireframe colors), or to both. A Color may be attached to a sub-shape. In such a case, the sub-shape (and its own sub-shapes) takes its own Color as a priority.
 
@@ -608,19 +660,418 @@ To remove a Color and all the references to it (so that the related shapes will 
 myColors->RemoveColor(ColLabel); 
 ~~~~~
 
+@subsection occt_xde_2_7 Geometric Dimensions & Tolerances (GD\&T)
+
+XDE can read and write GD\&T assigned to shapes or their subparts (down to the level of faces and edges) to and from STEP formats. 
+
+In an XDE document, GD\&T are managed by the class *XCAFDoc_DimTolTool*. It works basing on the same principles as ShapeTool works with Shapes. This tool can be provided on the Main Label or on any sub-label. The GD\&T entities themselves are defined as the following sub-classes of *TDF_Attribute*:
+  * *XCAFDoc_Dimension* - for dimensions;
+  * *XCAFDoc_GeomTolerance* - for geometric tolerances;
+  * *XCAFDoc_Datum* - for geometric tolerance Datums.
+A GD\&T type is identified by the attributes listed above, i.e. *XCAFDoc_DimTolTool* methods working with particular entity types check 
+for presence of the corresponding attributes in passed labels. One can use methods of *XCAFDoc_DimTolTool* beginning with 'Is' for this purpose.
+ 
+GD\&T entities are stored in a child of the starting document label 0.1.4. 
+Each GD\&T entity then corresponds to the dedicated label, the property itself is one of access classes:
+  * *XCAFDimTolObject_DimensionObject* - for dimensions;
+  * *XCAFDimTolObject_GeomToleranceObject* - for geometric tolerances;
+  * *XCAFDimTolObject_DatumObject* - for geometric tolerance Datums.
+
+GD\&Ts and Shapes are related by Graph Nodes. 
+
+These definitions are common to various exchange formats, at least for STEP. 
+
+@subsubsection occt_xde_2_7_1 Initialization
+To query, edit, or initialize a Document to handle GD\&Ts of XCAF, use: 
+~~~~~
+Handle(XCAFDoc_DimTolTool) myDimTolTool = 
+XCAFDoc_DocumentTool::DimTolTool(Doc->Main()); 
+~~~~~
+This call can be used at any time. When it is used for the first time, a relevant structure is added to the document. This definition is used for all later GD\&T calls and is not repeated for them. 
+
+@subsubsection occt_xde_2_7_2 Adding a GD\&T
+*XCAFDoc_DimTolTool* provides methods to create GD\&T 'empty' entities:
+  * *AddDimension* - for a new dimension;
+  * *AddGeomTolerance* - for a new geometric tolerance;
+  * *AddDatum* - for a new geometric tolerance datum.
+
+All methods create a sub-label for the corresponding GD\&T entity of the tool master label and attach an attribute specific for the
+created entity.
+
+Here is an example of adding a new dimension:
+~~~~~
+TDF_Label aDimLabel = myDimTolTool->AddDimension();
+if (!aDimLabel.IsNull())
+{
+  // error processing
+}
+~~~~~
+A similar approach can be used for other GD\&T types.
+
+@subsubsection occt_xde_2_7_3 Editing a GD\&T
+A newly added GD\&T entity is empty. To set its data a corresponding access object should be used as it is demonstrated
+below, where the dimension becomes a linear distance between two points.
+~~~~~
+Handle(XCAFDoc_Dimension) aDimAttr;
+aDimLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimAttr);
+if (!aDimAttr.IsNull())
+{
+  Handle(XCAFDimTolObjects_DimensionObject) aDimObject = aDimAttr->GetObject();
+  // set dimension data
+  aDimObject->SetType(XCAFDimTolObjects_DimensionType_Location_LinearDistance);
+  aDimObject->SetPoint(thePnt1);  // the first reference point
+  aDimObject->SetPoint2(thePnt2); // the second reference point
+  aDimObject->SetValue(theValue); // the distance value
+  //...
+  aDimAttr->SetObject(aDimObject);
+}
+~~~~~
+A similar approach can be used for other GD\&T types.
+
+@subsubsection occt_xde_2_7_4 Linking GD\&Ts
+To link a GD\&T entity with other OCAF labels (e.g. representing shapes) one should use the following methods:
+  * *SetDimension* - for dimensions;
+  * *SetGeomTolerance* - for geometric tolerances;
+  * *SetDatum* - for geometric tolerance datums.
+
+These methods can take a single label or a sequence of labels. All previous links will be removed.
+
+The example below demonstrates linking of a dimension to sequences of shape labels:
+~~~~~
+TDF_LabelSequence aShapes1, aShapes2;
+aShapes1.Append(aShape11);
+//...
+aShapes2.Append(aShape21);
+//...
+aDGTTool->SetDimension(aShapes1, aShapes2, aDimLabel);
+~~~~~
+
+In addition, a special method *SetDatumToGeomTol* should be used to link a datum with a geometric tolerance.
+
+@subsubsection occt_xde_2_7_5 Finding GD\&Ts and reference shapes
+
+*XCAFDimTolObjects_Tool* class provides basic capabilities for searching GD\&Ts linked to shapes.
+The tool provides sequences of dimensions, geometric tolerances and datums linked with a shape. A series of related datums is also returned for geometric tolerances.
+
+To get reference shapes for a GD\&T entity one can use *GetRefShapeLabel* from *XCAFDoc_DimTolTool*.
+
+*XCAFDoc_DimTolTool* provides methods to get lists of all dimensions, geometric tolerances and datums.
+
+@subsubsection occt_xde_2_7_6 Storing custom data
+Every GD\&T entity in XDE is represented as a label with attached attribute identifying entity type. All specific data is
+stored in sub-labels in standard OCAF attributes, such as *TDataStd_Integer*, *TDataStd_IntegerArray*, *TDataStd_RealArray* and so on.
+Sub-label tags are reserved for internal use and cannot be used for storing custom data. The following tag ranges are reserved for
+GD\&T entities:
+  * 1 - 17 - for dimensions;
+  * 1 - 17 - for geometric tolerances;
+  * 1 - 19 - for datums.
+Custom data can be stored in labels with tags beyond the ranges listed above.
+
+@subsection occt_xde_2_8 Clipping planes
+
+In an XDE document, Clipping planes are managed by the class *XCAFDoc_ClippingPlaneTool*. It works basing on the same principles as ShapeTool works with Shapes. This tool can be provided on the Main Label or on any sub-label. Clipping planes are stored in a child of the starting document label 0.1.8, where planes themselves are defined as *TDataXtd_Plane* attribute. *TDataStd_Name* attribute is used for naming.
+
+To query, edit, or initialize a Document to handle clipping planes of XCAF, use: 
+~~~~~
+Handle(XCAFDoc_ClippingPlaneTool) myClipPlaneTool = 
+XCAFDoc_DocumentTool::ClippingPlaneTool(Doc->Main()); 
+~~~~~
+This call can be used at any time. When it is used for the first time, a relevant structure is added to the document. 
+
+To add a clipping plane use one of overloaded methods *AddClippingPlane*, e.g.:
+~~~~~
+gp_Pln aPln = ...
+Standard_Boolean aCapping = ...
+TDF_Label aClipPlnLbl = myClipPlaneTool->AddClippingPlane(aPln, "Name of plane", aCapping);
+if (aClipPlnLbl.IsNull())
+{
+  // error processing
+}
+~~~~~ 
+
+To remove a plane use *RemoveClippingPlane* method, e.g.:
+~~~~~
+if (!myClipPlaneTool->RemoveClippingPlane(aClipPlnLbl))
+{
+  // not removed
+}
+~~~~~
+The plane will not be removed if it is referenced in at least one view.
+
+To change the clipping plane and its name use *UpdateClippingPlane* method, e.g.:
+~~~~~
+gp_Pln aPln = ...
+myClipPlaneTool->UpdateClippingPlane(aClipPlnLbl, aPln, "New name of plane");
+~~~~~
+
+Capping property can be changed using *SetCapping* method, e.g.:
+~~~~~
+Standard_Boolean aCapping = ...
+myClipPlaneTool->SetCapping(aClipPlnLbl, aCapping);
+~~~~~
+
+*XCAFDoc_ClippingPlaneTool* can be used to get all clipping plane labels and to check if a label belongs to the *ClippingPlane table*, e.g.:
+~~~~~
+TDF_LabelSequence aClipPlaneLbls;
+myClipPlaneTool->GetClippingPlanes(aClipPlaneLbls);
+...
+for (TDF_LabelSequence::Iterator anIt(aClipPlaneLbls); anIt.More(); anIt.Next())
+{
+  if (myClipPlaneTool->IsClippingPlane(anIt.Value()))
+  {
+    // the label is a clipping plane
+    gp_Pln aPln;
+    TCollection_ExtendedString aName;
+    Standard_Boolean aCapping;
+    if (!myClipPlaneTool->GetClippingPlane(anIt.Value(), aPln, aName, aCapping))
+    {
+      // error processing
+    }
+    ...
+  }
+}
+~~~~~
+
+@subsection occt_xde_2_9 Saved views
+
+In an XDE document, Views are managed by the class *XCAFDoc_ViewTool*. It works basing on the same principles as ShapeTool works with Shapes. This tool can be provided on the Main Label or on any sub-label. Views are stored in a child of the starting document label 0.1.7, where a view itself is defined as *XCAFDoc_View* sub-class of *TDF_Attribute*. Views and selected shapes, clipping planes, GD\&Ts and notes are related by Graph Nodes.
+
+To query, edit, or initialize a Document to handle views of XCAF, use: 
+~~~~~
+Handle(XCAFDoc_ViewTool) myViewTool = 
+XCAFDoc_DocumentTool::ViewTool(Doc->Main()); 
+~~~~~
+This call can be used at any time. When it is used for the first time, a relevant structure is added to the document. 
+
+To add a view use *AddView* method and an access *XCAFView_Object* object to set camera parameters, e.g.:
+~~~~~
+TDF_Label aViewLbl = myViewTool->AddView();
+if (aViewLbl.IsNull())
+{
+  // error processing
+}
+Handle(XCAFDoc_View) aViewAttr;
+aViewLbl.FindAttribute(XCAFDoc_View::GetID(), aViewAttr);
+if (!aViewAttr.IsNull())
+{
+  Handle(XCAFView_Object) aViewObject = aViewAttr->GetObject();
+  // set view data
+  aViewObject->SetType(XCAFView_ProjectionType_Parallel);
+  aViewObject->SetViewDirection(theViewDir);
+  aViewObject->SetZoomFactor(2.0);
+  ...
+  aViewAttr->SetObject(aViewObject);
+}
+~~~~~ 
+
+To set shapes, clipping planes, GD\&Ts and notes selected for the view use one of overloaded *SetView* methods of *XCAFDoc_ViewTool*. 
+To set only clipping planes one should use *SetClippingPlanes* method.
+~~~~~
+TDF_LabelSequence aShapes; ...
+TDF_LabelSequence aGDTs; ...
+myViewTool->SetView(aShapes, aGDTs, aViewLbl);
+TDF_LabelSequence aClippingPlanes; ...
+myViewTool->SetClippingPlanes(aClippingPlanes, aViewLbl);
+~~~~~
+
+To remove a view use *RemoveView* method.
+
+To get all view labels and check if a label belongs to the View table use:
+~~~~~
+TDF_LabelSequence aViewLbls;
+myViewTool->GetViewLabels(aViewLbls);
+...
+for (TDF_LabelSequence::Iterator anIt(aViewLbls); anIt.More(); anIt.Next())
+{
+  if (myViewTool->IsView(anIt.Value()))
+  {
+    // the label is a view
+    ...
+  }
+}
+~~~~~
+
+To get shapes, clipping planes, GD\&Ts or notes associated with a particular view use the following methods:
+  * *GetRefShapeLabel* - returns a sequence of associated shape labels;
+  * *GetRefGDTLabel* - returns a sequence of associated GDT labels;
+  * *GetRefClippingPlaneLabel* - returns a sequence of associated clipping plane labels;
+  * *GetRefNoteLabel* - returns a sequence of associated note labels;
+  * *GetRefAnnotationLabel* - returns a sequence of associated annotated labels.
+
+And vice versa, to get views that display a particular clipping plane, GD\&T or note use the following methods:
+  * *GetViewLabelsForShape* - returns a sequence of view labels associated with a shape;
+  * *GetViewLabelsForGDT* - returns a sequence of view labels associated with a GD\&T;
+  * *GetViewLabelsForClippingPlane* - returns a sequence of view labels associated with a clipping plane;
+  * *GetViewLabelsForNote* - returns a sequence of view labels associated with a note;
+  * *GetViewLabelsForAnnotation* - returns a sequence of view labels associated with an annotated label.
+
+@subsection occt_xde_2_10 Custom notes
+
+In an XDE document, custom notes are managed by the class *XCAFDoc_NotesTool*. 
+It works basing on the same principles as ShapeTool works with Shapes. 
+This tool can be provided on the Main Label or on any sub-label. 
+The Property itself is defined as sub-class of *XCAFDoc_Note* abstract class, which is a sub-class of *TDF_Attribute* one. 
+
+Custom notes are stored in a child of the *XCAFDoc_NotesTool* label, at label 0.1.9.1. Each note then corresponds to a dedicated label. A note may be attached to a document item identified by a label, a sub-shape identified by integer index or an attribute identified by GUID. Annotations are stored in a child of the *XCAFDoc_NotesTool* label, at label 0.1.9.2.
+Notes binding is done through *XCAFDoc_GraphNode* attribute.
+
+  @figure{/user_guides/xde/images/xde_notes001.png,"Structure of notes part of XCAF document",240}
   
-@subsection occt_xde_2_8 Reading and Writing STEP or IGES
+@subsubsection occt_xde_2_10_1 Initialization
+
+To query, edit, or initialize a Document to handle custom notes of XCAF, use: 
+~~~~~
+Handle(XCAFDoc_NotesTool) myNotes = 
+XCAFDoc_DocumentTool::NotesTool(Doc->Main ()); 
+~~~~~
+This call can be used at any time. The first time it is used, a relevant structure is added to the document. This definition is used for all later notes calls and will not be repeated for them. 
+  
+@subsubsection occt_xde_2_10_2 Creating Notes
+
+Before annotating a Document item a note must be created using one of the following methods of *XCAFDoc_NotesTool* class:
+- *CreateComment* : creates a note with a textual comment;
+- *CreateBinData* : creates a note with arbitrary binary data, e.g. contents of a file.
+
+Both methods return an instance of *XCAFDoc_Note* class.
+~~~~~
+Handle(XCAFDoc_NotesTool) myNotes = ...
+Handle(XCAFDoc_Note) myNote = myNotes->CreateComment("User", "Timestamp", "Hello, World!");
+~~~~~
+This code adds a child label to label 0.1.9.1 with *XCAFDoc_NoteComment* attribute.
+
+@subsubsection occt_xde_2_10_3 Editing a Note
+An instance of *XCAFDoc_Note* class can be used for note editing.
+One may change common note data.
+~~~~~
+myNote->Set("New User", "New Timestamp");
+~~~~~
+To change specific data one needs to down cast *myNote* handle to the appropriate sub-class:
+~~~~~
+Handle(XCAFDoc_NoteComment) myCommentNote = Handle(XCAFDoc_NoteComment)::DownCast(myNote);
+if (!myCommentNote.IsNull()) {
+  myCommentNote->Set("New comment");
+}
+~~~~~
+In order to edit auxiliary note data such as text and attachment position, plane for rendering and tesselated presentation,
+one should use a transfer object *XCAFNoteObjects_NoteObject* by GetObject and SetObject methods of *XCAFDoc_Note* class.
+*XCAFNoteObjects_NoteObject* class provides the following functionality:
+- HasPlane, GetPlane and SetPlane methods test, get and set plane for note rendering
+- HasPoint, GetPoint and SetPoint methods test, get and set note attachment position on the annotated object
+- HasPointText, GetPointText, SetPointText methods test, get and set test position
+- GetPresentation and SetPresentation methods allow to test for and specify tesselated presentation
+
+After getting, the transfer object can be edited and set back to the note:
+~~~~~
+Handle(XCAFNoteObjects_NoteObject) aNoteObj = myNote->GetObject();
+if (!aNoteObj.IsNull())
+{
+  gp_Pnt aPntTxt (...);
+  aNoteObj->SetPointText (aPntTxt);
+  TopoDS_Shape aS = ...;
+  aNoteObj->SetPresentation (aS);
+  myNote->SetObject (aNoteObj);
+}
+~~~~~
+
+@subsubsection occt_xde_2_10_4 Adding Notes
+
+Once a note has been created it can be bound to a Document item using the following *XCAFDoc_NotesTool* methods:
+- *AddNote* : binds a note to a label;
+- *AddNoteToAttr* : binds a note to a label's attribute;
+- *AddNoteToSubshape* : binds a note to a sub-shape.
+
+All methods return a pointer to *XCAFDoc_AssemblyItemRef* attribute identifying the annotated item.
+~~~~~
+Handle(XCAFDoc_NotesTool) myNotes = ...
+Handle(XCAFDoc_Note) myNote = ...
+TDF_Label theLabel; ...
+Handle(XCAFDoc_AssemblyItemRef) myRef = myNotes->AddNote(myNote->Label(), theLabel);
+Standard_GUID theAttrGUID; ...
+Handle(XCAFDoc_AssemblyItemRef) myRefAttr = myNotes->AddNoteToAttr(myNote->Label(), theAttrGUID);
+Standard_Integer theSubshape = 1;
+Handle(XCAFDoc_AssemblyItemRef) myRefSubshape = myNotes->AddNoteToSubshape(myNote->Label(), theSubshape);
+~~~~~
+This code adds three child labels with *XCAFDoc_AssemblyItemRef* attribute to label 0.1.9.2. *XCAFDoc_GraphNode* attributes are added to the child labels and note labels.
+
+@subsubsection occt_xde_2_10_5 Finding Notes
+
+To find annotation labels under label 0.1.9.2 use the following *XCAFDoc_NotesTool* methods:
+- *FindAnnotatedItem* : returns an annotation label for a label;
+- *FindAnnotatedItemAttr* : returns an annotation label for a label's attribute;
+- *FindAnnotatedItemSubshape* : returns an annotation label for a sub-shape.
+
+~~~~~
+Handle(XCAFDoc_NotesTool) myNotes = ...
+TDF_Label theLabel; ...
+TDF_Label myLabel = myNotes->FindAnnotatedItem(theLabel);
+Standard_GUID theAttrGUID; ...
+TDF_Label myLabelAttr = myNotes->FindAnnotatedItemAttr(theLabel, theAttrGUID);
+Standard_Integer theSubshape = 1;
+TDF_Label myLabelSubshape = myNotes->FindAnnotatedItemSubshape(theLabel, theSubshape);
+~~~~~
+Null label will be returned if there is no corresponding annotation.
+
+To get all notes of the Document item use the following *XCAFDoc_NotesTool* methods:
+- *GetNotes* : outputs a sequence of note labels bound to a label;
+- *GetAttrNotes* : outputs a sequence of note labels bound to a label's attribute;
+- *GetAttrSubshape* : outputs a sequence of note labels bound to a sub-shape.
+
+All these methods return the number of notes.
+~~~~~
+Handle(XCAFDoc_NotesTool) myNotes = ...
+TDF_Label theLabel; ...
+TDF_LabelSequence theNotes;
+myNotes->GetNotes(theLabel, theNotes);
+Standard_GUID theAttrGUID; ...
+TDF_LabelSequence theNotesAttr;
+myNotes->GetAttrNotes(theLabel, theAttrGUID, theNotesAttr);
+Standard_Integer theSubshape = 1;
+TDF_LabelSequence theNotesSubshape;
+myNotes->GetAttrSubshape(theLabel, theSubshape, theNotesSubshape);
+~~~~~
+
+@subsubsection occt_xde_2_10_6 Removing Notes
+
+To remove a note use one of the following *XCAFDoc_NotesTool* methods:
+- *RemoveNote* : unbinds a note from a label;
+- *RemoveAttrNote* : unbinds a note from a label's attribute;
+- *RemoveSubshapeNote* : unbinds a note from a sub-shape.
+
+~~~~~
+Handle(XCAFDoc_Note) myNote = ...
+TDF_Label theLabel; ...
+myNotes->RemoveNote(myNote->Label(), theLabel);
+Standard_GUID theAttrGUID; ...
+myRefAttr = myNotes->RemoveAttrNote(myNote->Label(), theAttrGUID);
+Standard_Integer theSubshape = 1;
+myNotes->RemoveSubshapeNote(myNote->Label(), theSubshape);
+~~~~~
+A note will not be deleted automatically.
+Counterpart methods to remove all notes are available, too.
+  
+@subsubsection occt_xde_2_10_7 Deleting Notes
+
+To delete note(s) use the following *XCAFDoc_NotesTool* methods:
+- *DeleteNote* : deletes a single note;
+- *DeleteNotes* : deletes a sequence of notes;
+- *DeleteAllNotes* : deletes all Document notes;
+- *DeleteOrphanNotes* : deletes notes not bound to Document items.
+
+All these methods except for the last one break all links with Document items as well.
+  
+@subsection occt_xde_2_11 Reading and Writing STEP or IGES
 Note that saving and restoring the document itself are standard OCAF operations. As the various previously described definitions enter into this frame, they will not be explained any further. 
 The same can be said for Viewing: presentations can be defined from Shapes and Colors. 
 
 There are several important points to consider: 
   * Previously defined Readers and Writers for dealing with Shapes only, whether Standard or Advanced, remain unchanged in their form and in their dependencies. In addition, functions other than mapping are also unchanged.
-  * XDE provides mapping with data other than Shapes. Names, Colors, Layers, Validation Properties (Centroid, Volume, Area), and Assembly Structure are hierarchic with rigid motion.
+  * XDE provides mapping with data other than Shapes. Names, Colors, Layers, GD\&T, Clipping planes, Views, Validation Properties (Centroid, Volume, Area), and Assembly Structure are hierarchic with rigid motion. Currently, Clipping planes and Views writing supported for XBF format only.
   * XDE mapping is relevant for use within the Advanced level of Data Exchanges, rather than Standard ones, because a higher level of information is better suited to a higher quality of shapes. In addition, this allows to avoid the multiplicity of combinations between various options. Note that this choice is not one of architecture but of practical usage and packaging.
   * Reader and Writer classes for XDE are generally used like those for Shapes. However, their use is adapted to manage a Document rather than a Shape.
   
 The packages to manage this are *IGESCAFControl* for IGES, and *STEPCAFControl* for STEP. 
-@subsubsection occt_xde_2_8_1 Reading a STEP file
+
+@subsubsection occt_xde_2_11_1 Reading a STEP file
 To read a STEP file by itself, use: 
 
 ~~~~~
@@ -641,7 +1092,7 @@ if ( !reader.Transfer ( doc ) ) {
 ~~~~~
 
 In addition, the reader provides methods that are applicable to document transfers and for directly querying of the data produced. 
-@subsubsection occt_xde_2_8_2 Writing a STEP file
+@subsubsection occt_xde_2_11_2 Writing a STEP file
 To write a STEP file by itself, use: 
 
 ~~~~~
@@ -662,18 +1113,19 @@ if ( ! writer.Transfer ( Doc, mode ) ) {
 IFSelect_ReturnStatus stat = writer.Write(file-name); 
 ~~~~~
 
-@subsubsection occt_xde_2_8_3 Reading an IGES File
+@subsubsection occt_xde_2_11_3 Reading an IGES File
 Use the same procedure as for a STEP file but with IGESCAFControl instead of STEPCAFControl. 
-@subsubsection occt_xde_2_8_4 Writing an IGES File
+@subsubsection occt_xde_2_11_4 Writing an IGES File
 Use the same procedure as for a STEP file but with IGESCAFControl instead of STEPCAFControl.
  
-@subsection occt_xde_2_9 Using an XDE Document
+@subsection occt_xde_2_12 Using an XDE Document
 There are several ways of exploiting XDE data from an application, you can: 
  1. Get the data relevant for the application by mapping XDE/Appli, then discard the XDE data once it has been used.
  2. Create a reference from the Application Document to the XDE Document, to have its data available as external data.
  3. Embed XDE data inside the Application Document (see the following section for details).
  4. Directly exploit XDE data such as when using file checkers.
-@subsubsection occt_xde_2_91 XDE Data inside an Application Document
+
+@subsubsection occt_xde_2_12_1 XDE Data inside an Application Document
 To have XCAF data elsewhere than under label 0.1, you use the DocLabel of XDE. The method DocLabel from XCAFDoc_DocumentTool determines the relevant Label for XCAF. However, note that the default is 0.1. 
 
 In addition, as XDE data is defined and managed in a modular way, you can consider exclusively Assembly Structure, only Colors, and so on. 
@@ -685,3 +1137,4 @@ As XDE provides an extension of the data structure, for relevant data in standar
 As a result, if an application works on Assemblies, on Colors or Layers, on Validation Properties (as defined in STEP), it can rely on all or a part of the XDE definitions, and include them in its own data structure. 
 
 In addition, if an application has a data structure far from these notions, it can get data (such as Colors and Names on Shapes) according to its needs, but without having to consider the whole. 
+

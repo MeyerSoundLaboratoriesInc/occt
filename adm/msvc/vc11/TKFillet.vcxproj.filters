@@ -2,34 +2,34 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{D7BF2E94-0637-1409-0113-08348CB1F2A1}</UniqueIdentifier>
+      <UniqueIdentifier>{5DBC4EBF-196C-004C-146D-48471532E0FA}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ChFiDS">
-      <UniqueIdentifier>{B05C3007-1411-0114-147A-AD0704A7C7A8}</UniqueIdentifier>
+      <UniqueIdentifier>{5077258B-0D7D-0E8A-14F0-F9D864EDCBCC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ChFi2d">
-      <UniqueIdentifier>{24EC0F10-0CFD-0E22-1352-5E510017F98D}</UniqueIdentifier>
+      <UniqueIdentifier>{DEBF114D-13F0-1180-0D1A-870E66C2571E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ChFi3d">
-      <UniqueIdentifier>{00CBD514-0451-1197-0A86-ADB0A929486B}</UniqueIdentifier>
+      <UniqueIdentifier>{E598EA39-0516-0BEB-0DA8-161F6266806A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ChFiKPart">
-      <UniqueIdentifier>{518F5A09-17BE-0778-0685-E2BFD6A0A72A}</UniqueIdentifier>
+      <UniqueIdentifier>{78D5D261-1740-0949-07D9-6D0C9555399A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Blend">
-      <UniqueIdentifier>{3ED78BEB-08E3-0D86-0DFF-FEF75F22ADAB}</UniqueIdentifier>
+      <UniqueIdentifier>{38ECB833-059A-035D-104E-3F63B6AB5F9A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepBlend">
-      <UniqueIdentifier>{B7EA7328-064B-00E8-0B0F-92677DC87CDF}</UniqueIdentifier>
+      <UniqueIdentifier>{118399ED-0BF7-0894-0B8E-1695B7BF2587}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BlendFunc">
-      <UniqueIdentifier>{7E2B7135-0252-1858-0FBA-FFB57AE365D1}</UniqueIdentifier>
+      <UniqueIdentifier>{38C379AA-14EC-1524-0501-0E3D55DCA032}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepFilletAPI">
-      <UniqueIdentifier>{31925667-18D0-0D48-02D9-A58F84715BDC}</UniqueIdentifier>
+      <UniqueIdentifier>{995258BE-035A-0AFA-0206-7F4E2EE5ED59}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\FilletSurf">
-      <UniqueIdentifier>{45E4F3EB-18A8-1674-1668-14E00C81423B}</UniqueIdentifier>
+      <UniqueIdentifier>{41A0C8CA-1249-0368-03DC-7CCF440BB391}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -344,9 +344,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\BlendFunc\BlendFunc_Tensor.cxx">
       <Filter>Source files\BlendFunc</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\BRepFilletAPI\BRepFilletAPI_LocalOperation.cxx">
-      <Filter>Source files\BRepFilletAPI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepFilletAPI\BRepFilletAPI_MakeChamfer.cxx">
       <Filter>Source files\BRepFilletAPI</Filter>

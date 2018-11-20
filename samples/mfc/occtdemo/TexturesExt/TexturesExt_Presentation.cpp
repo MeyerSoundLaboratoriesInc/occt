@@ -71,7 +71,6 @@ void TexturesExt_Presentation::Init()
   // initialize v3d_view so it displays TexturesExt well
   getViewer()->InitActiveViews();
   Handle(V3d_View) aView = getViewer()->ActiveView();
-  aView->SetSurfaceDetail(V3d_TEX_ALL);
   aView->SetSize(ZVIEW_SIZE);
 
   setResultTitle("Textured Shape");
@@ -107,11 +106,7 @@ void TexturesExt_Presentation::Init()
     "  // mode 3 is \"textured\" mode of AIS_TexturedShape, " EOL
     "  // other modes will display the \"normal\", non-textured shape," EOL
     "  // in wireframe(1) or shaded(2) modes correspondingly" EOL
-    "  aTShape->SetDisplayMode(3); " EOL
-    "" EOL
-    "  // V3d_TEX_ALL constant must be set as surface detail" EOL
-    "  // for current view to see AIS_TexturedShape" EOL
-    "  myCurrentView->SetSurfaceDetail(V3d_TEX_ALL);" EOL);
+    "  aTShape->SetDisplayMode(3); " EOL);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -190,12 +185,12 @@ Standard_Boolean TexturesExt_Presentation::loadShape(TopoDS_Shape& aShape,
 //================================================================
 void TexturesExt_Presentation::lightsOnOff(Standard_Boolean isOn)
 {
-  static Handle(V3d_Light) aLight1 = new V3d_DirectionalLight(getViewer(), V3d_XnegYposZneg);
-  static Handle(V3d_Light) aLight2 = new V3d_DirectionalLight(getViewer(), V3d_XnegYnegZpos);
-  static Handle(V3d_Light) aLight3 = new V3d_DirectionalLight(getViewer(), V3d_XposYnegZpos);
-  static Handle(V3d_Light) aLight4 = new V3d_DirectionalLight(getViewer(), V3d_XnegYnegZneg);
-  static Handle(V3d_Light) aLight5 = new V3d_DirectionalLight(getViewer(), V3d_XnegYposZpos);
-  static Handle(V3d_Light) aLight6 = new V3d_DirectionalLight(getViewer(), V3d_XposYposZpos);
+  static Handle(V3d_Light) aLight1 = new V3d_DirectionalLight(V3d_XnegYposZneg);
+  static Handle(V3d_Light) aLight2 = new V3d_DirectionalLight(V3d_XnegYnegZpos);
+  static Handle(V3d_Light) aLight3 = new V3d_DirectionalLight(V3d_XposYnegZpos);
+  static Handle(V3d_Light) aLight4 = new V3d_DirectionalLight(V3d_XnegYnegZneg);
+  static Handle(V3d_Light) aLight5 = new V3d_DirectionalLight(V3d_XnegYposZpos);
+  static Handle(V3d_Light) aLight6 = new V3d_DirectionalLight(V3d_XposYposZpos);
 
   if (isOn)
   {

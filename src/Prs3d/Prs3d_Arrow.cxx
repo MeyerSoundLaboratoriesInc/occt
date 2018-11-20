@@ -12,89 +12,160 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <Prs3d_Arrow.hxx>
 
+#include <gp_Ax3.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
 #include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_ArrayOfSegments.hxx>
 #include <Graphic3d_Group.hxx>
-#include <Prs3d_Arrow.hxx>
 #include <Prs3d_Presentation.hxx>
+#include <Prs3d_ToolCylinder.hxx>
+#include <Prs3d_ToolDisk.hxx>
+#include <Prs3d_ToolSphere.hxx>
 
 //=======================================================================
 //function : Draw
 //purpose  : 
 //=======================================================================
-void Prs3d_Arrow::Draw(const Handle(Prs3d_Presentation)& aPresentation,
-                       const gp_Pnt& aLocation,
-                       const gp_Dir& aDirection,
-                       const Quantity_PlaneAngle anAngle,
-                       const Quantity_Length aLength)
+void Prs3d_Arrow::Draw(const Handle(Graphic3d_Group)& theGroup,
+                       const gp_Pnt& theLocation,
+                       const gp_Dir& theDirection,
+                       const Standard_Real theAngle,
+                       const Standard_Real theLength)
 {
-  Quantity_Length dx,dy,dz;  aDirection.Coord(dx,dy,dz);
-//
-// Point of the arrow:
-  Quantity_Length xo,yo,zo;  aLocation.Coord(xo,yo,zo);
-
-// Center of the base circle of the arrow:
-  Quantity_Length xc = xo - dx * aLength;
-  Quantity_Length yc = yo - dy * aLength;
-  Quantity_Length zc = zo - dz * aLength;
-
-// Construction of i,j mark for the circle:
-  Quantity_Length xn=0., yn=0., zn=0.;
-
-  if ( Abs(dx) <= Abs(dy) && Abs(dx) <= Abs(dz)) xn=1.;
-  else if ( Abs(dy) <= Abs(dz) && Abs(dy) <= Abs(dx)) yn=1.;
-  else zn=1.;
-  Quantity_Length xi = dy * zn - dz * yn;
-  Quantity_Length yi = dz * xn - dx * zn;
-  Quantity_Length zi = dx * yn - dy * xn;
-
-  Quantity_Length Norme = sqrt ( xi*xi + yi*yi + zi*zi );
-  xi = xi / Norme; yi = yi / Norme; zi = zi/Norme;
-
-  const Quantity_Length  xj = dy * zi - dz * yi;
-  const Quantity_Length  yj = dz * xi - dx * zi;
-  const Quantity_Length  zj = dx * yi - dy * xi;
-
-  const Standard_Integer NbPoints = 15;
-
-  Handle(Graphic3d_ArrayOfSegments) aPrims1 = new Graphic3d_ArrayOfSegments(2*NbPoints);
-  Handle(Graphic3d_ArrayOfPolylines) aPrims2 = new Graphic3d_ArrayOfPolylines(NbPoints+1);
-
-  gp_Pnt p1;
-  const Standard_Real Tg=tan(anAngle);
-
-  for (Standard_Integer i = 1; i <= NbPoints ; i++)
-  {
-    const Standard_Real cosinus = cos ( 2 * M_PI / NbPoints * (i-1) );   
-    const Standard_Real sinus   = sin ( 2 * M_PI / NbPoints * (i-1) );
-
-    const gp_Pnt pp(xc + (cosinus * xi + sinus * xj) * aLength * Tg,
-                    yc + (cosinus * yi + sinus * yj) * aLength * Tg,
-                    zc + (cosinus * zi + sinus * zj) * aLength * Tg);
-
-    aPrims1->AddVertex(aLocation);
-    aPrims1->AddVertex(pp);
-    if(i==1) p1 = pp;
-    aPrims2->AddVertex(pp);
-  }
-  aPrims2->AddVertex(p1);
-
-  Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims1);
-  Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims2);
+  Handle(Graphic3d_ArrayOfSegments) aPrimitives = Prs3d_Arrow::DrawSegments(theLocation,
+                                                  theDirection, theAngle, theLength, 15);
+  theGroup->AddPrimitiveArray (aPrimitives);
 }
 
 //=======================================================================
-//function : Fill
-//purpose  : 
+//function : DrawSegments
+//purpose  :
 //=======================================================================
-
-void Prs3d_Arrow::Fill(const Handle(Prs3d_Presentation)& /*aPresentation*/,
-                       const gp_Pnt& /*aLocation*/,
-                       const gp_Dir& /*aDirection*/,
-                       const Quantity_PlaneAngle /*anAngle*/,
-                       const Quantity_Length /*aLength*/)
+Handle(Graphic3d_ArrayOfSegments) Prs3d_Arrow::DrawSegments (const gp_Pnt& theLocation,
+                                                             const gp_Dir& theDir,
+                                                             const Standard_Real theAngle,
+                                                             const Standard_Real theLength,
+                                                             const Standard_Integer theNbSegments)
 {
+  Handle(Graphic3d_ArrayOfSegments) aSegments = new Graphic3d_ArrayOfSegments (theNbSegments + 1, 2 * (2 * theNbSegments));
+
+  // center of the base circle of the arrow
+  const gp_XYZ aC = theLocation.XYZ() + theDir.XYZ() * (-theLength);
+
+  // construction of i,j mark for the circle
+  gp_Dir aN;
+  if (Abs(theDir.X()) <= Abs(theDir.Y())
+   && Abs(theDir.X()) <= Abs(theDir.Z()))
+  {
+    aN = gp::DX();
+  }
+  else if (Abs(theDir.Y()) <= Abs(theDir.Z())
+        && Abs(theDir.Y()) <= Abs(theDir.X()))
+  {
+    aN = gp::DY();
+  }
+  else
+  {
+    aN = gp::DZ();
+  }
+
+  const gp_Dir anXYZi = theDir.Crossed (aN.XYZ());
+  const gp_XYZ anXYZj = theDir.XYZ().Crossed (anXYZi.XYZ());
+  aSegments->AddVertex (theLocation);
+
+  const Standard_Real Tg = Tan (theAngle);
+  for (Standard_Integer aVertIter = 1; aVertIter <= theNbSegments; ++aVertIter)
+  {
+    const Standard_Real aCos = Cos (2.0 * M_PI / theNbSegments * (aVertIter - 1));
+    const Standard_Real aSin = Sin (2.0 * M_PI / theNbSegments * (aVertIter - 1));
+
+    const gp_Pnt pp(aC.X() + (aCos * anXYZi.X() + aSin * anXYZj.X()) * theLength * Tg,
+                    aC.Y() + (aCos * anXYZi.Y() + aSin * anXYZj.Y()) * theLength * Tg,
+                    aC.Z() + (aCos * anXYZi.Z() + aSin * anXYZj.Z()) * theLength * Tg);
+
+    aSegments->AddVertex (pp);
+  }
+
+  Standard_Integer aNbVertices = theNbSegments + 1;
+  Standard_Integer aFirstContourVertex = 2;
+  Standard_Integer anEdgeCount = 0;
+  for (Standard_Integer aVertIter = aFirstContourVertex; aVertIter <= aNbVertices; ++aVertIter)
+  {
+    aSegments->AddEdge (1);
+    aSegments->AddEdge (aVertIter);
+    ++anEdgeCount;
+  }
+  aSegments->AddEdge (aNbVertices);
+  aSegments->AddEdge (aFirstContourVertex);
+  ++anEdgeCount;
+
+  for (Standard_Integer aVertIter = aFirstContourVertex; aVertIter <= aNbVertices - 1; ++aVertIter)
+  {
+    aSegments->AddEdge (aVertIter);
+    aSegments->AddEdge (aVertIter + 1);
+    ++anEdgeCount;
+  }
+  return aSegments;
+}
+
+// ============================================================================
+// function : DrawShaded
+// purpose  :
+// ============================================================================
+Handle(Graphic3d_ArrayOfTriangles) Prs3d_Arrow::DrawShaded (const gp_Ax1&          theAxis,
+                                                            const Standard_Real    theTubeRadius,
+                                                            const Standard_Real    theAxisLength,
+                                                            const Standard_Real    theConeRadius,
+                                                            const Standard_Real    theConeLength,
+                                                            const Standard_Integer theNbFacettes)
+{
+  const Standard_Real aTubeLength = Max (0.0, theAxisLength - theConeLength);
+  const Standard_Integer aNbTrisTube = (theTubeRadius > 0.0 && aTubeLength > 0.0)
+                                     ? Prs3d_ToolCylinder::TrianglesNb (theNbFacettes, 1)
+                                     : 0;
+  const Standard_Integer aNbTrisCone = (theConeRadius > 0.0 && theConeLength > 0.0)
+                                     ? (Prs3d_ToolDisk    ::TrianglesNb (theNbFacettes, 1)
+                                      + Prs3d_ToolCylinder::TrianglesNb (theNbFacettes, 1))
+                                     : 0;
+
+  const Standard_Integer aNbTris = aNbTrisTube + aNbTrisCone;
+  if (aNbTris == 0)
+  {
+    return Handle(Graphic3d_ArrayOfTriangles)();
+  }
+
+  Handle(Graphic3d_ArrayOfTriangles) anArray = new Graphic3d_ArrayOfTriangles (aNbTris * 3, 0, Standard_True);
+  if (aNbTrisTube != 0)
+  {
+    gp_Ax3  aSystem (theAxis.Location(), theAxis.Direction());
+    gp_Trsf aTrsf;
+    aTrsf.SetTransformation (aSystem, gp_Ax3());
+
+    Prs3d_ToolCylinder aTool (theTubeRadius, theTubeRadius, aTubeLength, theNbFacettes, 1);
+    aTool.FillArray (anArray, aTrsf);
+  }
+
+  if (aNbTrisCone != 0)
+  {
+    gp_Pnt aConeOrigin = theAxis.Location().Translated (gp_Vec (theAxis.Direction().X() * aTubeLength,
+                                                                theAxis.Direction().Y() * aTubeLength,
+                                                                theAxis.Direction().Z() * aTubeLength));
+    gp_Ax3  aSystem (aConeOrigin, theAxis.Direction());
+    gp_Trsf aTrsf;
+    aTrsf.SetTransformation (aSystem, gp_Ax3());
+    {
+      Prs3d_ToolDisk aTool (0.0, theConeRadius, theNbFacettes, 1);
+      aTool.FillArray (anArray, aTrsf);
+    }
+    {
+      Prs3d_ToolCylinder aTool (theConeRadius, 0.0, theConeLength, theNbFacettes, 1);
+      aTool.FillArray (anArray, aTrsf);
+    }
+  }
+
+  return anArray;
 }

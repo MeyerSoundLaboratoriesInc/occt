@@ -63,10 +63,6 @@
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 
-//modified by NIZNHY-PKV Thu Mar 21 17:49:46 2002 f
-//#include <BRepAlgo_Cut.hxx>
-//#include <BRepAlgo_Fuse.hxx>
-//modified by NIZNHY-PKV Thu Mar 21 17:50:04 2002 t
 #ifdef OCCT_DEBUG
 extern Standard_Boolean BRepFeat_GettraceFEAT();
 #endif
@@ -177,7 +173,7 @@ void BRepFeat_MakeDPrism::Add(const TopoDS_Edge& E,
     }
   }
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
 
   for (exp.Init(myPbase,TopAbs_EDGE);exp.More();exp.Next()) {
@@ -186,7 +182,7 @@ void BRepFeat_MakeDPrism::Add(const TopoDS_Edge& E,
     }
   }
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
 
   if (!mySlface.IsBound(F)) {
@@ -258,25 +254,15 @@ void BRepFeat_MakeDPrism::Perform(const Standard_Real Height)
   // if there is no gluing -> call topological operations
   if(!myJustGluer) {
     if(myFuse == 1) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:32:17 2002 f
-      //BRepAlgo_Fuse f(mySbase, myGShape);
-      //myShape = f.Shape();
-      //UpdateDescendants(f.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Fuse f(mySbase, myGShape);
       myShape = f.Shape();
       UpdateDescendants(f, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:32:23 2002 t
       Done();
     }
     else if(myFuse == 0) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:32:57 2002 f
-      //BRepAlgo_Cut c(mySbase, myGShape);
-      //myShape = c.Shape();
-      //UpdateDescendants(c.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Cut c(mySbase, myGShape);
       myShape = c.Shape();
       UpdateDescendants(c, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:33:00 2002 t
       Done();
     }
     else {
@@ -298,11 +284,11 @@ void BRepFeat_MakeDPrism::Perform(const TopoDS_Shape& Until)
   if (trc) cout << "BRepFeat_MakeDPrism::Perform(Until)" << endl;
 #endif
   if (Until.IsNull()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   TopExp_Explorer exp(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   //  myPbase.Orientation(TopAbs_FORWARD);
 
@@ -372,35 +358,21 @@ void BRepFeat_MakeDPrism::Perform(const TopoDS_Shape& Until)
       TopoDS_Solid S = BRepFeat::Tool(mySUntil, FUntil, Or);
       if (!S.IsNull()) bB.Add(Comp,S);
 
-      //modified by NIZNHY-PKV Thu Mar 21 17:33:27 2002
-      //BRepAlgo_Cut trP(VraiDPrism,Comp);
-      //UpdateDescendants(trP.Builder(),trP.Shape(), Standard_False);
       BRepAlgoAPI_Cut trP(VraiDPrism,Comp);
       UpdateDescendants(trP, trP.Shape(), Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:33:32 2002 t
 
       TopExp_Explorer ex(trP.Shape(), TopAbs_SOLID);
       TopoDS_Shape Cutsh = ex.Current();
       if(myFuse == 1) {
-        //modified by NIZNHY-PKV Thu Mar 21 17:34:09 2002 f
-        //BRepAlgo_Fuse f(mySbase, Cutsh);
-        //myShape = f.Shape();
-        //UpdateDescendants(f.Builder(), myShape, Standard_False);
         BRepAlgoAPI_Fuse f(mySbase, Cutsh);
         myShape = f.Shape();
         UpdateDescendants(f, myShape, Standard_False);
-        //modified by NIZNHY-PKV Thu Mar 21 17:34:13 2002 t
         Done();
       }
       else if(myFuse == 0) {
-        //modified by NIZNHY-PKV Thu Mar 21 17:34:56 2002 f
-        //BRepAlgo_Cut c(mySbase, Cutsh);
-        //myShape = c.Shape();
-        //UpdateDescendants(c.Builder(), myShape, Standard_False);
         BRepAlgoAPI_Cut c(mySbase, Cutsh);
         myShape = c.Shape();
         UpdateDescendants(c, myShape, Standard_False);
-        //modified by NIZNHY-PKV Thu Mar 21 17:34:59 2002 t
         Done();
       }
       else {
@@ -434,7 +406,7 @@ void BRepFeat_MakeDPrism::Perform(const TopoDS_Shape& From,
   if (trc) cout << "BRepFeat_MakeDPrism::Perform(From,Until)" << endl;
 #endif
   if (From.IsNull() || Until.IsNull()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
 
   if (!mySkface.IsNull()) {
@@ -457,11 +429,11 @@ void BRepFeat_MakeDPrism::Perform(const TopoDS_Shape& From,
 
   TopExp_Explorer exp(From, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   exp.Init(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   mySFrom = From;
   Standard_Boolean Trff = TransformShapeFU(0);
@@ -570,32 +542,19 @@ void BRepFeat_MakeDPrism::Perform(const TopoDS_Shape& From,
       return;
     }
 
-    //modified by NIZNHY-PKV Thu Mar 21 17:35:48 2002 f
-    //BRepAlgo_Cut trP(VraiDPrism,Comp);
     BRepAlgoAPI_Cut trP(VraiDPrism,Comp);
-    //modified by NIZNHY-PKV Thu Mar 21 17:35:59 2002 t
 
     if(myFuse == 1) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:36:06 2002 f
-      //BRepAlgo_Fuse f(mySbase, trP.Shape());
-      //myShape = f.Shape();
-      //UpdateDescendants(f.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Fuse f(mySbase, trP.Shape());
       myShape = f.Shape();
       UpdateDescendants(f, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:36:33 2002 t
       Done();
     }
     //
     else if(myFuse == 0) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:37:16 2002 f
-      //BRepAlgo_Cut c(mySbase, trP.Shape());
-      //myShape = c.Shape();
-      //UpdateDescendants(c.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Cut c(mySbase, trP.Shape());
       myShape = c.Shape();
       UpdateDescendants(c, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:37:49 2002 t
       Done();
     }
     else {
@@ -652,7 +611,7 @@ void BRepFeat_MakeDPrism::PerformFromEnd(const TopoDS_Shape& Until)
   if (trc) cout << "BRepFeat_MakeDPrism::PerformFromEnd(From,Until)" << endl;
 #endif
   if (Until.IsNull()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   if (!mySkface.IsNull() && Until.IsSame(mySkface)) {
     PerformUntilEnd();
@@ -661,7 +620,7 @@ void BRepFeat_MakeDPrism::PerformFromEnd(const TopoDS_Shape& Until)
   TopExp_Explorer exp;
   exp.Init(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   //  myPbase.Orientation(TopAbs_FORWARD);
   myPerfSelection = BRepFeat_SelectionShU;
@@ -764,30 +723,17 @@ void BRepFeat_MakeDPrism::PerformFromEnd(const TopoDS_Shape& Until)
       return;
     }
 
-    //modified by NIZNHY-PKV Thu Mar 21 17:38:33 2002 f
-    //BRepAlgo_Cut trP(VraiDPrism,Comp);
     BRepAlgoAPI_Cut trP(VraiDPrism,Comp);
-    //modified by NIZNHY-PKV Thu Mar 21 17:38:37 2002 t
     if(myFuse == 1) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:40:03 2002 f
-      //BRepAlgo_Fuse f(mySbase, trP.Shape());
-      //myShape = f.Shape();
-      //UpdateDescendants(f.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Fuse f(mySbase, trP.Shape());
       myShape = f.Shape();
       UpdateDescendants(f, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:40:07 2002 t
       Done();
     }
     else if(myFuse == 0) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:40:33 2002 t
-      //BRepAlgo_Cut c(mySbase, trP.Shape());
-      //myShape = c.Shape();
-      //UpdateDescendants(c.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Cut c(mySbase, trP.Shape());
       myShape = c.Shape();
       UpdateDescendants(c, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:40:44 2002 t
       Done();
     }
     else {
@@ -835,16 +781,10 @@ void BRepFeat_MakeDPrism::PerformThruAll()
   GeneratedShapeValid();
 
   if(myFuse == 0) {
-    //modified by NIZNHY-PKV Thu Mar 21 17:46:16 2002 f
-    //BRepAlgo_Cut c(mySbase, myGShape);
     BRepAlgoAPI_Cut c(mySbase, myGShape);
-    //modified by NIZNHY-PKV Thu Mar 21 17:46:26 2002 t
     if (c.IsDone()) {
       myShape = c.Shape();
-      //modified by NIZNHY-PKV Thu Mar 21 17:46:39 2002 f
-      //UpdateDescendants(c.Builder(), myShape, Standard_False);
       UpdateDescendants(c, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:46:43 2002 t
       Done();
     }
   }
@@ -876,7 +816,7 @@ void BRepFeat_MakeDPrism::PerformUntilHeight(const TopoDS_Shape& Until,
   }
   TopExp_Explorer exp(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   //  myPbase.Orientation(TopAbs_FORWARD);
   myGluedF.Clear();
@@ -942,30 +882,17 @@ void BRepFeat_MakeDPrism::PerformUntilHeight(const TopoDS_Shape& Until,
       B.MakeCompound(TopoDS::Compound(Comp));
       TopoDS_Solid S = BRepFeat::Tool(mySUntil, FUntil, Or);
       if (!S.IsNull()) B.Add(Comp,S);
-      //modified by NIZNHY-PKV Thu Mar 21 17:47:14 2002 f
-      //BRepAlgo_Cut trP(VraiDPrism,Comp);
       BRepAlgoAPI_Cut trP(VraiDPrism,Comp);
-      //modified by NIZNHY-PKV Thu Mar 21 17:47:21 2002 t
       if(myFuse == 1) {
-        //modified by NIZNHY-PKV Thu Mar 21 17:47:42 2002 f
-        //BRepAlgo_Fuse f(mySbase, trP.Shape());
-        //myShape = f.Shape();
-        //UpdateDescendants(f.Builder(), myShape, Standard_False);
         BRepAlgoAPI_Fuse f(mySbase, trP.Shape());
         myShape = f.Shape();
         UpdateDescendants(f, myShape, Standard_False);
-        //modified by NIZNHY-PKV Thu Mar 21 17:47:49 2002 t
         Done();
       }
       else if(myFuse == 0) {
-        //modified by NIZNHY-PKV Thu Mar 21 17:48:18 2002 f
-        //BRepAlgo_Cut c(mySbase, trP.Shape());
-        //myShape = c.Shape();
-        //UpdateDescendants(c.Builder(), myShape, Standard_False);
         BRepAlgoAPI_Cut c(mySbase, trP.Shape());
         myShape = c.Shape();
         UpdateDescendants(c, myShape, Standard_False);
-        //modified by NIZNHY-PKV Thu Mar 21 17:48:26 2002 t
         Done();
       }
       else {

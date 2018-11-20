@@ -1,3 +1,4 @@
+#include <d3d9.h>
 #include <windows.h>
 
 // include required OCCT headers
@@ -38,6 +39,8 @@
 //wrapper of pure C++ classes to ref classes
 #include <NCollection_Haft.h>
 
+#include <vcclr.h>
+
 // list of required OCCT libraries
 #pragma comment(lib, "TKernel.lib")
 #pragma comment(lib, "TKMath.lib")
@@ -53,6 +56,24 @@
 #pragma comment(lib, "TKVrml.lib")
 
 #pragma comment(lib, "D3D9.lib")
+
+//! Auxiliary tool for converting C# string into UTF-8 string.
+static TCollection_AsciiString toAsciiString (String^ theString)
+{
+  if (theString == nullptr)
+  {
+    return TCollection_AsciiString();
+  }
+
+  pin_ptr<const wchar_t> aPinChars = PtrToStringChars (theString);
+  const wchar_t* aWCharPtr = aPinChars;
+  if (aWCharPtr == NULL
+  || *aWCharPtr == L'\0')
+  {
+    return TCollection_AsciiString();
+  }
+  return TCollection_AsciiString (aWCharPtr);
+}
 
 /// <summary>
 /// Proxy class encapsulating calls to OCCT C++ classes within
@@ -78,12 +99,7 @@ public:
     myGraphicDriver()->ChangeOptions().buffersNoSwap = true;
     //myGraphicDriver()->ChangeOptions().contextDebug = true;
 
-    TCollection_ExtendedString a3DName ("Visu3D");
-    myViewer() = new V3d_Viewer (myGraphicDriver(), a3DName.ToExtString(), "", 1000.0,
-                                 V3d_XposYnegZpos, Quantity_NOC_GRAY30,
-                                 V3d_ZBUFFER, V3d_GOURAUD, V3d_WAIT,
-                                 Standard_True, Standard_False);
-
+    myViewer() = new V3d_Viewer (myGraphicDriver());
     myViewer()->SetDefaultLights();
     myViewer()->SetLightOn();
     myView() = myViewer()->CreateView();
@@ -113,14 +129,14 @@ public:
   /// Make dump of current view to file
   /// </summary>
   /// <param name="theFileName">Name of dump file</param>
-  bool Dump (const char* theFileName)
+  bool Dump (const TCollection_AsciiString& theFileName)
   {
     if (myView().IsNull())
     {
       return false;
     }
     myView()->Redraw();
-    return myView()->Dump (theFileName) != Standard_False;
+    return myView()->Dump (theFileName.ToCString()) != Standard_False;
   }
 
   /// <summary>
@@ -153,6 +169,7 @@ public:
     if (!myView().IsNull())
     {
       myView()->SetComputedMode (Standard_False);
+      myView()->Redraw();
     }
   }
 
@@ -164,6 +181,7 @@ public:
     if (!myView().IsNull())
     {
       myView()->SetComputedMode (Standard_True);
+      myView()->Redraw();
     }
   }
 
@@ -185,7 +203,7 @@ public:
   /// <param name="theZoomFactor">Current zoom</param>
   void Place (int theX, int theY, float theZoomFactor)
   {	
-    Quantity_Factor aZoomFactor = theZoomFactor;
+    Standard_Real aZoomFactor = theZoomFactor;
     if (!myView().IsNull())
     {
       myView()->Place (theX, theY, aZoomFactor);
@@ -243,7 +261,7 @@ public:
   {
     if (!myAISContext().IsNull())
     {
-      myAISContext()->Select (theX1, theY1, theX2, theY2, myView());
+      myAISContext()->Select (theX1, theY1, theX2, theY2, myView(), Standard_True);
     }
   }
 
@@ -254,7 +272,7 @@ public:
   {
     if (!myAISContext().IsNull())
     {
-      myAISContext()->Select();
+      myAISContext()->Select (Standard_True);
     }
   }
 
@@ -265,7 +283,7 @@ public:
   {
     if (!myAISContext().IsNull() && !myView().IsNull())
     {
-      myAISContext()->MoveTo (theX, theY, myView());
+      myAISContext()->MoveTo (theX, theY, myView(), Standard_True);
     }
   }
 
@@ -276,7 +294,7 @@ public:
   {
     if (!myAISContext().IsNull() && !myView().IsNull())
     {
-      myAISContext()->ShiftSelect (theX1, theY1, theX2, theY2, myView());
+      myAISContext()->ShiftSelect (theX1, theY1, theX2, theY2, myView(), Standard_True);
     }
   }
 
@@ -287,7 +305,7 @@ public:
   {
     if (!myAISContext().IsNull())
     {
-      myAISContext()->ShiftSelect();
+      myAISContext()->ShiftSelect (Standard_True);
     }
   }
 
@@ -470,16 +488,15 @@ public:
     AIS_DisplayMode aCurrentMode = theMode == 0
                                  ? AIS_WireFrame
                                  : AIS_Shaded;
-    if (myAISContext()->NbCurrents() == 0
-     || myAISContext()->NbSelected() == 0)
+    if (myAISContext()->NbSelected() == 0)
     {
-       myAISContext()->SetDisplayMode (aCurrentMode);
+       myAISContext()->SetDisplayMode (aCurrentMode, Standard_False);
     }
     else
     {
-       for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+       for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
        {
-         myAISContext()->SetDisplayMode (myAISContext()->Current(), theMode, Standard_False);
+         myAISContext()->SetDisplayMode (myAISContext()->SelectedInteractive(), theMode, Standard_False);
        }
     }
     myAISContext()->UpdateCurrentViewer();
@@ -496,10 +513,11 @@ public:
     }
 
     Quantity_Color aCol (theR / 255.0, theG / 255.0, theB / 255.0, Quantity_TOC_RGB);
-    for (; myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (; myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      myAISContext()->SetColor (myAISContext()->Current(), aCol.Name());
+      myAISContext()->SetColor (myAISContext()->SelectedInteractive(), aCol, false);
     }
+    myAISContext()->UpdateCurrentViewer();
   }
 
   /// <summary>
@@ -545,16 +563,17 @@ public:
     theRed   = 255;
     theGreen = 255;
     theBlue  = 255;
-    myAISContext()->InitCurrent();
-    if (!myAISContext()->MoreCurrent())
+    myAISContext()->InitSelected();
+    if (!myAISContext()->MoreSelected())
     {
       return;
     }
 
-    Handle(AIS_InteractiveObject) aCurrent = myAISContext()->Current();
+    Handle(AIS_InteractiveObject) aCurrent = myAISContext()->SelectedInteractive();
     if (aCurrent->HasColor())
     {
-      Quantity_Color anObjCol = myAISContext()->Color (myAISContext()->Current());
+      Quantity_Color anObjCol;
+      myAISContext()->Color (aCurrent, anObjCol);
       theRed   = int(anObjCol.Red()   * 255.0);
       theGreen = int(anObjCol.Green() * 255.0);
       theBlue  = int(anObjCol.Blue()  * 255.0);
@@ -582,8 +601,8 @@ public:
       return;
     }
 
-    myAISContext()->EraseSelected (Standard_True);
-    myAISContext()->ClearCurrents();
+    myAISContext()->EraseSelected (Standard_False);
+    myAISContext()->ClearSelected (Standard_True);
   }
 
   /// <summary>
@@ -603,9 +622,9 @@ public:
     {
       return;
     }
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      myAISContext()->SetMaterial (myAISContext()->Current(), (Graphic3d_NameOfMaterial )theMaterial);
+      myAISContext()->SetMaterial (myAISContext()->SelectedInteractive(), (Graphic3d_NameOfMaterial )theMaterial, Standard_False);
     }
     myAISContext()->UpdateCurrentViewer();
   }
@@ -619,10 +638,11 @@ public:
     {
       return;
     }
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextSelected())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      myAISContext()->SetTransparency (myAISContext()->Current(), ((Standard_Real )theTrans) / 10.0);
+      myAISContext()->SetTransparency (myAISContext()->SelectedInteractive(), ((Standard_Real )theTrans) / 10.0, Standard_False);
     }
+    myAISContext()->UpdateCurrentViewer();
   }
 
   /// <summary>
@@ -634,8 +654,8 @@ public:
     {
       return false;
     }
-    myAISContext()->InitCurrent();
-    return myAISContext()->MoreCurrent() != Standard_False;
+    myAISContext()->InitSelected();
+    return myAISContext()->MoreSelected() != Standard_False;
   }
 
   /// <summary>
@@ -650,13 +670,13 @@ public:
 
     bool isOneOrMoreInShading   = false;
     bool isOneOrMoreInWireframe = false;
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      if (myAISContext()->IsDisplayed (myAISContext()->Current(), AIS_Shaded))
+      if (myAISContext()->IsDisplayed (myAISContext()->SelectedInteractive(), AIS_Shaded))
       {
         isOneOrMoreInShading = true;
       }
-      if (myAISContext()->IsDisplayed (myAISContext()->Current(), AIS_WireFrame))
+      if (myAISContext()->IsDisplayed (myAISContext()->SelectedInteractive(), AIS_WireFrame))
       {
         isOneOrMoreInWireframe = true;
       }
@@ -709,39 +729,26 @@ public:
   /// <param name="theFileName">Name of import file</param>
   bool ImportBrep (System::String^ theFileName)
   {
-    bool  isResult  = false;
-    int   aLength   = theFileName->Length;
-    char* aFilename = new char[aLength + 1];
-    for(int i = 0; i < aLength; ++i)
-    {
-      aFilename[i] = (char )theFileName->ToCharArray()[i];
-    }
-    aFilename[aLength] = '\0';
-    isResult = ImportBrep (aFilename);
-    delete[] aFilename;
-    return isResult;
+    return ImportBrep (toAsciiString (theFileName));
   }
 
   /// <summary>
   ///Import BRep file
   /// </summary>
   /// <param name="theFileName">Name of import file</param>
-  bool ImportBrep (char* theFileName)
+  bool ImportBrep (const TCollection_AsciiString& theFileName)
   {
     TopoDS_Shape aShape;
     BRep_Builder aBuilder;
-    if (!BRepTools::Read (aShape, theFileName, aBuilder))
+    if (!BRepTools::Read (aShape, theFileName.ToCString(), aBuilder))
     {
       return false;
     }
-    if (myAISContext()->HasOpenedContext())
-    {
-      myAISContext()->CloseLocalContext();
-    }
+
     Handle(AIS_Shape) aPrs = new AIS_Shape (aShape);
-    myAISContext()->SetMaterial   (aPrs, Graphic3d_NOM_GOLD);
+    myAISContext()->SetMaterial   (aPrs, Graphic3d_NOM_GOLD, Standard_False);
     myAISContext()->SetDisplayMode(aPrs, AIS_Shaded, Standard_False);
-    myAISContext()->Display (aPrs);
+    myAISContext()->Display (aPrs, Standard_True);
     return true;
   }
 
@@ -749,10 +756,10 @@ public:
   ///Import Step file
   /// </summary>
   /// <param name="theFileName">Name of import file</param>
-  bool ImportStep (char* theFileName)
+  bool ImportStep (const TCollection_AsciiString& theFileName)
   {
     STEPControl_Reader aReader;
-    if (aReader.ReadFile (theFileName) != IFSelect_RetDone)
+    if (aReader.ReadFile (theFileName.ToCString()) != IFSelect_RetDone)
     {
       return false;
     }
@@ -770,8 +777,9 @@ public:
       {
         for (int aShapeIter = 1; aShapeIter <= aNbShap; ++aShapeIter)
         {
-          myAISContext()->Display (new AIS_Shape (aReader.Shape (aShapeIter)), Standard_True);
+          myAISContext()->Display (new AIS_Shape (aReader.Shape (aShapeIter)), Standard_False);
         }
+        myAISContext()->UpdateCurrentViewer();
       }
     }
     return true;
@@ -781,10 +789,10 @@ public:
   ///Import Iges file
   /// </summary>
   /// <param name="theFileName">Name of import file</param>
-  bool ImportIges (char* theFileName)
+  bool ImportIges (const TCollection_AsciiString& theFileName)
   {
     IGESControl_Reader aReader;
-    if (aReader.ReadFile (theFileName) != IFSelect_RetDone)
+    if (aReader.ReadFile (theFileName.ToCString()) != IFSelect_RetDone)
     {
       return false;
     }
@@ -800,30 +808,30 @@ public:
   ///Export BRep file
   /// </summary>
   /// <param name="theFileName">Name of export file</param>
-  bool ExportBRep (char* theFileName)
+  bool ExportBRep (const TCollection_AsciiString& theFileName)
   {
-    myAISContext()->InitCurrent();
-    if (!myAISContext()->MoreCurrent())
+    myAISContext()->InitSelected();
+    if (!myAISContext()->MoreSelected())
     {
       return false;
     }
 
-    Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->Current());
+    Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->SelectedInteractive());
     return !anIS.IsNull()
-         && BRepTools::Write (anIS->Shape(), theFileName);
+         && BRepTools::Write (anIS->Shape(), theFileName.ToCString());
   }
 
   /// <summary>
   ///Export Step file
   /// </summary>
   /// <param name="theFileName">Name of export file</param>
-  bool ExportStep (char* theFileName)
+  bool ExportStep (const TCollection_AsciiString& theFileName)
   {
     STEPControl_StepModelType aType = STEPControl_AsIs;
     STEPControl_Writer        aWriter;
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->Current());
+      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->SelectedInteractive());
       if (anIS.IsNull())
       {
         return false;
@@ -835,21 +843,21 @@ public:
         return false;
       }
     }
-    return aWriter.Write (theFileName) == IFSelect_RetDone;
+    return aWriter.Write (theFileName.ToCString()) == IFSelect_RetDone;
   }
 
   /// <summary>
   ///Export Iges file
   /// </summary>
   /// <param name="theFileName">Name of export file</param>
-  bool ExportIges (char* theFileName)
+  bool ExportIges (const TCollection_AsciiString& theFileName)
   {
     IGESControl_Controller::Init();
     IGESControl_Writer aWriter (Interface_Static::CVal ("XSTEP.iges.unit"),
                                 Interface_Static::IVal ("XSTEP.iges.writebrep.mode"));
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->Current());
+      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->SelectedInteractive());
       if (anIS.IsNull())
       {
         return false;
@@ -859,21 +867,21 @@ public:
     }
 
     aWriter.ComputeModel();
-    return aWriter.Write (theFileName) != Standard_False;
+    return aWriter.Write (theFileName.ToCString()) != Standard_False;
   }
 
   /// <summary>
   ///Export Vrml file
   /// </summary>
   /// <param name="theFileName">Name of export file</param>
-  bool ExportVrml (char* theFileName)
+  bool ExportVrml (const TCollection_AsciiString& theFileName)
   {
     TopoDS_Compound aRes;
     BRep_Builder    aBuilder;
     aBuilder.MakeCompound (aRes);
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->Current());
+      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->SelectedInteractive());
       if (anIS.IsNull())
       {
         return false;
@@ -882,7 +890,7 @@ public:
     }
 
     VrmlAPI_Writer aWriter;
-    aWriter.Write (aRes, theFileName);
+    aWriter.Write (aRes, theFileName.ToCString());
     return true;
   }
 
@@ -890,14 +898,14 @@ public:
   ///Export Stl file
   /// </summary>
   /// <param name="theFileName">Name of export file</param>
-  bool ExportStl (char* theFileName)
+  bool ExportStl (const TCollection_AsciiString& theFileName)
   {
     TopoDS_Compound aComp;
     BRep_Builder    aBuilder;
     aBuilder.MakeCompound (aComp);
-    for (myAISContext()->InitCurrent(); myAISContext()->MoreCurrent(); myAISContext()->NextCurrent())
+    for (myAISContext()->InitSelected(); myAISContext()->MoreSelected(); myAISContext()->NextSelected())
     {
-      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->Current());
+      Handle(AIS_Shape) anIS = Handle(AIS_Shape)::DownCast (myAISContext()->SelectedInteractive());
       if (anIS.IsNull())
       {
         return false;
@@ -906,7 +914,7 @@ public:
     }
 
     StlAPI_Writer aWriter;
-    aWriter.Write (aComp, theFileName);
+    aWriter.Write (aComp, theFileName.ToCString());
     return true;
   }
 
@@ -919,14 +927,7 @@ public:
   bool TranslateModel (System::String^ theFileName, int theFormat, bool theIsImport)
   {
     bool  isResult  = false;
-    int   aLength   = theFileName->Length;
-    char* aFilename = new char[aLength + 1];
-    for (int aCharIter = 0; aCharIter < aLength; ++aCharIter)
-    {
-      aFilename[aCharIter] = (char)theFileName->ToCharArray()[aCharIter];
-    }
-    aFilename[aLength] = '\0';
-
+    const TCollection_AsciiString aFilename = toAsciiString (theFileName);
     if (theIsImport)
     {
       switch (theFormat)
@@ -948,7 +949,6 @@ public:
         case 5: isResult = Dump (aFilename);      break;
       }
     }
-    delete[] aFilename;
     return isResult;
   }
 

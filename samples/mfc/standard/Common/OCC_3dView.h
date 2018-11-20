@@ -23,7 +23,7 @@ enum CurAction3d {
   CurAction3d_DynamicRotation
 };
 
-class AFX_EXT_CLASS OCC_3dView : public OCC_BaseView  
+class Standard_EXPORT OCC_3dView : public OCC_BaseView  
 {
 	DECLARE_DYNCREATE(OCC_3dView)
 public:
@@ -34,7 +34,7 @@ public:
 	void FitAll() {   if ( !myView.IsNull() ) myView->FitAll();  myView->ZFitAll(); };
 	void Redraw() {   if ( !myView.IsNull() ) myView->Redraw(); };
 
-	void SetZoom ( const Quantity_Factor& Coef  ) {   myView->SetZoom ( Coef  );  };
+	void SetZoom ( const Standard_Real& Coef  ) {   myView->SetZoom ( Coef  );  };
 
   Handle(V3d_View)& GetView() { return myView; }
 // Overrides

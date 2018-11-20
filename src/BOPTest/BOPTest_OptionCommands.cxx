@@ -17,6 +17,7 @@
 #include <BOPTest_Objects.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
+#include <BOPAlgo_GlueEnum.hxx>
 
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +25,10 @@ static Standard_Integer boptions (Draw_Interpretor&, Standard_Integer, const cha
 static Standard_Integer brunparallel (Draw_Interpretor&, Standard_Integer, const char**); 
 static Standard_Integer bnondestructive(Draw_Interpretor&, Standard_Integer, const char**);
 static Standard_Integer bfuzzyvalue(Draw_Interpretor&, Standard_Integer, const char**);
+static Standard_Integer bGlue(Draw_Interpretor&, Standard_Integer, const char**);
+static Standard_Integer bdrawwarnshapes(Draw_Interpretor&, Standard_Integer, const char**);
+static Standard_Integer bcheckinverted(Draw_Interpretor&, Standard_Integer, const char**);
+static Standard_Integer buseobb(Draw_Interpretor&, Standard_Integer, const char**);
 
 //=======================================================================
 //function : OptionCommands
@@ -41,6 +46,14 @@ void BOPTest::OptionCommands(Draw_Interpretor& theCommands)
   theCommands.Add("brunparallel", "use brunparallel [0/1]" , __FILE__, brunparallel, g);
   theCommands.Add("bnondestructive", "use bnondestructive [0/1]", __FILE__, bnondestructive, g);
   theCommands.Add("bfuzzyvalue", "use bfuzzyvalue value", __FILE__, bfuzzyvalue, g);
+  theCommands.Add("bglue", "use bglue [0 (off) / 1 (shift) / 2 (full)]", __FILE__, bGlue, g);
+  theCommands.Add("bdrawwarnshapes", "Defines whether to draw warning shapes or not\n"
+                  "Usage: bdrawwarnshapes [0 (do not draw) / 1 (draw warning shapes)",
+                  __FILE__, bdrawwarnshapes, g);
+  theCommands.Add("bcheckinverted", "Defines whether to check the input solids on inverted status or not\n"
+                                     "Usage: bcheckinverted [0 (off) / 1 (on)]", __FILE__, bcheckinverted, g);
+  theCommands.Add("buseobb", "Enables/disables the usage of OBB\n"
+                                     "Usage: buseobb [0 (off) / 1 (on)]", __FILE__, buseobb, g);
 }
 //=======================================================================
 //function : boptions
@@ -58,16 +71,30 @@ Standard_Integer boptions(Draw_Interpretor& di,
   char buf[128];
   Standard_Boolean bRunParallel, bNonDestructive;
   Standard_Real aFuzzyValue;
+  BOPAlgo_GlueEnum aGlue;
   //
   bRunParallel=BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
   aFuzzyValue = BOPTest_Objects::FuzzyValue();
-  
+  aGlue = BOPTest_Objects::Glue();
+  Standard_Boolean bDrawWarnShapes = BOPTest_Objects::DrawWarnShapes();
+  Standard_Boolean bCheckInverted = BOPTest_Objects::CheckInverted();
+  Standard_Boolean bUseOBB = BOPTest_Objects::UseOBB();
+  //
   Sprintf(buf, " RunParallel: %d\n",  bRunParallel);
   di << buf;
   Sprintf(buf, " NonDestructive: %d\n", bNonDestructive);
   di << buf;
-  Sprintf(buf, " FuzzyValue : %lf\n", aFuzzyValue);
+  Sprintf(buf, " FuzzyValue: %lf\n", aFuzzyValue);
+  di << buf;
+  Sprintf(buf, " GlueOption: %s\n", ((aGlue == BOPAlgo_GlueOff) ? "Off" :
+    ((aGlue == BOPAlgo_GlueFull) ? "Full" : "Shift")));
+  di << buf;
+  Sprintf(buf, " Draw Warning Shapes: %s\n", bDrawWarnShapes ? "Yes" : "No");
+  di << buf;
+  Sprintf(buf, " Check for inverted solids: %s\n", bCheckInverted ? "Yes" : "No");
+  di << buf;
+  Sprintf(buf, " Use OBB: %s\n", bUseOBB ? "Yes" : "No");
   di << buf;
   //
   return 0;
@@ -119,7 +146,7 @@ Standard_Integer brunparallel(Draw_Interpretor& di,
     return 0;  
   }
   //
-  bRunParallel=(Standard_Boolean)(iX);
+  bRunParallel = (iX != 0);
   BOPTest_Objects::SetRunParallel(bRunParallel);
   //
   return 0;
@@ -146,8 +173,88 @@ Standard_Integer bnondestructive(Draw_Interpretor& di,
     return 0;
   }
   //
-  bNonDestructive = (Standard_Boolean)(iX);
+  bNonDestructive = (iX != 0);
   BOPTest_Objects::SetNonDestructive(bNonDestructive);
   //
+  return 0;
+}
+
+//=======================================================================
+//function : bglue
+//purpose  : 
+//=======================================================================
+Standard_Integer bGlue(Draw_Interpretor& di,
+                             Standard_Integer n,
+                             const char** a)
+{
+  if (n != 2) {
+    di << " use bglue [0 (off) / 1 (shift) / 2 (full)]\n";
+    return 1;
+  }
+  //
+  Standard_Integer iGlue = Draw::Atoi(a[1]);
+  if (iGlue < 0 || iGlue > 2) {
+    di << " Wrong value. Use bglue [0 (off) / 1 (shift) / 2 (full)]\n";
+    return 1;
+  }
+  //
+  BOPAlgo_GlueEnum aGlue = BOPAlgo_GlueEnum(iGlue);
+  BOPTest_Objects::SetGlue(aGlue);
+  //
+  return 0;
+}
+
+//=======================================================================
+//function : bdrawwarnshapes
+//purpose  : 
+//=======================================================================
+Standard_Integer bdrawwarnshapes(Draw_Interpretor& di,
+                              Standard_Integer n, 
+                              const char** a) 
+{ 
+  if (n != 2) {
+    di << " use bdrawwarnshapes [0 (do not draw) / 1 (draw warning shapes)\n";
+    return 1;
+  }
+  //
+  Standard_Integer iDraw = Draw::Atoi(a[1]);
+  BOPTest_Objects::SetDrawWarnShapes(iDraw != 0);
+  return 0;
+}
+
+//=======================================================================
+//function : bcheckinverted
+//purpose  : 
+//=======================================================================
+Standard_Integer bcheckinverted(Draw_Interpretor& di,
+                                Standard_Integer n,
+                                const char** a)
+{
+  if (n != 2) {
+    di.PrintHelp(a[0]);
+    return 1;
+  }
+  //
+  Standard_Integer iCheck = Draw::Atoi(a[1]);
+  BOPTest_Objects::SetCheckInverted(iCheck != 0);
+  return 0;
+}
+
+//=======================================================================
+//function : buseobb
+//purpose  : 
+//=======================================================================
+Standard_Integer buseobb(Draw_Interpretor& di,
+                         Standard_Integer n,
+                         const char** a)
+{
+  if (n != 2)
+  {
+    di.PrintHelp(a[0]);
+    return 1;
+  }
+  //
+  Standard_Integer iUse = Draw::Atoi(a[1]);
+  BOPTest_Objects::SetUseOBB(iUse != 0);
   return 0;
 }

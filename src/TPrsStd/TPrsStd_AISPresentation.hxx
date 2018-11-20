@@ -189,12 +189,18 @@ public:
 
   DEFINE_STANDARD_RTTIEXT(TPrsStd_AISPresentation,TDF_Attribute)
 
-private:
+protected:
 
   //! Returns attribute storing presentation data
-  Handle(TDataXtd_Presentation) getData () const;
+  Standard_EXPORT virtual Handle(TDataXtd_Presentation) getData () const;
+
+private:
 
   Handle(AIS_InteractiveContext) getAISContext() const;
+
+  //! Activates selection mode of the interactive object.
+  //! It is called internally on change of selection mode and AISUpdate().
+  void ActivateSelectionMode();
   
   //! Updates AIS_InteractiveObject stored in the attribute
   //! and applies the visualization settings
@@ -210,7 +216,6 @@ private:
 
 private:
   Handle(AIS_InteractiveObject) myAIS;
-  Handle(TDataXtd_Presentation) myData;
 };
 
 #endif // _TPrsStd_AISPresentation_HeaderFile

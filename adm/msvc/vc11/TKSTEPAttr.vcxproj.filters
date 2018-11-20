@@ -2,23 +2,32 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{275D2905-09A9-112F-0268-3E4EA39CB07B}</UniqueIdentifier>
+      <UniqueIdentifier>{AB77D634-18C5-1941-074A-E84835DCCB06}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepVisual">
-      <UniqueIdentifier>{06807B4D-04AE-0653-1855-7AC827EAA135}</UniqueIdentifier>
+      <UniqueIdentifier>{9502A3FE-033E-0BF7-0ED1-873E8619F8B7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepVisual">
-      <UniqueIdentifier>{FDA19BD7-0E22-060B-116C-1EB7C8B3AC0B}</UniqueIdentifier>
+      <UniqueIdentifier>{17E72844-1451-179A-113D-32EB24EBB535}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StepDimTol">
-      <UniqueIdentifier>{E40A2045-0EA9-15BF-0B09-D17DD09B04F5}</UniqueIdentifier>
+      <UniqueIdentifier>{C5D390FC-1502-077C-1859-328AB22FCF9B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\RWStepDimTol">
-      <UniqueIdentifier>{62958D24-18EA-12A1-07DC-C04025B374EA}</UniqueIdentifier>
+      <UniqueIdentifier>{E7074568-09C2-1316-1768-4F21E239A59E}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_AnnotationCurveOccurrence.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_AnnotationFillArea.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_AnnotationFillAreaOccurrence.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_AnnotationOccurrence.cxx">
@@ -66,7 +75,25 @@
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3MultiClipping.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3MultiClippingInterectionSelect.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3MultiClippingIntersection.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3MultiClippingUnion.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraModelD3MultiClippingUnionSelect.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CameraUsage.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_Colour.cxx">
@@ -168,6 +195,9 @@
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_MechanicalDesignGeometricPresentationRepresentation.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_NullStyleMember.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_OverRidingStyledItem.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
@@ -240,6 +270,9 @@
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_StyledItem.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StepVisual\StepVisual_StyledItemTarget.cxx">
+      <Filter>Source files\StepVisual</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\StepVisual\StepVisual_SurfaceSideStyle.cxx">
       <Filter>Source files\StepVisual</Filter>
     </ClCompile>
@@ -306,6 +339,15 @@
     <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWAnnotationCurveOccurrence.cxx">
       <Filter>Source files\RWStepVisual</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWAnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWAnnotationFillArea.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWAnnotationFillAreaOccurrence.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWAnnotationOccurrence.cxx">
       <Filter>Source files\RWStepVisual</Filter>
     </ClCompile>
@@ -330,7 +372,19 @@
     <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCameraModelD3.cxx">
       <Filter>Source files\RWStepVisual</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCameraModelD3MultiClipping.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCameraModelD3MultiClippingIntersection.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCameraModelD3MultiClippingUnion.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCameraUsage.cxx">
+      <Filter>Source files\RWStepVisual</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWCharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.cxx">
       <Filter>Source files\RWStepVisual</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\RWStepVisual\RWStepVisual_RWColour.cxx">

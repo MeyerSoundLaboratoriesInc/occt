@@ -14,6 +14,7 @@
 #ifndef _StdPrs_ToolTriangulatedShape_HeaderFile
 #define _StdPrs_ToolTriangulatedShape_HeaderFile
 
+#include <Poly_Connect.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Standard.hxx>
@@ -39,6 +40,26 @@ public:
   //! @return true if shape is closed manifold Solid or compound of such Solids. <br>
   Standard_EXPORT static Standard_Boolean IsClosed (const TopoDS_Shape& theShape);
 
+  //! Computes nodal normals for Poly_Triangulation structure using UV coordinates and surface.
+  //! Does nothing if triangulation already defines normals.
+  //! @param theFace [in] the face
+  //! @param theTris [in] the definition of a face triangulation
+  static void ComputeNormals (const TopoDS_Face& theFace,
+                              const Handle(Poly_Triangulation)& theTris)
+  {
+    Poly_Connect aPolyConnect;
+    ComputeNormals (theFace, theTris, aPolyConnect);
+  }
+
+  //! Computes nodal normals for Poly_Triangulation structure using UV coordinates and surface.
+  //! Does nothing if triangulation already defines normals.
+  //! @param theFace [in] the face
+  //! @param theTris [in] the definition of a face triangulation
+  //! @param thePolyConnect [in,out] optional, initialized tool for exploring triangulation
+  Standard_EXPORT static void ComputeNormals (const TopoDS_Face& theFace,
+                                              const Handle(Poly_Triangulation)& theTris,
+                                              Poly_Connect& thePolyConnect);
+
   //! Evaluate normals for a triangle of a face.
   //! @param theFace [in] the face.
   //! @param thePolyConnect [in] the definition of a face triangulation.
@@ -59,6 +80,18 @@ public:
   //! @return true if tesselation was recomputed and false otherwise.
   Standard_EXPORT static Standard_Boolean Tessellate (const TopoDS_Shape& theShape,
                                                       const Handle(Prs3d_Drawer)& theDrawer);
+
+  //! If presentation has own deviation coefficient and IsAutoTriangulation() is true,
+  //! function will compare actual coefficients with previous values and will clear triangulation on their change
+  //! (regardless actual tessellation quality).
+  //! Function is placed here for compatibility reasons - new code should avoid using IsAutoTriangulation().
+  //! @param theShape  [in] the shape
+  //! @param theDrawer [in] the display settings
+  //! @param theToResetCoeff [in] updates coefficients in theDrawer to actual state to avoid redundant recomputations
+  Standard_EXPORT static void ClearOnOwnDeflectionChange (const TopoDS_Shape& theShape,
+                                                          const Handle(Prs3d_Drawer)& theDrawer,
+                                                          const Standard_Boolean theToResetCoeff);
+
 };
 
 #endif

@@ -24,24 +24,27 @@
 #include <TColStd_Array1OfTransient.hxx>
 #include <TColStd_HArray1OfTransient.hxx>
 #include <HLRAlgo_ListOfBPoint.hxx>
-#include <MMgt_TShared.hxx>
-#include <Standard_Address.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Boolean.hxx>
 
 
 class HLRAlgo_PolyShellData;
-DEFINE_STANDARD_HANDLE(HLRAlgo_PolyShellData, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(HLRAlgo_PolyShellData, Standard_Transient)
 
 //! All the PolyData of a Shell
-class HLRAlgo_PolyShellData : public MMgt_TShared
+class HLRAlgo_PolyShellData : public Standard_Transient
 {
 
 public:
+  struct ShellIndices
+  {
+    Standard_Integer Min, Max;
+  };
 
   
   Standard_EXPORT HLRAlgo_PolyShellData(const Standard_Integer nbFace);
   
-  Standard_EXPORT void UpdateGlobalMinMax (const Standard_Address TotMinMax);
+  Standard_EXPORT void UpdateGlobalMinMax (HLRAlgo_PolyData::Box& theBox);
   
   Standard_EXPORT void UpdateHiding (const Standard_Integer nbHiding);
   
@@ -53,12 +56,15 @@ public:
   
     HLRAlgo_ListOfBPoint& Edges();
   
-    Standard_Address Indices();
+    ShellIndices& Indices()
+    {
+      return myIndices;
+    }
 
 
 
 
-  DEFINE_STANDARD_RTTIEXT(HLRAlgo_PolyShellData,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(HLRAlgo_PolyShellData,Standard_Transient)
 
 protected:
 
@@ -68,7 +74,7 @@ protected:
 private:
 
 
-  Standard_Integer myMinMax[2];
+  ShellIndices myIndices;
   TColStd_Array1OfTransient myPolyg;
   Handle(TColStd_HArray1OfTransient) myHPolHi;
   HLRAlgo_ListOfBPoint mySegList;

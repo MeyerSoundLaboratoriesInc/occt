@@ -44,9 +44,9 @@
 #include <TColStd_Array1OfInteger.hxx>
 #include <TopTrans_CurveTransition.hxx>
 
-#define Tolpetit 1.e-10  // pour dist au carre
+static const Standard_Real Tolpetit = 1.e-10; // pour dist au carre
 
-#define tole 5.e-6
+static const Standard_Real tole = 5.e-6;
 
 Contap_Contour::Contap_Contour () : 
 done(Standard_False),modeset(Standard_False)
@@ -141,7 +141,7 @@ void Contap_Contour::Init (const gp_Pnt& Eye)
 void Contap_Contour::Perform (const Handle(Adaptor3d_HSurface)& Surf,
                               const Handle(Adaptor3d_TopolTool)& Domain)
 {
-  if (!modeset) {Standard_ConstructionError::Raise();}
+  if (!modeset) {throw Standard_ConstructionError();}
   mySFunc.Set(Surf);
   myAFunc.Set(Surf);
 
@@ -307,17 +307,23 @@ static void LineConstructor(Contap_TheSequenceOfLine& slin,
                                     else { 
                                       //-- cout<<"ContapWLine      : firtsp="<<firstp<<" lastp="<<lastp<<" Vtx:"<<i<<","<<i+1<<endl;
                                       Handle(IntSurf_LineOn2S) LineOn2S = new IntSurf_LineOn2S();
-                                      Contap_Line Line;
-                                      for(Standard_Integer j=firstp; j<=lastp; j++) { 
-                                        LineOn2S->Add(L.Point(j));
+                                      LineOn2S->Add(L.Point(firstp));
+                                      for (Standard_Integer j = firstp + 1; j <= lastp; j++) {
+                                        Standard_Real aSqDist = L.Point(j).Value().
+                                          SquareDistance(L.Point(j - 1).Value());
+                                        if (aSqDist > gp::Resolution())
+                                          LineOn2S->Add(L.Point(j));
                                       }
+                                      if (LineOn2S->NbPoints() < 2)
+                                        continue;
+                                      Contap_Line Line;
                                       Line.SetLineOn2S(LineOn2S);
                                       Contap_Point pvtx = L.Vertex(i);
                                       pvtx.SetParameter(1);
                                       Line.Add(pvtx);
 
                                       pvtx = L.Vertex(i+1);
-                                      pvtx.SetParameter(lastp-firstp+1);
+                                      pvtx.SetParameter(LineOn2S->NbPoints());
                                       Line.Add(pvtx);
                                       Line.SetTransitionOnS(L.TransitionOnS());
                                       slin.Append(Line);
@@ -468,7 +474,6 @@ static void KeepInsidePoints(const Contap_TheSearchInside& solins,
 
 {
   Standard_Integer Nba = solrst.NbSegments();
-  if (Nba <= 0) return;
   Standard_Integer Nbp,indp,inda;
   Standard_Real U,V,paramproj;
   gp_Pnt2d toproj,Ptproj;
@@ -1492,7 +1497,8 @@ void Contap_Contour::Perform
 
   if (seqpdep.Length() != 0 || seqpins.Length() != 0) {
 
-    Contap_TheIWalking iwalk(Preci,Fleche,Pas);
+    Standard_Boolean theToFillHoles = Standard_True;
+    Contap_TheIWalking iwalk(Preci,Fleche,Pas,theToFillHoles);
     iwalk.Perform(seqpdep,seqpins,mySFunc ,Surf);
     if(!iwalk.IsDone()) {
       return;

@@ -17,14 +17,15 @@
 #ifndef _HLRBRep_ShapeBounds_HeaderFile
 #define _HLRBRep_ShapeBounds_HeaderFile
 
+#include <HLRAlgo_EdgesBlock.hxx>
+
 #include <Standard.hxx>
 #include <Standard_DefineAlloc.hxx>
 #include <Standard_Handle.hxx>
 
 #include <Standard_Integer.hxx>
-#include <Standard_Address.hxx>
 class HLRTopoBRep_OutLiner;
-class MMgt_TShared;
+class Standard_Transient;
 
 
 //! Contains  a Shape and the  bounds of its vertices,
@@ -38,7 +39,7 @@ public:
   
     HLRBRep_ShapeBounds();
   
-  Standard_EXPORT HLRBRep_ShapeBounds(const Handle(HLRTopoBRep_OutLiner)& S, const Handle(MMgt_TShared)& SData, const Standard_Integer nbIso, const Standard_Integer V1, const Standard_Integer V2, const Standard_Integer E1, const Standard_Integer E2, const Standard_Integer F1, const Standard_Integer F2);
+  Standard_EXPORT HLRBRep_ShapeBounds(const Handle(HLRTopoBRep_OutLiner)& S, const Handle(Standard_Transient)& SData, const Standard_Integer nbIso, const Standard_Integer V1, const Standard_Integer V2, const Standard_Integer E1, const Standard_Integer E2, const Standard_Integer F1, const Standard_Integer F2);
   
   Standard_EXPORT HLRBRep_ShapeBounds(const Handle(HLRTopoBRep_OutLiner)& S, const Standard_Integer nbIso, const Standard_Integer V1, const Standard_Integer V2, const Standard_Integer E1, const Standard_Integer E2, const Standard_Integer F1, const Standard_Integer F2);
   
@@ -48,9 +49,9 @@ public:
   
     const Handle(HLRTopoBRep_OutLiner)& Shape() const;
   
-    void ShapeData (const Handle(MMgt_TShared)& SD);
+    void ShapeData (const Handle(Standard_Transient)& SD);
   
-    const Handle(MMgt_TShared)& ShapeData() const;
+    const Handle(Standard_Transient)& ShapeData() const;
   
     void NbOfIso (const Standard_Integer nbIso);
   
@@ -60,9 +61,15 @@ public:
   
   Standard_EXPORT void Bounds (Standard_Integer& V1, Standard_Integer& V2, Standard_Integer& E1, Standard_Integer& E2, Standard_Integer& F1, Standard_Integer& F2) const;
   
-  Standard_EXPORT void UpdateMinMax (const Standard_Address TotMinMax);
+  void UpdateMinMax (const HLRAlgo_EdgesBlock::MinMaxIndices& theTotMinMax)
+  {
+    myMinMax = theTotMinMax;
+  }
   
-    Standard_Address MinMax() const;
+  HLRAlgo_EdgesBlock::MinMaxIndices& MinMax()
+  {
+    return myMinMax;
+  }
 
 
 
@@ -78,7 +85,7 @@ private:
 
 
   Handle(HLRTopoBRep_OutLiner) myShape;
-  Handle(MMgt_TShared) myShapeData;
+  Handle(Standard_Transient) myShapeData;
   Standard_Integer myNbIso;
   Standard_Integer myVertStart;
   Standard_Integer myVertEnd;
@@ -86,7 +93,7 @@ private:
   Standard_Integer myEdgeEnd;
   Standard_Integer myFaceStart;
   Standard_Integer myFaceEnd;
-  Standard_Integer myMinMax[16];
+  HLRAlgo_EdgesBlock::MinMaxIndices myMinMax;
 
 
 };

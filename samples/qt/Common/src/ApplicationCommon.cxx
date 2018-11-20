@@ -3,6 +3,7 @@
 #include "DocumentCommon.h"
 #include "View.h"
 
+#include <Standard_WarningsDisable.hxx>
 #include <QFrame>
 #include <QVBoxLayout>
 #include <QMenuBar>
@@ -12,9 +13,11 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QSignalMapper>
+#include <Standard_WarningsRestore.hxx>
 
 #include <Graphic3d_GraphicDriver.hxx>
 #include <OpenGl_GraphicDriver.hxx>
+#include <OSD_Environment.hxx>
 
 #include <stdlib.h>
 
@@ -22,15 +25,16 @@ static ApplicationCommonWindow* stApp = 0;
 static QMdiArea* stWs = 0;
 
 ApplicationCommonWindow::ApplicationCommonWindow()
-    : QMainWindow( 0 ),
-myWindowPopup( 0 ),
-myFilePopup( 0 ),
+: QMainWindow( 0 ),
+myNbDocuments( 0 ),
+myIsDocuments(false),
+myStdToolBar( 0 ),
 myCasCadeBar( 0 ),
-myStdToolBar( 0 )
+myFilePopup( 0 ),
+myWindowPopup( 0 ),
+myFileSeparator(NULL)
 {
-  myNbDocuments = 0;
   stApp = this;
-  myIsDocuments = false;
 
   // create and define the central widget
   QFrame* vb = new QFrame( this );
@@ -86,7 +90,7 @@ void ApplicationCommonWindow::createStandardOperations()
   filePrefUseVBOAction->setStatusTip( QObject::tr("TBR_USE_VBO") );
   filePrefUseVBOAction->setCheckable( true );
   filePrefUseVBOAction->setChecked( true );
-  connect( filePrefUseVBOAction, SIGNAL( activated() ) , this, SLOT( onUseVBO() ) );
+  connect( filePrefUseVBOAction, SIGNAL( triggered() ) , this, SLOT( onUseVBO() ) );
   myStdActions.insert( FilePrefUseVBOId, filePrefUseVBOAction );
 
   fileQuitAction = new QAction( QObject::tr("MNU_QUIT"), this );
@@ -346,48 +350,51 @@ ApplicationCommonWindow* ApplicationCommonWindow::getApplication()
 
 void ApplicationCommonWindow::updateFileActions()
 {
-  if ( myDocuments.isEmpty() )
+  if (!myDocuments.isEmpty())
   {
-    if ( !myIsDocuments )
+    return;
+  }
+
+  if ( !myIsDocuments )
+  {
+    QAction* fileQuitAction = NULL;
+    QAction* windowAction = NULL;
+    QList<QAction *> aListActions = myFilePopup->actions();
+    for ( int i = 0; i < aListActions.size(); i++ )
     {
-      QAction *fileQuitAction, *windowAction;
-      QList<QAction *> aListActions = myFilePopup->actions();
-      for ( int i = 0; i < aListActions.size(); i++ )
+      if( aListActions.at( i )->text() == QObject::tr("MNU_QUIT") )
       {
-        if( aListActions.at( i )->text() == QObject::tr("MNU_QUIT") )
-        {
-          fileQuitAction = aListActions.at( i );
-          break;
-        }
+        fileQuitAction = aListActions.at( i );
+        break;
       }
+    }
         
-      if( !fileQuitAction )
-        return;
+    if( !fileQuitAction )
+      return;
       
-      myIsDocuments = true;
-      myCasCadeBar->show();
+    myIsDocuments = true;
+    myCasCadeBar->show();
 
-      QList<QAction *> aListMenuActions = menuBar()->actions();
-      for ( int i = 0; i < aListMenuActions.size(); i++ )
-      {
-        if( aListMenuActions.at( i )->text() == QObject::tr("MNU_HELP") )
-        {
-           windowAction= aListMenuActions.at( i );
-           break;
-        }
-      }
-
-      if( !windowAction )
-        return;
-
-      menuBar()->insertMenu( windowAction, myWindowPopup );
-    }
-    else
+    QList<QAction *> aListMenuActions = menuBar()->actions();
+    for ( int i = 0; i < aListMenuActions.size(); i++ )
     {
-      myIsDocuments = false;
-      myCasCadeBar->hide();
-      menuBar()->removeAction( myWindowPopup->menuAction() );
+      if( aListMenuActions.at( i )->text() == QObject::tr("MNU_HELP") )
+      {
+          windowAction= aListMenuActions.at( i );
+          break;
+      }
     }
+
+    if( !windowAction )
+      return;
+
+    menuBar()->insertMenu( windowAction, myWindowPopup );
+  }
+  else
+  {
+    myIsDocuments = false;
+    myCasCadeBar->hide();
+    menuBar()->removeAction( myWindowPopup->menuAction() );
   }
 }
 
@@ -544,11 +551,11 @@ void ApplicationCommonWindow::onSelectionChanged()
   int numSel = context->NbSelected();
   if ( numSel )
   {
-    for ( context->InitCurrent(); context->MoreCurrent(); context->NextCurrent() )
+    for ( context->InitSelected(); context->MoreSelected(); context->NextSelected() )
     {
-      if ( context->IsDisplayed( context->Current(), 1 ) )
+      if ( context->IsDisplayed( context->SelectedInteractive(), 1 ) )
         OneOrMoreInShading = true;
-      if ( context->IsDisplayed( context->Current(), 0 ) )
+      if ( context->IsDisplayed( context->SelectedInteractive(), 0 ) )
         OneOrMoreInWireframe = true;
     }
     myToolActions.at( ToolWireframeId )->setEnabled( OneOrMoreInShading );
@@ -579,8 +586,10 @@ void ApplicationCommonWindow::onSetMaterial( int theMaterial )
 QString ApplicationCommonWindow::getResourceDir()
 {
   static QString aResourceDir =
-    QString::fromUtf8 (qgetenv ("CSF_ResourcesDefaults").constData());
-  
+    QString (OSD_Environment ("CSF_ResourcesDefaults").Value().ToCString());
+  if (aResourceDir.isEmpty())
+    aResourceDir = QString (OSD_Environment ("CSF_OCCTResourcePath").Value().ToCString()) + "/samples";
+
   return aResourceDir;
 }
 

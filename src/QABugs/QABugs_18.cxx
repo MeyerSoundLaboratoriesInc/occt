@@ -55,8 +55,7 @@ static Standard_Integer OCC267 (Draw_Interpretor& di, Standard_Integer argc, con
   Handle(TDocStd_Document) D;
   if (!DDocStd::GetDocument(argv[1],D)) return 1;
   TCollection_ExtendedString path (argv[2]);
-  Handle(TDocStd_Application) A;
-  if (!DDocStd::Find(A)) return 1;
+  Handle(TDocStd_Application) A = DDocStd::GetApplication();
 
   PCDM_StoreStatus theStatus = A->SaveAs(D,path);
   if (theStatus == PCDM_SS_OK ) {
@@ -105,6 +104,28 @@ static Standard_Integer OCC181 (Draw_Interpretor& di, Standard_Integer argc, con
   return 0;
 }
 
+static Standard_Integer OCC27849 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
+{
+  if (argc != 3) {
+    di << "Usage : " << argv[0] << " <environment variable name> <resource name>\n";
+    return 1;
+  }
+  Standard_CString aEnvName = argv[1];
+  Standard_CString aResName = argv[2];
+
+  Resource_Manager aManager (aEnvName);
+  if (aManager.Find (aResName))
+  {
+    di << aManager.Value (aResName);
+  }
+  else
+  {
+    di << "Error: could not find resource " << aResName;
+  }
+
+  return 0;
+}
+
 static Standard_Real delta_percent (Standard_Real a, Standard_Real b)
 {
   Standard_Real result;
@@ -131,7 +152,7 @@ static Standard_Integer OCC367 (Draw_Interpretor& di, Standard_Integer argc, con
   Standard_Real goodY = Draw::Atof(argv[4]);
   Standard_Real goodZ = Draw::Atof(argv[5]);
   Standard_Real percent = Draw::Atof(argv[6]);
-  Standard_Boolean Status = Standard_False;
+  Standard_Boolean aStatus = Standard_False;
 
   // Find the first vertex of the wire
   BRepTools_WireExplorer wire_exp(myTopoDSWire);
@@ -200,14 +221,14 @@ static Standard_Integer OCC367 (Draw_Interpretor& di, Standard_Integer argc, con
 	  deltaY = delta_percent(FirstEdgeY, goodY);
 	  deltaZ = delta_percent(FirstEdgeZ, goodZ);
 	  if (deltaX <= percent && deltaY <= percent && deltaZ <= percent) {
-	    Status = Standard_True;
+	    aStatus = Standard_True;
 	  }
 	}
       }
     }
   di << "\n\nFirstEdge = " << FirstEdgeX <<" " << FirstEdgeY <<" " << FirstEdgeZ << "\n";
   di << "deltaX = " << deltaX << " deltaY = " << deltaY << " deltaZ = " << deltaZ << "\n";
-  if (Status) {
+  if (aStatus) {
     di << argv[0] << " : OK\n";
   } else {
     di << argv[0] << " : ERROR\n";
@@ -216,28 +237,13 @@ static Standard_Integer OCC367 (Draw_Interpretor& di, Standard_Integer argc, con
   return 0;
 }
 
-static Standard_Integer OCC71bug (Draw_Interpretor& di, Standard_Integer /*argc*/, const char ** argv)
-{
-  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
-  if(aContext.IsNull()) { 
-    di << argv[0] << "ERROR : use 'vinit' command before \n";
-    return 1;
-  }
-
-  Handle(V3d_View) V3dView = ViewerTest::CurrentView();
-  V3dView->EnableGLLight( Standard_False );  
-  V3dView->TriedronDisplay(Aspect_TOTP_LEFT_LOWER, Quantity_NOC_WHITE, 0.07);
-  aContext->UpdateCurrentViewer();
-  return 0;
-}
-
 void QABugs::Commands_18(Draw_Interpretor& theCommands) {
   const char *group = "QABugs";
 
   theCommands.Add("OCC267", "OCC267 DOC path", __FILE__, OCC267, group);
   theCommands.Add("OCC181", "OCC181 FileName path1 path2 verbose=0/1", __FILE__, OCC181, group);
+  theCommands.Add("OCC27849", "OCC27849 <resource env name> <resource name>", __FILE__, OCC27849, group);
   theCommands.Add("OCC367", "OCC367 shape step goodX goodY goodZ percent_tolerance", __FILE__, OCC367, group);
-  theCommands.Add("OCC71", "OCC71", __FILE__, OCC71bug, group);
 
   return;
 }

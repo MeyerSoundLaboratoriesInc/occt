@@ -34,6 +34,14 @@ IMPLEMENT_STANDARD_RTTIEXT(Cocoa_Window,Aspect_Window)
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
   //
 #else
+
+#if !defined(MAC_OS_X_VERSION_10_12) || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12)
+  // replacements for macOS versions before 10.12
+  #define NSWindowStyleMaskResizable NSResizableWindowMask
+  #define NSWindowStyleMaskClosable  NSClosableWindowMask
+  #define NSWindowStyleMaskTitled    NSTitledWindowMask
+#endif
+
 static Standard_Integer getScreenBottom()
 {
   Cocoa_LocalPool aLocalPool;
@@ -82,11 +90,11 @@ Cocoa_Window::Cocoa_Window (const Standard_CString theTitle,
 #else
   if (thePxWidth <= 0 || thePxHeight <= 0)
   {
-    Aspect_WindowDefinitionError::Raise ("Coordinate(s) out of range");
+    throw Aspect_WindowDefinitionError("Coordinate(s) out of range");
   }
   else if (NSApp == NULL)
   {
-    Aspect_WindowDefinitionError::Raise ("Cocoa application should be instantiated before window");
+    throw Aspect_WindowDefinitionError("Cocoa application should be instantiated before window");
     return;
   }
 
@@ -95,7 +103,7 @@ Cocoa_Window::Cocoa_Window (const Standard_CString theTitle,
   myYBottom = myYTop + thePxHeight;
 
   Cocoa_LocalPool aLocalPool;
-  NSUInteger aWinStyle = NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask;
+  NSUInteger aWinStyle = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable;
   NSRect aRectNs = NSMakeRect (float(myXLeft), float(myYTop), float(thePxWidth), float(thePxHeight));
   myHWindow = [[NSWindow alloc] initWithContentRect: aRectNs
                                           styleMask: aWinStyle
@@ -103,7 +111,7 @@ Cocoa_Window::Cocoa_Window (const Standard_CString theTitle,
                                               defer: NO];
   if (myHWindow == NULL)
   {
-    Aspect_WindowDefinitionError::Raise ("Unable to create window");
+    throw Aspect_WindowDefinitionError("Unable to create window");
   }
   myHView = [[myHWindow contentView] retain];
 
@@ -311,7 +319,7 @@ Standard_Boolean Cocoa_Window::DoMapping() const
 // function : Ratio
 // purpose  :
 // =======================================================================
-Quantity_Ratio Cocoa_Window::Ratio() const
+Standard_Real Cocoa_Window::Ratio() const
 {
   if (myHView == NULL)
   {
@@ -323,7 +331,7 @@ Quantity_Ratio Cocoa_Window::Ratio() const
 #else
   NSRect aBounds = [myHView bounds];
 #endif
-  return Quantity_Ratio (aBounds.size.width / aBounds.size.height);
+  return Standard_Real (aBounds.size.width / aBounds.size.height);
 }
 
 // =======================================================================

@@ -44,15 +44,6 @@ Handle(Aspect_Grid) V3d_Viewer::Grid() const
 }
 
 // =======================================================================
-// function : GridType
-// purpose  :
-// =======================================================================
-Aspect_GridType V3d_Viewer::GridType() const
-{
-  return myGridType;
-}
-
-// =======================================================================
 // function : GridDrawMode
 // purpose  :
 // =======================================================================
@@ -76,11 +67,10 @@ void V3d_Viewer::ActivateGrid (const Aspect_GridType     theType,
     Grid()->Display();
   }
   Grid()->Activate();
-  for (InitActiveViews(); MoreActiveViews(); NextActiveViews())
+  for (V3d_ListOfView::Iterator anActiveViewIter (myActiveViews); anActiveViewIter.More(); anActiveViewIter.Next())
   {
-    ActiveView()->SetGrid (myPrivilegedPlane, Grid());
+    anActiveViewIter.Value()->SetGrid (myPrivilegedPlane, Grid());
   }
-  Update();
 }
 
 // =======================================================================
@@ -92,16 +82,15 @@ void V3d_Viewer::DeactivateGrid()
   Grid()->Erase();
   myGridType = Aspect_GT_Rectangular;
   Grid()->Deactivate();
-  for (InitActiveViews(); MoreActiveViews(); NextActiveViews())
+  for (V3d_ListOfView::Iterator anActiveViewIter (myActiveViews); anActiveViewIter.More(); anActiveViewIter.Next())
   {
-    ActiveView()->SetGridActivity (Standard_False);
+    anActiveViewIter.Value()->SetGridActivity (Standard_False);
     if (myGridEcho
     && !myGridEchoStructure.IsNull())
     {
       myGridEchoStructure->Erase();
     }
   }
-  Update();
 }
 
 // =======================================================================
@@ -117,11 +106,11 @@ Standard_Boolean V3d_Viewer::IsActive() const
 // function : RectangularGridValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::RectangularGridValues (Quantity_Length&     theXOrigin,
-                                        Quantity_Length&     theYOrigin,
-                                        Quantity_Length&     theXStep,
-                                        Quantity_Length&     theYStep,
-                                        Quantity_PlaneAngle& theRotationAngle) const
+void V3d_Viewer::RectangularGridValues (Standard_Real& theXOrigin,
+                                        Standard_Real& theYOrigin,
+                                        Standard_Real& theXStep,
+                                        Standard_Real& theYStep,
+                                        Standard_Real& theRotationAngle) const
 {
   theXOrigin       = myRGrid->XOrigin();
   theYOrigin       = myRGrid->YOrigin();
@@ -134,29 +123,28 @@ void V3d_Viewer::RectangularGridValues (Quantity_Length&     theXOrigin,
 // function : SetRectangularGridValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::SetRectangularGridValues (const Quantity_Length     theXOrigin,
-                                           const Quantity_Length     theYOrigin,
-                                           const Quantity_Length     theXStep,
-                                           const Quantity_Length     theYStep,
-                                           const Quantity_PlaneAngle theRotationAngle)
+void V3d_Viewer::SetRectangularGridValues (const Standard_Real theXOrigin,
+                                           const Standard_Real theYOrigin,
+                                           const Standard_Real theXStep,
+                                           const Standard_Real theYStep,
+                                           const Standard_Real theRotationAngle)
 {
   myRGrid->SetGridValues (theXOrigin, theYOrigin, theXStep, theYStep, theRotationAngle);
-  for (InitActiveViews(); MoreActiveViews(); NextActiveViews())
+  for (V3d_ListOfView::Iterator anActiveViewIter (myActiveViews); anActiveViewIter.More(); anActiveViewIter.Next())
   {
-    ActiveView()->SetGrid (myPrivilegedPlane, myRGrid);
+    anActiveViewIter.Value()->SetGrid (myPrivilegedPlane, myRGrid);
   }
-  Update();
 }
 
 // =======================================================================
 // function : CircularGridValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::CircularGridValues (Quantity_Length&     theXOrigin,
-                                     Quantity_Length&     theYOrigin,
-                                     Quantity_Length&     theRadiusStep,
-                                     Standard_Integer&    theDivisionNumber,
-                                     Quantity_PlaneAngle& theRotationAngle) const
+void V3d_Viewer::CircularGridValues (Standard_Real& theXOrigin,
+                                     Standard_Real& theYOrigin,
+                                     Standard_Real& theRadiusStep,
+                                     Standard_Integer& theDivisionNumber,
+                                     Standard_Real& theRotationAngle) const
 {
   theXOrigin        = myCGrid->XOrigin();
   theYOrigin        = myCGrid->YOrigin();
@@ -169,28 +157,27 @@ void V3d_Viewer::CircularGridValues (Quantity_Length&     theXOrigin,
 // function : SetCircularGridValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::SetCircularGridValues (const Quantity_Length     theXOrigin,
-                                        const Quantity_Length     theYOrigin,
-                                        const Quantity_Length     theRadiusStep,
-                                        const Standard_Integer    theDivisionNumber,
-                                        const Quantity_PlaneAngle theRotationAngle)
+void V3d_Viewer::SetCircularGridValues (const Standard_Real theXOrigin,
+                                        const Standard_Real theYOrigin,
+                                        const Standard_Real theRadiusStep,
+                                        const Standard_Integer theDivisionNumber,
+                                        const Standard_Real theRotationAngle)
 {
   myCGrid->SetGridValues (theXOrigin, theYOrigin, theRadiusStep,
                           theDivisionNumber, theRotationAngle);
-  for (InitActiveViews(); MoreActiveViews(); NextActiveViews())
+  for (V3d_ListOfView::Iterator anActiveViewIter (myActiveViews); anActiveViewIter.More(); anActiveViewIter.Next())
   {
-    ActiveView()->SetGrid (myPrivilegedPlane, myCGrid);
+    anActiveViewIter.Value()->SetGrid (myPrivilegedPlane, myCGrid);
   }
-  Update();
 }
 
 // =======================================================================
 // function : RectangularGridGraphicValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::RectangularGridGraphicValues (Quantity_Length& theXSize,
-                                               Quantity_Length& theYSize,
-                                               Quantity_Length& theOffSet) const
+void V3d_Viewer::RectangularGridGraphicValues (Standard_Real& theXSize,
+                                               Standard_Real& theYSize,
+                                               Standard_Real& theOffSet) const
 {
   myRGrid->GraphicValues (theXSize, theYSize, theOffSet);
 }
@@ -199,20 +186,19 @@ void V3d_Viewer::RectangularGridGraphicValues (Quantity_Length& theXSize,
 // function : SetRectangularGridGraphicValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::SetRectangularGridGraphicValues (const Quantity_Length theXSize,
-                                                  const Quantity_Length theYSize,
-                                                  const Quantity_Length theOffSet)
+void V3d_Viewer::SetRectangularGridGraphicValues (const Standard_Real theXSize,
+                                                  const Standard_Real theYSize,
+                                                  const Standard_Real theOffSet)
 {
   myRGrid->SetGraphicValues (theXSize, theYSize, theOffSet);
-  Update();
 }
 
 // =======================================================================
 // function : CircularGridGraphicValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::CircularGridGraphicValues (Quantity_Length& theRadius,
-                                            Quantity_Length& theOffSet) const
+void V3d_Viewer::CircularGridGraphicValues (Standard_Real& theRadius,
+                                            Standard_Real& theOffSet) const
 {
   myCGrid->GraphicValues (theRadius, theOffSet);
 }
@@ -221,11 +207,10 @@ void V3d_Viewer::CircularGridGraphicValues (Quantity_Length& theRadius,
 // function : SetCircularGridGraphicValues
 // purpose  :
 // =======================================================================
-void V3d_Viewer::SetCircularGridGraphicValues (const Quantity_Length theRadius,
-                                               const Quantity_Length theOffSet)
+void V3d_Viewer::SetCircularGridGraphicValues (const Standard_Real theRadius,
+                                               const Standard_Real theOffSet)
 {
   myCGrid->SetGraphicValues (theRadius, theOffSet);
-  Update();
 }
 
 // =======================================================================
@@ -263,15 +248,6 @@ void V3d_Viewer::SetGridEcho (const Handle(Graphic3d_AspectMarker3d)& theMarker)
 
   myGridEchoAspect = theMarker;
   myGridEchoGroup->SetPrimitivesAspect (theMarker);
-}
-
-// =======================================================================
-// function : GridEcho
-// purpose  :
-// =======================================================================
-Standard_Boolean V3d_Viewer::GridEcho() const
-{
-  return myGridEcho;
 }
 
 // =======================================================================

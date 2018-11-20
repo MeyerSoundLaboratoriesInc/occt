@@ -12,30 +12,30 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-
 #include <AIS_LocalStatus.hxx>
-#include <Standard_Transient.hxx>
+
 #include <Standard_Type.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(AIS_LocalStatus,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(AIS_LocalStatus, Standard_Transient)
 
-AIS_LocalStatus::AIS_LocalStatus(const Standard_Boolean IsTemp,
-				 const Standard_Boolean Decomp,
-				 const Standard_Integer DMode,
-				 const Standard_Integer SMode,
-				 const Standard_Integer HMode,
-				 const Standard_Boolean SubIntensity,
-				 const Quantity_NameOfColor HiCol):
-myDecomposition(Decomp),
-myIsTemporary(IsTemp),
-myDMode(DMode),
-myFirstDisplay(Standard_False),
-myHMode(HMode),
-mySubIntensity(SubIntensity),
-myHiCol(HiCol)
+AIS_LocalStatus::AIS_LocalStatus (const Standard_Boolean theIsTemporary,
+                                  const Standard_Boolean theIsToDecompose,
+                                  const Standard_Integer theDisplayMode,
+                                  const Standard_Integer theSelectionMode,
+                                  const Standard_Integer theHilightMode,
+                                  const Standard_Boolean theIsSubIntensity,
+                                  const Handle(Prs3d_Drawer)& theStyle)
+: myDecomposition (theIsToDecompose),
+  myIsTemporary   (theIsTemporary),
+  myDMode         (theDisplayMode),
+  myFirstDisplay  (Standard_False),
+  myHMode         (theHilightMode),
+  mySubIntensity  (theIsSubIntensity),
+  myHiStyle       (theStyle)
 {
-  if(SMode!=-1) mySModes.Append(SMode);
+  if (theSelectionMode != -1)
+    mySModes.Append (theSelectionMode);
 }
 
 

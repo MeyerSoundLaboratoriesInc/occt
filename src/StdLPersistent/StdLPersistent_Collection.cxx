@@ -33,6 +33,14 @@ struct StdLPersistent_Collection::byteConverter
     { return static_cast<Standard_Byte> (theValue); }
 };
 
+struct StdLPersistent_Collection::boolConverter
+{
+  boolConverter (const Handle(TDF_Data)&) {}
+
+  Standard_Boolean operator() (Standard_Integer theValue) const
+    { return theValue != 0; }
+};
+
 struct StdLPersistent_Collection::stringConverter
 {
   stringConverter (const Handle(TDF_Data)&) {}
@@ -59,18 +67,6 @@ struct StdLPersistent_Collection::referenceConverter
 private:
   Handle(TDF_Data) myDF;
 };
-
-//=======================================================================
-//function : Read
-//purpose  : Read persistent data from a file
-//=======================================================================
-template <class Base>
-void StdLPersistent_Collection::booleanArrayBase<Base>::Read
-  (StdObjMgt_ReadData& theReadData)
-{
-  Base::Read (theReadData);
-  theReadData >> myLower >> myUpper;
-}
 
 template <class Base>
 template <class ArrayHandle, class Converter>
@@ -222,7 +218,7 @@ template class StdLPersistent_Collection::instance
   <StdLPersistent_Collection::listBase,
    StdLPersistent_Collection::integer,
    TDataStd_BooleanList,
-   StdLPersistent_Collection::noConversion>;
+   StdLPersistent_Collection::boolConverter>;
 
 template class StdLPersistent_Collection::instance
   <StdLPersistent_Collection::listBase,

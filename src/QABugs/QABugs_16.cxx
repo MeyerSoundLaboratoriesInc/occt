@@ -58,19 +58,10 @@
 #include <OSD_Path.hxx>
 #include <Standard_ProgramError.hxx>
 
-//#include <QAModTopOpe_Limitation.hxx>
-#include <QANewModTopOpe_Limitation.hxx>
-
-//#include <QAModTopOpe_Glue.hxx>
-#include <QANewModTopOpe_Glue.hxx>
-
 #include <ShapeFix_Wireframe.hxx>
 #include <ShapeBuild_ReShape.hxx>
 
 #include <BRepBuilderAPI_MakeEdge.hxx>
-
-//#include <QAModTopOpe_ReShaper.hxx>
-#include <QANewModTopOpe_ReShaper.hxx>
 
 #include <ViewerTest_EventManager.hxx>
 
@@ -145,7 +136,7 @@ static Standard_Integer  BUC60814(Draw_Interpretor& di, Standard_Integer argc, c
   Handle(AIS_InteractiveObject) aTrihedron;
   Handle(Geom_Axis2Placement) aTrihedronAxis=new Geom_Axis2Placement(gp::XOY());
   aTrihedron=new AIS_Trihedron(aTrihedronAxis);
-  myAISContext->Display(aTrihedron);
+  myAISContext->Display (aTrihedron, Standard_False);
   
   //Circle
   gp_Pnt P(10,10,10);
@@ -154,12 +145,13 @@ static Standard_Integer  BUC60814(Draw_Interpretor& di, Standard_Integer argc, c
   
   Handle(Geom_Circle) ahCircle=new Geom_Circle(aAx2,20);
   Handle(AIS_InteractiveObject)   aCircle=new AIS_Circle(ahCircle);
-  myAISContext->Display(aCircle);
+  myAISContext->Display (aCircle, Standard_False);
     
-  myAISContext->SelectionColor(Quantity_NOC_BLUE1);
+  const Handle(Prs3d_Drawer)& aSelStyle = myAISContext->SelectionStyle();
+  aSelStyle->SetColor (Quantity_NOC_BLUE1);
   
-  myAISContext->AddOrRemoveSelected(aTrihedron);
-  myAISContext->AddOrRemoveSelected(aCircle);
+  myAISContext->AddOrRemoveSelected (aTrihedron, Standard_False);
+  myAISContext->AddOrRemoveSelected (aCircle, Standard_True);
   
   return 0;
 }
@@ -196,7 +188,7 @@ static Standard_Integer BUC60774 (Draw_Interpretor& theDi,
   Standard_Integer aXPixMax = aWinWidth;
   Standard_Integer aYPixMax = aWinHeight;
 
-  AIS_StatusOfPick aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView);
+  AIS_StatusOfPick aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView, Standard_False);
   theDi << (aPickStatus == AIS_SOP_NothingSelected
     ? "status = AIS_SOP_NothingSelected : OK"
     : "status = AIS_SOP_NothingSelected : bugged - Faulty ");
@@ -205,7 +197,7 @@ static Standard_Integer BUC60774 (Draw_Interpretor& theDi,
   theDi.Eval ("box b 10 10 10");
   theDi.Eval (" vdisplay b");
 
-  aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView);
+  aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView, Standard_False);
   theDi << (aPickStatus == AIS_SOP_OneSelected
     ? "status = AIS_SOP_OneSelected : OK"
     : "status = AIS_SOP_OneSelected : bugged - Faulty ");
@@ -214,7 +206,7 @@ static Standard_Integer BUC60774 (Draw_Interpretor& theDi,
   theDi.Eval ("box w 20 20 20 20 20 20");
   theDi.Eval (" vdisplay w");
 
-  aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView);
+  aPickStatus = anAISContext->Select (aXPixMin, aYPixMin, aXPixMax, aYPixMax, aV3dView, Standard_True);
   theDi << (aPickStatus == AIS_SOP_SeveralSelected
     ? "status = AIS_SOP_SeveralSelected : OK"
     : "status = AIS_SOP_SeveralSelected : bugged - Faulty ");
@@ -250,7 +242,7 @@ static Standard_Integer BUC60972 (Draw_Interpretor& di, Standard_Integer argc, c
   di << argv[5] << " " << Draw::Atof(argv[4]) << "\n";
   
   Handle(AIS_AngleDimension) aDim = new AIS_AngleDimension(aFirst, aSecond);
-  aContext->Display(aDim);                                                         
+  aContext->Display (aDim, Standard_True);
   
   return 0;
 }
@@ -337,7 +329,7 @@ static Standard_Integer OCC218bug (Draw_Interpretor& di, Standard_Integer argc, 
     theAISPlaneTri->SetYLabel(Ylabel);
     
     GetMapOfAIS().Bind ( theAISPlaneTri, name);
-    aContext->Display(theAISPlaneTri );
+    aContext->Display (theAISPlaneTri, Standard_True);
   }
   return 0;
 }
@@ -511,76 +503,6 @@ static Standard_Integer OCC405 (Draw_Interpretor& di, Standard_Integer argc, con
   else return 1;
 }
 
-static Standard_Integer OCC252 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  if(!(argc == 4 || argc == 5)) {
-    di << "Usage : " << argv[0] << " result part tool [ModeOfLimitation=0/1/2]\n";
-    return 1;
-  }
-  
-  TopoDS_Shape s1 = DBRep::Get(argv[2]);
-  TopoDS_Shape s2 = DBRep::Get(argv[3]);
-  if (s1.IsNull() || s2.IsNull()) return 1;
-
-  //QAModTopOpe_ModeOfLimitation ModeOfLimitation = QAModTopOpe_Forward;
-  QANewModTopOpe_ModeOfLimitation ModeOfLimitation = QANewModTopOpe_Forward;
-  if(argc==5) {
-    Standard_Integer ModeOfLimitationInteger = Draw::Atoi(argv[4]);
-    if(!(ModeOfLimitationInteger == 0 || ModeOfLimitationInteger == 1 || ModeOfLimitationInteger == 2)) {
-      di << "Usage : " << argv[0] << " result part tool [ModeOfLimitation=0/1/2]\n";
-      return 1;
-    }
-    //if (ModeOfLimitationInteger == 1) ModeOfLimitation = QAModTopOpe_Reversed;
-    //if (ModeOfLimitationInteger == 2) ModeOfLimitation = QAModTopOpe_BothParts;
-    if (ModeOfLimitationInteger == 1) ModeOfLimitation = QANewModTopOpe_Reversed;
-    if (ModeOfLimitationInteger == 2) ModeOfLimitation = QANewModTopOpe_BothParts;
-  }
-
-  //TopoDS_Shape res = QAModTopOpe_Limitation(s1,s2,ModeOfLimitation);
-  TopoDS_Shape res = QANewModTopOpe_Limitation(s1,s2,ModeOfLimitation);
-  if (res.IsNull()) {
-    di << "Error : result is null\n";
-    return 1;
-  }
-
-  DBRep::Set(argv[1],res);
-
-  return 0;
-}
-
-static Standard_Integer OCC307 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  if(!(argc == 4 || argc == 5)) {
-    di << "Usage : " << argv[0] << " result part tool [AllowCutting=0/1]\n";
-    return 1;
-  }
-  
-  TopoDS_Shape s1 = DBRep::Get(argv[2]);
-  TopoDS_Shape s2 = DBRep::Get(argv[3]);
-  if (s1.IsNull() || s2.IsNull()) return 1;
-
-  Standard_Boolean AllowCutting = Standard_False;
-  if(argc==5) {
-    Standard_Integer AllowCuttingInteger = Draw::Atoi(argv[4]);
-    if(!( AllowCuttingInteger == 0 || AllowCuttingInteger == 1)) {
-      di << "Usage : " << argv[0] << " result part tool [AllowCutting=0/1]\n";
-      return 1;
-    }
-    if (AllowCuttingInteger == 1) AllowCutting = Standard_True;
-  }
-
-  //TopoDS_Shape res = QAModTopOpe_Glue(s1,s2,AllowCutting);
-  TopoDS_Shape res = QANewModTopOpe_Glue(s1,s2,AllowCutting);
-  if (res.IsNull()) {
-    di << "Error : result is null\n";
-    return 1;
-  }
-
-  DBRep::Set(argv[1],res);
-
-  return 0;
-}
-
 static Standard_Integer OCC395 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
 {
   if(argc != 4) {
@@ -691,8 +613,8 @@ static Standard_Integer OCC301 (Draw_Interpretor& di, Standard_Integer argc, con
   TopoDS_Edge E1 = BRepBuilderAPI_MakeEdge(p1, p2);
   TopoDS_Edge E2 = BRepBuilderAPI_MakeEdge(p2, p3);
 
-  context->Display(new AIS_Shape(E1)); 
-  context->Display(new AIS_Shape(E2)); 
+  context->Display (new AIS_Shape(E1), Standard_False);
+  context->Display (new AIS_Shape(E2), Standard_True);
 
   gp_Pnt plnpt(0, 0, 0);
   gp_Dir plndir(0, 0, 1);
@@ -709,87 +631,6 @@ static Standard_Integer OCC301 (Draw_Interpretor& di, Standard_Integer argc, con
   // Another position of dimension
   anAngleDimension->SetFlyout (aRadius);
   context->Display (anAngleDimension, 0);
-  return 0;
-}
-
-static Standard_Integer OCC294 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  if(argc < 4) {
-    di << "Usage : " << argv[0] << " shape_result shape edge\n";
-    return 1;
-  }
-  TopoDS_Shape Sh1 = DBRep::Get(argv[2]);
-  TopoDS_Shape Sh2 = DBRep::Get(argv[3]);
-  if(Sh1.IsNull() || Sh2.IsNull()) return 1;
-  if(Sh2.ShapeType() != TopAbs_EDGE) return 1;
-
-  //QAModTopOpe_ReShaper ReShaper(Sh1);
-  QANewModTopOpe_ReShaper ReShaper(Sh1);
-  ReShaper.Remove(Sh2);
-  const TopoDS_Shape& ResultShape = ReShaper.GetResult();
-  if(ResultShape.IsNull()) {
-    di << "Faulty " << argv[0] << " : " << argv[1] << " - shape_result is null\n";
-    return 1;
-  }
-
-  DBRep::Set ( argv[1], ResultShape);
-  return 0;
-}
-
-static Standard_Integer OCC60 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
-  if(aContext.IsNull()) { 
-    di << "use 'vinit' command before " << argv[0] << "\n";
-    return 1;
-  }
-  if(argc < 5) {
-    di << "Usage : " << argv[0] << " xmin ymin xmax ymax; selection window\n";
-    return 1;
-  }
-
-  Standard_Integer xmin = Draw::Atoi(argv[1]);
-  Standard_Integer ymin = Draw::Atoi(argv[2]);
-  Standard_Integer xmax = Draw::Atoi(argv[3]);
-  Standard_Integer ymax = Draw::Atoi(argv[4]);
-
-  Handle(V3d_View) V3dView = ViewerTest::CurrentView();
-
-  Handle(ViewerTest_EventManager) EM = ViewerTest::CurrentEventManager();
-  EM->Select(xmin,ymin,xmax,ymax);
-
-  return 0;
-}
-
-static Standard_Integer OCC70 (Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
-{
-  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
-  if(aContext.IsNull()) { 
-    di << "use 'vinit' command before " << argv[0] << "\n";
-    return 1;
-  }
-  if(argc < 7) {
-    di << "Usage : " << argv[0] << " x1 y1 x2 y2 x3 y3 [x y ...]; polygon of selection\n";
-    return 1;
-  }
-  if (((argc - 1) % 2) != 0) {
-    di << "Usage : " << argv[0] << " x1 y1 x2 y2 x3 y3 [x y ...]; polygon of selection\n";
-    return 1;
-  }
-
-  Standard_Integer i, j, np = (argc-1) / 2;
-  TColgp_Array1OfPnt2d Polyline(1,np);
-  j = 1;
-  for (i = 1; i <= np; i++) {
-    Polyline(i) = gp_Pnt2d(Draw::Atof(argv[j]), Draw::Atof(argv[j+1]));
-    j += 2;
-  }
-
-  Handle(V3d_View) V3dView = ViewerTest::CurrentView();
-
-  aContext->Select(Polyline,V3dView);
-  aContext->UpdateCurrentViewer();
-
   return 0;
 }
 
@@ -857,14 +698,9 @@ void QABugs::Commands_16(Draw_Interpretor& theCommands) {
   theCommands.Add ("OCC49", "OCC49 name", __FILE__, OCC49, group);
   theCommands.Add ("OCC132", "OCC132 DependentName", __FILE__, OCC132, group);
   theCommands.Add ("OCC405", "OCC405 edge_result edge1 edge2; merge two edges", __FILE__, OCC405, group);
-  theCommands.Add ("OCC252", "OCC252 result part tool [ModeOfLimitation=0/1/2]", __FILE__, OCC252, group);
-  theCommands.Add ("OCC307", "OCC307 result part tool [AllowCutting=0/1]", __FILE__, OCC307, group);
   theCommands.Add ("OCC395", "OCC395 edge_result edge1 edge2", __FILE__, OCC395, group);
   theCommands.Add ("OCC394", "OCC394 edge_result edge [tol [mode [tolang]]]", __FILE__, OCC394, group);
   theCommands.Add ("OCC301", "OCC301 ArcRadius ArrowSize", __FILE__, OCC301, group);
-  theCommands.Add ("OCC294", "OCC294 shape_result shape edge", __FILE__, OCC294, group);
-  theCommands.Add ("OCC60", "OCC60 xmin ymin xmax ymax; selection window", __FILE__, OCC60, group);
-  theCommands.Add ("OCC70", "OCC70 x1 y1 x2 y2 x3 y3 [x y ...]; polygon of selection", __FILE__, OCC70, group);
   theCommands.Add ("OCC261", "OCC261 Doc", __FILE__, OCC261, group);
   theCommands.Add ("OCC710", "OCC710 path", __FILE__, OCC710, group);
   theCommands.Add ("OCC904", "OCC904 result shape nonmanifoldmode(0/1)", __FILE__, OCC904, group);

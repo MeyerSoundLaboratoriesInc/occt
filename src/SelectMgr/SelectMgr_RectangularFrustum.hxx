@@ -34,7 +34,7 @@ class SelectMgr_RectangularFrustum : public SelectMgr_Frustum<4>
 {
 public:
 
-  SelectMgr_RectangularFrustum() : myScale (1.0) {};
+  SelectMgr_RectangularFrustum() : myScale (1.0), myIsViewClipEnabled (Standard_True) {};
 
   //! Builds volume according to the point and given pixel tolerance
   Standard_EXPORT virtual void Build (const gp_Pnt2d& thePoint) Standard_OVERRIDE;
@@ -50,8 +50,8 @@ public:
   //! There are no default parameters, but in case if:
   //!    - transformation only is needed: @theScaleFactor must be initialized as any negative value;
   //!    - scale only is needed: @theTrsf must be set to gp_Identity.
-  Standard_EXPORT virtual NCollection_Handle<SelectMgr_BaseFrustum> ScaleAndTransform (const Standard_Integer theScaleFactor,
-                                                                                       const gp_Trsf& theTrsf) Standard_OVERRIDE;
+  Standard_EXPORT virtual Handle(SelectMgr_BaseFrustum) ScaleAndTransform (const Standard_Integer theScaleFactor,
+                                                                           const gp_GTrsf& theTrsf) const Standard_OVERRIDE;
 
 
   // SAT Tests for different objects
@@ -109,14 +109,34 @@ public:
 
   //! Valid for point selection only!
   //! Computes depth range for global (defined for the whole view) clipping planes.
-  Standard_EXPORT virtual void SetViewClipping (const Graphic3d_SequenceOfHClipPlane& thePlanes) Standard_OVERRIDE;
+  Standard_EXPORT virtual void SetViewClipping (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes) Standard_OVERRIDE;
+
+  //! Set if view clipping plane is enabled or not.
+  //! @return previous value of the flag
+  virtual Standard_Boolean SetViewClippingEnabled (const Standard_Boolean theToEnable) Standard_OVERRIDE
+  {
+    Standard_Boolean aPrevValue = myIsViewClipEnabled;
+    myIsViewClipEnabled = theToEnable;
+    return aPrevValue;
+  }
 
   //! A set of helper functions that return rectangular selecting frustum data
   inline const gp_Pnt* GetVertices() const { return myVertices; }
 
-  inline gp_Pnt GetNearPnt() const { return myNearPickedPnt; }
+  //! Returns projection of 2d mouse picked point or projection
+  //! of center of 2d rectangle (for point and rectangular selection
+  //! correspondingly) onto near view frustum plane
+  inline const gp_Pnt& GetNearPnt() const { return myNearPickedPnt; }
 
-  inline gp_Pnt GetFarPnt() const { return myFarPickedPnt; }
+  //! Returns projection of 2d mouse picked point or projection
+  //! of center of 2d rectangle (for point and rectangular selection
+  //! correspondingly) onto far view frustum plane
+  inline const gp_Pnt& GetFarPnt() const { return myFarPickedPnt; }
+
+  //! Stores plane equation coefficients (in the following form:
+  //! Ax + By + Cz + D = 0) to the given vector
+  Standard_EXPORT virtual void GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const Standard_OVERRIDE;
+
 protected:
 
   Standard_EXPORT void segmentSegmentDistance (const gp_Pnt& theSegPnt1,
@@ -137,7 +157,7 @@ protected:
 
 private:
 
-  void cacheVertexProjections (SelectMgr_RectangularFrustum* theFrustum);
+  void cacheVertexProjections (SelectMgr_RectangularFrustum* theFrustum) const;
 
 private:
   enum { LeftTopNear, LeftTopFar,
@@ -153,6 +173,8 @@ private:
   gp_Pnt2d                myMousePos;                  //!< Mouse coordinates
   Standard_Real           myScale;                     //!< Scale factor of applied transformation, if there was any
   SelectMgr_ViewClipRange myViewClipRange;
+  Standard_Boolean        myIsViewClipEnabled;         //!< view clipping enabled state
+
 };
 
 #endif // _SelectMgr_RectangularFrustum_HeaderFile

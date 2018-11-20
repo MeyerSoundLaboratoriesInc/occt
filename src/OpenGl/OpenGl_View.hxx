@@ -16,7 +16,7 @@
 #ifndef _OpenGl_View_Header
 #define _OpenGl_View_Header
 
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Type.hxx>
 
 #include <TColStd_Array2OfReal.hxx>
@@ -26,15 +26,12 @@
 #include <Quantity_NameOfColor.hxx>
 #include <Aspect_FillMethod.hxx>
 #include <Aspect_GradientFillMethod.hxx>
-#include <Aspect_TypeOfTriedronPosition.hxx>
-
-#include <InterfaceGraphic_Graphic3d.hxx>
 
 #include <Graphic3d_CView.hxx>
 #include <Graphic3d_GraduatedTrihedron.hxx>
 #include <Graphic3d_SequenceOfHClipPlane.hxx>
+#include <Graphic3d_ToneMappingMethod.hxx>
 #include <Graphic3d_TypeOfShadingModel.hxx>
-#include <Graphic3d_TypeOfSurfaceDetail.hxx>
 #include <Graphic3d_WorldViewProjState.hxx>
 #include <Graphic3d_ZLayerSettings.hxx>
 
@@ -43,38 +40,18 @@
 #include <OpenGl_BVHTreeSelector.hxx>
 #include <OpenGl_Context.hxx>
 #include <OpenGl_FrameBuffer.hxx>
+#include <OpenGl_FrameStatsPrs.hxx>
 #include <OpenGl_GraduatedTrihedron.hxx>
 #include <OpenGl_LayerList.hxx>
-#include <OpenGl_Light.hxx>
 #include <OpenGl_LineAttributes.hxx>
 #include <OpenGl_SceneGeometry.hxx>
 #include <OpenGl_Structure.hxx>
-#include <OpenGl_Trihedron.hxx>
 #include <OpenGl_Window.hxx>
 #include <OpenGl_Workspace.hxx>
+#include <OpenGl_TileSampler.hxx>
 
 #include <map>
 #include <set>
-
-struct OPENGL_ZCLIP
-{
-  struct {
-    Standard_Boolean   IsOn;
-    Standard_ShortReal Limit; /* in the range [0., 1.] */
-  } Back;
-  struct {
-    Standard_Boolean   IsOn;
-    Standard_ShortReal Limit; /* in the range [0., 1.] */
-  } Front;
-};
-
-struct OPENGL_FOG
-{
-  Standard_Boolean   IsOn;
-  Standard_ShortReal Front; /* in the range [0., 1.] */
-  Standard_ShortReal Back; /* in the range [0., 1.] */
-  TEL_COLOUR         Color;
-};
 
 struct OpenGl_Matrix;
 
@@ -97,7 +74,6 @@ public:
   Standard_EXPORT OpenGl_View (const Handle(Graphic3d_StructureManager)& theMgr,
                                const Handle(OpenGl_GraphicDriver)& theDriver,
                                const Handle(OpenGl_Caps)& theCaps,
-                               Standard_Boolean& theDeviceLostFlag,
                                OpenGl_StateCounter* theCounter);
 
   //! Default destructor.
@@ -151,26 +127,6 @@ public:
   //! Return true if view content cache has been invalidated.
   virtual Standard_Boolean IsInvalidated() Standard_OVERRIDE { return !myBackBufferRestored; }
 
-  //! Displays z-buffer trihedron.
-  Standard_EXPORT virtual void TriedronDisplay (const Aspect_TypeOfTriedronPosition thePosition = Aspect_TOTP_CENTER,
-                                                const Quantity_NameOfColor theColor = Quantity_NOC_WHITE,
-                                                const Standard_Real theScale = 0.02,
-                                                const Standard_Boolean theAsWireframe = Standard_True) Standard_OVERRIDE;
-
-  //! Erases z-buffer trihedron.
-  Standard_EXPORT virtual void TriedronErase() Standard_OVERRIDE;
-
-  //! Setup parameters of z-buffer trihedron.
-  Standard_EXPORT virtual void ZBufferTriedronSetup (const Quantity_NameOfColor theXColor = Quantity_NOC_RED,
-                                                     const Quantity_NameOfColor theYColor = Quantity_NOC_GREEN,
-                                                     const Quantity_NameOfColor theZColor = Quantity_NOC_BLUE1,
-                                                     const Standard_Real theSizeRatio = 0.8,
-                                                     const Standard_Real theAxisDiametr = 0.05,
-                                                     const Standard_Integer theNbFacettes = 12) Standard_OVERRIDE;
-
-  //! Displays trihedron echo.
-  Standard_EXPORT virtual void TriedronEcho (const Aspect_TypeOfTriedronEcho theType = Aspect_TOTE_NONE) Standard_OVERRIDE;
-
   //! Returns data of a graduated trihedron
   const Graphic3d_GraduatedTrihedron& GetGraduatedTrihedron() Standard_OVERRIDE
   { return myGTrihedronData; }
@@ -187,29 +143,10 @@ public:
   Standard_EXPORT virtual void GraduatedTrihedronMinMaxValues (const Graphic3d_Vec3 theMin, const Graphic3d_Vec3 theMax) Standard_OVERRIDE;
 
   //! Dump active rendering buffer into specified memory buffer.
+  //! In Ray-Tracing allow to get a raw HDR buffer using Graphic3d_BT_RGB_RayTraceHdrLeft buffer type,
+  //! only Left view will be dumped ignoring stereoscopic parameter.
   Standard_EXPORT virtual Standard_Boolean BufferDump (Image_PixMap& theImage,
                                                        const Graphic3d_BufferType& theBufferType) Standard_OVERRIDE;
-
-  //! Print the contents of the view to the printer.
-  //! @param thePrinterDC        pass the PrinterDeviceContext (HDC)
-  //! @param theToShowBackground when set to FALSE then print the view without background
-  //!                            color (background is white) else set to TRUE for printing
-  //!                            with current background color
-  //! @param theFileName         if != NULL, then the view will be printed to a file
-  //! @param thePrintAlgorithm   select print algorithm: stretch, tile
-  //! @param theScaleFactor      scaling coefficient, used internally to scale the printings
-  //!                            accordingly to the scale factor selected in the printer properties dialog
-  //! @return Standard_True if the data is passed to the printer, otherwise Standard_False if
-  //! the print operation failed due to the printer errors, or lack of system memory. This might be related
-  //! to insufficient memory or some internal errors.
-  //! All this errors are indicated by the message boxes (on level of OpenGl_GraphicDriver).
-  //! Warning: This function can reuse FBO assigned to the view, please take it into account
-  //! if you use it for your purposes.
-  Standard_EXPORT virtual Standard_Boolean Print (const Aspect_Handle    thePrinterDC,
-                                                  const Standard_Boolean theToShowBackground,
-                                                  const Standard_CString theFileName,
-                                                  const Aspect_PrintAlgo thePrintAlgorithm = Aspect_PA_STRETCH,
-                                                  const Standard_Real    theScaleFactor = 1.0) Standard_OVERRIDE;
 
   //! Export scene into the one of the Vector graphics formats (SVG, PS, PDF...).
   //! In contrast to Bitmaps, Vector graphics is scalable (so you may got quality benefits
@@ -220,7 +157,7 @@ public:
                                                    const Graphic3d_SortType theSortType = Graphic3d_ST_BSP_Tree) Standard_OVERRIDE;
 
   //! Marks BVH tree and the set of BVH primitives of correspondent priority list with id theLayerId as outdated.
-  Standard_EXPORT virtual void InvalidateBVHData (const Standard_Integer theLayerId) Standard_OVERRIDE;
+  Standard_EXPORT virtual void InvalidateBVHData (const Graphic3d_ZLayerId theLayerId) Standard_OVERRIDE;
 
   //! Insert a new top-level z layer with the given ID.
   Standard_EXPORT virtual void AddZLayer (const Graphic3d_ZLayerId theLayerId) Standard_OVERRIDE;
@@ -231,6 +168,28 @@ public:
   //! Sets the settings for a single Z layer of specified view.
   Standard_EXPORT virtual void SetZLayerSettings (const Graphic3d_ZLayerId theLayerId,
                                                   const Graphic3d_ZLayerSettings& theSettings) Standard_OVERRIDE;
+
+  //! Returns the maximum Z layer ID.
+  //! First layer ID is Graphic3d_ZLayerId_Default, last ID is ZLayerMax().
+  Standard_EXPORT virtual Standard_Integer ZLayerMax() const Standard_OVERRIDE;
+
+  //! Returns the bounding box of all structures displayed in the Z layer.
+  //! Never fails. If Z layer does not exist nothing happens.
+  Standard_EXPORT virtual void InvalidateZLayerBoundingBox (const Graphic3d_ZLayerId theLayerId) const Standard_OVERRIDE;
+
+  //! Returns the bounding box of all structures displayed in the Z layer.
+  //! If Z layer does not exist the empty box is returned.
+  //! @param theLayerId            layer identifier
+  //! @param theCamera             camera definition
+  //! @param theWindowWidth        viewport width  (for applying transformation-persistence)
+  //! @param theWindowHeight       viewport height (for applying transformation-persistence)
+  //! @param theToIncludeAuxiliary consider also auxiliary presentations (with infinite flag or with trihedron transformation persistence)
+  //! @return computed bounding box
+  Standard_EXPORT virtual Bnd_Box ZLayerBoundingBox (const Graphic3d_ZLayerId        theLayerId,
+                                                     const Handle(Graphic3d_Camera)& theCamera,
+                                                     const Standard_Integer          theWindowWidth,
+                                                     const Standard_Integer          theWindowHeight,
+                                                     const Standard_Boolean          theToIncludeAuxiliary) const Standard_OVERRIDE;
 
   //! Returns pointer to an assigned framebuffer object.
   Standard_EXPORT virtual Handle(Standard_Transient) FBO() const Standard_OVERRIDE;
@@ -260,12 +219,6 @@ public:
 
 public:
 
-  //! Returns true if anti-aliasing is enabled for the view.
-  Standard_Boolean virtual IsAntialiasingEnabled() const Standard_OVERRIDE { return myAntiAliasing; }
-
-  //! Enable or disable anti-aliasing in the view.
-  virtual void SetAntialiasingEnabled (const Standard_Boolean theIsEnabled) Standard_OVERRIDE { myAntiAliasing = theIsEnabled; }
-
   //! Returns background  fill color.
   Standard_EXPORT virtual Aspect_Background Background() const Standard_OVERRIDE;
 
@@ -279,7 +232,7 @@ public:
   Standard_EXPORT virtual void SetGradientBackground (const Aspect_GradientBackground& theBackground) Standard_OVERRIDE;
 
   //! Returns background image texture file path.
-  Standard_EXPORT virtual TCollection_AsciiString BackgroundImage() Standard_OVERRIDE { return myBackgroundImagePath; }
+  virtual TCollection_AsciiString BackgroundImage() Standard_OVERRIDE { return myBackgroundImagePath; }
 
   //! Sets background image texture file path.
   Standard_EXPORT virtual void SetBackgroundImage (const TCollection_AsciiString& theFilePath) Standard_OVERRIDE;
@@ -291,7 +244,7 @@ public:
   Standard_EXPORT virtual void SetBackgroundImageStyle (const Aspect_FillMethod theFillStyle) Standard_OVERRIDE;
 
   //! Returns environment texture set for the view.
-  Standard_EXPORT virtual Handle(Graphic3d_TextureEnv) TextureEnv() const Standard_OVERRIDE { return myTextureEnvData; }
+  virtual Handle(Graphic3d_TextureEnv) TextureEnv() const Standard_OVERRIDE { return myTextureEnvData; }
 
   //! Sets environment texture for the view.
   Standard_EXPORT virtual void SetTextureEnv (const Handle(Graphic3d_TextureEnv)& theTextureEnv) Standard_OVERRIDE;
@@ -302,22 +255,6 @@ public:
   //! Enables or disables frustum culling optimization.
   virtual void SetCullingEnabled (const Standard_Boolean theIsEnabled) Standard_OVERRIDE { myCulling = theIsEnabled; }
 
-  //! Returns shading model of the view.
-  virtual Graphic3d_TypeOfShadingModel ShadingModel() const Standard_OVERRIDE { return myShadingModel; }
-
-  //! Sets shading model of the view.
-  virtual void SetShadingModel (const Graphic3d_TypeOfShadingModel theModel) Standard_OVERRIDE { myShadingModel = theModel; }
-
-  //! Returns surface detail type of the view.
-  virtual Graphic3d_TypeOfSurfaceDetail SurfaceDetailType() const Standard_OVERRIDE { return mySurfaceDetail; }
-
-  //! Sets surface detail type of the view.
-  virtual void SetSurfaceDetailType (const Graphic3d_TypeOfSurfaceDetail theType) Standard_OVERRIDE
-  {
-    mySurfaceDetail          = theType;
-    myToUpdateEnvironmentMap = Standard_True;
-  }
-
   //! Return backfacing model used for the view.
   virtual Graphic3d_TypeOfBackfacingModel BackfacingModel() const Standard_OVERRIDE { return myBackfacing; }
 
@@ -327,104 +264,51 @@ public:
   //! Returns camera object of the view.
   virtual const Handle(Graphic3d_Camera)& Camera() const Standard_OVERRIDE { return myCamera; }
 
+  //! Returns local camera origin currently set for rendering, might be modified during rendering.
+  const gp_XYZ& LocalOrigin() const { return myLocalOrigin; }
+
+  //! Setup local camera origin currently set for rendering.
+  Standard_EXPORT void SetLocalOrigin (const gp_XYZ& theOrigin);
+
   //! Sets camera used by the view.
-  virtual void SetCamera (const Handle(Graphic3d_Camera)& theCamera) Standard_OVERRIDE { myCamera = theCamera; }
-
-  //! Returns the activity of back z-clipping plane.
-  virtual Standard_Boolean BackZClippingIsOn() const Standard_OVERRIDE { return myZClip.Back.IsOn; }
-
-  //! Activates the back Z-clipping plane.
-  virtual void SetBackZClippingOn (const Standard_Boolean theIsOn) Standard_OVERRIDE { myZClip.Back.IsOn = theIsOn; }
-
-  //! Returns the definition of the back Z-clipping plane.
-  virtual Standard_Real ZClippingBackPlane() const Standard_OVERRIDE { return myZClip.Back.Limit; }
-
-  //! Sets the definition of the back Z-clipping plane.
-  virtual void SetZClippingBackPlane (const Standard_Real theValue) Standard_OVERRIDE
-  {
-    myZClip.Back.Limit = static_cast<Standard_ShortReal> (theValue);
-  }
-
-  //! Returns the activity of front z-clipping plane.
-  virtual Standard_Boolean FrontZClippingIsOn() const Standard_OVERRIDE { return myZClip.Front.IsOn; }
-
-  //! Activates the front Z-clipping plane.
-  virtual void SetFrontZClippingOn (const Standard_Boolean theIsOn) Standard_OVERRIDE{ myZClip.Front.IsOn = theIsOn; }
-
-  //! Returns the definition of the front Z-clipping plane.
-  virtual Standard_Real ZClippingFrontPlane() const Standard_OVERRIDE { return myZClip.Front.Limit; }
-
-  //! Sets the definition of the front Z-clipping plane.
-  virtual void SetZClippingFrontPlane (const Standard_Real theValue) Standard_OVERRIDE
-  {
-    myZClip.Front.Limit = static_cast<Standard_ShortReal> (theValue);
-  }
-
-  //! Returns the activity of depth cueing.
-  virtual Standard_Boolean DepthCueingIsOn() const Standard_OVERRIDE { return myFog.IsOn; }
-
-  //! Sets the activity of depth cueing.
-  virtual void SetDepthCueingOn (const Standard_Boolean theIsOn) Standard_OVERRIDE { myFog.IsOn = theIsOn; }
-
-  //! Returns the back depth cueing plane.
-  virtual Standard_Real DepthCueingBackPlane() const Standard_OVERRIDE { return myFog.Back; }
-
-  //! Set the back depth cueing plane.
-  virtual void SetDepthCueingBackPlane (const Standard_Real theValue) Standard_OVERRIDE
-  {
-    myFog.Back = static_cast<Standard_ShortReal> (theValue);
-  }
-
-  //! Returns the front depth cueing plane.
-  virtual Standard_Real DepthCueingFrontPlane() const Standard_OVERRIDE { return myFog.Front; }
-
-  //! Set the front depth cueing plane.
-  virtual void SetDepthCueingFrontPlane (const Standard_Real theValue) Standard_OVERRIDE
-  {
-    myFog.Front = static_cast<Standard_ShortReal> (theValue);
-  }
-
-  //! Returns true if GL lighting is enabled.
-  virtual Standard_Boolean IsGLLightEnabled() const Standard_OVERRIDE { return myUseGLLight; }
-
-  //! Sets GL lighting enabled or disable state.
-  virtual void SetGLLightEnabled (const Standard_Boolean theIsEnabled) Standard_OVERRIDE { myUseGLLight = theIsEnabled; }
+  Standard_EXPORT virtual void SetCamera (const Handle(Graphic3d_Camera)& theCamera) Standard_OVERRIDE;
 
   //! Returns list of lights of the view.
-  virtual const Graphic3d_ListOfCLight& Lights() const Standard_OVERRIDE { return myLights; }
+  virtual const Handle(Graphic3d_LightSet)& Lights() const Standard_OVERRIDE { return myLights; }
 
   //! Sets list of lights for the view.
-  virtual void SetLights (const Graphic3d_ListOfCLight& theLights) Standard_OVERRIDE
+  virtual void SetLights (const Handle(Graphic3d_LightSet)& theLights) Standard_OVERRIDE
   {
     myLights = theLights;
     myCurrLightSourceState = myStateCounter->Increment();
   }
 
   //! Returns list of clip planes set for the view.
-  virtual const Graphic3d_SequenceOfHClipPlane& ClipPlanes() const Standard_OVERRIDE { return myClipPlanes; }
+  virtual const Handle(Graphic3d_SequenceOfHClipPlane)& ClipPlanes() const Standard_OVERRIDE { return myClipPlanes; }
 
   //! Sets list of clip planes for the view.
-  virtual void SetClipPlanes (const Graphic3d_SequenceOfHClipPlane& thePlanes) Standard_OVERRIDE { myClipPlanes = thePlanes; }
+  virtual void SetClipPlanes (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes) Standard_OVERRIDE { myClipPlanes = thePlanes; }
+
+  //! Fill in the dictionary with diagnostic info.
+  //! Should be called within rendering thread.
+  //!
+  //! This API should be used only for user output or for creating automated reports.
+  //! The format of returned information (e.g. key-value layout)
+  //! is NOT part of this API and can be changed at any time.
+  //! Thus application should not parse returned information to weed out specific parameters.
+  Standard_EXPORT virtual void DiagnosticInformation (TColStd_IndexedDataMapOfStringString& theDict,
+                                                      Graphic3d_DiagnosticInfo theFlags) const Standard_OVERRIDE;
 
 public:
 
   //! Returns background color.
-  const TEL_COLOUR& BackgroundColor() const { return myBgColor; }
-
-  //! Change trihedron.
-  OpenGl_Trihedron& ChangeTrihedron() { return myTrihedron; }
+  const Quantity_ColorRGBA& BackgroundColor() const { return myBgColor; }
 
   //! Change graduated trihedron.
   OpenGl_GraduatedTrihedron& ChangeGraduatedTrihedron() { return myGraduatedTrihedron; }
 
   void SetTextureEnv (const Handle(OpenGl_Context)&       theCtx,
                       const Handle(Graphic3d_TextureEnv)& theTexture);
-
-  //! Returns height of view volume.
-  Standard_Real Height () const { return myCamera->ViewDimensions().X(); }
-
-  //! Returns width of view volume.
-  Standard_Real Width () const { return myCamera->ViewDimensions().Y(); }
 
   void SetBackgroundTextureStyle (const Aspect_FillMethod FillStyle);
 
@@ -435,18 +319,15 @@ public:
   //! Returns list of OpenGL Z-layers.
   const OpenGl_LayerList& LayerList() const { return myZLayers; }
 
-  //! Returns list of openGL light sources.
-  const OpenGl_ListOfLight& LightList() const { return myLights; }
-
   //! Returns OpenGL window implementation.
   const Handle(OpenGl_Window) GlWindow() const { return myWindow; }
 
   //! Returns OpenGL environment map.
-  const Handle(OpenGl_Texture)& GlTextureEnv() const { return myTextureEnv; }
+  const Handle(OpenGl_TextureSet)& GlTextureEnv() const { return myTextureEnv; }
 
   //! Returns selector for BVH tree, providing a possibility to store information
   //! about current view volume and to detect which objects are overlapping it.
-  OpenGl_BVHTreeSelector& BVHTreeSelector() { return myBVHSelector; }
+  const OpenGl_BVHTreeSelector& BVHTreeSelector() const { return myBVHSelector; }
 
   //! Returns true if there are immediate structures to display
   bool HasImmediateStructures() const
@@ -463,7 +344,8 @@ protected: //! @name low-level redrawing sub-routines
 
   //! Redraws view for the given monographic camera projection, or left/right eye.
   Standard_EXPORT virtual void redraw (const Graphic3d_Camera::Projection theProjection,
-                                       OpenGl_FrameBuffer*                theReadDrawFbo);
+                                       OpenGl_FrameBuffer*                theReadDrawFbo,
+                                       OpenGl_FrameBuffer*                theOitAccumFbo);
 
   //! Redraws view for the given monographic camera projection, or left/right eye.
   //!
@@ -480,6 +362,7 @@ protected: //! @name low-level redrawing sub-routines
   Standard_EXPORT virtual bool redrawImmediate (const Graphic3d_Camera::Projection theProjection,
                                                 OpenGl_FrameBuffer* theReadFbo,
                                                 OpenGl_FrameBuffer* theDrawFbo,
+                                                OpenGl_FrameBuffer* theOitAccumFbo,
                                                 const Standard_Boolean theIsPartialUpdate = Standard_False);
 
   //! Blit image from/to specified buffers.
@@ -495,17 +378,21 @@ protected: //! @name Rendering of GL graphics (with prepared drawing buffer).
   //! Renders the graphical contents of the view into the preprepared window or framebuffer.
   //! @param theProjection [in] the projection that should be used for rendering.
   //! @param theReadDrawFbo [in] the framebuffer for rendering graphics.
+  //! @param theOitAccumFbo [in] the framebuffer for accumulating color and coverage for OIT process.
   //! @param theToDrawImmediate [in] the flag indicates whether the rendering performs in immediate mode.
   Standard_EXPORT virtual void render (Graphic3d_Camera::Projection theProjection,
                                        OpenGl_FrameBuffer*          theReadDrawFbo,
+                                       OpenGl_FrameBuffer*          theOitAccumFbo,
                                        const Standard_Boolean       theToDrawImmediate);
 
   //! Renders the graphical scene.
   //! @param theProjection [in] the projection that is used for rendering.
   //! @param theReadDrawFbo [in] the framebuffer for rendering graphics.
+  //! @param theOitAccumFbo [in] the framebuffer for accumulating color and coverage for OIT process.
   //! @param theToDrawImmediate [in] the flag indicates whether the rendering performs in immediate mode.
   Standard_EXPORT virtual void renderScene (Graphic3d_Camera::Projection theProjection,
                                             OpenGl_FrameBuffer*    theReadDrawFbo,
+                                            OpenGl_FrameBuffer*    theOitAccumFbo,
                                             const Standard_Boolean theToDrawImmediate);
 
   //! Draw background (gradient / image)
@@ -514,13 +401,18 @@ protected: //! @name Rendering of GL graphics (with prepared drawing buffer).
   //! Render set of structures presented in the view.
   //! @param theProjection [in] the projection that is used for rendering.
   //! @param theReadDrawFbo [in] the framebuffer for rendering graphics.
+  //! @param theOitAccumFbo [in] the framebuffer for accumulating color and coverage for OIT process.
   //! @param theToDrawImmediate [in] the flag indicates whether the rendering performs in immediate mode.
   Standard_EXPORT virtual void renderStructs (Graphic3d_Camera::Projection theProjection,
                                               OpenGl_FrameBuffer*    theReadDrawFbo,
+                                              OpenGl_FrameBuffer*    theOitAccumFbo,
                                               const Standard_Boolean theToDrawImmediate);
 
   //! Renders trihedron.
   void renderTrihedron (const Handle(OpenGl_Workspace) &theWorkspace);
+
+  //! Renders frame statistics.
+  void renderFrameStats();
 
 private:
 
@@ -539,10 +431,16 @@ private:
   Standard_EXPORT virtual void changePriority (const Handle(Graphic3d_CStructure)& theCStructure,
                                                const Standard_Integer theNewPriority) Standard_OVERRIDE;
 
+  //! Returns zoom-scale factor.
+  Standard_EXPORT virtual Standard_Real considerZoomPersistenceObjects (const Graphic3d_ZLayerId        theLayerId,
+                                                                        const Handle(Graphic3d_Camera)& theCamera,
+                                                                        const Standard_Integer          theWindowWidth,
+                                                                        const Standard_Integer          theWindowHeight) const Standard_OVERRIDE;
+
 private:
 
   //! Copy content of Back buffer to the Front buffer.
-  void copyBackToFront();
+  bool copyBackToFront();
 
   //! Initialize blit quad.
   OpenGl_VertexBuffer* initBlitQuad (const Standard_Boolean theToFlip);
@@ -550,39 +448,43 @@ private:
   //! Blend together views pair into stereo image.
   void drawStereoPair (OpenGl_FrameBuffer* theDrawFbo);
 
+  //! Check and update OIT compatibility with current OpenGL context's state.
+  bool checkOitCompatibility (const Handle(OpenGl_Context)& theGlContext,
+                              const Standard_Boolean theMSAA);
+
+  //! Chooses compatible internal color format for OIT frame buffer.
+  bool chooseOitColorConfiguration (const Handle(OpenGl_Context)& theGlContext,
+                                    const Standard_Integer theConfigIndex,
+                                    OpenGl_ColorFormats& theFormats);
+
 protected:
 
   OpenGl_GraphicDriver*    myDriver;
   Handle(OpenGl_Window)    myWindow;
   Handle(OpenGl_Workspace) myWorkspace;
   Handle(OpenGl_Caps)      myCaps;
-  Standard_Boolean&        myDeviceLostFlag;
   Standard_Boolean         myWasRedrawnGL;
 
-  Standard_Boolean                myAntiAliasing;
   Standard_Boolean                myCulling;
-  Graphic3d_TypeOfShadingModel    myShadingModel;
-  Graphic3d_TypeOfSurfaceDetail   mySurfaceDetail;
   Graphic3d_TypeOfBackfacingModel myBackfacing;
-  TEL_COLOUR                      myBgColor;
-  OPENGL_FOG                      myFog;
-  OPENGL_ZCLIP                    myZClip;
-  Graphic3d_SequenceOfHClipPlane  myClipPlanes;
+  Quantity_ColorRGBA              myBgColor;
+  Handle(Graphic3d_SequenceOfHClipPlane) myClipPlanes;
   Handle(Graphic3d_Camera)        myCamera;
+  gp_XYZ                          myLocalOrigin;
   Handle(OpenGl_FrameBuffer)      myFBO;
-  Standard_Boolean                myUseGLLight;
-  Standard_Boolean                myToShowTrihedron;
   Standard_Boolean                myToShowGradTrihedron;
   TCollection_AsciiString         myBackgroundImagePath;
   Handle(Graphic3d_TextureEnv)    myTextureEnvData;
   Graphic3d_GraduatedTrihedron    myGTrihedronData;
 
-  OpenGl_ListOfLight              myLights;
+  Handle(Graphic3d_LightSet)      myNoShadingLight;
+  Handle(Graphic3d_LightSet)      myLights;
   OpenGl_LayerList                myZLayers; //!< main list of displayed structure, sorted by layers
 
   Graphic3d_WorldViewProjState    myWorldViewProjState; //!< camera modification state
   OpenGl_StateCounter*            myStateCounter;
   Standard_Size                   myCurrLightSourceState;
+  Standard_Size                   myLightsRevision;
 
   typedef std::pair<Standard_Size, Standard_Size> StateInfo;
 
@@ -593,10 +495,14 @@ protected:
   //! Is needed for selection of overlapping objects and storage of the current view volume
   OpenGl_BVHTreeSelector myBVHSelector;
 
-  OpenGl_Trihedron          myTrihedron;
   OpenGl_GraduatedTrihedron myGraduatedTrihedron;
+  OpenGl_FrameStatsPrs      myFrameStatsPrs;
 
-  Handle(OpenGl_Texture) myTextureEnv;
+  Handle(OpenGl_TextureSet) myTextureEnv;
+
+  //! Framebuffers for OpenGL output.
+  Handle(OpenGl_FrameBuffer) myOpenGlFBO;
+  Handle(OpenGl_FrameBuffer) myOpenGlFBO2;
 
 protected: //! @name Rendering properties
 
@@ -604,13 +510,19 @@ protected: //! @name Rendering properties
   //! of the view (without presentation of immediate layers).
   GLint                      myFboColorFormat;        //!< sized format for color attachments
   GLint                      myFboDepthFormat;        //!< sized format for depth-stencil attachments
+  OpenGl_ColorFormats        myFboOitColorConfig;     //!< selected color format configuration for OIT color attachments
   Handle(OpenGl_FrameBuffer) myMainSceneFbos[2];
-  Handle(OpenGl_FrameBuffer) myImmediateSceneFbos[2]; //!< Additional buffers for immediate layer in stereo mode.
+  Handle(OpenGl_FrameBuffer) myMainSceneFbosOit[2];      //!< Additional buffers for transparent draw of main layer.
+  Handle(OpenGl_FrameBuffer) myImmediateSceneFbos[2];    //!< Additional buffers for immediate layer in stereo mode.
+  Handle(OpenGl_FrameBuffer) myImmediateSceneFbosOit[2]; //!< Additional buffers for transparency draw of immediate layer.
   OpenGl_VertexBuffer        myFullScreenQuad;        //!< Vertices for full-screen quad rendering.
   OpenGl_VertexBuffer        myFullScreenQuadFlip;
   Standard_Boolean           myToFlipOutput;          //!< Flag to draw result image upside-down
   unsigned int               myFrameCounter;          //!< redraw counter, for debugging
-  Standard_Boolean           myHasFboBlit;
+  Standard_Boolean           myHasFboBlit;            //!< disable FBOs on failure
+  Standard_Boolean           myToDisableOIT;          //!< disable OIT on failure
+  Standard_Boolean           myToDisableOITMSAA;      //!< disable OIT with MSAA on failure
+  Standard_Boolean           myToDisableMSAA;         //!< disable MSAA after failure
   Standard_Boolean           myTransientDrawToFront; //!< optimization flag for immediate mode (to render directly to the front buffer)
   Standard_Boolean           myBackBufferRestored;
   Standard_Boolean           myIsImmediateDrawn;     //!< flag indicates that immediate mode buffer contains some data
@@ -653,7 +565,7 @@ protected: //! @name data types related to ray-tracing
     OpenGl_RT_uDirectLB,
     OpenGl_RT_uDirectRT,
     OpenGl_RT_uDirectRB,
-    OpenGl_RT_uViewMat,
+    OpenGl_RT_uViewPrMat,
     OpenGl_RT_uUnviewMat,
 
     // 3D scene params
@@ -674,8 +586,12 @@ protected: //! @name data types related to ray-tracing
     OpenGl_RT_uTexSamplersArray,
     OpenGl_RT_uBlockedRngEnabled,
 
+    // size of render window
+    OpenGl_RT_uWinSizeX,
+    OpenGl_RT_uWinSizeY,
+
     // sampled frame params
-    OpenGl_RT_uSampleWeight,
+    OpenGl_RT_uAccumSamples,
     OpenGl_RT_uFrameRndSeed,
 
     // adaptive FSAA params
@@ -683,33 +599,25 @@ protected: //! @name data types related to ray-tracing
     OpenGl_RT_uOffsetY,
     OpenGl_RT_uSamples,
 
+    // images used by ISS mode
+    OpenGl_RT_uRenderImage,
+    OpenGl_RT_uOffsetImage,
+
+    // maximum radiance value
+    OpenGl_RT_uMaxRadiance,
+
     OpenGl_RT_NbVariables // special field
   };
 
-  //! Defines texture samplers.
-  enum ShaderSamplerNames
+  //! Defines OpenGL image samplers.
+  enum ShaderImageNames
   {
-    OpenGl_RT_SceneNodeInfoTexture  = 0,
-    OpenGl_RT_SceneMinPointTexture  = 1,
-    OpenGl_RT_SceneMaxPointTexture  = 2,
-    OpenGl_RT_SceneTransformTexture = 3,
-
-    OpenGl_RT_GeometryVertexTexture = 4,
-    OpenGl_RT_GeometryNormalTexture = 5,
-    OpenGl_RT_GeometryTexCrdTexture = 6,
-    OpenGl_RT_GeometryTriangTexture = 7,
-
-    OpenGl_RT_EnvironmentMapTexture = 8,
-
-    OpenGl_RT_RaytraceMaterialTexture = 9,
-    OpenGl_RT_RaytraceLightSrcTexture = 10,
-
-    OpenGl_RT_FsaaInputTexture = 11,
-    OpenGl_RT_PrevAccumTexture = 12,
-    OpenGl_RT_DepthTexture = 13,
-
-    OpenGl_RT_OpenGlColorTexture = 14,
-    OpenGl_RT_OpenGlDepthTexture = 15
+    OpenGl_RT_OutputImageLft = 0,
+    OpenGl_RT_OutputImageRgh = 1,
+    OpenGl_RT_VisualErrorImageLft = 2,
+    OpenGl_RT_VisualErrorImageRgh = 3,
+    OpenGl_RT_TileOffsetsImageLft = 4,
+    OpenGl_RT_TileOffsetsImageRgh = 5
   };
 
   //! Tool class for management of shader sources.
@@ -750,7 +658,10 @@ protected: //! @name data types related to ray-tracing
     TCollection_AsciiString Source() const;
 
     //! Loads shader source from specified files.
-    Standard_Boolean Load (const TCollection_AsciiString* theFileNames, const TCollection_AsciiString& thePrefix = EMPTY_PREFIX);
+    Standard_Boolean LoadFromFiles (const TCollection_AsciiString* theFileNames, const TCollection_AsciiString& thePrefix = EMPTY_PREFIX);
+
+    //! Loads shader source from specified strings.
+    Standard_Boolean LoadFromStrings (const TCollection_AsciiString* theStrings, const TCollection_AsciiString& thePrefix = EMPTY_PREFIX);
 
   private:
 
@@ -764,7 +675,7 @@ protected: //! @name data types related to ray-tracing
   static const Standard_Integer THE_DEFAULT_NB_BOUNCES = 3;
 
   //! Default size of traversal stack.
-  static const Standard_Integer THE_DEFAULT_STACK_SIZE = 24;
+  static const Standard_Integer THE_DEFAULT_STACK_SIZE = 10;
 
   //! Compile-time ray-tracing parameters.
   struct RaytracingParams
@@ -784,16 +695,45 @@ protected: //! @name data types related to ray-tracing
     //! Enables/disables the use of OpenGL bindless textures.
     Standard_Boolean UseBindlessTextures;
 
+    //! Enables/disables two-sided BSDF models instead of one-sided.
+    Standard_Boolean TwoSidedBsdfModels;
+
+    //! Enables/disables adaptive screen sampling for path tracing.
+    Standard_Boolean AdaptiveScreenSampling;
+
+    //! Enables/disables environment map for background.
+    Standard_Boolean UseEnvMapForBackground;
+
+    //! Maximum radiance value used for clamping radiance estimation.
+    Standard_ShortReal RadianceClampingValue;
+
+    //! Number of tiles in X dimension (in adaptive sampling mode).
+    Standard_Integer NbTilesX;
+    
+    //! Number of tiles in Y dimension (in adaptive sampling mode).
+    Standard_Integer NbTilesY;
+    
+    //! Enables/disables depth-of-field effect (path tracing, perspective camera).
+    Standard_Boolean DepthOfField;
+
+    //! Tone mapping method for path tracing.
+    Graphic3d_ToneMappingMethod ToneMappingMethod;
+
     //! Creates default compile-time ray-tracing parameters.
     RaytracingParams()
-    : StackSize (THE_DEFAULT_STACK_SIZE),
-      NbBounces (THE_DEFAULT_NB_BOUNCES),
-      TransparentShadows (Standard_False),
-      GlobalIllumination  (Standard_False),
-      UseBindlessTextures (Standard_False)
-    {
-      //
-    }
+    : StackSize              (THE_DEFAULT_STACK_SIZE),
+      NbBounces              (THE_DEFAULT_NB_BOUNCES),
+      TransparentShadows     (Standard_False),
+      GlobalIllumination     (Standard_False),
+      UseBindlessTextures    (Standard_False),
+      TwoSidedBsdfModels     (Standard_False),
+      AdaptiveScreenSampling (Standard_False),
+      UseEnvMapForBackground (Standard_False),
+      RadianceClampingValue  (30.0),
+      NbTilesX               (16),
+      NbTilesY               (16),
+      DepthOfField           (Standard_False),
+      ToneMappingMethod      (Graphic3d_ToneMappingMethod_Disabled) { }
   };
 
   //! Describes state of OpenGL structure.
@@ -831,9 +771,6 @@ protected: //! @name methods related to ray-tracing
   //! Updates 3D scene light sources for ray-tracing.
   Standard_Boolean updateRaytraceLightSources (const OpenGl_Mat4& theInvModelView, const Handle(OpenGl_Context)& theGlContext);
 
-  //! Updates environment map for ray-tracing.
-  Standard_Boolean updateRaytraceEnvironmentMap (const Handle(OpenGl_Context)& theGlContext);
-
   //! Checks to see if the OpenGL structure is modified.
   Standard_Boolean toUpdateStructure (const OpenGl_Structure* theStructure);
 
@@ -844,7 +781,7 @@ protected: //! @name methods related to ray-tracing
   //! Adds OpenGL groups to ray-traced scene geometry.
   Standard_Boolean addRaytraceGroups (const OpenGl_Structure*        theStructure,
                                       const OpenGl_RaytraceMaterial& theStructMat,
-                                      const Graphic3d_Mat4*          theTransform,
+                                      const Handle(Geom_Transformation)& theTrsf,
                                       const Handle(OpenGl_Context)&  theGlContext);
 
   //! Creates ray-tracing material properties.
@@ -852,9 +789,9 @@ protected: //! @name methods related to ray-tracing
                                            const Handle(OpenGl_Context)& theGlContext);
 
   //! Adds OpenGL primitive array to ray-traced scene geometry.
-  OpenGl_TriangleSet* addRaytracePrimitiveArray (const OpenGl_PrimitiveArray* theArray,
-                                                 const Standard_Integer       theMatID,
-                                                 const OpenGl_Mat4*           theTrans);
+  Handle(OpenGl_TriangleSet) addRaytracePrimitiveArray (const OpenGl_PrimitiveArray* theArray,
+                                                        const Standard_Integer       theMatID,
+                                                        const OpenGl_Mat4*           theTrans);
 
   //! Adds vertex indices from OpenGL primitive array to ray-traced scene geometry.
   Standard_Boolean addRaytraceVertexIndices (OpenGl_TriangleSet&                  theSet,
@@ -929,7 +866,8 @@ protected: //! @name methods related to ray-tracing
   Standard_Boolean initRaytraceResources (const Handle(OpenGl_Context)& theGlContext);
 
   //! Releases OpenGL/GLSL shader programs.
-  void releaseRaytraceResources (const Handle(OpenGl_Context)& theGlContext);
+  void releaseRaytraceResources (const Handle(OpenGl_Context)& theGlContext,
+                                 const Standard_Boolean        theToRebuild = Standard_False);
 
   //! Updates auxiliary OpenGL frame buffers.
   Standard_Boolean updateRaytraceBuffers (const Standard_Integer        theSizeX,
@@ -937,12 +875,22 @@ protected: //! @name methods related to ray-tracing
                                           const Handle(OpenGl_Context)& theGlContext);
 
   //! Generates viewing rays for corners of screen quad.
+  //! (ray tracing; path tracing for orthographic camera)
   void updateCamera (const OpenGl_Mat4& theOrientation,
                      const OpenGl_Mat4& theViewMapping,
                      OpenGl_Vec3*       theOrigins,
                      OpenGl_Vec3*       theDirects,
                      OpenGl_Mat4&       theView,
                      OpenGl_Mat4&       theUnView);
+
+  //! Generate viewing rays (path tracing, perspective camera).
+  void updatePerspCameraPT(const OpenGl_Mat4&           theOrientation,
+                           const OpenGl_Mat4&           theViewMapping,
+                           Graphic3d_Camera::Projection theProjection,
+                           OpenGl_Mat4&                 theViewPr,
+                           OpenGl_Mat4&                 theUnview,
+                           const int                    theWinSizeX,
+                           const int                    theWinSizeY);
 
   //! Binds ray-trace textures to corresponding texture units.
   void bindRaytraceTextures (const Handle(OpenGl_Context)& theGlContext);
@@ -951,25 +899,34 @@ protected: //! @name methods related to ray-tracing
   void unbindRaytraceTextures (const Handle(OpenGl_Context)& theGlContext);
 
   //! Sets uniform state for the given ray-tracing shader program.
-  Standard_Boolean setUniformState (const OpenGl_Vec3*            theOrigins,
-                                    const OpenGl_Vec3*            theDirects,
-                                    const OpenGl_Mat4&            theViewMat,
-                                    const OpenGl_Mat4&            theUnviewMat,
-                                    const Standard_Integer        theProgramId,
+  Standard_Boolean setUniformState (const Standard_Integer        theProgramId,
+                                    const Standard_Integer        theSizeX,
+                                    const Standard_Integer        theSizeY,
+                                    Graphic3d_Camera::Projection  theProjection,
                                     const Handle(OpenGl_Context)& theGlContext);
 
   //! Runs ray-tracing shader programs.
   Standard_Boolean runRaytraceShaders (const Standard_Integer        theSizeX,
                                        const Standard_Integer        theSizeY,
-                                       const OpenGl_Vec3*            theOrigins,
-                                       const OpenGl_Vec3*            theDirects,
-                                       const OpenGl_Mat4&            theViewMat,
-                                       const OpenGl_Mat4&            theUnviewMat,
                                        Graphic3d_Camera::Projection  theProjection,
                                        OpenGl_FrameBuffer*           theReadDrawFbo,
                                        const Handle(OpenGl_Context)& theGlContext);
 
-  //! Redraws the window using OpenGL/GLSL ray-tracing.
+  //! Runs classical (Whitted-style) ray-tracing kernel.
+  Standard_Boolean runRaytrace (const Standard_Integer        theSizeX,
+                                const Standard_Integer        theSizeY,
+                                Graphic3d_Camera::Projection  theProjection,
+                                OpenGl_FrameBuffer*           theReadDrawFbo,
+                                const Handle(OpenGl_Context)& theGlContext);
+
+  //! Runs path tracing (global illumination) kernel.
+  Standard_Boolean runPathtrace (const Standard_Integer        theSizeX,
+                                 const Standard_Integer        theSizeY,
+                                 Graphic3d_Camera::Projection  theProjection,
+                                 OpenGl_FrameBuffer*           theReadDrawFbo,
+                                 const Handle(OpenGl_Context)& theGlContext);
+
+  //! Redraws the window using OpenGL/GLSL ray-tracing or path tracing.
   Standard_Boolean raytrace (const Standard_Integer        theSizeX,
                              const Standard_Integer        theSizeY,
                              Graphic3d_Camera::Projection  theProjection,
@@ -978,17 +935,20 @@ protected: //! @name methods related to ray-tracing
 
 protected: //! @name fields related to ray-tracing
 
-  //! Result of shaders initialization.
+  //! Result of RT/PT shaders initialization.
   RaytraceInitStatus myRaytraceInitStatus;
 
-  //! Is geometry data valid?
+  //! Is ray-tracing geometry data valid?
   Standard_Boolean myIsRaytraceDataValid;
 
-  //! Warning about missing extension GL_ARB_bindless_texture has been displayed?
+  //! True if warning about missing extension GL_ARB_bindless_texture has been displayed.
   Standard_Boolean myIsRaytraceWarnTextures;
 
   //! 3D scene geometry data for ray-tracing.
   OpenGl_RaytraceGeometry myRaytraceGeometry;
+
+  //! Builder for triangle set.
+  opencascade::handle<BVH_Builder<Standard_ShortReal, 3> > myRaytraceBVHBuilder;
 
   //! Compile-time ray-tracing parameters.
   RaytracingParams myRaytraceParameters;
@@ -1002,11 +962,15 @@ protected: //! @name fields related to ray-tracing
   ShaderSource myRaytraceShaderSource;
   //! OpenGL/GLSL source of adaptive-AA fragment shader.
   ShaderSource myPostFSAAShaderSource;
+  //! OpenGL/GLSL source of RT/PT display fragment shader.
+  ShaderSource myOutImageShaderSource;
 
   //! OpenGL/GLSL ray-tracing fragment shader.
   Handle(OpenGl_ShaderObject) myRaytraceShader;
   //! OpenGL/GLSL adaptive-AA fragment shader.
   Handle(OpenGl_ShaderObject) myPostFSAAShader;
+  //! OpenGL/GLSL ray-tracing display fragment shader.
+  Handle(OpenGl_ShaderObject) myOutImageShader;
 
   //! OpenGL/GLSL ray-tracing shader program.
   Handle(OpenGl_ShaderProgram) myRaytraceProgram;
@@ -1039,12 +1003,22 @@ protected: //! @name fields related to ray-tracing
   Handle(OpenGl_TextureBufferArb) myRaytraceLightSrcTexture;
 
   //! 1st framebuffer (FBO) to perform adaptive FSAA.
+  //! Used in compatibility mode (no adaptive sampling).
   Handle(OpenGl_FrameBuffer) myRaytraceFBO1[2];
   //! 2nd framebuffer (FBO) to perform adaptive FSAA.
+  //! Used in compatibility mode (no adaptive sampling).
   Handle(OpenGl_FrameBuffer) myRaytraceFBO2[2];
-  //! Framebuffer (FBO) for preliminary OpenGL output.
-  Handle(OpenGl_FrameBuffer) myOpenGlFBO;
-  Handle(OpenGl_FrameBuffer) myOpenGlFBO2;
+
+  //! Output textures (2 textures are used in stereo mode).
+  //! Used if adaptive screen sampling is activated.
+  Handle(OpenGl_Texture) myRaytraceOutputTexture[2];
+
+  //! Texture containing per-tile visual error estimation (2 textures are used in stereo mode).
+  //! Used if adaptive screen sampling is activated.
+  Handle(OpenGl_Texture) myRaytraceVisualErrorTexture[2];
+  //! Texture containing offsets of sampled screen tiles (2 textures are used in stereo mode).
+  //! Used if adaptive screen sampling is activated.
+  Handle(OpenGl_Texture) myRaytraceTileOffsetsTexture[2];
 
   //! Vertex buffer (VBO) for drawing dummy quad.
   OpenGl_VertexBuffer myRaytraceScreenQuad;
@@ -1068,7 +1042,7 @@ protected: //! @name fields related to ray-tracing
   Standard_Boolean myToUpdateEnvironmentMap;
 
   //! State of OpenGL layer list.
-  Standard_Size myLayerListState;
+  Standard_Size myRaytraceLayerListState;
 
   //! Number of accumulated frames (for progressive rendering).
   Standard_Integer myAccumFrames;
@@ -1079,6 +1053,30 @@ protected: //! @name fields related to ray-tracing
   //! Bullard RNG to produce random sequence.
   math_BullardGenerator myRNG;
 
+  //! Tool object for sampling screen tiles in PT mode.
+  OpenGl_TileSampler myTileSampler;
+
+  //! Camera position used for projective mode
+  OpenGl_Vec3 myEyeOrig;
+
+  //! Camera view direction used for projective mode
+  OpenGl_Vec3 myEyeView;
+
+  //! Camera's screen vertical direction used for projective mode
+  OpenGl_Vec3 myEyeVert;
+
+  //! Camera's screen horizontal direction used for projective mode
+  OpenGl_Vec3 myEyeSide;
+
+  //! Camera's screen size used for projective mode
+  OpenGl_Vec2 myEyeSize;
+
+  //! Aperture radius of camera on previous frame used for depth-of-field (path tracing)
+  float myPrevCameraApertureRadius;
+
+  //! Focal distance of camera on previous frame used for depth-of-field (path tracing)
+  float myPrevCameraFocalPlaneDist;
+
 public:
 
   DEFINE_STANDARD_ALLOC
@@ -1086,6 +1084,8 @@ public:
 
   friend class OpenGl_GraphicDriver;
   friend class OpenGl_Workspace;
+  friend class OpenGl_LayerList;
+  friend class OpenGl_FrameStats;
 };
 
 #endif // _OpenGl_View_Header

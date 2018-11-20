@@ -19,9 +19,12 @@
 //pdn,gka 10.06.99 S4189: command DT_ShapeConvertRev added
 
 #include <BRep_Tool.hxx>
+#include <BRep_Builder.hxx>
 #include <BRepBuilderAPI.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
+#include <BRepTest_Objects.hxx>
 #include <BRepTools.hxx>
+#include <BRepTools_ReShape.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
@@ -69,7 +72,7 @@
 #include <TopoDS_Shell.hxx>
 #include <TopoDS_Wire.hxx>
 
-#include <stdio.h>
+#include <stdio.h> 
 //#include <SWDRAW_ShapeUpgrade.hxx>
 //#include <ShapeUpgrade_SupportModification.hxx>
 //#include <ShapeExtend_WireData.hxx>
@@ -1258,7 +1261,7 @@ static Standard_Integer removeloc (Draw_Interpretor& di,
                                    const char** argv)
 {
   if (argc<3) {
-    di << "bad number of arguments. Should be:  removeloc res shape\n";
+    di << "bad number of arguments. Should be:  removeloc res shape [remove_level(see ShapeEnum)]\n";
     return 1;
   }
   
@@ -1266,6 +1269,8 @@ static Standard_Integer removeloc (Draw_Interpretor& di,
   if(aShape.IsNull())
     return 1;
   ShapeUpgrade_RemoveLocations aRemLoc;
+  if (argc > 3)
+    aRemLoc.SetRemoveLevel((TopAbs_ShapeEnum)Draw::Atoi(argv[3]));
   aRemLoc.Remove(aShape);
   TopoDS_Shape aNewShape = aRemLoc.GetResult();
   
@@ -1283,13 +1288,18 @@ static ShapeUpgrade_UnifySameDomain& Unifier() {
 //=======================================================================
 static Standard_Integer unifysamedom(Draw_Interpretor& di, Standard_Integer n, const char** a)
 {
-  if (n < 3 || n > 6)
+  if (n < 3)
   {
-    di << "Use unifysamedom result shape [-f] [-e] [+b]\n";
-    di << "where [-f]. [-e], [+b] is available options\n";
-    di << "[-f] to switch off 'unify-faces' mode \n";
-    di << "[-e] to switch off 'unify-edges' mode\n";
-    di << "[+b] to switch on a 'concat bspline' mode\n";
+    di << "Use unifysamedom result shape [s1 s2 ...] [-f] [-e] [-nosafe] [+b] [+i] [-t val] [-a val]\n";
+    di << "options:\n";
+    di << "s1 s2 ... to keep the given edges during unification of faces\n";
+    di << "-f to switch off 'unify-faces' mode \n";
+    di << "-e to switch off 'unify-edges' mode\n";
+    di << "-nosafe to switch off 'safe input shape' mode\n";
+    di << "+b to switch on 'concat bspline' mode\n";
+    di << "+i to switch on 'allow internal edges' mode\n";
+    di << "-t val to set linear tolerance\n";
+    di << "-a val to set angular tolerance\n";
     di << "'unify-faces' and 'unify-edges' modes are switched on by default";
     return 1;
   }
@@ -1302,57 +1312,67 @@ static Standard_Integer unifysamedom(Draw_Interpretor& di, Standard_Integer n, c
   Standard_Boolean anUFaces = Standard_True;
   Standard_Boolean anUEdges = Standard_True;
   Standard_Boolean anConBS = Standard_False;
+  Standard_Boolean isAllowInternal = Standard_False;
+  Standard_Boolean isSafeInputMode = Standard_True;
+  Standard_Real aLinTol = Precision::Confusion();
+  Standard_Real aAngTol = Precision::Angular();
+  TopoDS_Shape aKeepShape;
+  TopTools_MapOfShape aMapOfShapes;
 
   if (n > 3)
     for ( int i = 3; i < n; i++ ) 
     {
-      if ( !strcmp(a[i], "-f")) 
-        anUFaces = Standard_False;
-      else if (!strcmp(a[i], "-e"))
-        anUEdges = Standard_False;
-      else if (!strcmp(a[i], "+b"))
-        anConBS = Standard_True;
+      aKeepShape = DBRep::Get(a[i]);
+      if (!aKeepShape.IsNull()) {
+        aMapOfShapes.Add(aKeepShape);
+      }
+      else {
+        if ( !strcmp(a[i], "-f")) 
+          anUFaces = Standard_False;
+        else if (!strcmp(a[i], "-e"))
+          anUEdges = Standard_False;
+        else if (!strcmp(a[i], "-nosafe"))
+          isSafeInputMode = Standard_False;
+        else if (!strcmp(a[i], "+b"))
+          anConBS = Standard_True;
+        else if (!strcmp(a[i], "+i"))
+          isAllowInternal = Standard_True;
+        else if (!strcmp(a[i], "-t") || !strcmp(a[i], "-a"))
+        {
+          if (++i < n)
+          {
+            (a[i-1][1] == 't' ? aLinTol : aAngTol) = Draw::Atof(a[i]);
+          }
+          else
+          {
+            di << "value expected after " << a[i-1];
+            return 1;
+          }
+        }
+      }
     }
 
   Unifier().Initialize(aShape, anUEdges, anUFaces, anConBS);
+  Unifier().KeepShapes(aMapOfShapes);
+  Unifier().SetSafeInputMode(isSafeInputMode);
+  Unifier().AllowInternalEdges(isAllowInternal);
+  Unifier().SetLinearTolerance(aLinTol);
+  Unifier().SetAngularTolerance(aAngTol);
   Unifier().Build();
   TopoDS_Shape Result = Unifier().Shape();
+
+  BRepTest_Objects::SetHistory(Unifier().History());
 
   DBRep::Set(a[1], Result);
   return 0;
 }
-
-Standard_Integer unifysamedomgen (Draw_Interpretor& di, 
-                                  Standard_Integer n, 
-                                  const char** a)
-{
-  if (n!=3) {
-    di << "use unifysamedomgen newshape oldshape";
-    return 0;
-  }
-  TopoDS_Shape aShape;
-  aShape=DBRep::Get(a[2]);
-  if (aShape.IsNull()) {
-    di<<" null shape is not allowed here\n";
-    return 1;
-  }
-  TopoDS_Shape ResShape = Unifier().Generated(aShape);
-  if (ResShape.IsNull()) {
-    di << " null shape\n";
-  }
-  else {
-    DBRep::Set(a[1], ResShape);
-  }
-  return 0;
-}
-
 
 static Standard_Integer copytranslate(Draw_Interpretor& di, 
                                    Standard_Integer argc, 
                                    const char** argv)
 {
   if (argc<6) {
-    di << "bad number of arguments. Should be:  removeloc res shape dx dyy dz\n";
+    di << "bad number of arguments. Should be:  copytranslate res shape dx dy dz\n";
     return 1;
   }
   TopoDS_Shape aShape = DBRep::Get(argv[2]);
@@ -1371,6 +1391,92 @@ static Standard_Integer copytranslate(Draw_Interpretor& di,
   
 }
 
+static Standard_Integer reshape(Draw_Interpretor& /*theDI*/,
+                                Standard_Integer  theArgc,
+                                const char**      theArgv)
+{
+  if ( theArgc < 4 )
+  {
+    cout << "Error: wrong number of arguments. Type 'help " << theArgv[0] << "'\n";
+    return 1;
+  }
+
+  TopoDS_Shape aSource = DBRep::Get(theArgv[2]);
+  if ( aSource.IsNull() )
+  {
+    cout << "Error: source shape ('" << theArgv[2] << "') is null\n";
+    return 1;
+  }
+
+  Handle(BRepTools_ReShape) aReShaper = new BRepTools_ReShape;
+
+  // Record the requested modifications
+  for ( Standard_Integer i = 3; i < theArgc; ++i )
+  {
+    Standard_CString        anArg = theArgv[i];
+    TCollection_AsciiString anOpt(anArg);
+    anOpt.LowerCase();
+
+    if ( anOpt == "-replace" )
+    {
+      if ( theArgc - i < 3 )
+      {
+        cout << "Error: not enough arguments for replacement\n";
+        return 1;
+      }
+
+      TopoDS_Shape aWhat = DBRep::Get(theArgv[++i]);
+      if ( aWhat.IsNull() )
+      {
+        cout << "Error: argument shape ('" << theArgv[i] << "') is null\n";
+        return 1;
+      }
+
+      TopoDS_Shape aWith = DBRep::Get(theArgv[++i]);
+      if ( aWith.IsNull() )
+      {
+        cout << "Error: replacement shape ('" << theArgv[i] << "') is null\n";
+        return 1;
+      }
+
+      aReShaper->Replace(aWhat, aWith);
+    }
+    else if ( anOpt == "-remove" )
+    {
+      if ( theArgc - i < 2 )
+      {
+        cout << "Error: not enough arguments for removal\n";
+        return 1;
+      }
+
+      TopoDS_Shape aWhat = DBRep::Get(theArgv[++i]);
+      if ( aWhat.IsNull() )
+      {
+        cout << "Error: shape to remove ('" << theArgv[i] << "') is null\n";
+        return 1;
+      }
+
+      aReShaper->Remove(aWhat);
+    }
+    else
+    {
+      cout << "Error: invalid syntax at " << anOpt << "\n" ;
+      return 1;
+    }
+  }
+
+  // Apply all the recorded modifications
+  TopoDS_Shape aResult = aReShaper->Apply(aSource);
+  if ( aResult.IsNull() )
+  {
+    cout << "Error: result shape is null\n";
+    return 1;
+  }
+
+  DBRep::Set(theArgv[1], aResult);
+  return 0;
+}
+
 //=======================================================================
 //function : InitCommands
 //purpose  : 
@@ -1379,7 +1485,11 @@ static Standard_Integer copytranslate(Draw_Interpretor& di,
  void SWDRAW_ShapeUpgrade::InitCommands(Draw_Interpretor& theCommands) 
 {
   static Standard_Integer initactor = 0;
-  if (initactor) return;  initactor = 1;
+  if (initactor)
+  {
+    return;
+  }
+  initactor = 1;
   
   Standard_CString g = SWDRAW::GroupName(); // "Tests of DivideTool";
  
@@ -1466,15 +1576,19 @@ static Standard_Integer copytranslate(Draw_Interpretor& di,
   theCommands.Add ("RemoveIntWires","result minarea wholeshape [faces or wires] [moderemoveface ]",
                    __FILE__,removeinternalwires,g);
   
-  theCommands.Add ("removeloc","result shape",__FILE__,removeloc,g);
+  theCommands.Add ("removeloc","result shape [remove_level(see ShapeEnum)]",__FILE__,removeloc,g);
   
   theCommands.Add ("unifysamedom",
-                   "unifysamedom result shape [-f] [-e] [+b]", __FILE__,unifysamedom,g);
+                   "unifysamedom result shape [s1 s2 ...] [-f] [-e] [-nosafe] [+b] [+i] [-t val] [-a val]",
+                    __FILE__,unifysamedom,g);
 
-  theCommands.Add ("unifysamedomgen",
-                   "unifysamedomgen newshape oldshape : get new shape generated "
-                   "by unifysamedom command from the old one",
-                   __FILE__,unifysamedomgen,g);
-  
   theCommands.Add ("copytranslate","result shape dx dy dz",__FILE__,copytranslate,g);
+
+  theCommands.Add ("reshape",
+    "\n    reshape : result shape [-replace what with] [-remove what]"
+    "\n    Basic utility for topological modification: "
+    "\n      '-replace what with'   Replaces 'what' sub-shape with 'with' sub-shape"
+    "\n      '-remove what'         Removes 'what' sub-shape"
+    "\n    Requests '-replace' and '-remove' can be repeated many times.",
+    __FILE__, reshape, g);
 }

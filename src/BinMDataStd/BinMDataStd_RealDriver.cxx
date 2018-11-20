@@ -16,10 +16,11 @@
 
 #include <BinMDataStd_RealDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_Real.hxx>
 #include <TDF_Attribute.hxx>
+#include <BinMDataStd.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_RealDriver,BinMDF_ADriver)
 
@@ -28,7 +29,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_RealDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataStd_RealDriver::BinMDataStd_RealDriver 
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_Real)->Name())
 {
 }
@@ -58,6 +59,19 @@ Standard_Boolean BinMDataStd_RealDriver::Paste
   Standard_Boolean ok = theSource >> aValue;
   if (ok)
     anAtt->Set(aValue);
+  if(BinMDataStd::DocumentVersion() > 8) { // process user defined guid
+	const Standard_Integer& aPos = theSource.Position();
+	Standard_GUID aGuid;
+	ok = theSource >> aGuid;	
+	if (!ok) {
+	  theSource.SetPosition(aPos);	  
+	  anAtt->SetID(TDataStd_Real::GetID());
+	  ok = Standard_True;
+	} else {	  
+	  anAtt->SetID(aGuid);
+	}
+  } else
+	anAtt->SetID(TDataStd_Real::GetID());
   return ok;
 }
 
@@ -72,4 +86,7 @@ void BinMDataStd_RealDriver::Paste (const Handle(TDF_Attribute)& theSource,
 {
   Handle(TDataStd_Real) anAtt= Handle(TDataStd_Real)::DownCast(theSource);
   theTarget << anAtt->Get();
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_Real::GetID()) 
+	theTarget << anAtt->ID();
 }

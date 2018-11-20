@@ -46,7 +46,7 @@ HLRBRep_ShapeBounds::Shape () const
 //=======================================================================
 
 inline void HLRBRep_ShapeBounds::
-ShapeData (const Handle(MMgt_TShared)& SD)
+ShapeData (const Handle(Standard_Transient)& SD)
 { myShapeData = SD; }
 
 //=======================================================================
@@ -54,7 +54,7 @@ ShapeData (const Handle(MMgt_TShared)& SD)
 //purpose  : 
 //=======================================================================
 
-inline const Handle(MMgt_TShared) & HLRBRep_ShapeBounds::ShapeData () const
+inline const Handle(Standard_Transient) & HLRBRep_ShapeBounds::ShapeData () const
 { return myShapeData; }
 
 //=======================================================================
@@ -72,11 +72,3 @@ inline void HLRBRep_ShapeBounds::NbOfIso (const Standard_Integer nbIso)
 
 inline Standard_Integer HLRBRep_ShapeBounds::NbOfIso () const
 { return myNbIso; }
-
-//=======================================================================
-//function : MinMax
-//purpose  : 
-//=======================================================================
-
-inline Standard_Address HLRBRep_ShapeBounds::MinMax () const
-{ return (Standard_Address)&myMinMax; }

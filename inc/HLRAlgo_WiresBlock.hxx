@@ -17,18 +17,18 @@
 #ifndef _HLRAlgo_WiresBlock_HeaderFile
 #define _HLRAlgo_WiresBlock_HeaderFile
 
+#include <HLRAlgo_EdgesBlock.hxx>
+
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
 #include <TColStd_Array1OfTransient.hxx>
 #include <Standard_Integer.hxx>
-#include <MMgt_TShared.hxx>
-#include <Standard_Address.hxx>
-class HLRAlgo_EdgesBlock;
+#include <Standard_Transient.hxx>
 
 
 class HLRAlgo_WiresBlock;
-DEFINE_STANDARD_HANDLE(HLRAlgo_WiresBlock, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(HLRAlgo_WiresBlock, Standard_Transient)
 
 //! A WiresBlock is a set of Blocks. It is used by the
 //! DataStructure to structure the Edges.
@@ -36,49 +36,43 @@ DEFINE_STANDARD_HANDLE(HLRAlgo_WiresBlock, MMgt_TShared)
 //! A WiresBlock contains :
 //!
 //! * An Array  of Blocks.
-class HLRAlgo_WiresBlock : public MMgt_TShared
+class HLRAlgo_WiresBlock : public Standard_Transient
 {
-
 public:
-
-  
   //! Create a Block of Blocks.
-  Standard_EXPORT HLRAlgo_WiresBlock(const Standard_Integer NbWires);
+  HLRAlgo_WiresBlock(const Standard_Integer NbWires) :
+    myWires(1,NbWires)
+  {
+  }
   
-  Standard_EXPORT Standard_Integer NbWires() const;
+  Standard_Integer NbWires() const
+  {
+    return myWires.Upper();
+  }
   
-  Standard_EXPORT void Set (const Standard_Integer I, const Handle(HLRAlgo_EdgesBlock)& W);
+  void Set (const Standard_Integer I, const Handle(HLRAlgo_EdgesBlock)& W)
+  {
+    myWires (I) = W;
+  }
   
-  Standard_EXPORT Handle(HLRAlgo_EdgesBlock)& Wire (const Standard_Integer I);
+  Handle(HLRAlgo_EdgesBlock)& Wire (const Standard_Integer I)
+  {
+    return *((Handle(HLRAlgo_EdgesBlock)*) &myWires(I));
+  }
   
-  Standard_EXPORT void UpdateMinMax (const Standard_Address TotMinMax);
-  
-    Standard_Address MinMax() const;
+  void UpdateMinMax (const HLRAlgo_EdgesBlock::MinMaxIndices& theMinMaxes)
+  {myMinMax = theMinMaxes;}
 
+  HLRAlgo_EdgesBlock::MinMaxIndices& MinMax()
+  {
+    return myMinMax;
+  }
 
-
-
-  DEFINE_STANDARD_RTTIEXT(HLRAlgo_WiresBlock,MMgt_TShared)
-
-protected:
-
-
-
+  DEFINE_STANDARD_RTTIEXT(HLRAlgo_WiresBlock,Standard_Transient)
 
 private:
-
-
   TColStd_Array1OfTransient myWires;
-  Standard_Integer myMinMax[16];
-
-
+  HLRAlgo_EdgesBlock::MinMaxIndices myMinMax;
 };
-
-
-#include <HLRAlgo_WiresBlock.lxx>
-
-
-
-
 
 #endif // _HLRAlgo_WiresBlock_HeaderFile

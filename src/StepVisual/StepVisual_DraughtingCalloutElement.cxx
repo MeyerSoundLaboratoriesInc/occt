@@ -16,7 +16,8 @@
 #include <StepVisual_DraughtingCalloutElement.hxx>
 #include <Interface_Macros.hxx>
 #include <StepVisual_AnnotationCurveOccurrence.hxx>
-
+#include <StepVisual_AnnotationFillAreaOccurrence.hxx>
+#include <StepVisual_AnnotationTextOccurrence.hxx>
 #include <StepVisual_TessellatedAnnotationOccurrence.hxx>
 
 //=======================================================================
@@ -35,15 +36,20 @@ Standard_Integer StepVisual_DraughtingCalloutElement::CaseNum(const Handle(Stand
 {
   if (ent.IsNull()) return 0;
   if (ent->IsKind(STANDARD_TYPE(StepVisual_AnnotationCurveOccurrence))) return 1;
-  else if (ent->IsKind(STANDARD_TYPE(StepVisual_TessellatedAnnotationOccurrence))) return 2;
+  if (ent->IsKind(STANDARD_TYPE(StepVisual_AnnotationTextOccurrence))) return 2;
+  if (ent->IsKind(STANDARD_TYPE(StepVisual_TessellatedAnnotationOccurrence))) return 3;
+  if (ent->IsKind(STANDARD_TYPE(StepVisual_AnnotationFillAreaOccurrence))) return 4;
   return 0;
 }
 
 Handle(StepVisual_AnnotationCurveOccurrence) StepVisual_DraughtingCalloutElement::AnnotationCurveOccurrence() const
 {  return GetCasted(StepVisual_AnnotationCurveOccurrence,Value());  }
 
-
- 
 Handle(StepVisual_TessellatedAnnotationOccurrence) StepVisual_DraughtingCalloutElement::TessellatedAnnotationOccurrence()  const
 {  return GetCasted(StepVisual_TessellatedAnnotationOccurrence,Value()); } 
 
+Handle(StepVisual_AnnotationTextOccurrence) StepVisual_DraughtingCalloutElement::AnnotationTextOccurrence()  const
+{  return GetCasted(StepVisual_AnnotationTextOccurrence, Value()); }
+
+Handle(StepVisual_AnnotationFillAreaOccurrence) StepVisual_DraughtingCalloutElement::AnnotationFillAreaOccurrence()  const
+{ return GetCasted(StepVisual_AnnotationFillAreaOccurrence, Value()); }

@@ -81,9 +81,6 @@ void AIS_EqualDistanceRelation::Compute( const Handle( PrsMgr_PresentationManage
 					 const Handle( Prs3d_Presentation )& aPresentation,
 					 const Standard_Integer ) 
 {
-
-  aPresentation->Clear();
-
   gp_Pnt Position12 =  myPosition, Position34 = myPosition;
 
   Handle(Prs3d_DimensionAspect) la = myDrawer->DimensionAspect();
@@ -218,7 +215,7 @@ void AIS_EqualDistanceRelation::Compute( const Handle( PrsMgr_PresentationManage
 void AIS_EqualDistanceRelation::Compute( const Handle( Prs3d_Projector )& /*aProjector*/,
 					 const Handle( Prs3d_Presentation )& /*aPresentation*/) 
 {
-// Standard_NotImplemented::Raise("AIS_EqualDistanceRelation::Compute( const Handle( Prs3d_Projector )&,
+// throw Standard_NotImplemented("AIS_EqualDistanceRelation::Compute( const Handle( Prs3d_Projector )&,
  // const Handle( Prs3d_Presentation )& )");
 // PrsMgr_PresentableObject::Compute( aProjector , aPresentation ) ; 
 }
@@ -231,7 +228,7 @@ void AIS_EqualDistanceRelation::Compute(const Handle(Prs3d_Projector)& aProjecto
 				  const Handle(Geom_Transformation)& aTransformation,
 				  const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_EqualDistanceRelation::Compute(const Handle(Prs3d_Projector)&,
+// throw Standard_NotImplemented("AIS_EqualDistanceRelation::Compute(const Handle(Prs3d_Projector)&,
 //  const Handle(Geom_Transformation)&,const Handle(Prs3d_Presentation)&)");
  PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation ) ; 
 }
@@ -642,8 +639,8 @@ void AIS_EqualDistanceRelation::ComputeTwoVerticesLength( const Handle( Prs3d_Pr
      curpos.Translate(offset);
      Position = curpos;
    }
-   else {  
-     const gp_Dir& aDir = Plane->Pln().Axis().Direction();
+   else {
+     gp_Dir aDir = Plane->Pln().Axis().Direction();
      gp_Vec aVec (aDir.XYZ()*10*ArrowSize);
      //Position = gp_Pnt(FirstAttach.XYZ()+gp_XYZ(1.,1.,1.)); // not correct
      Position = FirstAttach.Translated(aVec);

@@ -16,18 +16,19 @@
 #ifndef _OpenGl_BVHClipPrimitiveSet_HeaderFile
 #define _OpenGl_BVHClipPrimitiveSet_HeaderFile
 
-#include <BVH_PrimitiveSet.hxx>
+#include <BVH_PrimitiveSet3d.hxx>
 #include <NCollection_Array1.hxx>
 #include <NCollection_IndexedMap.hxx>
 
 #include <OpenGl_Structure.hxx>
 
 //! Set of OpenGl_Structures for building BVH tree.
-class OpenGl_BVHClipPrimitiveSet : public BVH_PrimitiveSet<Standard_ShortReal, 4>
+class OpenGl_BVHClipPrimitiveSet : public BVH_PrimitiveSet3d
 {
+  DEFINE_STANDARD_RTTIEXT(OpenGl_BVHClipPrimitiveSet, BVH_PrimitiveSet3d)
 protected:
 
-  using BVH_PrimitiveSet<Standard_ShortReal, 4>::Box;
+  using BVH_PrimitiveSet3d::Box;
 
 public:
 
@@ -35,18 +36,18 @@ public:
   OpenGl_BVHClipPrimitiveSet();
 
   //! Returns total number of structures.
-  virtual Standard_Integer Size() const;
+  virtual Standard_Integer Size() const Standard_OVERRIDE;
 
   //! Returns AABB of the structure.
-  virtual Graphic3d_BndBox4f Box (const Standard_Integer theIdx) const;
+  virtual Graphic3d_BndBox3d Box (const Standard_Integer theIdx) const Standard_OVERRIDE;
 
   //! Calculates center of the AABB along given axis.
-  virtual Standard_ShortReal Center (const Standard_Integer theIdx,
-                                     const Standard_Integer theAxis) const;
+  virtual Standard_Real Center (const Standard_Integer theIdx,
+                                const Standard_Integer theAxis) const Standard_OVERRIDE;
 
   //! Swaps structures with the given indices.
   virtual void Swap (const Standard_Integer theIdx1,
-                     const Standard_Integer theIdx2);
+                     const Standard_Integer theIdx2) Standard_OVERRIDE;
 
   //! Adds structure to the set.
   //! @return true if structure added, otherwise returns false (structure already in the set).
@@ -61,6 +62,9 @@ public:
 
   //! Returns the structure corresponding to the given ID.
   const OpenGl_Structure* GetStructureById (Standard_Integer theId);
+
+  //! Access directly a collection of structures.
+  const NCollection_IndexedMap<const OpenGl_Structure*>& Structures() const { return myStructs; }
 
 private:
 

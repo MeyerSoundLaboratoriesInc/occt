@@ -34,7 +34,10 @@ class gp_XYZ;
 class gp_Ax1;
 class gp_Ax2;
 
-
+// Avoid possible conflict with SetForm macro defined by windows.h
+#ifdef SetForm
+#undef SetForm
+#endif
 
 //! Defines a non-persistent transformation in 3D space.
 //! This transformation is a general transformation.
@@ -145,7 +148,7 @@ public:
   //! transformation (relative to a point, an axis or a plane), a
   //! scaling transformation, a compound transformation or
   //! some other type of transformation.
-  Standard_EXPORT gp_TrsfForm Form() const;
+  gp_TrsfForm Form() const;
   
 
   //! verify and set the shape of the GTrsf Other or CompoundTrsf

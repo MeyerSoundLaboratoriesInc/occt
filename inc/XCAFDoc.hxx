@@ -33,6 +33,7 @@ class XCAFDoc_Material;
 class XCAFDoc_Volume;
 class XCAFDoc_Area;
 class XCAFDoc_Centroid;
+class XCAFDoc_ClippingPlaneTool;
 class XCAFDoc_ShapeTool;
 class XCAFDoc_ShapeMapTool;
 class XCAFDoc_ColorTool;
@@ -41,6 +42,7 @@ class XCAFDoc_LayerTool;
 class XCAFDoc_MaterialTool;
 class XCAFDoc_GraphNode;
 class XCAFDoc_Editor;
+class XCAFDoc_ViewTool;
 
 
 //! Definition of general structure of DECAF document
@@ -78,13 +80,13 @@ public:
   Standard_EXPORT static Standard_GUID DimTolRefGUID();
 
   //! Return GUIDs for TreeNode representing specified types of Dimension
-  Standard_EXPORT static   Standard_GUID DimensionRefFirstGUID() ;
+  Standard_EXPORT static Standard_GUID DimensionRefFirstGUID() ;
 
   //! Return GUIDs for TreeNode representing specified types of Dimension
-  Standard_EXPORT static   Standard_GUID DimensionRefSecondGUID() ;
+  Standard_EXPORT static Standard_GUID DimensionRefSecondGUID() ;
 
   //! Return GUIDs for TreeNode representing specified types of GeomTolerance
-  Standard_EXPORT static   Standard_GUID GeomToleranceRefGUID() ;
+  Standard_EXPORT static Standard_GUID GeomToleranceRefGUID() ;
   
   //! Return GUIDs for TreeNode representing specified types of datum
   Standard_EXPORT static Standard_GUID DatumRefGUID();
@@ -95,8 +97,13 @@ public:
   Standard_EXPORT static Standard_GUID LayerRefGUID();
   
   Standard_EXPORT static Standard_GUID MaterialRefGUID();
-  
+
+  //! Return GUIDs for representing notes
+  Standard_EXPORT static Standard_GUID NoteRefGUID();
+
   Standard_EXPORT static Standard_GUID InvisibleGUID();
+
+  Standard_EXPORT static Standard_GUID ColorByLayerGUID();
   
   //! Returns GUID for UAttribute identifying external reference on no-step file
   Standard_EXPORT static Standard_GUID ExternRefGUID();
@@ -104,8 +111,24 @@ public:
   //! Returns GUID for UAttribute identifying specified higher usage occurrence
   Standard_EXPORT static Standard_GUID SHUORefGUID();
 
+  //! Return GUIDs for TreeNode representing specified types of View
+  Standard_EXPORT static Standard_GUID ViewRefGUID();
 
+  //! Return GUIDs for TreeNode representing specified types of View
+  Standard_EXPORT static Standard_GUID ViewRefShapeGUID();
 
+  //! Return GUIDs for TreeNode representing specified types of View
+  Standard_EXPORT static Standard_GUID ViewRefGDTGUID();
+  
+  //! Return GUIDs for TreeNode representing specified types of View
+  Standard_EXPORT static Standard_GUID ViewRefPlaneGUID();
+
+  //! Return GUIDs for GraphNode representing specified types of View
+  Standard_EXPORT static Standard_GUID ViewRefNoteGUID();
+  Standard_EXPORT static Standard_GUID ViewRefAnnotationGUID();
+
+  //! Returns GUID for UAttribute identifying lock flag
+  Standard_EXPORT static Standard_GUID LockGUID();
 
 protected:
 
@@ -127,6 +150,7 @@ friend class XCAFDoc_Material;
 friend class XCAFDoc_Volume;
 friend class XCAFDoc_Area;
 friend class XCAFDoc_Centroid;
+friend class XCAFDoc_ClippingPlaneTool;
 friend class XCAFDoc_ShapeTool;
 friend class XCAFDoc_ShapeMapTool;
 friend class XCAFDoc_ColorTool;
@@ -135,6 +159,7 @@ friend class XCAFDoc_LayerTool;
 friend class XCAFDoc_MaterialTool;
 friend class XCAFDoc_GraphNode;
 friend class XCAFDoc_Editor;
+friend class XCAFDoc_ViewTool;
 
 };
 

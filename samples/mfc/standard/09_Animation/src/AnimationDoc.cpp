@@ -52,12 +52,7 @@ CAnimationDoc::CAnimationDoc()
 	Handle(Graphic3d_GraphicDriver) aGraphicDriver = 
 		((CAnimationApp*)AfxGetApp())->GetGraphicDriver();
 
-    TCollection_ExtendedString a3DName("Visu3D");
-	myViewer = new V3d_Viewer(aGraphicDriver,a3DName.ToExtString(),"", 1000.0, 
-                              V3d_XposYnegZpos, Quantity_NOC_GRAY30,
-                              V3d_ZBUFFER,V3d_GOURAUD,V3d_WAIT, 
-                              Standard_True, Standard_False);
-
+	myViewer = new V3d_Viewer(aGraphicDriver);
 	myViewer->SetDefaultLights();
 	myViewer->SetLightOn();
 
@@ -132,24 +127,24 @@ CAnimationDoc::CAnimationDoc()
 	myAISContext->SetDeviationCoefficient(myDeviation);
 
 	myAisCylinderHead = new AIS_Shape (CylinderHead);
-	myAISContext->SetColor    (myAisCylinderHead, Quantity_NOC_WHITE);
-	myAISContext->SetMaterial (myAisCylinderHead, Graphic3d_NOM_PLASTIC);
+	myAISContext->SetColor    (myAisCylinderHead, Quantity_NOC_WHITE, Standard_False);
+	myAISContext->SetMaterial (myAisCylinderHead, Graphic3d_NOM_PLASTIC, Standard_False);
 	myAisEngineBlock  = new AIS_Shape (EngineBlock);
-	myAISContext->SetColor(myAisEngineBlock,   Quantity_NOC_WHITE);
-	myAISContext->SetMaterial(myAisEngineBlock,Graphic3d_NOM_PLASTIC);
+	myAISContext->SetColor(myAisEngineBlock,   Quantity_NOC_WHITE, Standard_False);
+	myAISContext->SetMaterial(myAisEngineBlock,Graphic3d_NOM_PLASTIC, Standard_False);
 
 	myAISContext->Display(myAisCylinderHead ,1,-1,Standard_False,Standard_False);
 	myAISContext->Display(myAisEngineBlock  ,1,-1,Standard_False,Standard_False);
 
 	myAisCrankArm     = new AIS_Shape (CrankArm);
-	myAISContext->SetColor   (myAisCrankArm, Quantity_NOC_HOTPINK);
-	myAISContext->SetMaterial(myAisCrankArm, Graphic3d_NOM_PLASTIC);
+	myAISContext->SetColor   (myAisCrankArm, Quantity_NOC_HOTPINK, Standard_False);
+	myAISContext->SetMaterial(myAisCrankArm, Graphic3d_NOM_PLASTIC, Standard_False);
 	myAisPiston       = new AIS_Shape (Piston);
-	myAISContext->SetColor   (myAisPiston  , Quantity_NOC_WHITE);
-	myAISContext->SetMaterial(myAisPiston  , Graphic3d_NOM_PLASTIC);
+	myAISContext->SetColor   (myAisPiston  , Quantity_NOC_WHITE, Standard_False);
+	myAISContext->SetMaterial(myAisPiston  , Graphic3d_NOM_PLASTIC, Standard_False);
 	myAisPropeller    = new AIS_Shape (Propeller);
-	myAISContext->SetColor   (myAisPropeller, Quantity_NOC_RED);
-	myAISContext->SetMaterial(myAisPropeller, Graphic3d_NOM_PLASTIC);
+	myAISContext->SetColor   (myAisPropeller, Quantity_NOC_RED, Standard_False);
+	myAISContext->SetMaterial(myAisPropeller, Graphic3d_NOM_PLASTIC, Standard_False);
 
 	myAISContext->Display(myAisCrankArm     ,1,-1,Standard_False,Standard_False);
 	myAISContext->Display(myAisPropeller    ,1,-1,Standard_False,Standard_False);
@@ -209,7 +204,7 @@ void CAnimationDoc::DragEvent(const Standard_Integer  x        ,
     }
 
 	if (TheState == 1)
-	  myAISContext->Select(theButtonDownX,theButtonDownY,x,y,aView);  
+	  myAISContext->Select (theButtonDownX, theButtonDownY, x, y, aView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -219,7 +214,7 @@ void CAnimationDoc::InputEvent(const Standard_Integer  /*x*/,
                                const Standard_Integer  /*y*/,
                                const Handle(V3d_View)& /*aView*/ )
 {
-    myAISContext->Select(); 
+    myAISContext->Select (Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -229,7 +224,7 @@ void CAnimationDoc::MoveEvent(const Standard_Integer  x       ,
                                   const Standard_Integer  y       ,
                                   const Handle(V3d_View)& aView   ) 
 {
-      myAISContext->MoveTo(x,y,aView);
+      myAISContext->MoveTo (x, y, aView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -239,7 +234,7 @@ void CAnimationDoc::ShiftMoveEvent(const Standard_Integer  x       ,
                                   const Standard_Integer  y       ,
                                   const Handle(V3d_View)& aView   ) 
 {
-      myAISContext->MoveTo(x,y,aView);
+      myAISContext->MoveTo (x, y, aView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -260,7 +255,7 @@ void CAnimationDoc::ShiftDragEvent(const Standard_Integer  x        ,
     }
 
 	if (TheState == 0)
-	  myAISContext->ShiftSelect(theButtonDownX,theButtonDownY,x,y,aView);  
+	  myAISContext->ShiftSelect (theButtonDownX, theButtonDownY, x, y, aView, Standard_True);
 }
 
 
@@ -271,7 +266,7 @@ void CAnimationDoc::ShiftInputEvent(const Standard_Integer  /*x*/,
                                     const Standard_Integer  /*y*/,
                                     const Handle(V3d_View)& /*aView*/)
 {
-  myAISContext->ShiftSelect(); 
+  myAISContext->ShiftSelect (Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -338,7 +333,7 @@ void CAnimationDoc::OnShading()
 		
         myAisPropeller->Set(Propeller);
         myAISContext->Deactivate(myAisPropeller);
-        myAISContext->Redisplay(myAisPropeller);
+        myAISContext->Redisplay (myAisPropeller, Standard_True);
 	}
 	((CAnimationView3D *)pCurrentView)->OnRestart();
 }
@@ -369,8 +364,9 @@ void CAnimationDoc::OnFileLoadgrid()
 		  L"Points Files (*.pnt;*.pnts)|*.pnt; *.pnts|All Files (*.*)|*.*||",
 		  NULL );
 
-	CString initdir(((OCC_App*) AfxGetApp())->GetInitDataDir());
-	initdir += "\\Data\\";
+	CString initdir;
+	initdir.GetEnvironmentVariable (L"CSF_OCCTDataPath");
+	initdir += L"\\occ\\";
 
 	dlg.m_ofn.lpstrInitialDir = initdir;
 
@@ -406,7 +402,7 @@ void CAnimationDoc::OnFileLoadgrid()
 	  myFace = aMkFace.Face();
 
 	  // Remove all other shapes
-	  myAISContext->RemoveAll();
+	  myAISContext->RemoveAll (Standard_False);
 
 	  Handle(AIS_Shape) myAISSurface = new AIS_Shape(myFace);
 

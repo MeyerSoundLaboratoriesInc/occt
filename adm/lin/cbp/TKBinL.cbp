@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -98,6 +100,7 @@
 		<Unit filename="../../../src/BinMDocStd/BinMDocStd.cxx" />
 		<Unit filename="../../../src/BinMDocStd/BinMDocStd_XLinkDriver.cxx" />
 		<Unit filename="../../../src/BinObjMgt/BinObjMgt_Persistent.cxx" />
+		<Unit filename="../../../src/BinObjMgt/BinObjMgt_RRelocationTable.cxx" />
 		<Unit filename="../../../src/BinLDrivers/BinLDrivers.cxx" />
 		<Unit filename="../../../src/BinLDrivers/BinLDrivers_DocumentRetrievalDriver.cxx" />
 		<Unit filename="../../../src/BinLDrivers/BinLDrivers_DocumentSection.cxx" />

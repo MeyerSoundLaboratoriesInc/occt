@@ -76,8 +76,6 @@
 		<Unit filename="../../../src/ShapeExtend/ShapeExtend_MsgRegistrator.cxx" />
 		<Unit filename="../../../src/ShapeExtend/ShapeExtend_WireData.cxx" />
 		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct.cxx" />
-		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct_CompBezierCurves2dToBSplineCurve2d.cxx" />
-		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct_CompBezierCurvesToBSplineCurve.cxx" />
 		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct_Curve.cxx" />
 		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct_MakeTriangulation.cxx" />
 		<Unit filename="../../../src/ShapeConstruct/ShapeConstruct_ProjectCurveOnSurface.cxx" />
@@ -172,12 +170,9 @@
 		<Unit filename="../../../src/ShapeAlgo/ShapeAlgo_ToolContainer.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess_Context.cxx" />
-		<Unit filename="../../../src/ShapeProcess/ShapeProcess_DictionaryOfOperator_0.cxx" />
-		<Unit filename="../../../src/ShapeProcess/ShapeProcess_IteratorOfDictionaryOfOperator_0.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess_OperLibrary.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess_Operator.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess_ShapeContext.cxx" />
-		<Unit filename="../../../src/ShapeProcess/ShapeProcess_StackItemOfDictionaryOfOperator_0.cxx" />
 		<Unit filename="../../../src/ShapeProcess/ShapeProcess_UOperator.cxx" />
 		<Unit filename="../../../src/ShapeProcessAPI/ShapeProcessAPI_ApplySequence.cxx" />
 	</Project>

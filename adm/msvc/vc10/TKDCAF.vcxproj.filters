@@ -2,25 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{8778E511-0F84-187E-046E-1FC3093D99FD}</UniqueIdentifier>
+      <UniqueIdentifier>{D4BC7A2A-1885-0AC6-0BE6-46CE408EE589}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DDF">
-      <UniqueIdentifier>{48CACFDF-0CA5-064A-0E17-2FEA1AB25529}</UniqueIdentifier>
+      <UniqueIdentifier>{7FA98F95-0F29-0AEE-0BBF-C3068AE26CAD}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DDocStd">
-      <UniqueIdentifier>{F4F79DCA-18D3-0068-04C8-2C8BEB960771}</UniqueIdentifier>
+      <UniqueIdentifier>{4CD24F28-0739-189C-066E-AFCD0DBF4EE5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DNaming">
-      <UniqueIdentifier>{C2CA13D6-14F7-0FE7-1749-D15EC2A4453D}</UniqueIdentifier>
+      <UniqueIdentifier>{D49ED250-0BAB-0465-1729-0CBF3FDFC3B0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DDataStd">
-      <UniqueIdentifier>{BDB805B7-071B-1562-0B66-A7AA95B05471}</UniqueIdentifier>
+      <UniqueIdentifier>{A85BD9E2-175C-17D3-0A2F-4E2041279133}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DPrsStd">
-      <UniqueIdentifier>{77D46751-03B1-0094-1337-2832A21459F9}</UniqueIdentifier>
+      <UniqueIdentifier>{ADC70BBE-0C0A-04F5-0CCA-9C6C067801D1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DrawDim">
-      <UniqueIdentifier>{1EFB6670-11AE-13E4-17DE-988DB57F6C05}</UniqueIdentifier>
+      <UniqueIdentifier>{BF582C93-0BBB-15DC-0003-6022BA881AF9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -67,6 +67,9 @@
       <Filter>Source files\DDocStd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\DDocStd\DDocStd_MTMCommands.cxx">
+      <Filter>Source files\DDocStd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\DDocStd\DDocStd_ShapeSchemaCommands.cxx">
       <Filter>Source files\DDocStd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\DDocStd\DDocStd_ToolsCommands.cxx">

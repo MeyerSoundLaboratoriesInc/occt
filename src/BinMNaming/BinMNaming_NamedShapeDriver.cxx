@@ -18,7 +18,7 @@
 #include <BinObjMgt_Persistent.hxx>
 #include <BinTools_LocationSet.hxx>
 #include <BinTools_ShapeSet.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_DomainError.hxx>
 #include <Standard_Type.hxx>
 #include <TCollection_AsciiString.hxx>
@@ -46,9 +46,8 @@ static Standard_Character EvolutionToChar(const TNaming_Evolution theEvol)
     case TNaming_SELECTED     : return 'S';
     case TNaming_REPLACE      : return 'M'; // for compatibility case TNaming_REPLACE      : return 'R';
   default:
-    Standard_DomainError::Raise("TNaming_Evolution:: Evolution Unknown");
+    throw Standard_DomainError("TNaming_Evolution:: Evolution Unknown");
   }
-  return 'P'; // To avoid compilation error message.
 }
 
 //=======================================================================
@@ -62,9 +61,8 @@ static TNaming_Evolution EvolutionToEnum(const Standard_Character theEvol)
     case 'S': return TNaming_SELECTED;
     case 'R': return TNaming_MODIFY; //for compatibility //TNaming_REPLACE;
   default:
-    Standard_DomainError::Raise("TNaming_Evolution:: Evolution Unknown");
+    throw Standard_DomainError("TNaming_Evolution:: Evolution Unknown");
   }
-  return TNaming_PRIMITIVE; // To avoid compilation error message.
 }
 //=======================================================================
 static Standard_Character OrientationToChar(const TopAbs_Orientation theOrient)
@@ -75,9 +73,8 @@ static Standard_Character OrientationToChar(const TopAbs_Orientation theOrient)
     case TopAbs_INTERNAL   : return 'I';
     case TopAbs_EXTERNAL   : return 'E';
   default:
-    Standard_DomainError::Raise("TopAbs_Orientation:: Orientation Unknown");
+    throw Standard_DomainError("TopAbs_Orientation:: Orientation Unknown");
   }
-  return 'F'; // To avoid compilation error message.
 }
 //=======================================================================
 static TopAbs_Orientation CharToOrientation(const Standard_Character  theCharOrient)
@@ -88,9 +85,8 @@ static TopAbs_Orientation CharToOrientation(const Standard_Character  theCharOri
     case 'I':  return TopAbs_INTERNAL;
     case 'E':  return TopAbs_EXTERNAL;
   default:
-    Standard_DomainError::Raise("TopAbs_Orientation:: Orientation Unknown");
+    throw Standard_DomainError("TopAbs_Orientation:: Orientation Unknown");
   }
-  return TopAbs_FORWARD; // To avoid compilation error message.
 }
 
 //=======================================================================
@@ -145,7 +141,7 @@ static int TranslateFrom  (const BinObjMgt_Persistent&  theSource,
 //=======================================================================
 
 BinMNaming_NamedShapeDriver::BinMNaming_NamedShapeDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TNaming_NamedShape)->Name()), myShapeSet(Standard_False),myFormatNb(FORMAT_NUMBER)
 {
 }
@@ -175,7 +171,6 @@ Standard_Boolean BinMNaming_NamedShapeDriver::Paste
   theSource >> aNbShapes;
   TDF_Label aLabel = theTarget->Label ();
   TNaming_Builder   aBuilder   (aLabel);
-  if (aNbShapes == 0) return Standard_False;
   Standard_Integer aVer;
   Standard_Boolean ok = theSource >> aVer;
   if(!ok) return Standard_False;
@@ -188,39 +183,49 @@ Standard_Boolean BinMNaming_NamedShapeDriver::Paste
 
   BinTools_ShapeSet& aShapeSet = (BinTools_ShapeSet&) myShapeSet;
 
-  for (Standard_Integer i = 1; i <= aNbShapes; i++) {
+  NCollection_List<TopoDS_Shape> anOldShapes, aNewShapes;
+  for (Standard_Integer i = 1; i <= aNbShapes; i++)
+  {
     TopoDS_Shape anOldShape, aNewShape;
-    
-    if ( anEvol != TNaming_PRIMITIVE ) 
-      if(TranslateFrom(theSource, anOldShape, aShapeSet)) return Standard_False;
 
-    if (anEvol != TNaming_DELETE) 
-      if(TranslateFrom(theSource, aNewShape, aShapeSet)) return Standard_False;
+    if (anEvol != TNaming_PRIMITIVE)
+      if (TranslateFrom (theSource, anOldShape, aShapeSet)) return Standard_False;
 
-    switch (anEvol) {
-    case TNaming_PRIMITIVE    : 
-      aBuilder.Generated(aNewShape); 
-      break;
-    case TNaming_GENERATED    : 
-      aBuilder.Generated(anOldShape, aNewShape); 
-      break;
-    case TNaming_MODIFY       : 
-      aBuilder.Modify(anOldShape, aNewShape); 
-      break;
-    case TNaming_DELETE       : 
-      aBuilder.Delete (anOldShape); 
-      break;
-    case TNaming_SELECTED     : 
-      aBuilder.Select(aNewShape, anOldShape); 
-      break;
-    case TNaming_REPLACE      :
-      aBuilder.Modify(anOldShape, aNewShape); // for compatibility aBuilder.Replace(anOldShape, aNewShape);
-      break;
-      default :
-        Standard_DomainError::Raise("TNaming_Evolution:: Evolution Unknown");
+    if (anEvol != TNaming_DELETE)
+      if (TranslateFrom (theSource, aNewShape, aShapeSet)) return Standard_False;
+
+    // Here we add shapes in reverse order because TNaming_Builder also adds them in reverse order.
+    anOldShapes.Prepend (anOldShape);
+    aNewShapes.Prepend (aNewShape);
+  }
+
+  for (NCollection_List<TopoDS_Shape>::Iterator anOldIt (anOldShapes), aNewIt (aNewShapes);
+      anOldIt.More() && aNewIt.More();
+      anOldIt.Next(), aNewIt.Next())
+  {
+    switch (anEvol)
+    {
+      case TNaming_PRIMITIVE:
+        aBuilder.Generated (aNewIt.Value ());
+        break;
+      case TNaming_GENERATED:
+        aBuilder.Generated (anOldIt.Value(), aNewIt.Value());
+        break;
+      case TNaming_MODIFY:
+        aBuilder.Modify (anOldIt.Value(), aNewIt.Value());
+        break;
+      case TNaming_DELETE:
+        aBuilder.Delete (anOldIt.Value());
+        break;
+      case TNaming_SELECTED:
+        aBuilder.Select (aNewIt.Value(), anOldIt.Value());
+        break;
+      case TNaming_REPLACE:
+        aBuilder.Modify (anOldIt.Value(), aNewIt.Value()); // for compatibility aBuilder.Replace(anOldShape, aNewShape);
+        break;
+      default:
+          throw Standard_DomainError("TNaming_Evolution:: Evolution Unknown");
     }
-    anOldShape.Nullify();
-    aNewShape.Nullify();
   }
   return Standard_True;
 }
@@ -240,8 +245,6 @@ void BinMNaming_NamedShapeDriver::Paste (const Handle(TDF_Attribute)& theSource,
   Standard_Integer NbShapes = 0;
   for (TNaming_Iterator SItr (aSAtt); SItr.More (); SItr.Next ()) NbShapes++;
   //--------------------------------------------------------------
-
-  if (NbShapes == 0) return;
 
   BinTools_ShapeSet& aShapeSet = (BinTools_ShapeSet&) myShapeSet;
   TNaming_Evolution anEvol = aSAtt->Evolution();
@@ -311,4 +314,3 @@ void BinMNaming_NamedShapeDriver::ReadShapeSection (Standard_IStream& theIS)
   else
     theIS.seekg(aPos); // no shape section is present, try to return to initial point
 }
-

@@ -17,13 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__QABugs_DLL" />
-					<Add option="-D__QADNaming_DLL" />
-					<Add option="-D__QADraw_DLL" />
-					<Add option="-D__QANCollection_DLL" />
-					<Add option="-D__QANewBRepNaming_DLL" />
-					<Add option="-D__QANewDBRepNaming_DLL" />
-					<Add option="-D__QANewModTopOpe_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKQADraw_obj.link" />
@@ -42,13 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__QABugs_DLL" />
-					<Add option="-D__QADNaming_DLL" />
-					<Add option="-D__QADraw_DLL" />
-					<Add option="-D__QANCollection_DLL" />
-					<Add option="-D__QANewBRepNaming_DLL" />
-					<Add option="-D__QANewDBRepNaming_DLL" />
-					<Add option="-D__QANewModTopOpe_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKQADraw_objd.link" />
@@ -109,6 +95,7 @@
 			<Add library="TKXDESTEP" />
 			<Add library="TKXSDRAW" />
 			<Add library="TKSTL" />
+			<Add library="TKXml" />
 		</Linker>
 		<Unit filename="../../../src/QABugs/QABugs.cxx" />
 		<Unit filename="../../../src/QABugs/QABugs_1.cxx">
@@ -171,9 +158,6 @@
 		<Unit filename="../../../src/QABugs/QABugs_9.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/QABugs/QABugs_MyText.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/QABugs/QABugs_PresentableObject.cxx">
 			<Option link="0" />
 		</Unit>
@@ -220,108 +204,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/QANCollection/QANCollection_Test.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_BooleanOperation.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_BooleanOperationFeat.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Box.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Chamfer.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Common.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Cut.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Cylinder.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Fillet.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Fuse.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Gluing.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_ImportShape.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Intersection.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Limitation.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Loader.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_LoaderParent.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Prism.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Revol.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_Sphere.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewBRepNaming/QANewBRepNaming_TopNaming.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming_FeatureCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewDBRepNaming/QANewDBRepNaming_PrimitiveCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_SDFaces.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_shell.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_util.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_vertex.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Glue_wire.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Intersection.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Limitation.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_ReShaper.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/QANewModTopOpe/QANewModTopOpe_Tools.cxx">
 			<Option link="0" />
 		</Unit>
 	</Project>

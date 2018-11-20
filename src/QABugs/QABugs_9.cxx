@@ -46,22 +46,22 @@ static Standard_Integer BUC60857 (Draw_Interpretor& di, Standard_Integer /*argc*
   TopoDS_Shape myshape = BRepBuilderAPI_MakeFace(S, Precision::Confusion()).Shape();
   DBRep::Set("BUC60857_BLUE",myshape);
   Handle(AIS_Shape) ais1 = new AIS_Shape(myshape);
-  aContext->Display(ais1);
-  aContext->SetColor(ais1, Quantity_NOC_BLUE1);
+  aContext->Display (ais1, Standard_False);
+  aContext->SetColor (ais1, Quantity_NOC_BLUE1, Standard_False);
 
   Handle(Geom_RectangularTrimmedSurface) S2 = GC_MakeTrimmedCone (P1, P2, R1, 0).Value();
   TopoDS_Shape myshape2 = BRepBuilderAPI_MakeFace(S2, Precision::Confusion()).Shape();
   DBRep::Set("BUC60857_RED",myshape2);
   Handle(AIS_Shape) ais2 = new AIS_Shape(myshape2);
-  aContext->Display(ais2);
-  aContext->SetColor(ais2, Quantity_NOC_RED);
+  aContext->Display (ais2, Standard_False);
+  aContext->SetColor (ais2, Quantity_NOC_RED, Standard_False);
 
   Handle(Geom_RectangularTrimmedSurface) S3 = GC_MakeTrimmedCone (P1, P2, R2, R1).Value();
   TopoDS_Shape myshape3 = BRepBuilderAPI_MakeFace(S3, Precision::Confusion()).Shape();
   DBRep::Set("BUC60857_GREEN",myshape3);
   Handle(AIS_Shape) ais3 = new AIS_Shape(myshape3);
-  aContext->Display(ais3);
-  aContext->SetColor(ais3, Quantity_NOC_GREEN);
+  aContext->Display (ais3, Standard_False);
+  aContext->SetColor (ais3, Quantity_NOC_GREEN, Standard_True);
 
   return 0;
 }
@@ -115,9 +115,11 @@ static Standard_Integer OCC137 (Draw_Interpretor& di, Standard_Integer argc, con
     if(AISObj->HasSelection(4)) {
       //Handle(SelectMgr_Selection)& aSelection = AISObj->Selection(4);
       const Handle(SelectMgr_Selection)& aSelection = AISObj->Selection(4);
-      if(!aSelection.IsNull()) {
-        for(aSelection->Init();aSelection->More();aSelection->Next()) {
-          Handle(StdSelect_BRepOwner) aO = Handle(StdSelect_BRepOwner)::DownCast(aSelection->Sensitive()->BaseSensitive()->OwnerId());
+      if(!aSelection.IsNull())
+      {
+        for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (aSelection->Entities()); aSelEntIter.More(); aSelEntIter.Next())
+        {
+          Handle(StdSelect_BRepOwner) aO = Handle(StdSelect_BRepOwner)::DownCast(aSelEntIter.Value()->BaseSensitive()->OwnerId());
           aO->SetHilightMode(Draw::Atoi(argv[1]));
         }
       }
@@ -125,21 +127,6 @@ static Standard_Integer OCC137 (Draw_Interpretor& di, Standard_Integer argc, con
     it.Next();
   }
   
-  return 0;
-}
-
-static Standard_Integer OCC137_z (Draw_Interpretor& di, Standard_Integer argc, const char ** argv) 
-{
-  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
-  if(aContext.IsNull()) {
-    di << argv[0] << "ERROR : use 'vinit' command before \n";
-    return 1;
-  }
-  if ( argc != 1 && argc != 2) {
-    di << "ERROR : Usage : " << argv[0] << " [ZDetection_mode]\n";
-    return 1;
-  }
-  aContext->SetZDetection(((argc == 1 || (argc == 2 && Draw::Atoi(argv[1]) == 1)) ? Standard_True : Standard_False));
   return 0;
 }
 
@@ -221,7 +208,6 @@ void QABugs::Commands_9(Draw_Interpretor& theCommands) {
 
   theCommands.Add ("BUC60857", "BUC60857", __FILE__, BUC60857, group);
   theCommands.Add("OCC137","OCC137 mode [shape]",__FILE__,OCC137,group);
-  theCommands.Add("OCC137_z","OCC137_z [ZDetection_mode]",__FILE__,OCC137_z,group);
   theCommands.Add("OCC24303", "OCC24303 SolID ",	__FILE__,	OCC24303,group);
 
   return;

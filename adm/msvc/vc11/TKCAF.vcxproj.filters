@@ -2,16 +2,16 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{649D5AD9-032D-1351-03C4-9D9214E17E23}</UniqueIdentifier>
+      <UniqueIdentifier>{5998A2D3-0F5A-0460-023E-56FEFD7E9958}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TDataXtd">
-      <UniqueIdentifier>{2032705C-105C-0E55-0612-385D8583F8A0}</UniqueIdentifier>
+      <UniqueIdentifier>{858C41DB-159D-09EE-079A-45025B9DD7CA}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TNaming">
-      <UniqueIdentifier>{37EEE6A2-068B-1293-01FA-9A8B4C2F4C3A}</UniqueIdentifier>
+      <UniqueIdentifier>{C247827E-136C-0E72-002D-070D7C065229}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\AppStd">
-      <UniqueIdentifier>{35788C07-1213-0E20-0CDA-3BC7E7C11A9B}</UniqueIdentifier>
+      <UniqueIdentifier>{FC306EFC-1082-0FF5-0741-CB5BE1FD5045}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -51,10 +51,10 @@
     <ClCompile Include="..\..\..\src\TDataXtd\TDataXtd_Shape.cxx">
       <Filter>Source files\TDataXtd</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming.cxx">
-      <Filter>Source files\TNaming</Filter>
+    <ClCompile Include="..\..\..\src\TDataXtd\TDataXtd_Triangulation.cxx">
+      <Filter>Source files\TDataXtd</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_Builder.cxx">
+    <ClCompile Include="..\..\..\src\TNaming\TNaming.cxx">
       <Filter>Source files\TNaming</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TNaming\TNaming_CopyShape.cxx">
@@ -67,12 +67,6 @@
       <Filter>Source files\TNaming</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TNaming\TNaming_Identifier.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_Iterator.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_IteratorOnShapesSet.cxx">
       <Filter>Source files\TNaming</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TNaming\TNaming_Localizer.cxx">
@@ -88,18 +82,6 @@
       <Filter>Source files\TNaming</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TNaming\TNaming_NamingTool.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_NewShapeIterator.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_OldShapeIterator.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_RefShape.cxx">
-      <Filter>Source files\TNaming</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TNaming\TNaming_SameShapeIterator.cxx">
       <Filter>Source files\TNaming</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TNaming\TNaming_Scope.cxx">

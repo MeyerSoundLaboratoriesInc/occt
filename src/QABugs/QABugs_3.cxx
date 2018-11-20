@@ -86,8 +86,12 @@ static int BUC60569(Draw_Interpretor& di, Standard_Integer argc, const char ** a
 
   Handle(AIS_Shape) anAISShape = new AIS_Shape( theShape ); 
   myAISContext->Display( anAISShape, Standard_True );
+
+  Standard_DISABLE_DEPRECATION_WARNINGS
   myAISContext->OpenLocalContext(); 
   myAISContext->ActivateStandardMode(TopAbs_FACE);
+  Standard_ENABLE_DEPRECATION_WARNINGS
+
   return 0;
 }
 
@@ -111,117 +115,14 @@ static int BUC60614(Draw_Interpretor& di, Standard_Integer argc, const char ** a
   }
   Handle(AIS_Shape) anAISShape = new AIS_Shape( theShape ); 
   myAISContext->Display( anAISShape, Standard_True );
+
+  Standard_DISABLE_DEPRECATION_WARNINGS
   myAISContext->OpenLocalContext(); 
   myAISContext->ActivateStandardMode(TopAbs_COMPOUND);
+  Standard_ENABLE_DEPRECATION_WARNINGS
 //  myAISContext->ActivateStandardMode(TopAbs_SOLID);
 //  di.Eval("vfit");
 //  cout << "vfini" << endl;
-  return 0;
-}
-
-#include<BRep_Builder.hxx>
-#include<BRepTools_ShapeSet.hxx>
-#include<BRepTools.hxx>
-#include<BRepAdaptor_HSurface.hxx>
-#include<TopOpeBRep_PointClassifier.hxx>
-#include<Precision.hxx>
-#ifdef _MSC_VER
-#include<stdio.h>
-#endif
-
-static int BUC60609(Draw_Interpretor& di, Standard_Integer argc, const char ** argv) {
-  gp_Pnt2d uvSurf;
-  TopAbs_State state;
-  
-  if (argc == 3) {
-    // BUC60609 shape name
-  } else if ( argc == 5 ) {
-    // BUC60609 shape name U V
-  } else {
-    di << "Usage : "<< argv[0] << " shape name [U V]\n";
-    return(-1);
-  }
-  
-  TCollection_AsciiString  aFilePath(argv[1]); 
-  
-  filebuf fic;
-  istream in(&fic);
-  if (!fic.open(aFilePath.ToCString(),ios::in)) {
-    di << "Cannot open file for reading : " << aFilePath << "\n";
-    return(-1);
-  }
-
-  TopoDS_Shape theShape;
-  char typ[255];
-  in >> typ;
-  if (!in.fail()) {
-    if( !strcmp(typ, "DBRep_DrawableShape") ){
-      BRep_Builder B;
-      BRepTools_ShapeSet S(B);
-      S.Read(in);
-      S.Read(theShape,in);
-    }else{
-      di << "Wrong entity type in " << aFilePath << "\n";
-      return(-1);
-    }
-  }
-
-  const TopoDS_Face &face = TopoDS::Face (theShape);
-
-  if(argc > 2){
-    DBRep::Set(argv[2],face);
-  }
-
-  Standard_Real faceUMin,faceUMax,faceVMin,faceVMax;
-  
-  BRepTools::UVBounds (face, faceUMin,faceUMax,faceVMin,faceVMax);
-
-  di << "The bounds of the trimmed face:\n";
-  di << faceUMin << " <= U <= " << faceUMax << "\n";
-  di << faceVMin << " <= V <= " << faceVMax << "\n";
-  
-  Handle(BRepAdaptor_HSurface) hsurfa = new BRepAdaptor_HSurface(face);
-  
-  TopOpeBRep_PointClassifier PClass;
-
-  di << "Now test the point classifier by inputting U,V values\n";
-  di << "inside or outside the bounds displayed above\n";
-  di << "Type stop to exit\n";
-  
-  // Please register this:
-  // ***********************************************
-  // Note also that for periodic surfaces such as nimpod_1.topo,
-  // the U/V values may be +- 2pi compared to the actual face bounds
-  // (because U,V is probably coming from a Geom package routine).
-  // Hence IT WOULD BE USEFUL IF TopOpeBRep_PointClassifier COULD
-  // COPE WITH PERIODIC SURFACES, i.e. U,V +-Period giving same result.
-  // *************************************************
-
-  if (argc == 3) {
-    uvSurf = gp_Pnt2d(0.14,5.1);
-    state = PClass.Classify(face,uvSurf,Precision::PConfusion());
-    if(state == TopAbs_IN || state == TopAbs_ON){
-      di << "U=" << 0.14 << " V=" << 5.1 << "  classified INSIDE\n";
-    }else{
-      di << "U=" << 0.14 << " V=" << 5.1 << "  classified OUTSIDE\n";
-    }
-
-    uvSurf = gp_Pnt2d(1.28,5.1);
-    state = PClass.Classify(face,uvSurf,Precision::PConfusion());
-    if(state == TopAbs_IN || state == TopAbs_ON){
-      di << "U=" << 1.28 << " V=" << 5.1 << "  classified INSIDE\n";
-    }else{
-      di << "U=" << 1.28 << " V=" << 5.1 << "  classified OUTSIDE\n";
-    }
-  } else {
-    uvSurf = gp_Pnt2d(Draw::Atof(argv[3]),Draw::Atof(argv[4]));
-    state = PClass.Classify(face,uvSurf,Precision::PConfusion());
-    if(state == TopAbs_IN || state == TopAbs_ON){
-      di << "U=" << Draw::Atof(argv[3]) << " V=" << Draw::Atof(argv[4]) << "  classified INSIDE\n";
-    }else{
-      di << "U=" << Draw::Atof(argv[3]) << " V=" << Draw::Atof(argv[4]) << "  classified OUTSIDE\n";
-    }
-  }
   return 0;
 }
 
@@ -237,7 +138,7 @@ static Standard_Integer BUC60632(Draw_Interpretor& di, Standard_Integer /*n*/, c
     di << "use 'vinit' command before " << a[0] << "\n";
     return -1;
   }
-  myAIScontext->EraseAll();
+  myAIScontext->EraseAll (Standard_False);
   
   TopoDS_Vertex V1 = BRepBuilderAPI_MakeVertex(gp_Pnt(0,0,0)); 
   TopoDS_Vertex V2 = BRepBuilderAPI_MakeVertex(gp_Pnt(10,10,0)); 
@@ -245,8 +146,8 @@ static Standard_Integer BUC60632(Draw_Interpretor& di, Standard_Integer /*n*/, c
   Handle(AIS_Shape) Ve1 = new AIS_Shape(V1);
   Handle(AIS_Shape) Ve2 = new AIS_Shape(V2);
   
-  myAIScontext->Display(Ve1);
-  myAIScontext->Display(Ve2);
+  myAIScontext->Display (Ve1, Standard_False);
+  myAIScontext->Display (Ve2, Standard_False);
   
   Handle(Geom_Plane) Plane1 = new Geom_Plane(gp_Pnt(0,0,0),gp_Dir(0,0,1)); 
   TCollection_ExtendedString Ext1("Dim1"); 
@@ -261,12 +162,13 @@ static Standard_Integer BUC60632(Draw_Interpretor& di, Standard_Integer /*n*/, c
   anAspect->ArrowAspect()->SetLength (1.0);
   Dim1->SetDimensionAspect (anAspect);
 
-  myAIScontext->SetDisplayMode(Dim1, Draw::Atoi(a[1]));
-  myAIScontext->Display(Dim1);
+  myAIScontext->SetDisplayMode (Dim1, Draw::Atoi(a[1]), Standard_False);
+  myAIScontext->Display (Dim1, Standard_True);
   return 0;
 }
 
 #include<TopoDS_Wire.hxx>
+#include <BRepTools.hxx>
 
 static Standard_Integer BUC60652(Draw_Interpretor& di, Standard_Integer argc, const char ** argv )
 {
@@ -279,45 +181,6 @@ static Standard_Integer BUC60652(Draw_Interpretor& di, Standard_Integer argc, co
   TopoDS_Wire ow = BRepTools::OuterWire( face ); 
   DBRep::Set( "w", ow ); 
   return 0; 
-}
-
-#include <BRepAlgo_BooleanOperations.hxx>
-  
-static Standard_Integer defNbPntMax = 30;
-static Standard_Real defTol3d = 1.e-7;
-static Standard_Real defTol2d = 1.e-7;
-Standard_Integer NbPntMax = defNbPntMax;
-Standard_Real Toler3d =defTol3d;
-Standard_Real Toler2d = defTol2d;
-//              //== // ksection : operateur section appelant BRepAlgo_BooleanOperation
-//== // ksection : operateur section appelant BRepAlgo_BooleanOperations
-//=======================================================================
-Standard_Integer ksection(Draw_Interpretor& di, Standard_Integer n, const char ** a) {
-  if (n < 8) {
-    di << "Usage : " << a[0] << " resultat shell1 shell2 NbPntMax Toler3d Toler2d"   << "\n";
-    return -1;
-  }
-  // a[1]= resultat
-  // a[2]= shell1
-  // a[3]= shell2
-  // a[4]= NbPntMax
-  // a[5]= Toler3d
-  // a[6]= Toler2d
-  TopoDS_Shape s1 = DBRep::Get(a[2],TopAbs_SHELL);
-  TopoDS_Shape s2 = DBRep::Get(a[3],TopAbs_SHELL);
-  if (s1.IsNull() || s2.IsNull()) return 1;
-  NbPntMax=Draw::Atoi(a[4]);
-  Toler3d=Draw::Atof(a[5]);
-  Toler2d=Draw::Atof(a[6]);
-
-  di << "BRepAlgo_BooleanOperations myalgo\n";
-  BRepAlgo_BooleanOperations myalgo;
-
-  myalgo.Shapes(s1, s2);
-  myalgo.SetApproxParameters(NbPntMax,Toler3d,Toler2d);
-  TopoDS_Shape res; res = myalgo.Section();
-  DBRep::Set(a[1],res);
-  return 0;
 }
 
 #include <Geom_Axis2Placement.hxx>
@@ -340,8 +203,11 @@ static Standard_Integer BUC60574(Draw_Interpretor& di, Standard_Integer /*n*/, c
   TopLoc_Location aLoc(aTrsf); 
   myAISContext->SetLocation(atri,aLoc); 
   myAISContext->Display(atri,0,-1,Standard_True, Standard_True);
-  myAISContext->OpenLocalContext(Standard_False, 
-				 Standard_True,Standard_False,Standard_False); 
+
+  Standard_DISABLE_DEPRECATION_WARNINGS
+  myAISContext->OpenLocalContext(Standard_False, Standard_True, Standard_False, Standard_False);
+  Standard_ENABLE_DEPRECATION_WARNINGS
+
   myAISContext->Load(atri,3,Standard_True);
 
   return 0;
@@ -352,66 +218,9 @@ static Standard_Integer BUC60574(Draw_Interpretor& di, Standard_Integer /*n*/, c
 #include <BRepPrimAPI_MakeSphere.hxx>
 
 #include <BRepAlgoAPI_Fuse.hxx>
-#include <BRepAlgo_Fuse.hxx>
 
 #include <V3d_View.hxx>
 #include <gce_MakePln.hxx>
-
-static Standard_Integer BUC60699(Draw_Interpretor& di, Standard_Integer /*n*/, const char ** a)
-{
-  
-  Handle(AIS_InteractiveContext) myAISContext = ViewerTest::GetAISContext();
-  if(myAISContext.IsNull()) {
-    di << "use 'vinit' command before " << a[0] << "\n";
-    return -1;
-  }
-  TopoDS_Solid B1 = BRepPrimAPI_MakeBox (1,1,1).Solid();
-  TopAbs_ShapeEnum theType = B1.ShapeType();
-  if ( theType == TopAbs_SOLID ) {
-    di << "It is a solid."   << "\n";
-  } else {
-    di << "It is not solid."   << "\n";
-  }
-  myAISContext->Display(new AIS_Shape(B1)); 
-  myAISContext->OpenLocalContext();
-  TopAbs_ShapeEnum amode = TopAbs_SOLID;
-  myAISContext->ActivateStandardMode(amode);
-  di.Eval("vfit");
-  di.Eval("QAMoveTo 200 200");
-  di.Eval("QASelect 200 200");
-  myAISContext->InitSelected() ;
-  if ( myAISContext->MoreSelected() ) {
-    if (myAISContext->HasSelectedShape() ) {
-      di << "has selected shape : OK"   << "\n";
-    } else {
-      di << "has selected shape : bugged - Faulty "   << "\n";
-    }
-  }
-  return 0;
-}
-
-static Standard_Integer GER61394(Draw_Interpretor& di, Standard_Integer argc, const char ** argv )
-{
-  if(argc > 2) {
-    di << "Usage : " << argv[0] << " [1/0]\n";
-    return -1;
-  }
-  
-  Handle(AIS_InteractiveContext) myAIScontext = ViewerTest::GetAISContext();
-  if(myAIScontext.IsNull()) {
-    di << "use 'vinit' command before " << argv[0] << "\n";
-    return -1;
-  }
-  Handle(V3d_View) myV3dView = ViewerTest::CurrentView();
-  
-  if((argc == 2) && (Draw::Atof(argv[1]) == 0))
-    myV3dView->SetAntialiasingOff();
-  else
-    myV3dView->SetAntialiasingOn();
-  myV3dView->Update();
-  return 0;
-}
-
 
 #define DEFAULT_COLOR    Quantity_NOC_GOLDENROD
 
@@ -517,42 +326,11 @@ switch (argc){
 return 0;
 }
 
-static Standard_Integer BUC60726 (Draw_Interpretor& di,Standard_Integer argc, const char ** argv )
-{
-  Handle(AIS_InteractiveContext) myAISContext = ViewerTest::GetAISContext();
-  if(myAISContext.IsNull()) { 
-    di << "use 'vinit' command before " << argv[0] << "\n";
-    return -1;
-  }
-  
-  if(argc != 2) {
-    di << "Usage : " << argv[0] << " 0/1\n";
-  }
-
-  if(Draw::Atoi(argv[1]) == 0) {
-    myAISContext->CloseAllContexts();
-    BRepPrimAPI_MakeBox B(gp_Pnt(-400.,-400.,-100.),200.,150.,100.);
-    Handle(AIS_Shape) aBox = new AIS_Shape(B.Shape());
-    myAISContext->Display(aBox);
-  } else if(Draw::Atoi(argv[1]) == 1) {
-    myAISContext->CloseAllContexts();
-    myAISContext->OpenLocalContext();
-    myAISContext->ActivateStandardMode(TopAbs_EDGE);
-  } else if(Draw::Atoi(argv[1]) == 2) {
-    myAISContext->CloseAllContexts();
-    myAISContext->OpenLocalContext();
-    myAISContext->ActivateStandardMode(TopAbs_FACE);
-  } else {
-    di << "Usage : " << argv[0] << " 0/1\n";
-    return -1;
-  }
-  
-  return 0;
-}
-
+#include <Bnd_BoundSortBox.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_HArray1OfBox.hxx>
-  
+#include <TopExp_Explorer.hxx>
+
 static Standard_Integer BUC60729 (Draw_Interpretor& /*di*/,Standard_Integer /*argc*/, const char ** /*argv*/ )
 {
   Bnd_Box aMainBox;
@@ -632,8 +410,8 @@ static Standard_Integer BUC60792(Draw_Interpretor& di, Standard_Integer /*argc*/
   Handle(Geom2d_Curve) gcir1 = GeomAPI::To2d(gcir, pln->Pln()); 
   TopoDS_Shape sh1 = BRepBuilderAPI_MakeEdge(gcir1, pln).Shape(); 
   Handle(AIS_Shape) ais1 = new AIS_Shape(sh1); 
-  aContext->SetColor(ais1, Quantity_NOC_INDIANRED); 
-  aContext->Display(ais1); 
+  aContext->SetColor (ais1, Quantity_NOC_INDIANRED, Standard_False);
+  aContext->Display (ais1, Standard_False);
   DBRep::Set("sh0",sh1);
   gp_Pnt2d thepoint; 
 //  local_get_2Dpointfrom3Dpoint(pt3d, pln->Pln(), thepoint); 
@@ -654,10 +432,10 @@ static Standard_Integer BUC60792(Draw_Interpretor& di, Standard_Integer /*argc*/
       DBRep::Set(aStr,sh);
       Handle(AIS_Shape) ais = new AIS_Shape(sh); 
       if( i ==1 ) 
-	aContext->SetColor(ais, Quantity_NOC_GREEN); 
+        aContext->SetColor (ais, Quantity_NOC_GREEN, Standard_False);
       if( i == 2) 
-	aContext->SetColor(ais, Quantity_NOC_HOTPINK); 
-      aContext->Display(ais); 
+        aContext->SetColor (ais, Quantity_NOC_HOTPINK, Standard_False);
+      aContext->Display (ais, Standard_False);
       Standard_Real ParSol1, ParSol2, ParArg1, ParArg2; 
       gp_Pnt2d PntSol1, PntSol2; 
       cirtanrad.Tangency1(i, ParSol1, ParArg1, PntSol1);
@@ -666,6 +444,7 @@ static Standard_Integer BUC60792(Draw_Interpretor& di, Standard_Integer /*argc*/
       printf("%f\t%f\t\t%f\t%f\n",ParSol2, ParArg2,PntSol2.X(),PntSol2.Y());
     }
   }
+  aContext->UpdateCurrentViewer();
   return 0;
 }
 
@@ -725,7 +504,7 @@ static Standard_Integer BUC60811(Draw_Interpretor& di, Standard_Integer argc, co
   ais1 = new AIS_Shape(F1);
   DBRep::Set("F1",F1);
   aContext->SetMaterial(ais1,Graphic3d_NOM_ALUMINIUM,Standard_False);
-  aContext->Display(ais1);
+  aContext->Display (ais1, Standard_False);
   BRep_Builder B;
   TopoDS_Shell shell;
   B.MakeShell(shell);
@@ -762,7 +541,7 @@ static Standard_Integer BUC60811(Draw_Interpretor& di, Standard_Integer argc, co
   FP = BRepBuilderAPI_MakeFace(mkw.Wire()); 
   ais2 = new AIS_Shape( FP ); 
   aContext->SetMaterial(ais2,Graphic3d_NOM_ALUMINIUM,Standard_False); 
-  aContext->Display( ais2 );
+  aContext->Display (ais2, Standard_False);
 
   DBRep::Set("FP",FP);
   
@@ -772,7 +551,7 @@ static Standard_Integer BUC60811(Draw_Interpretor& di, Standard_Integer argc, co
   BRepBuilderAPI_MakeFace bzf2( offsurf, Precision::Confusion() ); 
   TopoDS_Face F2= bzf2.Face(); 
   Handle(AIS_Shape) ais22 = new AIS_Shape(F2); 
-  aContext->Display(ais22); 
+  aContext->Display (ais22, Standard_False);
   DBRep::Set("F2",F2);
   
 //step 3. filleting the patch. 
@@ -793,7 +572,7 @@ static Standard_Integer BUC60811(Draw_Interpretor& di, Standard_Integer argc, co
   FP1 = fillet.Shape(); 
   ais2 = new AIS_Shape( FP1 ); 
   aContext->SetMaterial(ais2,Graphic3d_NOM_ALUMINIUM,Standard_False); 
-  aContext->Display( ais2 ); 
+  aContext->Display (ais2, Standard_False);
 
   DBRep::Set("FP1",FP1);
   
@@ -811,7 +590,7 @@ static Standard_Integer BUC60811(Draw_Interpretor& di, Standard_Integer argc, co
       myWire->Add((BRepBuilderAPI_MakeEdge(projCurve)).Edge()); 
     } 
   Handle(AIS_Shape) ais33 = new AIS_Shape( myWire->Wire() ); 
-  aContext->Display(ais33);
+  aContext->Display (ais33, Standard_True);
 
   DBRep::Set("Wire",myWire->Wire());
   
@@ -848,20 +627,9 @@ static int BUC60825(Draw_Interpretor& di, Standard_Integer argc, const char ** a
 
 static int OCC10006(Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
 {
-  if(argc > 2) {
-    di << "Usage : " << argv[0] << " [BRepAlgoAPI/BRepAlgo = 1/0]\n";
+  if(argc != 1) {
+    di << "Usage : " << argv[0] << "\n";
     return 1;
-  }
-  Standard_Boolean IsBRepAlgoAPI = Standard_True;
-  if (argc == 2) {
-    Standard_Integer IsB = Draw::Atoi(argv[1]);
-    if (IsB != 1) {
-      IsBRepAlgoAPI = Standard_False;
-#if ! defined(BRepAlgo_def01)
-//      di << "Error: There is not BRepAlgo_Fuse class\n";
-//      return 1;
-#endif
-    }
   }
 
   double bottompoints1[12] = { 10, -10, 0, 100, -10, 0, 100, -100, 0, 10, -100, 0};
@@ -901,22 +669,10 @@ static int OCC10006(Draw_Interpretor& di, Standard_Integer argc, const char ** a
   DBRep::Set("TS1",loft1.Shape());
   DBRep::Set("TS2",loft2.Shape());
 
-//#if ! defined(BRepAlgoAPI_def01)
-//  BRepAlgoAPI_Fuse result(loft1.Shape(), loft2.Shape());
-//#else
-//  BRepAlgo_Fuse result(loft1.Shape(), loft2.Shape());
-//#endif
-  if (IsBRepAlgoAPI) {
-    di << "BRepAlgoAPI_Fuse result(loft1.Shape(), loft2.Shape())\n";
-    BRepAlgoAPI_Fuse result(loft1.Shape(), loft2.Shape());
-    DBRep::Set("F",result.Shape());
-  } else {
-    di << "BRepAlgo_Fuse result(loft1.Shape(), loft2.Shape())\n";
-    BRepAlgo_Fuse result(loft1.Shape(), loft2.Shape());
-    DBRep::Set("F",result.Shape());
-  }
+  di << "BRepAlgoAPI_Fuse result(loft1.Shape(), loft2.Shape())\n";
+  BRepAlgoAPI_Fuse result(loft1.Shape(), loft2.Shape());
+  DBRep::Set("F", result.Shape());
 
-//  DBRep::Set("F",result.Shape());
   return 0;
 }
 
@@ -938,14 +694,14 @@ static Standard_Integer BUC60856(Draw_Interpretor& di, Standard_Integer /*argc*/
   Handle(Geom_RectangularTrimmedSurface) S = GC_MakeTrimmedCone (P1, P2, R1, R2).Value();
   TopoDS_Shape myshape = BRepBuilderAPI_MakeFace(S, Precision::Confusion()).Shape();
   Handle(AIS_Shape) ais1 = new AIS_Shape(myshape);
-  aContext->Display(ais1);
-  aContext->SetColor(ais1, Quantity_NOC_BLUE1);
+  aContext->Display (ais1, Standard_False);
+  aContext->SetColor (ais1, Quantity_NOC_BLUE1, Standard_False);
   
   Handle(Geom_RectangularTrimmedSurface) S2 = GC_MakeTrimmedCone (P1, P2,R1, 0).Value();
   TopoDS_Shape myshape2 = BRepBuilderAPI_MakeFace(S2, Precision::Confusion()).Shape();
   Handle(AIS_Shape) ais2 = new AIS_Shape(myshape2);
-  aContext->Display(ais2);
-  aContext->SetColor(ais2, Quantity_NOC_RED);
+  aContext->Display (ais2, Standard_False);
+  aContext->SetColor (ais2, Quantity_NOC_RED, Standard_False);
   return 0;
 }
 
@@ -1035,7 +791,7 @@ static Standard_Integer BUC60876_ (Draw_Interpretor& di,
   Handle(AIS_InteractiveObject) anIO = new AIS_Shape(aShape);
 //  Handle(AIS_InteractiveObject) anIOa = ViewerTest::GetAISShapeFromName(argv[1]);
   anIO->SetHilightMode((argc == 3) ? Draw::Atoi(argv[2]) : 1);
-  aContext->Display(anIO);
+  aContext->Display (anIO, Standard_True);
   return 0;
 }
 
@@ -1061,20 +817,9 @@ static Standard_Integer BUC60773 (Draw_Interpretor& /*di*/, Standard_Integer /*n
 static int TestCMD(Draw_Interpretor& di, Standard_Integer argc, const char ** argv)
 
 {
-  if(argc > 2) {
-    di << "Usage : " << argv[0] << " [BRepAlgoAPI/BRepAlgo = 1/0]\n";
+  if(argc != 1) {
+    di << "Usage : " << argv[0] << "\n";
     return 1;
-  }
-  Standard_Boolean IsBRepAlgoAPI = Standard_True;
-  if (argc == 2) {
-    Standard_Integer IsB = Draw::Atoi(argv[1]);
-    if (IsB != 1) {
-      IsBRepAlgoAPI = Standard_False;
-#if ! defined(BRepAlgo_def01)
-//      di << "Error: There is not BRepAlgo_Fuse class\n";
-//      return 1;
-#endif
-    }
   }
 
   //Cylindre 36.085182 20.0 8.431413 88.04671 20.0 38.931416 10.0
@@ -1116,38 +861,19 @@ static int TestCMD(Draw_Interpretor& di, Standard_Integer argc, const char ** ar
   TopoDS_Shape SCon = cone.Shape();
   DBRep::Set("con", SCon);
 
-//#if ! defined(BRepAlgoAPI_def01)
-//  BRepAlgoAPI_Fuse SFuse(SCyl, SCon);
-//#else
-//  BRepAlgo_Fuse SFuse(SCyl, SCon);
-//#endif
-//
-//  if(! SFuse.IsDone() )
-//    cout<<"Error: Boolean fuse operation failed !"<<endl;
-//
-//  TopoDS_Shape fuse = SFuse.Shape();
-
-  TopoDS_Shape fuse;
-  if (IsBRepAlgoAPI) {
-    di << "BRepAlgoAPI_Fuse SFuse(SCyl, SCon)\n";
-    BRepAlgoAPI_Fuse SFuse(SCyl, SCon);
-    if(! SFuse.IsDone() )
-      di<<"Error: Boolean fuse operation failed !\n";
-    fuse = SFuse.Shape();
-  } else {
-    di << "BRepAlgo_Fuse SFuse(SCyl, SCon)\n";
-    BRepAlgo_Fuse SFuse(SCyl, SCon);
-    if(! SFuse.IsDone() )
-      di<<"Error: Boolean fuse operation failed !\n";
-    fuse = SFuse.Shape();
+  di << "BRepAlgoAPI_Fuse SFuse(SCyl, SCon)\n";
+  BRepAlgoAPI_Fuse SFuse(SCyl, SCon);
+  if (!SFuse.IsDone()) {
+    di << "Error: Boolean fuse operation failed !\n";
   }
-
-  DBRep::Set("fus", fuse);
- 	
+  else {
+    const TopoDS_Shape& fuse = SFuse.Shape();
+    DBRep::Set("fus", fuse);
+  }
   return 0;
 }
 
-#include <Dico_DictionaryOfInteger.hxx>
+#include <NCollection_DataMap.hxx>
 #include <TColStd_HSequenceOfAsciiString.hxx>
 #include <TopExp.hxx>
 #include <TopoDS_Iterator.hxx>
@@ -1163,10 +889,10 @@ static Standard_Integer statface (Draw_Interpretor& di,Standard_Integer /*argc*/
     di<<"Invalid input shape\n";
     return 1;
   }
-  Handle(Dico_DictionaryOfInteger) aDico = new Dico_DictionaryOfInteger();
+  NCollection_DataMap<TCollection_AsciiString, Standard_Integer> aMap;
   Handle(TColStd_HSequenceOfAsciiString) aSequence = new TColStd_HSequenceOfAsciiString;
   Standard_CString aString;
-  Standard_Integer i=1,j=1,l=1,aa=1;
+  Standard_Integer l=0;
   TopExp_Explorer expl;
   Standard_Real f3d,l3d;
   for(expl.Init(aShape,TopAbs_FACE);expl.More();expl.Next())
@@ -1176,15 +902,11 @@ static Standard_Integer statface (Draw_Interpretor& di,Standard_Integer /*argc*/
     Handle(Geom_Surface) aSurface = BRep_Tool::Surface(aFace);
     aString = aSurface->DynamicType()->Name();
 
-    if(aDico->GetItem(aString,aa) != 0)
-    {
-      aDico->GetItem(aString,aa);
-      aDico->SetItem(aString,aa+1);
-    } else  {
-      aDico->SetItem(aString,1);
+    if (aMap.IsBound(aString))
+      aMap.ChangeFind(aString)++;
+    else {
+      aMap.Bind(aString, 1);
       aSequence->Append(aString);
-      aa=1;
-      i++;
     }
   }
   // PCURVES
@@ -1196,51 +918,42 @@ static Standard_Integer statface (Draw_Interpretor& di,Standard_Integer /*argc*/
     TopoDS_Iterator it (aWire); 
     for (; it.More(); it.Next()) {
       TopoDS_Edge Edge = TopoDS::Edge (it.Value());
-    Handle(Geom2d_Curve) aCurve2d = BRep_Tool::CurveOnSurface(Edge,aFace,f3d,l3d);
-    aString = aCurve2d->DynamicType()->Name();
-        if(aDico->GetItem(aString,aa) != 0)
-        {         
-          aDico->GetItem(aString,aa);
-          aDico->SetItem(aString,aa+1);
-        } else  {
-          aDico->SetItem(aString,1);
-          aSequence->Append(aString);
-          i++;
-          aa=1;
-        }
+      Handle(Geom2d_Curve) aCurve2d = BRep_Tool::CurveOnSurface(Edge,aFace,f3d,l3d);
+      aString = aCurve2d->DynamicType()->Name();
+      if(aMap.IsBound(aString))
+        aMap.ChangeFind(aString)++;
+      else  {
+        aMap.Bind(aString, 1);
+        aSequence->Append(aString);
+      }
     }
   }
   // 3d CURVES
   TopExp_Explorer exp;
   for (exp.Init(aShape,TopAbs_EDGE); exp.More(); exp.Next()) 
   {
-      TopoDS_Edge Edge = TopoDS::Edge (exp.Current());
-      Handle(Geom_Curve) aCurve3d = BRep_Tool::Curve (Edge,f3d,l3d);
-      if(aCurve3d.IsNull())
-      {
-        l++;
-        goto aLabel;
-      }
+    TopoDS_Edge Edge = TopoDS::Edge (exp.Current());
+    Handle(Geom_Curve) aCurve3d = BRep_Tool::Curve (Edge,f3d,l3d);
+    if(aCurve3d.IsNull())
+    {
+      l++;
+    } else {
       aString = aCurve3d->DynamicType()->Name();
-        if(aDico->GetItem(aString,aa) != 0)
-        {
-          aDico->GetItem(aString,aa);
-          aDico->SetItem(aString,aa+1);
-        } else  {
-          aDico->SetItem(aString,1);
-          aSequence->Append(aString);
-          i++;
-          aa=1;
-        }
-    aLabel:;
+      if (aMap.IsBound(aString))
+      {
+        aMap.ChangeFind(aString)++;
+      } else {
+        aMap.Bind(aString, 1);
+        aSequence->Append(aString);
+      }
     }
+  }
   // Output 
   di<<"\n";
-  for(j=1;j<i;j++)
-    {
-      aDico->GetItem(aSequence->Value(j),aa);
-      di<<aa<<"   --   "<<aSequence->Value(j).ToCString()<<"\n";
-    }    
+
+  for (Standard_Integer i = 1; i <= aSequence->Length(); i++) {
+    di << aMap.Find(aSequence->Value(i)) << "   --   " << aSequence->Value(i).ToCString() << "\n";
+  }
 
   di<<"\n";
   di<<"Degenerated edges :\n";
@@ -1254,20 +967,9 @@ static Standard_Integer statface (Draw_Interpretor& di,Standard_Integer /*argc*/
 
 static Standard_Integer BUC60841(Draw_Interpretor& di, Standard_Integer argc, const char ** argv )
 {
-  if(argc > 2) {
-    di << "Usage : " << argv[0] << " [BRepAlgoAPI/BRepAlgo = 1/0]\n";
+  if(argc != 1) {
+    di << "Usage : " << argv[0] << "\n";
     return 1;
-  }
-  Standard_Boolean IsBRepAlgoAPI = Standard_True;
-  if (argc == 2) {
-    Standard_Integer IsB = Draw::Atoi(argv[1]);
-    if (IsB != 1) {
-      IsBRepAlgoAPI = Standard_False;
-#if ! defined(BRepAlgo_def01)
-//      di << "Error: There is not BRepAlgo_Fuse class\n";
-//      return 1;
-#endif
-    }
   }
 
   gp_Ax2 Ax2 = gp_Ax2(gp_Pnt(0, 621, 78), gp_Dir(0, 1,0));
@@ -1285,52 +987,21 @@ static Standard_Integer BUC60841(Draw_Interpretor& di, Standard_Integer argc, co
   TopoDS_Shape sh2 = trans1.Shape();
   DBRep::Set("sh2",sh2);
 
-//#if ! defined(BRepAlgoAPI_def01)
-//  BRepAlgoAPI_Fuse fuse1(sh1, sh2);
-//#else
-//  BRepAlgo_Fuse fuse1(sh1, sh2);
-//#endif
-//
-//  TopoDS_Shape fsh1 = fuse1.Shape();
-
-  TopoDS_Shape fsh1;
-  if (IsBRepAlgoAPI) {
-    di << "BRepAlgoAPI_Fuse fuse1(sh1, sh2)\n";
-    BRepAlgoAPI_Fuse fuse1(sh1, sh2);
-    fsh1 = fuse1.Shape();
-  } else {
-    di << "BRepAlgo_Fuse fuse1(sh1, sh2)\n";
-    BRepAlgo_Fuse fuse1(sh1, sh2);
-    fsh1 = fuse1.Shape();
-  }
-
+  di << "BRepAlgoAPI_Fuse fuse1(sh1, sh2)\n";
+  BRepAlgoAPI_Fuse fuse1(sh1, sh2);
+  TopoDS_Shape fsh1 = fuse1.Shape();
   DBRep::Set("fsh1",fsh1);
+
   BRepBuilderAPI_Transform trans2(fsh1, trsf2);
   TopoDS_Shape sh3 = trans2.Shape();
   DBRep::Set("sh3",sh3);
 
-//#if ! defined(BRepAlgoAPI_def01)
-//  BRepAlgoAPI_Fuse fuse2(fsh1,sh3);
-//#else
-//  BRepAlgo_Fuse fuse2(fsh1,sh3);
-//#endif
-//
-//  TopoDS_Shape fsh2 = fuse2.Shape();
-
-  TopoDS_Shape fsh2;
-  if (IsBRepAlgoAPI) {
-    di << "BRepAlgoAPI_Fuse fuse2(fsh1,sh3)\n";
-    BRepAlgoAPI_Fuse fuse2(fsh1,sh3);
-    fsh2 = fuse2.Shape();
-  } else {
-    di << "BRepAlgo_Fuse fuse2(fsh1,sh3)\n";
-    BRepAlgo_Fuse fuse2(fsh1,sh3);
-    fsh2 = fuse2.Shape();
-  }
-
+  di << "BRepAlgoAPI_Fuse fuse2(fsh1,sh3)\n";
+  BRepAlgoAPI_Fuse fuse2(fsh1, sh3);
+  const TopoDS_Shape& fsh2 = fuse2.Shape();
   DBRep::Set("fsh2",fsh2);
+
   Handle(AIS_Shape) aisp1 = new AIS_Shape(fsh2);
-//  aContext->Display(aisp1);
   return 0;
 }
 
@@ -1558,8 +1229,7 @@ static int BUC60862(Draw_Interpretor& di, Standard_Integer argc, const char ** a
 static int BUC60867(Draw_Interpretor& di, Standard_Integer argc, const char ** argv) {
   if (argc == 2) {
     TCollection_ExtendedString path (argv[1]); 
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) {di<<1;return 0;}
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     Handle(TDocStd_Document) D;
     Standard_Integer insession = A->IsInSession(path);
     if (insession > 0) {  
@@ -1726,27 +1396,11 @@ static Standard_Integer BUC60921 (Draw_Interpretor& di,
 
 static Standard_Integer BUC60951_(Draw_Interpretor& di, Standard_Integer argc, const char ** a)
 {
-  //if(argc!=2)
-  //  {
-  //    cerr << "Usage : " << a[0] << " file.igs" << endl;
-  //    return -1;
-  //  }
-  if(argc < 2 || argc > 3) {
-    di << "Usage : " << a[0] << " [BRepAlgoAPI/BRepAlgo = 1/0]\n";
+  if (argc != 2) {
+    di << "Usage : " << a[0] << " file.igs\n";
     return 1;
   }
-  Standard_Boolean IsBRepAlgoAPI = Standard_True;
-  if (argc == 3) {
-    Standard_Integer IsB = Draw::Atoi(a[2]);
-    if (IsB != 1) {
-      IsBRepAlgoAPI = Standard_False;
-#if ! defined(BRepAlgo_def01)
-//      di << "Error: There is not BRepAlgo_Fuse class\n";
-//      return 1;
-#endif
-    }
-  }
-  
+
   Handle(AIS_InteractiveContext) myContext = ViewerTest::GetAISContext(); 
 
   if(myContext.IsNull()) {
@@ -1779,26 +1433,12 @@ static Standard_Integer BUC60951_(Draw_Interpretor& di, Standard_Integer argc, c
   BRepPrimAPI_MakeCylinder cyl(anAx2, 50, 300);
   TopoDS_Shape sh = cyl.Shape();
 
-//#if ! defined(BRepAlgoAPI_def01)
-//  BRepAlgoAPI_Fuse fuse(sol, sh);
-//#else
-//  BRepAlgo_Fuse fuse(sol, sh);
-//#endif
-//
-//  sh = fuse.Shape();
-
-  if (IsBRepAlgoAPI) {
-    di << "BRepAlgoAPI_Fuse fuse(sol, sh)\n";
-    BRepAlgoAPI_Fuse fuse(sol, sh);
-    sh = fuse.Shape();
-  } else {
-    di << "BRepAlgo_Fuse fuse(sol, sh)\n";
-    BRepAlgo_Fuse fuse(sol, sh);
-    sh = fuse.Shape();
-  }
+  di << "BRepAlgoAPI_Fuse fuse(sol, sh)\n";
+  BRepAlgoAPI_Fuse fuse(sol, sh);
+  sh = fuse.Shape();
 
   Handle(AIS_Shape) res = new AIS_Shape(sh);
-  myContext->Display( res );
+  myContext->Display (res, Standard_True);
   return 0;
 }
 
@@ -1808,21 +1448,13 @@ void QABugs::Commands_3(Draw_Interpretor& theCommands) {
   theCommands.Add("BUC60623","BUC60623 result Shape1 Shape2",__FILE__,BUC60623,group);
   theCommands.Add("BUC60569","BUC60569 shape",__FILE__,BUC60569,group);
   theCommands.Add("BUC60614","BUC60614 shape",__FILE__,BUC60614,group);
-  theCommands.Add("BUC60609","BUC60609 shape name [U V]",__FILE__,BUC60609,group);
   theCommands.Add("BUC60632","BUC60632 mode length",__FILE__,BUC60632,group);
   theCommands.Add("BUC60652","BUC60652 face",__FILE__,BUC60652,group);
-  theCommands.Add("ksection","ksection resultat shell1 shell2 NbPntMax Toler3d Toler2d",__FILE__,ksection,group);
-  theCommands.Add("BUC60682","ksection resultat shell1 shell2 NbPntMax Toler3d Toler2d",__FILE__,ksection,group);  
-  theCommands.Add("BUC60669","ksection resultat shell1 shell2 NbPntMax Toler3d Toler2d",__FILE__,ksection,group);  
-  theCommands.Add("PRO19626","ksection resultat shell1 shell2 NbPntMax Toler3d Toler2d",__FILE__,ksection,group);  
   theCommands.Add("BUC60574","BUC60574 ",__FILE__,BUC60574,group);
 
-  theCommands.Add("BUC60699","BUC60699 ",__FILE__,BUC60699,group);
-  theCommands.Add("GER61394","GER61394 [1/0]",__FILE__,GER61394,group);
   theCommands.Add("GER61351","GER61351 name/object name/r g b/object r g b",__FILE__,setcolor,group);
   theCommands.Add("setcolor","setcolor name/object name/r g b/object r g b",__FILE__,setcolor,group);
 
-  theCommands.Add("BUC60726","BUC60726 0/1",__FILE__,BUC60726,group);
   theCommands.Add("BUC60729","BUC60729",__FILE__,BUC60729,group);
   theCommands.Add("BUC60724","BUC60724",__FILE__,BUC60724,group);
   theCommands.Add("BUC60727","BUC60727",__FILE__,BUC60727,group);
@@ -1831,7 +1463,7 @@ void QABugs::Commands_3(Draw_Interpretor& theCommands) {
 
   theCommands.Add("BUC60825","BUC60825",__FILE__,BUC60825,group);
 
-  theCommands.Add("OCC10006","OCC10006 [BRepAlgoAPI/BRepAlgo = 1/0]",__FILE__,OCC10006,group);
+  theCommands.Add("OCC10006","OCC10006",__FILE__,OCC10006,group);
 
   theCommands.Add("BUC60856","BUC60856",__FILE__,BUC60856,group);
 
@@ -1842,11 +1474,11 @@ void QABugs::Commands_3(Draw_Interpretor& theCommands) {
   theCommands.Add("BUC60876","BUC60876 shape",__FILE__,BUC60876_,group); 
   theCommands.Add("BUC60773","BUC60773",__FILE__,BUC60773,group); 
 
-  theCommands.Add("TestCMD","TestCMD [BRepAlgoAPI/BRepAlgo = 1/0]",__FILE__,TestCMD,group);
+  theCommands.Add("TestCMD","TestCMD",__FILE__,TestCMD,group);
 
   theCommands.Add("statface","statface face",__FILE__,statface,group);
 
-  theCommands.Add("BUC60841","BUC60841 [BRepAlgoAPI/BRepAlgo = 1/0]",__FILE__,BUC60841,group);
+  theCommands.Add("BUC60841","BUC60841",__FILE__,BUC60841,group);
 
   theCommands.Add("BUC60874","BUC60874",__FILE__,BUC60874,group);
 
@@ -1863,6 +1495,6 @@ void QABugs::Commands_3(Draw_Interpretor& theCommands) {
   theCommands.Add("AISWidth","AISWidth (DOC,entry,[width])",__FILE__,AISWidth,group);
   theCommands.Add("BUC60921","BUC60921 Doc label brep_file",__FILE__,BUC60921,group);
 
-  theCommands.Add("BUC60951","BUC60951 file.igs [BRepAlgoAPI/BRepAlgo = 1/0]",__FILE__,BUC60951_, group );
+  theCommands.Add("BUC60951","BUC60951 file.igs",__FILE__,BUC60951_, group );
 
 }

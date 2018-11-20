@@ -47,8 +47,8 @@ public:
   Standard_EXPORT virtual void Build (const TColgp_Array1OfPnt2d& thePoints) Standard_OVERRIDE;
 
   //! Returns a copy of the frustum with all sub-volumes transformed according to the matrix given
-  Standard_EXPORT virtual NCollection_Handle<SelectMgr_BaseFrustum> ScaleAndTransform (const Standard_Integer theScale,
-                                                                                       const gp_Trsf& theTrsf) Standard_OVERRIDE;
+  Standard_EXPORT virtual Handle(SelectMgr_BaseFrustum) ScaleAndTransform (const Standard_Integer theScale,
+                                                                           const gp_GTrsf& theTrsf) const Standard_OVERRIDE;
 
   Standard_EXPORT virtual Standard_Boolean Overlaps (const SelectMgr_Vec3& theMinPnt,
                                                      const SelectMgr_Vec3& theMaxPnt,
@@ -74,6 +74,10 @@ public:
                                                      const gp_Pnt& thePnt3,
                                                      Select3D_TypeOfSensitivity theSensType,
                                                      Standard_Real& theDepth) Standard_OVERRIDE;
+
+  //! Stores plane equation coefficients (in the following form:
+  //! Ax + By + Cz + D = 0) to the given vector
+  Standard_EXPORT virtual void GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const Standard_OVERRIDE;
 
 private:
 

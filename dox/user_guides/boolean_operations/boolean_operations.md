@@ -10,9 +10,9 @@ This document provides a comprehensive description of the Boolean Operation Algo
 * General Fuse Operator (GFA), 
 * Boolean Operator (BOA), 
 * Section Operator (SA), 
-* Partition Operator (PA). 
+* Splitter Operator (SPA). 
 
-GFA is the base algorithm for BOA, PA, SA.
+GFA is the base algorithm for BOA, SPA, SA.
 
 GFA has a history-based architecture designed to allow using OCAF naming functionality. The architecture of GFA is expandable, that allows creating new algorithms basing on it.
 
@@ -40,6 +40,8 @@ where:
 
 **Note** There is an operation *Cut21*, which is an extension for forward Cut operation, i.e <i>Cut21=Cut(G2, G1)</i>.
 
+For more details see @ref occt_algorithms_9 "Boolean Operations Algorithm" section.
+
 @subsubsection occt_algorithms_2_1_2 General Fuse operator
 
 The General fuse operator can be applied to an arbitrary number of arguments in terms of *TopoDS_Shape*.
@@ -59,7 +61,7 @@ For example, for two arguments *S<sub>1</sub>* and *S<sub>2</sub>* the result *R
 
 <i>R<sub>GF</sub> = GF (S<sub>1</sub>, S<sub>2</sub>) = S<sub>p1</sub> + S<sub>p2</sub> + S<sub>p12</sub></i>	
 
-@figure{/user_guides/boolean_operations/images/operations_image001.svg,  "Operators"}
+@figure{/user_guides/boolean_operations/images/operations_image001.svg,"Operators",320}
 
 This Figure shows that 
 * <i>B<sub>common</sub> (S<sub>1</sub>, S<sub>2</sub>) = S<sub>p12</sub>;</i>
@@ -71,34 +73,37 @@ This Figure shows that
 
 The fact that *R<sub>GF</sub>* contains the components of *R<sub>B</sub>* allows considering GFA as the general case of BOA. So it is possible to implement BOA as a subclass of GFA.
 
-@subsubsection occt_algorithms_2_1_3 Partition operator 
+For more details see @ref occt_algorithms_7 "General Fuse Algorithm" section.
 
-The Partition operator can be applied to an arbitrary number of arguments in terms of *TopoDS_Shape*. The arguments are divided on two groups: Objects, Tools. The result of PA contains all parts belonging to the Objects but does not contain the parts that belongs to the Tools only.
+@subsubsection occt_algorithms_2_1_3 Splitter operator 
 
-The PA operator can be represented as follows:
+The Splitter operator can be applied to an arbitrary number of arguments in terms of *TopoDS_Shape*. The arguments are divided into two groups: *Objects* and *Tools*. The result of *SPA* contains all parts that belong to the *Objects* but does not contain the parts that belong to the *Tools*.
 
-<i>R<sub>PA</sub>=PA (G<sub>1</sub>, G<sub>2</sub>),</i>
+The *SPA* operator can be represented as follows:
+
+<i>R<sub>SPA</sub>=SPA (G<sub>1</sub>, G<sub>2</sub>),</i>
 where:
-* <i>R<sub>PA</sub></i> -- is the result of the operation; 
-* *G<sub>1</sub>={S<sub>11</sub>, S<sub>12</sub> ... S<sub>1n1</sub>}*  group of arguments (Objects); 
-* *G<sub>2</sub>={S<sub>21</sub>, S<sub>22</sub> ... S<sub>2n2</sub>}*  group of arguments (Tools);
+* <i>R<sub>SPA</sub></i> -- is the result of the operation; 
+* *G<sub>1</sub>={S<sub>11</sub>, S<sub>12</sub> ... S<sub>1n1</sub>}*  group of arguments (*Objects*); 
+* *G<sub>2</sub>={S<sub>21</sub>, S<sub>22</sub> ... S<sub>2n2</sub>}*  group of arguments (*Tools*);
 * *n<sub>1</sub>* -- Number of arguments in *Objects* group; 
 * *n<sub>2</sub>* -- Number of arguments in *Tools* group.
 
-The result *R<sub>PA</sub>* can be obtained from *R<sub>GF</sub>* .
+The result *R<sub>SPA</sub>* can be obtained from *R<sub>GF</sub>* .
 
-For example, for two arguments *S<sub>1</sub>* and  *S<sub>2</sub>* the result *R<sub>PA</sub>* is
+For example, for two arguments *S<sub>1</sub>* and  *S<sub>2</sub>* the result *R<sub>SPA</sub>* is
 
-<i>R<sub>PA</sub>=PA(S<sub>1</sub>,S<sub>2</sub>)=S<sub>p1</sub>+S<sub>p12</sub>.</i>      
+<i>R<sub>SPA</sub>=SPA(S<sub>1</sub>,S<sub>2</sub>)=S<sub>p1</sub>+S<sub>p12</sub>.</i>      
 
-In case when all arguments of the PA are Objects (no Tools), the result of PA is equivalent to the result of GFA. 
+In case when all arguments of the *SPA* are *Objects* and there are no *Tools*, the result of *SPA* is equivalent to the result of *GFA*. 
 
-For example, when *G<sub>1</sub>* consists of shapes *S<sub>1</sub>* and *S<sub>2</sub>* the result of  *R<sub>PA</sub>* is
+For example, when *G<sub>1</sub>* consists of shapes *S<sub>1</sub>* and *S<sub>2</sub>* the result of *SPA* is
 
-<i>R<sub>PA</sub>=PA(S<sub>1</sub>, S<sub>2</sub>) = S<sub>p1</sub> + S<sub>p2</sub> + S<sub>p12</sub> = GF (S<sub>1</sub>, S<sub>2</sub>)</i>
+<i>R<sub>SPA</sub>=SPA(S<sub>1</sub>, S<sub>2</sub>) = S<sub>p1</sub> + S<sub>p2</sub> + S<sub>p12</sub> = GF (S<sub>1</sub>, S<sub>2</sub>)</i>
 
-The fact that the *R<sub>GF</sub>* contains the components of *R<sub>PA</sub>* allows considering GFA as the general case of PA. Thus, it is possible to implement PA as a subclass of GFA.
+The fact that the *R<sub>GF</sub>* contains the components of *R<sub>SPA</sub>* allows considering *GFA* as the general case of *SPA*. Thus, it is possible to implement *SPA* as a subclass of *GFA*.
 
+For more details see @ref occt_algorithms_8 "Splitter Algorithm" section.
 
 @subsubsection occt_algorithms_2_1_4 Section operator
 
@@ -109,15 +114,17 @@ The SA operator can be represented as follows:
 * <i>S1, S2 ... Sn</i> -- the operation arguments;
 * *n* -- the number of arguments.
 
+For more details see @ref occt_algorithms_10a "Section Algorithm" section.
+
 @subsection occt_algorithms_2_2 Parts of algorithms 
 
-GFA, BOA, PA and SA have the same Data Structure (DS). The main goal of the Data Structure is to store all necessary information for input data and intermediate results.
+GFA, BOA, SPA and SA have the same Data Structure (DS). The main goal of the Data Structure is to store all necessary information for input data and intermediate results.
 
 The operators consist of two main parts:
 *	Intersection Part (IP). The main goal of IP is to compute the interferences between sub-shapes of arguments. The IP uses DS to retrieve input data and store the results of intersections.
 *	Building Part (BP). The main goal of BP is to build required result of an operation. This part also uses DS to retrieve data and store the results.
 
-As it follows from the definition of operator results, the main differences between GFA, BOA, PA and SA are in the Building Part. The Intersection Part is the same for the algorithms.
+As it follows from the definition of operator results, the main differences between GFA, BOA, SPA and SA are in the Building Part. The Intersection Part is the same for the algorithms.
 
 @section occt_algorithms_3 Terms and Definitions
 
@@ -145,7 +152,7 @@ At second, there are interferences that occur between a solid *Z1* and a shape *
 
 For two vertices *Vi* and *Vj*, the distance between their corresponding 3D points is less than the sum of their tolerances *Tol(Vi)* and *Tol(Vj)*.
 
-@figure{/user_guides/boolean_operations/images/operations_image002.svg,  "Vertex/vertex interference"}
+@figure{/user_guides/boolean_operations/images/operations_image002.svg,"Vertex/vertex interference",420}
 
 The result is a new vertex *Vn* with 3D point *Pn* and tolerance value <i>Tol(Vn)</i>. 
 
@@ -155,7 +162,7 @@ The coordinates of *Pn* and the value <i>Tol(Vn)</i> are computed as the center 
 
 For a vertex *Vi* and an edge *Ej*, the distance *D* between 3D point of the vertex and its projection on the 3D curve of edge *Ej* is less or equal than sum of tolerances of vertex *Tol(Vi)* and edge *Tol(Ej)*.
 
-@figure{/user_guides/boolean_operations/images/operations_image003.svg,  "Vertex/edge interference"}
+@figure{/user_guides/boolean_operations/images/operations_image003.svg,"Vertex/edge interference",420}
 
 The result is vertex *Vi* with the corresponding tolerance value <i>Tol(Vi)=Max(Tol(Vi), D+Tol(Ej))</i>, where <i>D = distance (Pi, PPi)</i>; 
 
@@ -165,7 +172,7 @@ and parameter *t<sub>i</sub>* of the projected point *PPi* on 3D curve *Cj* of e
 
 For a vertex *Vi* and a face *Fj* the distance *D* between 3D point of the vertex and its projection on the surface of the face is less or equal than sum of tolerances of the vertex *Tol(Vi)* and the face *Tol(Fj)*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image004.svg,  "Vertex/face interference"}
+@figure{/user_guides/boolean_operations/images/operations_image004.svg,"Vertex/face interference",420}
 
 The result is vertex *Vi* with the corresponding tolerance value <i>Tol(Vi)=Max(Tol(Vi), D+Tol(Fj))</i>, where <i>D = distance (Pi, PPi)</i>
 
@@ -179,7 +186,7 @@ Let us examine two cases:
 
 In  the first case two edges have one or several common parts of 3D curves in terms of tolerance.
 
-@figure{/user_guides/boolean_operations/images/operations_image005.svg,  "Edge/edge interference: common parts"}
+@figure{/user_guides/boolean_operations/images/operations_image005.svg,"Edge/edge interference: common parts",420}
 
 The results are: 
 * Parametric range <i>[t<sub>i1</sub>, t<sub>i2</sub> ]</i> for 3D curve *Ci* of edge *Ei*.
@@ -187,8 +194,7 @@ The results are:
 
 In the second case two edges have one or several common points in terms of tolerance.
 
-@image html /user_guides/boolean_operations/images/operations_image006.svg  "Edge/edge interference: common points"
-@image latex /user_guides/boolean_operations/images/operations_image006.svg  "Edge/edge interference: common points"
+@figure{/user_guides/boolean_operations/images/operations_image006.svg,"Edge/edge interference: common points",420}
 
 The result is a new vertex *Vn* with 3D point *Pn* and tolerance value *Tol(Vn)*.
 
@@ -205,13 +211,13 @@ Let us examine two cases:
 
 In the first case Edge *Ei* and Face *Fj* have one or several common parts in terms of tolerance. 
 
-@figure{/user_guides/boolean_operations/images/operations_image007.svg, "Edge/face interference: common parts"}
+@figure{/user_guides/boolean_operations/images/operations_image007.svg,"Edge/face interference: common parts",420}
 
 The result is a parametric range <i>[t<sub>i1</sub>, t<sub>i2</sub>]</i> for the 3D curve *Ci* of the edge *Ei*.
 
 In the second case Edge *Ei* and Face *Fj* have one or several common points in terms of tolerance.
 
-@figure{/user_guides/boolean_operations/images/operations_image008.svg,  "Edge/face interference: common points"}
+@figure{/user_guides/boolean_operations/images/operations_image008.svg,"Edge/face interference: common points",420}
 
 The result is a new vertex *Vn* with 3D point *Pn* and tolerance value *Tol(Vn)*. 
 
@@ -224,11 +230,11 @@ The coordinates of *Pn* and the value *Tol(Vn)* are computed as the center and t
 
 For a face *Fi* and a face *Fj* (with the corresponding surfaces *Si* and *Sj*) there are some places in 3D space, where the distance between the surfaces is less than (or equal to) sum of tolerances of the faces.
 
-@figure{/user_guides/boolean_operations/images/operations_image009.svg,  "Face/face interference: common curves"}
+@figure{/user_guides/boolean_operations/images/operations_image009.svg,"Face/face interference: common curves",418}
 
 In the first case the result contains intersection curves *C<sub>ijk</sub> (k = 0, 1, 2…k<sub>N</sub>,* where *k<sub>N</sub>* is the number of intersection curves with corresponding values of tolerances *Tol(C<sub>ijk</sub>)*.
 
-@figure{/user_guides/boolean_operations/images/operations_image010.svg, "Face/face interference: common points"}
+@figure{/user_guides/boolean_operations/images/operations_image010.svg,"Face/face interference: common points",305}
 
 In the second case Face *Fi* and face *Fj* have one or several new vertices *V<sub>ijm</sub>*, where <i>m=0,1,2, ... mN, mN </i> is the number of intersection points.
 
@@ -241,25 +247,25 @@ The coordinates of a 3D point *P<sub>ijm</sub>* and the value *Tol(V<sub>ijm</su
 
 For a vertex *Vi* and a solid *Zj* there is Vertex/Solid interference if the vertex *Vi* has no BRep interferences with any sub-shape of *Zj* and *Vi* is completely inside the solid *Zj*.
 
-@figure{/user_guides/boolean_operations/images/operations_image060.png,  "Vertex/Solid Interference"}
+@figure{/user_guides/boolean_operations/images/operations_image060.png,"Vertex/Solid Interference",220}
 
 @subsubsection occt_algorithms_3_1_8 Edge/Soild Interference
 
 For an edge *Ei* and a solid *Zj* there is Edge/Solid interference if the edge *Ei* and its sub-shapes have no BRep interferences with any sub-shape of *Zj* and *Ei* is completely inside the solid *Zj*.
 
-@figure{/user_guides/boolean_operations/images/operations_image061.png,  "Edge/Solid Interference"}
+@figure{/user_guides/boolean_operations/images/operations_image061.png,"Edge/Solid Interference",220}
 
 @subsubsection occt_algorithms_3_1_9 Face/Soild Interference
 
 For a face *Fi* and a solid *Zj* there is Face/Solid interference if the face *Fi* and its sub-shapes have no BRep interferences with any sub-shape of *Zj* and *Fi* is completely inside the solid *Zj*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image062.png,  "Face/Solid Interference"} 
+@figure{/user_guides/boolean_operations/images/operations_image062.png,"Face/Solid Interference",220}
 
 @subsubsection occt_algorithms_3_1_10  Solid/Soild Interference
 
 For a solid *Zi* and a solid *Zj* there is Solid/Solid interference if the solid *Zi* and its sub-shapes have no BRep interferences with any sub-shape of *Zj* and *Zi* is completely inside the solid *Zj*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image063.png,  "Solid/Solid Interference"} 
+@figure{/user_guides/boolean_operations/images/operations_image063.png,"Solid/Solid Interference",220}
 
 
 @subsubsection occt_algorithms_3_1_11 Computation Order
@@ -293,7 +299,7 @@ The result of interferences of the type Face/Face in most cases is intersection 
 The position of vertex *Vi* on curve *C* can be defined by a value of parameter <i>t<sub>i</sub></i> of the 3D point of the vertex on the curve.
 Pave *PVi* on curve *C* is a structure containing the vertex *Vi* and correspondent value of the parameter  <i>t<sub>i</sub></i> of the 3D point of the vertex on the curve. Curve *C* can be a 3D or a 2D curve.
 
-@figure{/user_guides/boolean_operations/images/operations_image011.svg,  "Paves"}
+@figure{/user_guides/boolean_operations/images/operations_image011.svg,"Paves",340}
 
 Two paves *PV1* and *PV2* on the same curve *C* can be compared using the parameter value @code PV1 > PV2 if t1 > t2 @endcode  
 
@@ -306,7 +312,7 @@ A set of paves *PVi (i=1, 2...nPV)*, where *nPV* is the number of paves] of curv
 
 A pave block *PBi* is a part of the object (edge, intersection curve) between neighboring paves. 
 
-@figure{/user_guides/boolean_operations/images/operations_image012.svg, "Pave Blocks"}
+@figure{/user_guides/boolean_operations/images/operations_image012.svg,"Pave Blocks",340}
 
 Any finite source edge *E* has at least one pave block that contains two paves *PVb* and *PVe*:
 * Pave *PVb* corresponds to the vertex *Vb* with minimal parameter <i>t<sub>b</sub></i> on the curve of the edge.
@@ -318,7 +324,7 @@ Pave block *PV* of curve *C* is bounded by vertices *V1* and *V2* with tolerance
 * In case of edge, the tolerance value is the tolerance of the edge.
 * In case of intersection curve, the tolerance value is obtained from an intersection algorithm.
 
-@figure{/user_guides/boolean_operations/images/operations_image013.svg, "Shrunk Range"}
+@figure{/user_guides/boolean_operations/images/operations_image013.svg,"Shrunk Range",340}
 
 The theoretical parametric range of the pave block is <i>[t1C, t2C]</i>.
 
@@ -337,14 +343,14 @@ The interferences of the type Edge/Edge, Edge/Face produce results as common par
 
 In case of Edge/Edge interference the common parts are pave blocks that have different base edges. 
 
-@figure{/user_guides/boolean_operations/images/operations_image014.svg, "Common Blocks: Edge/Edge interference"}
+@figure{/user_guides/boolean_operations/images/operations_image014.svg,"Common Blocks: Edge/Edge interference",340}
 
 If the pave blocks <i>PB<sub>1</sub>, PB<sub>2</sub>…PB<sub>NbPB</sub></i> , where *NbPB* is the number of pave blocks have the same bounding vertices and geometrically coincide, the pave blocks form common block *CB*.
 	
 
 In case of Edge/Face interference the common parts are pave blocks lying on a face(s).
 
-@figure{/user_guides/boolean_operations/images/operations_image015.svg, "Common Blocks: Edge/Face interference"}
+@figure{/user_guides/boolean_operations/images/operations_image015.svg,"Common Blocks: Edge/Face interference",265}
 
 If the pave blocks *PBi* geometrically coincide with a face *Fj*, the pave blocks form common block *CB*.
 
@@ -363,7 +369,7 @@ The structure *FaceInfo* contains the following information:
 * Pave blocks built up from intersection curves for the face;
 * Vertices built up from intersection points for the face.
 
-@figure{/user_guides/boolean_operations/images/operations_image016.svg,  "Face Info"}
+@figure{/user_guides/boolean_operations/images/operations_image016.svg,"Face Info",420}
 
 In the figure, for face *F1*:
 * Pave blocks that have state **In** for the face: *PB<sub>in1</sub>*.
@@ -461,7 +467,7 @@ The information about interferences is stored in the instances of classes that a
 
 The Figure shows inheritance diagram for *BOPDS_Interf* classes.
 
-@figure{/user_guides/boolean_operations/images/operations_image017.svg,  "BOPDS_Interf classes"}
+@figure{/user_guides/boolean_operations/images/operations_image017.svg,"BOPDS_Interf classes",420}
 
 
 @subsection occt_algorithms_4_4	Pave, PaveBlock and CommonBlock
@@ -534,6 +540,24 @@ The structure *BOPDS_FaceInfo* has the following contents.
 
 The objects of type *BOPDS_FaceInfo* are stored in one container of array type. The array allows getting the access to the information by index. This index (if exists) is stored in the field *myReference*.
 
+@section occt_algorithms_root_classes Root Classes
+
+@subsection occt_algorithms_root_classes_1 Class BOPAlgo_Options
+The class *BOPAlgo_Options* provides the following options for the algorithms:
+* Set the appropriate memory allocator;
+* Check the presence of the Errors and Warnings;
+* Turn on/off the parallel processing;
+* Set the additional tolerance for the operation;
+* Break the operations by user request;
+* Usage of Oriented Bounding boxes in the operation.
+
+@subsection occt_algorithms_root_classes_2 Class BOPAlgo_Algo
+
+The class *BOPAlgo_Algo* provides the base interface for all algorithms:
+* Perform the operation;
+* Check the input data;
+* Check the result.
+
 @section occt_algorithms_5	Intersection Part
 
 Intersection Part (IP) is used to
@@ -547,17 +571,7 @@ Intersection Part (IP) is used to
 
 IP is implemented in the class *BOPAlgo_PaveFiller*.
 
-@figure{/user_guides/boolean_operations/images/operations_image064.svg,  "Diagram for Class BOPAlgo_PaveFiller"}
-
-@subsection occt_algorithms_5_1a Class BOPAlgo_Algo
-The class *BOPAlgo_Algo* provides the base interface for all algorithms to provide the possibility to:
-* Get Error status;
-* Get Warning status;
-* Turn on/off the parallel processing
-* Break the operations by user request
-* Check data;
-* Check the result;
-* Set the appropriate memory allocator. 
+@figure{/user_guides/boolean_operations/images/operations_image064.png,"Diagram for Class BOPAlgo_PaveFiller",230}
 
 The description provided in the next paragraphs is coherent with the implementation of the method *BOPAlgo_PaveFiller::Perform()*.
 
@@ -593,7 +607,7 @@ The input data for this step is the DS after the @ref occt_algorithms_5_1 "Initi
 
 The example of connexity chains of interfered vertices is given in the image:
 
-@figure{/user_guides/boolean_operations/images/operations_image018.svg, "Connexity chains of interfered vertices"}
+@figure{/user_guides/boolean_operations/images/operations_image018.svg,"Connexity chains of interfered vertices",394}
 
 
 @subsection occt_algorithms_5_3	Compute Vertex/Edge Interferences
@@ -636,7 +650,7 @@ The input data for this step is the DS after updating Pave Blocks.
 
 The example of coinciding chains of pave blocks is given in the image:
 
-@figure{/user_guides/boolean_operations/images/operations_image019.png,  "Coinciding chains of pave blocks"}
+@figure{/user_guides/boolean_operations/images/operations_image019.png,"Coinciding chains of pave blocks",420}
 
 * The pairs of coincided pave blocks are: <i>(PB11, PB12), (PB11, PB13), (PB12, PB13), (PB21, PB22), (PB21, PB23), (PB22, PB23).</i>
 * The pairs produce  two chains: <i>(PB11, PB12, PB13)</i> and <i>(PB21, PB22, PB23).</i>
@@ -739,8 +753,11 @@ BP is implemented in the following classes:
 * *BOPAlgo_Builder* -- for the General Fuse operator  (GFA).
 * *BOPAlgo_BOP* -- for the Boolean Operation operator   (BOA).
 * *BOPAlgo_Section* -- for the Section operator  (SA).
+* *BOPAlgo_MakerVolume* -- for the Volume Maker operator.
+* *BOPAlgo_Splitter* -- for the Splitter operator.
+* *BOPAlgo_CellsBuilder* -- for the Cells Builder operator.
 
-@figure{/user_guides/boolean_operations/images/operations_image020.svg, "Diagram for BP classes"}
+@figure{/user_guides/boolean_operations/images/operations_image020.png,"Diagram for BP classes",300}
 
 The class *BOPAlgo_BuilderShape* provides the interface for algorithms that have:
 * A Shape as the result;
@@ -769,6 +786,118 @@ The types of resulting shapes depend on the type of the corresponding argument p
 | 7	| EDGE	| Set of split EDGEs	| |
 | 8	| VERTEX | VERTEX | |
 
+@subsection occt_algorithms_7_3a Options
+
+The General Fuse algorithm has a set of options, which allow speeding-up the operation and improving the quality of the result:
+* Parallel processing option allows running the algorithm in parallel mode;
+* Fuzzy option allows setting the additional tolerance for the operation;
+* Safe input shapes option allows preventing modification of the input shapes;
+* Gluing option allows speeding-up the intersection of the arguments;
+* Possibility to disable the check for the inverted solids among input shapes;
+* Usage of Oriented Bounding Boxes in the operation;
+* History support.
+
+For more detailed information on these options please see the @ref occt_algorithms_11a "Advanced options" section.
+
+@subsection occt_algorithms_7_3b Usage
+
+The following example illustrates how to use the GF algorithm:
+
+#### Usage of the GF algorithm on C++ level
+
+~~~~
+BOPAlgo_Builder aBuilder;
+// Setting arguments
+TopTools_ListOfShape aLSObjects = …; // Objects
+aBuilder.SetArguments(aLSObjects);
+
+// Setting options for GF
+
+// Set parallel processing mode (default is false)
+Standard_Boolean bRunParallel = Standard_True;
+aBuilder.SetRunParallel(bRunParallel);
+
+// Set Fuzzy value (default is Precision::Confusion())
+Standard_Real aFuzzyValue = 1.e-5;
+aBuilder.SetFuzzyValue(aFuzzyValue);
+
+// Set safe processing mode (default is false)
+Standard_Boolean bSafeMode = Standard_True;
+aBuilder.SetNonDestructive(bSafeMode);
+
+// Set Gluing mode for coinciding arguments (default is off)
+BOPAlgo_GlueEnum aGlue = BOPAlgo_GlueShift;
+aBuilder.SetGlue(aGlue);
+
+// Disabling/Enabling the check for inverted solids (default is true)
+Standard Boolean bCheckInverted = Standard_False;
+aBuilder.SetCheckInverted(bCheckInverted);
+
+// Set OBB usage (default is false)
+Standard_Boolean bUseOBB = Standard_True;
+aBuilder.SetUseOBB(buseobb);
+
+// Perform the operation
+aBuilder.Perform();
+
+// Check for the errors
+if (aBuilder.HasErrors())
+{
+  return;
+}
+
+// Check for the warnings
+if (aBuilder.HasWarnings())
+{
+  // treatment of the warnings
+  ...
+}
+
+// result of the operation
+const TopoDS_Shape& aResult = aBuilder.Shape();
+~~~~
+
+#### Usage of the GF algorithm on Tcl level
+
+~~~~
+# prepare the arguments
+box b1 10 10 10 
+box b2 3 4 5 10 10 10 
+box b3 5 6 7 10 10 10 
+
+# clear inner contents
+bclearobjects; bcleartools;
+
+# set the arguments
+baddobjects b1 b2 b3
+
+# setting options for GF
+
+# set parallel processing mode (default is 0)
+brunparallel 1
+
+# set Fuzzy value
+bfuzzyvalue 1.e-5
+
+# set safe processing mode (default is 0)
+bnondestructive 1
+
+# set gluing mode (default is 0)
+bglue 1
+
+# set check for inverted (default is 1)
+bcheckinverted 0
+
+# set obb usage (default is 0)
+buseobb 1
+
+# perform intersection
+bfillds
+
+# perform GF operaton
+bbuild result
+~~~~
+
 @subsection occt_algorithms_7_3 Examples
 
 Please, have a look at the examples, which can help to better understand the definitions.
@@ -777,7 +906,7 @@ Please, have a look at the examples, which can help to better understand the def
 
 Let us consider three edges: *E1, E2* and *E3* that intersect in one 3D point.
 
-@figure{/user_guides/boolean_operations/images/operations_image021.svg, "Three Intersecting Edges"}
+@figure{/user_guides/boolean_operations/images/operations_image021.svg,"Three Intersecting Edges",420}
 
 The result of the GFA operation is a compound containing 6 new edges: *E11, E12, E21, E22, E31*, and *E32*. These edges have one shared vertex *Vn1*.
 
@@ -790,7 +919,7 @@ In this case:
 
 Let us consider two wires *W1 (Ew11, Ew12, Ew13)* and *W2 (Ew21, Ew22, Ew23)* and edge *E1*.
 
-@figure{/user_guides/boolean_operations/images/operations_image022.svg,  "Two wires and an edge"}
+@figure{/user_guides/boolean_operations/images/operations_image022.svg,"Two wires and an edge",420}
 
 The result of the GF operation is a compound consisting of 2 wires: *Wn1 (Ew11, En1, En2, En3, Ew13)* and *Wn2 (Ew21, En2, En3, En4, Ew23)* and two edges: *E11* and *E12*. 
 
@@ -804,7 +933,7 @@ The edges *En1, En2, En3, En4* and vertex *Vn1* are new shapes created during th
 
 Let us consider edge *E1* and face *F2*:
 
-@figure{/user_guides/boolean_operations/images/operations_image023.svg,  "An edge intersecting with a face"}
+@figure{/user_guides/boolean_operations/images/operations_image023.svg,"An edge intersecting with a face",420}
 
 The result of the GF operation is a compound consisting of 3 shapes: 
 * Split edge parts *E11* and *E12* (image of *E1*).
@@ -814,7 +943,7 @@ The result of the GF operation is a compound consisting of 3 shapes:
 
 Let us consider edge *E1* and face *F2*:
 
-@figure{/user_guides/boolean_operations/images/operations_image024.svg,  "An edge lying on a face"}
+@figure{/user_guides/boolean_operations/images/operations_image024.svg,"An edge lying on a face",420}
 
 The result of the GF operation is a compound consisting of 5 shapes: 
 * Split edge parts *E11, E12* and *E13* (image of *E1*).
@@ -825,7 +954,7 @@ The result of the GF operation is a compound consisting of 5 shapes:
 
 Let us consider edge *E1* and shell *Sh2* that consists of 2 faces: *F21* and *F22*
 
-@figure{/user_guides/boolean_operations/images/operations_image025.svg, "An edge and a shell"}
+@figure{/user_guides/boolean_operations/images/operations_image025.svg,"An edge and a shell",488}
 
 The result of the GF operation is a compound consisting of 5 shapes: 
 * Split edge parts *E11, E12 , E13* and *E14* (image of *E1*).
@@ -834,7 +963,7 @@ The result of the GF operation is a compound consisting of 5 shapes:
 @subsubsection occt_algorithms_7_3_6 Case 6: A wire and a shell
 
 Let us consider  wire *W1 (E1, E2, E3, E4)* and  shell *Sh2 (F21, F22)*. 
-@figure{/user_guides/boolean_operations/images/operations_image026.svg,  "A wire and a shell"}
+@figure{/user_guides/boolean_operations/images/operations_image026.svg,"A wire and a shell",427}
 
 The result of the GF operation is a compound consisting of 2 shapes: 
 
@@ -843,7 +972,7 @@ The result of the GF operation is a compound consisting of 2 shapes:
 
 @subsubsection occt_algorithms_7_3_7 Case 7: Three faces
 
-Let us consider 3 faces: *F1, F2* and *F3*. @figure{/user_guides/boolean_operations/images/operations_image027.png,  "Three faces"}
+Let us consider 3 faces: *F1, F2* and *F3*. @figure{/user_guides/boolean_operations/images/operations_image027.png,"Three faces",420}
 
 The result of the GF operation is a compound consisting of 7 shapes:
 * Split face parts: *Fn1, Fn2, Fn3, Fn4, Fn5, Fn6* and *Fn7*.
@@ -851,7 +980,7 @@ The result of the GF operation is a compound consisting of 7 shapes:
 @subsubsection occt_algorithms_7_3_8 Case 8: A face and a shell
 
 Let us consider shell *Sh1 (F11, F12, F13)* and face *F2*.
-@figure{/user_guides/boolean_operations/images/operations_image028.png,  "A face and a shell"}
+@figure{/user_guides/boolean_operations/images/operations_image028.png,"A face and a shell",420}
 
 The result of the GF operation is a compound consisting of 4 shapes:
 * Image shell *Sh11* that consists of split face parts from shell *Sh1: Fn1, Fn2, Fn3, Fn4, Fn5* and *Fn6*.
@@ -859,23 +988,23 @@ The result of the GF operation is a compound consisting of 4 shapes:
 
 @subsubsection occt_algorithms_7_3_9 Case 9: A shell and a solid
 
-Let us consider shell *Sh1 (F11, F12…F16)* and solid *So2*. @figure{/user_guides/boolean_operations/images/operations_image029.png,  "A shell and a solid: arguments"}
+Let us consider shell *Sh1 (F11, F12…F16)* and solid *So2*. @figure{/user_guides/boolean_operations/images/operations_image029.png,"A shell and a solid: arguments",220}
 
 The result of the GF operation is a compound consisting of 2 shapes:
 * Image shell *Sh11* consisting of split face parts of *Sh1: Fn1, Fn2 ... Fn8.*
 * Solid *So21* with internal shell. (image of *So2*).
-@figure{/user_guides/boolean_operations/images/operations_image030.png,  "A shell and a solid: results"}
+@figure{/user_guides/boolean_operations/images/operations_image030.png,"A shell and a solid: results",420}
 
 @subsubsection occt_algorithms_7_3_10 Case 10: A compound and a solid
 
 Let us consider compound *Cm1* consisting of 2 solids *So11* and *So12*) and solid *So2*.
-@figure{/user_guides/boolean_operations/images/operations_image031.png, "A compound and a solid: arguments"}
+@figure{/user_guides/boolean_operations/images/operations_image031.png,"A compound and a solid: arguments",220}
 
 The result of the GF operation is a compound consisting of 4 shapes:
 * Image compound *Cm11* consisting of split solid parts from *So11* and *So12 (Sn1, Sn2, Sn3, Sn4)*.
 * Split parts of solid *So2 (Sn2, Sn3, Sn5)*.
 
-@figure{/user_guides/boolean_operations/images/operations_image032.png, "A compound and a solid: results"}
+@figure{/user_guides/boolean_operations/images/operations_image032.png,"A compound and a solid: results",420}
 
 @subsection occt_algorithms_7_4	Class BOPAlgo_Builder
 
@@ -904,7 +1033,7 @@ The input data for this step is a *BOPAlgo_PaveFiller* object (in terms of @ref 
 
 @subsubsection occt_algorithms_7_4_3 Build Images for Vertices
 
-The input data for this step is *BOPAlgo_Builder* object  after Initialisation.
+The input data for this step is *BOPAlgo_Builder* object  after Initialization.
 
 | No | Contents | Implementation  |
 | :--- | :--- | :--- | 
@@ -970,7 +1099,7 @@ The input data for this step is *BOPAlgo_Builder* object after building result o
 
 The example of chains of same domain faces is given in the image:
 
-@figure{/user_guides/boolean_operations/images/operations_image033.svg,  "Chains of same domain faces"}
+@figure{/user_guides/boolean_operations/images/operations_image033.svg,"Chains of same domain faces",420}
 
 * The pairs of same domain faces are: <i>(F11, F21), (F22, F31), (F41, F51) , (F41, F6)</i> and <i>(F51, F6)</i>.
 * The pairs produce the three chains: <i>(F11, F21), (F22, F31)</i> and <i>(F41, F51, F6)</i>.
@@ -1042,6 +1171,155 @@ The input data for this step is a *BOPAlgo_Builder* object after building result
 | 2	| Correct tolerances of edges on faces | *BOPTools_Tools::CorrectCurveOnSurface()* |
 
 
+@section occt_algorithms_8  Splitter Algorithm
+
+The Splitter algorithm allows splitting a group of arbitrary shapes by another group of arbitrary shapes.<br>
+It is based on the General Fuse  algorithm, thus all options of the General Fuse (see @ref occt_algorithms_7_3a "GF Options") are also available in this algorithm.
+
+@subsection occt_algorithms_8_1 Arguments
+
+* The arguments of the Splitter algorithm are divided into two groups - *Objects* (shapes that will be split) and *Tools* (shapes, by which the *Objects* will be split);
+* The requirements for the arguments (both for *Objects* and *Tools*) are the same as for the General Fuse algorithm - there can be any number of arguments of any type in each group, but each argument should be valid and not self-interfered.
+
+@subsection occt_algorithms_8_2 Results
+
+* The result of Splitter algorithm contains only the split parts of the shapes included into the group of *Objects*;
+* The split parts of the shapes included only into the group of *Tools* are excluded from the result;
+* If there are no shapes in the group of *Tools* the result of the operation will be equivalent to the result of General Fuse operation;
+* The shapes can be split by other shapes from the same group (if these shapes are interfering).
+
+@subsection occt_algorithms_8_3 Usage
+
+@subsubsection occt_algorithms_8_3_1 API
+
+On the low level the Splitter algorithm is implemented in class *BOPAlgo_Splitter*. The usage of this algorithm looks as follows:
+~~~~~
+BOPAlgo_Splitter aSplitter;
+// Setting arguments and tools
+TopTools_ListOfShape aLSObjects = …; // Objects
+TopTools_ListOfShape aLSTools = …; // Tools
+aSplitter.SetArguments(aLSObjects);
+aSplitter.SetTools(aLSTools);
+
+// Set options for the algorithm
+// setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+...
+
+// Perform the operation
+aSplitter.Perform();
+if (aSplitter.HasErrors()) { //check error status
+  return;
+}
+//
+const TopoDS_Shape& aResult = aSplitter.Shape(); // result of the operation
+~~~~~
+
+@subsubsection occt_algorithms_8_3_2 DRAW
+
+The command *bsplit* implements the Splitter algorithm in DRAW. Similarly to the *bbuild* command for the General Fuse algorithm, the *bsplit* command should be used after the Pave Filler is filled.
+~~~~~
+# s1 s2 s3 - objects
+# t1 t2 t3 - tools
+bclearobjects
+bcleartools
+baddobjects s1 s2 s3
+baddtools t1 t2 t3
+bfillds
+bsplit result
+~~~~~
+
+@subsection occt_algorithms_8_4 Examples
+
+@subsubsection occt_algorithms_8_4_1 Example 1
+
+Splitting a face by the set of edges:
+
+~~~~
+# draw script for reproducing
+bclearobjects
+bcleartools
+
+set height 20
+cylinder cyl 0 0 0 0 0 1 10
+mkface f cyl 0 2*pi -$height $height
+baddobjects f
+
+# create tool edges
+compound edges
+
+set nb_uedges 10
+set pi2 [dval 2*pi]
+set ustep [expr $pi2/$nb_uedges]
+for {set i 0} {$i <= $pi2} {set i [expr $i + $ustep]} {
+  uiso c cyl $i
+  mkedge e c -25 25
+  add e edges
+}
+
+set nb_vedges 10
+set vstep [expr 2*$height/$nb_vedges]
+for {set i -20} {$i <= 20} {set i [expr $i + $vstep]} {
+  viso c cyl $i
+  mkedge e c
+  add e edges
+}
+baddctools edges
+
+bfillds
+bsplit result
+~~~~
+
+<table align="center">
+<tr>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image001.png,"Arguments",160}</td>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image002.png,"Result",160}</td>
+</tr>
+</table>
+
+@subsubsection occt_algorithms_8_4_2 Example 2
+
+Splitting a plate by the set of cylinders:
+
+~~~~
+# draw script for reproducing:
+bclearobjects
+bcleartools
+
+box plate 100 100 1
+baddobjects plate
+
+pcylinder p 1 11
+compound cylinders
+for {set i 0} {$i < 101} {incr i 5} {
+  for {set j 0} {$j < 101} {incr j 5} {
+    copy p p1;
+    ttranslate p1 $i $j -5;
+    add p1 cylinders
+  }
+}
+baddtools cylinders
+
+bfillds
+bsplit result
+~~~~
+
+<table align="center">
+<tr>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image003.png,"Arguments",160}</td>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image004.png,"Result",160}</td>
+</tr>
+</table>
+
+@subsubsection occt_algorithms_8_4_3 Example 3
+
+Splitting shell hull by the planes:
+<table align="center">
+<tr>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image005.png,"Arguments",160}</td>
+  <td>@figure{/user_guides/boolean_operations/images/bsplit_image006.png,"Results",160}</td>
+</tr>
+</table>
+
 @section occt_algorithms_9	Boolean Operations Algorithm
 
 @subsection occt_algorithms_9_1	Arguments
@@ -1080,9 +1358,11 @@ The input data for this step is a *BOPAlgo_Builder* object after building result
 * The result of the operation *Cut12* for arguments *S1* and *S2* contains the parts of argument *S1* that have state **OUT** relative to the opposite argument *S2*.
 * The result of the operation *Cut21* for arguments *S1* and *S2* contains the parts of argument *S2* that have state **OUT** relative to the opposite argument *S1*.
 * For the arguments of collection type (WIRE, SHELL, COMPSOLID) the type will be passed in the result. For example, the result of Common operation between Shell and Wire will be a compound containing Wire.
-* For the arguments of collection type (WIRE, SHELL, COMPSOLID) containing overlapping parts the overlapping parts passed into result will be repeated for each container from the input shapes containing such parts.
-* The result of the operation Fuse for the arguments of collection type (WIRE, SHELL, COMPSOLID) will contain the same number of containers as the arguments. The overlapping parts (EDGES/FACES/SOLIDS) will be shared among them. For example, the result of Fuse operation between two wires will be two wires sharing coinciding edges if any.
-* The result of the operation Common for the arguments of collection type (WIRE, SHELL, COMPSOLID) will consist of the containers containing the same overlapping parts. For example, the result of Common operation between two fully/partially overlapping wires will be two wires containing the same edges.
+* For the arguments of collection type (WIRE, SHELL, COMPSOLID) containing overlapping parts the overlapping parts passed into result will be repeated for each container from the input shapes containing such parts. The containers completely included in other containers will be avoided in the result.
+* For the arguments of collection type (WIRE, SHELL, COMPSOLID) the containers included into result will have the same orientation as the original containers from arguments. In case of duplication its orientation will be defined by the orientation of the first container in arguments. Each container included into result will have coherent orientation of its sub-shapes.
+* The result of the operation Fuse for the arguments of collection type (WIRE, SHELL) will consist of the shapes of the same collection type. The overlapping parts (EDGES/FACES) will be shared among containers, but duplicating containers will be avoided in the result. For example, the result of Fuse operation between two fully coinciding wires will be one wire, but the result of Fuse operation between two partially coinciding wires will be two wires sharing coinciding edges.
+* The result of the operation Fuse for the arguments of type COMPSOLID will consist of the compound containing COMPSOLIDs created from connexity blocks of fused solids.
+* The result of the operation Common for the arguments of collection type (WIRE, SHELL, COMPSOLID) will consist of the unique containers containing the overlapping parts. For example, the result of Common operation between two fully overlapping wires will be one wire containing all splits of edges. The number of wires in the result of Common operation between two partially overlapping wires will be equal to the number of connexity blocks of overlapping edges.
 
 @subsection occt_algorithms_9_4 Examples
 
@@ -1090,11 +1370,11 @@ The input data for this step is a *BOPAlgo_Builder* object after building result
 
 Let us consider two interfering vertices *V1* and *V2*:
 
-@figure{/user_guides/boolean_operations/images/boolean_image001.svg}
+@figure{/user_guides/boolean_operations/images/boolean_image001.svg,"",160}
 
 * The result of *Fuse* operation is the compound that contains new vertex *V*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image002.svg}
+@figure{/user_guides/boolean_operations/images/boolean_image002.svg,"",160}
 
 * The result of *Common* operation is a compound containing new vertex *V*.
 
@@ -1105,13 +1385,13 @@ Let us consider two interfering vertices *V1* and *V2*:
 
 Let us consider vertex *V1* and the edge *E2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image004.png}
+@figure{/user_guides/boolean_operations/images/boolean_image004.png,"",230}
 
 * The result of *Fuse* operation is result is not defined because the dimension of the vertex (0) is not equal to the dimension of the edge (1).
 
 * The result of *Common* operation is a compound containing vertex *V<sub>1</sub>* as the argument *V<sub>1</sub>* has a common part with edge *E2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image005.png}
+@figure{/user_guides/boolean_operations/images/boolean_image005.png,"",230}
 
 * The result of *Cut12* operation is an empty compound.
 * The result of *Cut21* operation is not defined because the dimension of the vertex (0) is less than the dimension of the edge (1).
@@ -1120,13 +1400,13 @@ Let us consider vertex *V1* and the edge *E2*, that intersect in a 3D point:
 
 Let us consider  vertex *V1* and face *F2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image006.png}
+@figure{/user_guides/boolean_operations/images/boolean_image006.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the vertex (0) is not equal to the dimension of the face (2).
 
 * The result of *Common* operation is a compound containing vertex *V<sub>1</sub>* as the argument *V<sub>1</sub>* has a common part with face *F2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image007.png}
+@figure{/user_guides/boolean_operations/images/boolean_image007.png,"",230}
 
 * The result of *Cut12* operation is an empty compound.
 * The result of *Cut21* operation is not defined because the dimension of the vertex (0) is less than the dimension of the face (2).
@@ -1135,13 +1415,13 @@ Let us consider  vertex *V1* and face *F2*, that intersect in a 3D point:
 
 Let us consider  vertex *V1* and solid *S2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image008.png}
+@figure{/user_guides/boolean_operations/images/boolean_image008.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the vertex (0) is not equal to the dimension of the solid (3).
 
 * The result of *Common* operation is a compound containing vertex *V<sub>1</sub>* as the argument *V<sub>1</sub>* has a common part with solid *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image009.png}
+@figure{/user_guides/boolean_operations/images/boolean_image009.png,"",230}
 
 * The result of *Cut12* operation is an empty compound.
 * The result of *Cut21* operation is not defined because the dimension of the vertex (0) is less than the dimension of the solid (3).
@@ -1150,14 +1430,14 @@ Let us consider  vertex *V1* and solid *S2*, that intersect in a 3D point:
 
 Let us consider edges *E1* and *E2* that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image010.svg}
+@figure{/user_guides/boolean_operations/images/boolean_image010.svg,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments i.e. 4 new edges *E11, E12, E21*, and *E22*. These edges have one shared vertex *Vn1*. 
 In this case: 
 	* argument edge *E1* has resulting split edges *E11* and *E12* (image of *E1*);
 	* argument edge *E2* has resulting split edges *E21* and *E22* (image of *E2*).
 	
-@figure{/user_guides/boolean_operations/images/boolean_image011.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image011.svg,"",230}
 
 * The result of *Common* operation is an empty compound because the dimension (0) of the common part between the edges (vertex) is less than the dimension of the arguments (1).
 
@@ -1165,19 +1445,19 @@ In this case:
 
 In this case the argument edge *E1* has resulting split edges *E11* and *E12* (image of *E1*).
 
-@figure{/user_guides/boolean_operations/images/boolean_image012.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image012.svg,"",230}
 
 * The result of *Cut21* operation is a compound containing split parts of the argument  *E2*, i.e. 2 new edges *E21* and *E12*. These edges have one shared vertex *Vn1*. 
 
 In this case the argument edge *E2* has resulting split edges *E21* and *E22* (image of *E2*).
 
-@figure{/user_guides/boolean_operations/images/boolean_image013.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image013.svg,"",70}
 
 @subsubsection occt_algorithms_9_4_6	Case 6: Two edges having a common block
 
 Let us consider edges *E1* and *E2* that have a common block:
 
-@figure{/user_guides/boolean_operations/images/boolean_image014.svg}
+@figure{/user_guides/boolean_operations/images/boolean_image014.svg,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments i.e. 3 new edges *E11*, *E12* and *E22*. These edges have two shared vertices. 
 In this case: 
@@ -1185,27 +1465,27 @@ In this case:
 	* argument edge *E2* has resulting split edges *E21* and *E22* (image of *E2*);
 	* edge *E12* is common for the images of *E1* and *E2*.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image015.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image015.svg,"",230}
 
 * The result of *Common* operation is a compound containing split parts of arguments i.e. 1 new edge *E12*. In this case edge *E12* is common for the images of *E1* and *E2*. 
 The common part between the edges (edge) has the same dimension (1) as the dimension of the arguments (1).
 
-@figure{/user_guides/boolean_operations/images/boolean_image016.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image016.svg,"",230}
 
 * The result of *Cut12* operation is a compound containing a split part of argument  *E1*, i.e. new edge *E11*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image017.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image017.svg,"",230}
 
 * The result of *Cut21* operation is a compound containing a split part of argument  *E2*, i.e. new edge *E22*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image018.svg}	
+@figure{/user_guides/boolean_operations/images/boolean_image018.svg,"",230}
 
 
 @subsubsection occt_algorithms_9_4_7	Case 7: An Edge and a Face intersecting at a point
 
 Let us consider edge *E1* and face *F2* that intersect at a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image019.png}
+@figure{/user_guides/boolean_operations/images/boolean_image019.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the edge (1) is not equal to the dimension of the face (2).
 	
@@ -1215,7 +1495,7 @@ Let us consider edge *E1* and face *F2* that intersect at a 3D point:
 
 In this case the argument edge *E1* has no common parts with the face *F2* so the whole image of *E1* is in the result.
 
-@figure{/user_guides/boolean_operations/images/boolean_image020.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image020.png,"",230}
 
 * The result of *Cut21* operation is not defined because the dimension of the edge (1) is less than the dimension of the face (2).
 
@@ -1223,7 +1503,7 @@ In this case the argument edge *E1* has no common parts with the face *F2* so th
 
 Let us consider edge *E1* and face *F2* that have a common block:
 
-@figure{/user_guides/boolean_operations/images/boolean_image021.png}
+@figure{/user_guides/boolean_operations/images/boolean_image021.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the edge (1) is not equal to the dimension of the face (2).
 	
@@ -1231,13 +1511,13 @@ Let us consider edge *E1* and face *F2* that have a common block:
 
 In this case the argument edge *E1* has a common part with face *F2* so the corresponding part of the image of *E1* is in the result. The yellow square is not a part of the result. It only shows the place of *F2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image022.png}
+@figure{/user_guides/boolean_operations/images/boolean_image022.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument  *E1*, i.e. new edge *E11*.  
 
 In this case the argument edge *E1* has a common part with face *F2* so the corresponding part is not included into the result. The yellow square is not a part of the result. It only shows the place of F2.
 
-@figure{/user_guides/boolean_operations/images/boolean_image023.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image023.png,"",230}
 
 * The result of *Cut21* operation is not defined because the dimension of the edge (1) is less than the dimension of the face (2).
 
@@ -1245,7 +1525,7 @@ In this case the argument edge *E1* has a common part with face *F2* so the corr
 
 Let us consider edge *E1* and solid *S2* that intersect at a point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image024.png}
+@figure{/user_guides/boolean_operations/images/boolean_image024.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the edge (1) is not equal to the dimension of the solid (3).
 	
@@ -1253,13 +1533,13 @@ Let us consider edge *E1* and solid *S2* that intersect at a point:
 
 In this case the argument edge *E1* has a common part with solid *S2* so the corresponding part of the image of *E1* is in the result. The yellow square is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image025.png}
+@figure{/user_guides/boolean_operations/images/boolean_image025.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *E1*, i.e. new edge *E11*.  
 
 In this case the argument edge *E1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow square is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image071.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image071.png,"",230}
 
 * The result of *Cut21* operation is not defined because the dimension of the edge (1) is less than the dimension of the solid (3).
 
@@ -1267,7 +1547,7 @@ In this case the argument edge *E1* has a common part with solid *S2* so the cor
 
 Let us consider edge *E1* and solid *S2* that have a common block:
 
-@figure{/user_guides/boolean_operations/images/boolean_image072.png}
+@figure{/user_guides/boolean_operations/images/boolean_image072.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the edge (1) is not equal to the dimension of the solid (3).
 	
@@ -1275,13 +1555,13 @@ Let us consider edge *E1* and solid *S2* that have a common block:
 
 In this case the argument edge *E1* has a common part with solid *S2* so the corresponding part of the image of *E1* is in the result. The yellow square is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image073.png}
+@figure{/user_guides/boolean_operations/images/boolean_image073.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *E1*, i.e. new edge *E11*.  
 
 In this case the argument edge *E1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow square is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image026.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image026.png,"",230}
 
 * The result of *Cut21* operation is not defined because the dimension of the edge (1) is less than the dimension of the solid (3).
 
@@ -1289,107 +1569,107 @@ In this case the argument edge *E1* has a common part with solid *S2* so the cor
 
 Let us consider two intersecting faces *F1* and *F2*:
 
-@figure{/user_guides/boolean_operations/images/boolean_image027.png}
+@figure{/user_guides/boolean_operations/images/boolean_image027.png,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments  i.e. 2 new faces *F11* and *F21*. These faces have one shared edge *En1*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image028.png}
+@figure{/user_guides/boolean_operations/images/boolean_image028.png,"",230}
 
 
 * The result of *Common* operation is an empty compound because the dimension (1) of the common part between *F1* and *F2* (edge) is less than the dimension of arguments (2).
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*, i.e. new face *F11*.  
 
-@figure{/user_guides/boolean_operations/images/boolean_image029.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image029.png,"",230}
 
 * The result of *Cut21* operation is a compound containing split parts of the argument  *F2*, i.e. 1 new face *F21*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image030.png}
+@figure{/user_guides/boolean_operations/images/boolean_image030.png,"",127}
 	
 @subsubsection occt_algorithms_9_4_12	Case 12: Two faces that have a common part
 
 Let us consider two faces *F1* and *F2* that have a common part:
 
-@figure{/user_guides/boolean_operations/images/boolean_image031.png}
+@figure{/user_guides/boolean_operations/images/boolean_image031.png,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments, i.e. 3 new faces: *F11*, *F12* and *F22*. These faces are shared through edges In this case: 
 	* the argument edge *F1* has resulting split faces *F11* and *F12* (image of *F1*)
 	* the argument face *F2* has resulting split faces *F12* and *F22* (image of *F2*)
 	* the face *F12* is common for the images of *F1* and *F2*.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image032.png}
+@figure{/user_guides/boolean_operations/images/boolean_image032.png,"",230}
 
 * The result of *Common* operation is a compound containing split parts of arguments i.e. 1 new face *F12*. 
 In this case: face *F12* is common for the images of *F1* and *F2*.
 The common part between the faces (face) has the same dimension (2) as the dimension of the arguments (2).
 
 
-@figure{/user_guides/boolean_operations/images/boolean_image033.png}
+@figure{/user_guides/boolean_operations/images/boolean_image033.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*, i.e. new face *F11*.  
 	
-@figure{/user_guides/boolean_operations/images/boolean_image034.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image034.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split parts of the argument  *F2*, i.e. 1 new face *F21*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image035.png}
+@figure{/user_guides/boolean_operations/images/boolean_image035.png,"",230}
 
 @subsubsection occt_algorithms_9_4_13	Case 13: Two faces that have a common edge
 
 Let us consider two faces *F1* and *F2* that have a common edge:
 
-@figure{/user_guides/boolean_operations/images/boolean_image036.png}
+@figure{/user_guides/boolean_operations/images/boolean_image036.png,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments, i.e. 2 new faces: *F11* and *F21*. These faces have one shared edge *En1*.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image037.png}
+@figure{/user_guides/boolean_operations/images/boolean_image037.png,"",230}
 
 * The result of *Common* operation is an empty compound because the dimension (1) of the common part between *F1* and *F2* (edge)is less than the dimension of the arguments (2)
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*, i.e. new face *F11*.  The vertices are shown just to clarify the fact that the edges are spitted.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image038.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image038.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split parts of the argument  *F2*, i.e. 1 new face *F21*.  The vertices are shown just to clarify the fact that the edges are spitted.
 
-@figure{/user_guides/boolean_operations/images/boolean_image039.png}
+@figure{/user_guides/boolean_operations/images/boolean_image039.png,"",230}
 
 @subsubsection occt_algorithms_9_4_14	Case 14: Two faces that have a common vertex
 
 Let us consider two faces *F1* and *F2* that have a common vertex:
 
-@figure{/user_guides/boolean_operations/images/boolean_image040.png}
+@figure{/user_guides/boolean_operations/images/boolean_image040.png,"",230}
 
 * The result of *Fuse* operation is a compound containing split parts of arguments, i.e. 2 new faces: *F11* and *F21*. These faces have one shared vertex *Vn1*.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image041.png}
+@figure{/user_guides/boolean_operations/images/boolean_image041.png,"",230}
 
 * The result of *Common* operation is an empty compound because the dimension (0) of the common part between *F1* and *F2* (vertex) is less than the dimension of the arguments (2)
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*, i.e. new face *F11*.  
 	
-@figure{/user_guides/boolean_operations/images/boolean_image042.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image042.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split parts of the argument  *F2*, i.e. 1 new face *F21*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image043.png}
+@figure{/user_guides/boolean_operations/images/boolean_image043.png,"",230}
 
 
 @subsubsection occt_algorithms_9_4_15	Case 15: A Face and a Solid that have an intersection curve.
 
 Let us consider face *F1* and solid *S2* that have an intersection curve:
 
-@figure{/user_guides/boolean_operations/images/boolean_image044.png}
+@figure{/user_guides/boolean_operations/images/boolean_image044.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the face (2) is not equal to the dimension of the solid (3).
 	
 * The result of *Common* operation is a compound containing split part of the argument  *F1*. In this case the argument face *F1* has a common part with solid *S2*, so the corresponding part of the image of *F1* is in the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image045.png}
+@figure{/user_guides/boolean_operations/images/boolean_image045.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*. In this case  argument face *F1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image046.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image046.png,"",230}
 	
 * The result of *Cut21* operation is is not defined because the dimension of the face (2) is less than the dimension of the solid (3).
 
@@ -1397,17 +1677,17 @@ Let us consider face *F1* and solid *S2* that have an intersection curve:
 
 Let us consider face *F1* and solid *S2* that have overlapping faces:
 
-@figure{/user_guides/boolean_operations/images/boolean_image047.png}
+@figure{/user_guides/boolean_operations/images/boolean_image047.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the face (2) is not equal to the dimension of the solid (3).
 
 * The result of *Common* operation is a compound containing split part of the argument  *F1*. In this case the argument face *F1* has a common part with solid *S2*, so the corresponding part of the image of *F1* is included in the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image048.png}
+@figure{/user_guides/boolean_operations/images/boolean_image048.png,"",230}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*. In this case  argument face *F1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image049.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image049.png,"",230}
 	
 * The result of *Cut21* operation is is not defined because the dimension of the face (2) is less than the dimension of the solid (3).
 
@@ -1416,7 +1696,7 @@ Let us consider face *F1* and solid *S2* that have overlapping faces:
 
 Let us consider face *F1* and solid *S2* that have overlapping edges:
 
-@figure{/user_guides/boolean_operations/images/boolean_image050.png}
+@figure{/user_guides/boolean_operations/images/boolean_image050.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the face (2) is not equal to the dimension of the solid (3).
 	
@@ -1424,7 +1704,7 @@ Let us consider face *F1* and solid *S2* that have overlapping edges:
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*. In this case  argument face *F1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image051.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image051.png,"",230}
 	
 * The result of *Cut21* operation is is not defined because the dimension of the face (2) is less than the dimension of the solid (3).
 
@@ -1432,7 +1712,7 @@ Let us consider face *F1* and solid *S2* that have overlapping edges:
 
 Let us consider face *F1* and solid *S2* that have overlapping vertices:
 
-@figure{/user_guides/boolean_operations/images/boolean_image052.png}
+@figure{/user_guides/boolean_operations/images/boolean_image052.png,"",230}
 
 * The result of *Fuse* operation is not defined because the dimension of the face (2) is not equal to the dimension of the solid (3).
 	
@@ -1440,7 +1720,7 @@ Let us consider face *F1* and solid *S2* that have overlapping vertices:
 
 * The result of *Cut12* operation is a compound containing split part of the argument *F1*. In this case  argument face *F1* has a common part with solid *S2* so the corresponding part is not included into the result. The yellow contour is not a part of the result. It only shows the place of *S2*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image053.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image053.png,"",230}
 	
 * The result of *Cut21* operation is is not defined because the dimension of the face (2) is less than the dimension of the solid (3).
 
@@ -1448,100 +1728,101 @@ Let us consider face *F1* and solid *S2* that have overlapping vertices:
 
 Let us consider two intersecting solids *S1* and *S2*:
 
-@figure{/user_guides/boolean_operations/images/boolean_image054.png}
+@figure{/user_guides/boolean_operations/images/boolean_image054.png,"",230}
 
 * The result of *Fuse* operation is a compound composed from the split parts of arguments *S11, S12* and *S22* <i>(Cut12, Common, Cut21)</i>. All inner webs are removed, so the result is one new solid *R*. 
 	
-@figure{/user_guides/boolean_operations/images/boolean_image055.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image055.png,"",230}
 	
 * The result of *Common* operation is a compound containing split parts of arguments i.e. one new solid *S12*.  In this case solid *S12* is common for the images of *S1* and *S2*. The common part between the solids (solid) has the same dimension (3) as the dimension of the arguments (3). The yellow contour is not a part of the result. It only shows the place of *S1*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image056.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image056.png,"",176}
 
 * The result of *Cut12* operation is a compound containing split part of the argument *S1*, i.e. 1 new solid *S11*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image057.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image057.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split part of the argument *S2*, i.e. 1 new solid *S21*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image058.png}
+@figure{/user_guides/boolean_operations/images/boolean_image058.png,"",230}
 
 @subsubsection occt_algorithms_9_4_20	Case 20: Two Solids that have overlapping faces.
 
 Let us consider two solids *S1* and *S2* that have a common part on face:
 
-@figure{/user_guides/boolean_operations/images/boolean_image059.png}
+@figure{/user_guides/boolean_operations/images/boolean_image059.png,"",230}
 
 * The result of *Fuse* operation is a compound composed from the split parts of arguments *S11, S12* and *S22* <i>(Cut12, Common, Cut21)</i>. All inner webs are removed, so the result is one new solid *R*. 
 	
-@figure{/user_guides/boolean_operations/images/boolean_image060.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image060.png,"",230}
 	
 * The result of *Common* operation is an  empty compound because the dimension (2) of the common part between *S1* and *S2* (face) is less than the lower dimension of the arguments (3). 
 
 * The result of *Cut12* operation is a compound containing split part of the argument *S1*, i.e. 1 new solid *S11*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image061.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image061.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split part of the argument *S2*, i.e. 1 new solid *S21*.
-@figure{/user_guides/boolean_operations/images/boolean_image062.png}
+@figure{/user_guides/boolean_operations/images/boolean_image062.png,"",230}
 
 
 @subsubsection occt_algorithms_9_4_21	Case 21: Two Solids that have overlapping edges.
 
 Let us consider two solids *S1* and *S2* that have overlapping edges:
 
-@figure{/user_guides/boolean_operations/images/boolean_image063.png}
+@figure{/user_guides/boolean_operations/images/boolean_image063.png,"",230}
 
 * The result of *Fuse* operation is a compound composed from the split parts of arguments i.e. 2 new solids *S11* and *S21*. These solids have one shared edge *En1*.
  	
-@figure{/user_guides/boolean_operations/images/boolean_image064.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image064.png,"",230}
 	
 * The result of *Common* operation is an  empty compound because the dimension (1) of the common part between *S1* and *S2* (edge) is less than the lower dimension of the arguments (3). 
 
 * The result of *Cut12* operation is a compound containing split part of the argument *S1*. In this case 
 argument *S1* has a common part with solid *S2* so the corresponding part is not included into the result.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image065.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image065.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing split part of the argument *S2*. In this case 
 argument *S2* has a common part with solid *S1* so the corresponding part is not included into the result.
-@figure{/user_guides/boolean_operations/images/boolean_image066.png}
+
+@figure{/user_guides/boolean_operations/images/boolean_image066.png,"",230}
 
 @subsubsection occt_algorithms_9_4_22	Case 22: Two Solids that have overlapping vertices.
 
 Let us consider two solids *S1* and *S2* that have overlapping vertices:
 
-@figure{/user_guides/boolean_operations/images/boolean_image067.png}
+@figure{/user_guides/boolean_operations/images/boolean_image067.png,"",230}
 
 * The result of *Fuse* operation is a compound composed from the split parts of arguments i.e. 2 new solids *S11* and *S21*. These solids share *Vn1*.
  	
-@figure{/user_guides/boolean_operations/images/boolean_image068.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image068.png,"",230}
 	
 * The result of *Common* operation is an  empty compound because the dimension (0) of the common part between *S1* and *S2* (vertex) is less than the lower dimension of the arguments (3). 
 
 * The result of *Cut12* operation is a compound containing split part of the argument *S1*.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image069.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image069.png,"",230}
 	
 * The result of *Cut21* operation is a  compound containing split part of the argument *S2*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image070.png}
+@figure{/user_guides/boolean_operations/images/boolean_image070.png,"",230}
 
 @subsubsection occt_algorithms_9_4_23	Case 23: A Shell and a Wire cut by a Solid.
 
 Let us consider Shell *Sh* and Wire *W* as the objects and Solid *S* as the tool:
 
-@figure{/user_guides/boolean_operations/images/boolean_image136.png}
+@figure{/user_guides/boolean_operations/images/boolean_image136.png,"",230}
 
 * The result of *Fuse* operation is not defined as the dimension of the arguments is not the same.
  	
 * The result of *Common* operation is a compound containing the parts of the initial Shell and Wire common for the Solid. The new Shell and Wire are created from the objects.
 
-@figure{/user_guides/boolean_operations/images/boolean_image137.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image137.png,"",230}
 
 * The result of *Cut12* operation is a  compound containing new Shell and Wire split from the arguments *Sh* and *W*. In this case they have a common part with solid *S* so the corresponding part is not included into the result.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image138.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image138.png,"",230}
 	
 * The result of *Cut21* operation is not defined as the objects have a lower dimension than the tool. 
 
@@ -1549,23 +1830,23 @@ Let us consider Shell *Sh* and Wire *W* as the objects and Solid *S* as the tool
 
 Let us consider two Wires that have overlapping edges, *W1* is the object and *W2* is the tool:
 
-@figure{/user_guides/boolean_operations/images/boolean_image139.png}
+@figure{/user_guides/boolean_operations/images/boolean_image139.png,"",230}
 
 * The result of *Fuse* operation is a compound containing two Wires, which share an overlapping edge. The new Wires are created from the objects:
 
-@figure{/user_guides/boolean_operations/images/boolean_image140.png}
+@figure{/user_guides/boolean_operations/images/boolean_image140.png,"",230}
  	
-* The result of *Common* operation is a compound containing two Wires both consisting of an overlapping edge. The new Wires are created from the objects:
+* The result of *Common* operation is a compound containing one Wire consisting of an overlapping edge. The new Wire is created from the objects:
 
-@figure{/user_guides/boolean_operations/images/boolean_image141.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image141.png,"",230}
 
 * The result of *Cut12* operation is a compound containing a wire split from object *W1*. Its common part with *W2* is not included into the result.
   	
-@figure{/user_guides/boolean_operations/images/boolean_image142.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image142.png,"",230}
 	
 * The result of *Cut21* operation is a compound containing a wire split from *W2*. Its common part with *W1* is not included into the result.
 	
-@figure{/user_guides/boolean_operations/images/boolean_image143.png}	
+@figure{/user_guides/boolean_operations/images/boolean_image143.png,"",230}
 
 
 @subsection occt_algorithms_9_5 Class BOPAlgo_BOP
@@ -1631,37 +1912,37 @@ The arguments of BOA are shapes in terms of *TopoDS_Shape*. The main requirement
 
 Let us consider two interfering vertices: *V1* and *V2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image080.png}
+@figure{/user_guides/boolean_operations/images/boolean_image080.png,"",131}
 
 The result of *Section* operation is the compound that contains a new vertex *V*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image081.png}
+@figure{/user_guides/boolean_operations/images/boolean_image081.png,"",128}
 
 @subsubsection occt_algorithms_10a_3_2 Case 1: Case 2: A Vertex and an Edge
 
 Let us consider vertex *V1* and the edge *E2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image082.png}
+@figure{/user_guides/boolean_operations/images/boolean_image082.png,"",230}
 
 The result of *Section* operation is the compound that contains vertex *V1*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image083.png}
+@figure{/user_guides/boolean_operations/images/boolean_image083.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_3 Case 1: Case 2: A Vertex and a Face
  
 Let us consider vertex *V1* and face *F2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image084.png}
+@figure{/user_guides/boolean_operations/images/boolean_image084.png,"",230}
 
 The result of *Section* operation is the compound that contains vertex *V1*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image085.png}
+@figure{/user_guides/boolean_operations/images/boolean_image085.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_4 Case 4: A Vertex and a Solid
 
 Let us consider vertex *V1* and solid *Z2*. The vertex *V1* is inside the solid *Z2*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image086.png}
+@figure{/user_guides/boolean_operations/images/boolean_image086.png,"",230}
  
 The result of *Section* operation is an empty compound.
 
@@ -1669,174 +1950,174 @@ The result of *Section* operation is an empty compound.
 
 Let us consider edges *E1* and *E2*, that intersect in a 3D point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image087.png}
+@figure{/user_guides/boolean_operations/images/boolean_image087.png,"",230}
 
 The result of *Section* operation is the compound that contains a new vertex *Vnew*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image088.png}
+@figure{/user_guides/boolean_operations/images/boolean_image088.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_6 Case 6: Two edges having a common block
 
 Let us consider edges *E1* and *E2*, that have a common block:
 
-@figure{/user_guides/boolean_operations/images/boolean_image089.png}
+@figure{/user_guides/boolean_operations/images/boolean_image089.png,"",230}
  
 The result of *Section* operation is the compound that contains a new edge *Enew*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image090.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image090.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_7 Case 7: An Edge and a Face intersecting at a point
 
 Let us consider edge *E1* and face *F2*, that intersect at a 3D point:
  
-@figure{/user_guides/boolean_operations/images/boolean_image091.png}
+@figure{/user_guides/boolean_operations/images/boolean_image091.png,"",230}
 
 The result of *Section* operation is the compound that contains a new vertex *Vnew*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image092.png}
+@figure{/user_guides/boolean_operations/images/boolean_image092.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_8 Case 8: A Face and an Edge that have a common block
 
 Let us consider edge *E1* and face *F2*, that have a common block:
 
-@figure{/user_guides/boolean_operations/images/boolean_image093.png}
+@figure{/user_guides/boolean_operations/images/boolean_image093.png,"",230}
 
 The result of *Section* operation is the compound that contains new edge *Enew*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image094.png}
+@figure{/user_guides/boolean_operations/images/boolean_image094.png,"",230}
  
  
 @subsubsection occt_algorithms_10a_3_9 Case 9: An Edge and a Solid intersecting at a point
 
 Let us consider edge *E1* and solid *Z2*, that intersect at a point:
 
-@figure{/user_guides/boolean_operations/images/boolean_image095.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image095.png,"",230}
 
 The result of *Section* operation is the compound that contains a new vertex *Vnew*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image096.png}
+@figure{/user_guides/boolean_operations/images/boolean_image096.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_10 Case 10: An Edge and a Solid that have a common block
 
 Let us consider edge *E1* and solid *Z2*, that have a common block at a face:
 
-@figure{/user_guides/boolean_operations/images/boolean_image097.png}
+@figure{/user_guides/boolean_operations/images/boolean_image097.png,"",230}
  
 The result of *Section* operation is the compound that contains a new edge *Enew*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image098.png}
+@figure{/user_guides/boolean_operations/images/boolean_image098.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_11 Case 11: Two intersecting faces
 
 Let us consider two intersecting faces *F1* and *F2*:
  
-@figure{/user_guides/boolean_operations/images/boolean_image099.png}
+@figure{/user_guides/boolean_operations/images/boolean_image099.png,"",230}
 
 The result of *Section* operation is the compound that contains a new edge *Enew*. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image100.png}
+@figure{/user_guides/boolean_operations/images/boolean_image100.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_12 Case 12: Two faces that have a common part
 
 Let us consider two faces *F1* and *F2* that have a common part:
 
-@figure{/user_guides/boolean_operations/images/boolean_image133.png}
+@figure{/user_guides/boolean_operations/images/boolean_image133.png,"",230}
  
 The result of *Section* operation is the compound that contains 4 new edges.
 
-@figure{/user_guides/boolean_operations/images/boolean_image134.png}
+@figure{/user_guides/boolean_operations/images/boolean_image134.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_13 Case 13: Two faces that have overlapping edges
 
 Let us consider two faces *F1* and *F2* that have a overlapping edges:
 
-@figure{/user_guides/boolean_operations/images/boolean_image101.png}
+@figure{/user_guides/boolean_operations/images/boolean_image101.png,"",230}
 
 The result of *Section* operation is the compound that contains a new edge *Enew*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image102.png}
+@figure{/user_guides/boolean_operations/images/boolean_image102.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_14 Case 14: Two faces that have overlapping vertices
 
 Let us consider two faces *F1* and *F2* that have overlapping vertices:
 
-@figure{/user_guides/boolean_operations/images/boolean_image103.png}
+@figure{/user_guides/boolean_operations/images/boolean_image103.png,"",230}
  
 The result of *Section* operation is the compound that contains a new vertex *Vnew*. 
  
-@figure{/user_guides/boolean_operations/images/boolean_image104.png}
+@figure{/user_guides/boolean_operations/images/boolean_image104.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_15 Case 15: A Face and a Solid that have an intersection curve
 
 Let us consider face *F1* and solid *Z2* that have an intersection curve:
  
-@figure{/user_guides/boolean_operations/images/boolean_image105.png}
+@figure{/user_guides/boolean_operations/images/boolean_image105.png,"",230}
  
 The result of *Section* operation is the compound that contains new edges.
 
-@figure{/user_guides/boolean_operations/images/boolean_image106.png}
+@figure{/user_guides/boolean_operations/images/boolean_image106.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_16 Case 16: A Face and a Solid that have overlapping faces.
 
 Let us consider face *F1* and solid *Z2* that have overlapping faces:
 
-@figure{/user_guides/boolean_operations/images/boolean_image107.png}
+@figure{/user_guides/boolean_operations/images/boolean_image107.png,"",230}
  
 The result of *Section* operation is the compound that contains new edges
  
-@figure{/user_guides/boolean_operations/images/boolean_image108.png}
+@figure{/user_guides/boolean_operations/images/boolean_image108.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_17 Case 17: A Face and a Solid that have overlapping edges.
 
 Let us consider face *F1* and solid *Z2* that have a common part on edge:
 
-@figure{/user_guides/boolean_operations/images/boolean_image109.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image109.png,"",230}
 
 The result of *Section* operation is the compound that contains a new edge *Enew*.
 
-@figure{/user_guides/boolean_operations/images/boolean_image110.png}
+@figure{/user_guides/boolean_operations/images/boolean_image110.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_18 Case 18: A Face and a Solid that have overlapping vertices.
 
 Let us consider face *F1* and solid *Z2* that have overlapping vertices:
 
-@figure{/user_guides/boolean_operations/images/boolean_image111.png}
+@figure{/user_guides/boolean_operations/images/boolean_image111.png,"",230}
   
 The result of *Section* operation is the compound that contains a new vertex *Vnew*.
  
-@figure{/user_guides/boolean_operations/images/boolean_image112.png}
+@figure{/user_guides/boolean_operations/images/boolean_image112.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_19 Case 19: Two intersecting Solids
 
 Let us consider two intersecting solids *Z1* and *Z2*:
-@figure{/user_guides/boolean_operations/images/boolean_image113.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image113.png,"",230}
 
 The result of *Section* operation is the compound that contains new edges.
-@figure{/user_guides/boolean_operations/images/boolean_image114.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image114.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_20 Case 20: Two Solids that have overlapping faces
 
 Let us consider two solids *Z1* and *Z2* that have a common part on face:
-@figure{/user_guides/boolean_operations/images/boolean_image115.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image115.png,"",230}
 
 The result of *Section* operation is the compound that contains new edges.
-@figure{/user_guides/boolean_operations/images/boolean_image116.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image116.png,"",230}
  
 @subsubsection occt_algorithms_10a_3_21 Case 21: Two Solids that have overlapping edges
 
 Let us consider two solids *Z1* and *Z2* that have overlapping edges:
-@figure{/user_guides/boolean_operations/images/boolean_image117.png}
+@figure{/user_guides/boolean_operations/images/boolean_image117.png,"",230}
  
 The result of *Section* operation is the compound that contains a new edge *Enew*.
-@figure{/user_guides/boolean_operations/images/boolean_image118.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image118.png,"",230}
 
 @subsubsection occt_algorithms_10a_3_22 Case 22: Two Solids that have overlapping vertices
 
 Let us consider two solids *Z1* and *Z2* that have overlapping vertices: 
-@figure{/user_guides/boolean_operations/images/boolean_image119.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image119.png,"",230}
 
 The result of *Section* operation is the compound that contains a new vertex *Vnew*.
-@figure{/user_guides/boolean_operations/images/boolean_image120.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image120.png,"",230}
 
 @subsection occt_algorithms_10a_4 Class BOPAlgo_Section
 
@@ -1862,6 +2143,280 @@ Some aspects of building the result are described in the next paragraph
 | :---- | :---- | :------ |
 | 1 | Build the result of the operation using all information contained in *FaceInfo*, Common Block, Shared entities of the arguments, etc. | *BOPAlgo_Section:: BuildSection()* |
 
+@section occt_algorithms_10b Volume Maker Algorithm
+
+The Volume Maker algorithm has been designed for building the elementary volumes (solids) from a set of connected, intersecting, or nested shapes. The algorithm can also be useful for splitting solids into parts, or constructing new solid(s) from set of intersecting or connected faces or shells.
+The algorithm creates only closed solids. In general case the result solids are non-manifold: fragments of the input shapes (wires, faces) located inside the solids are added as internal sub-shapes to these solids.
+But the algorithm allows preventing the addition of the internal for solids parts into result. In this case the result solids will be manifold and not contain any internal parts. However, this option does not prevent from the occurrence of the internal edges or vertices in the faces.<br>
+Non-closed faces, free wires etc. located outside of any solid are always excluded from the result.
+
+The Volume Maker algorithm is implemented in the class BOPAlgo_MakerVolume. It is based on the General Fuse (GF) algorithm. All the options of the GF algorithm (see @ref occt_algorithms_7_3a "GF Options") are also available in this algorithm.
+
+The requirements for the arguments are the same as for the arguments of GF algorithm - they could be of any type, but each argument should be valid and not self-interfered.
+
+The algorithm allows disabling the calculation of intersections among the arguments. In this case the algorithm will run much faster, but the user should guarantee that the arguments do not interfere with each other, otherwise the result will be invalid (e.g. contain unexpected parts) or empty.
+This option is useful e.g. for building a solid from the faces of one shell or from the shapes that have already been intersected.
+
+@subsection occt_algorithms_10b_1 Usage
+
+#### C++ Level
+The usage of the algorithm on the API level:
+~~~~
+BOPAlgo_MakerVolume aMV;
+// Set the arguments
+TopTools_ListOfShape aLS = …; // arguments
+aMV.SetArguments(aLS);
+
+// Set options for the algorithm
+// setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+...
+// Additional option of the algorithm
+Standard_Boolean bAvoidInternalShapes = Standard_False; // Set to True to exclude from the result any shapes internal to the solids
+aMV.SetAvoidInternalShapes(bAvoidInternalShapes);
+
+// Perform the operation
+aMV.Perform();
+if (aMV.HasErrors()) { //check error status
+  return;
+}
+//
+const TopoDS_Shape& aResult = aMV.Shape(); // result of the operation
+~~~~
+
+#### Tcl Level
+To use the algorithm in Draw the command mkvolume has been implemented. The usage of this command is following:
+~~~~
+Usage: mkvolume r b1 b2 ... [-c] [-ni] [-ai]
+Options:
+-c - use this option to have input compounds considered as set of separate arguments (allows passing multiple arguments as one compound);
+-ni - use this option to disable the intersection of the arguments;
+-ai - use this option to avoid internal for solids shapes in the result.
+~~~~
+
+@subsection occt_algorithms_10b_2 Examples
+
+#### Example 1
+Creation of 9832 solids from sphere and set of 63 planes:
+
+<table align="center">
+<tr>
+  <td>@figure{/user_guides/boolean_operations/images/mkvolume_image001.png,"Arguments",200}</td>
+  <td>@figure{/user_guides/boolean_operations/images/mkvolume_image002.png,"Results",200}</td>
+</tr>
+</table>
+
+#### Example 2
+Creating compartments on a ship defined by hull shell and a set of planes. The ship is divided on compartments by five transverse bulkheads and a deck – six compartments are created:
+
+<table align="center">
+<tr>
+  <td>@figure{/user_guides/boolean_operations/images/mkvolume_image003.png,"Arguments",200}</td>
+  <td>@figure{/user_guides/boolean_operations/images/mkvolume_image004.png,"Results",200}</td>
+</tr>
+</table>
+
+@section occt_algorithms_10c_Cells Cells Builder algorithm
+
+The Cells Builder algorithm is an extension of the General Fuse algorithm. The result of General Fuse algorithm contains all split parts of the arguments. The Cells Builder algorithm provides means to specify if any given split part of the arguments (referred to as Cell) can be taken or avoided in the result.
+
+The possibility of selecting any Cell allows combining any possible result and gives the Cells Builder algorithm a very wide sphere of application - from building the result of any Boolean operation to building the result of any application-specific operation.
+
+The algorithm builds Cells only once and then just reuses them for combining the result. This gives this algorithm the performance advantage over Boolean operations, which always rebuild the splits to obtain the desirable result.
+
+Thus, the Cells Builder algorithm can be especially useful for simulating Boolean expressions, i.e. a sequence of Boolean operations on the same arguments. Instead of performing many Boolean operations it allows getting the final result in a single operation. The Cells Builder will also be beneficial to obtain the results of different Boolean operations on the same arguments - Cut and Common, for example.
+
+The Cells Builder algorithm also provides the possibility to remove any internal boundaries between splits of the same type, i.e. to fuse any same-dimensional parts added into the result and to keep any other parts as separate. This possibility is implemented through the Cells material approach: to remove the boundary between two Cells, both Cells should be assigned with the same material ID. However, if the same material ID has been assigned to the Cells of different dimension, the removal of the internal boundaries for that material will not be performed. Currently, such case is considered a limitation for the algorithm.
+
+The algorithm can also create containers from the connected Cells added into result - WIRES from Edges, SHELLS from Faces and COMPSOLIDS from Solids.
+
+@subsection occt_algorithms_10c_Cells_1 Usage
+
+The algorithm has been implemented in the *BOPAlgo_CellsBuilder* class.
+
+Cells Builder is based on the General Fuse algorithm. Thus all options of the General Fuse algorithm (see @ref occt_algorithms_7_3a "GF Options") are also available in this algorithm.
+
+The requirements for the input shapes are the same as for General Fuse - each argument should be valid in terms of *BRepCheck_Analyzer* and *BOPAlgo_ArgumentAnalyzer*.
+
+The result of the algorithm is a compound containing the selected parts of the basic type (VERTEX, EDGE, FACE or SOLID). The default result is an empty compound. It is possible to add any Cell by using the methods *AddToRessult()* and *AddAllToResult()*. It is also possible to remove any part from the result by using methods *RemoveFromResult()* and *RemoveAllFromResult()*. The method *RemoveAllFromResult()* is also suitable for clearing the result.
+
+The Cells that should be added/removed to/from the result are defined through the input shapes containing the parts that should be taken *(ShapesToTake)* and the ones containing parts that should be avoided (ShapesToAvoid).
+To be taken into the result the part must be IN all shapes from *ShapesToTake* and OUT of all shapes from *ShapesToAvoid*.
+
+To remove Internal boundaries, it is necessary to set the same material to the Cells, between which the boundaries should be removed, and call the method *RemoveInternalBoundaries()*.
+The material should not be equal to 0, as this is the default material ID. The boundaries between Cells with this material ID will not be removed. The same Cell cannot be added with different materials.
+It is also possible to remove the boundaries when the result is combined. To do this, it is necessary to set the material for parts (not equal to 0) and set the flag *bUpdate* to TRUE.
+If the same material ID has been set for parts of different dimension, the removal of internal boundaries for this material will not be performed.
+
+It is possible to create typed Containers from the parts added into result by using method *MakeContainers()*. The type of the containers will depend on the type of the input shapes: WIRES for EDGE, SHELLS for FACES and COMPSOLIDS for SOLIDS. The result will be a compound containing containers.
+
+#### API usage
+Here is the example of the algorithm use on the API level:
+~~~~
+BOPAlgo_CellsBuilder aCBuilder;
+// Set the arguments
+TopTools_ListOfShape aLS = …; // arguments
+aCBuilder.SetArguments(aLS);
+
+// Set options for the algorithm
+// setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+...
+
+aCBuilder.Perform(); // build splits of all arguments (GF)
+if (aCBuilder.HasErrors()) { // check error status
+  return;
+}
+//
+// collecting of the cells into result
+const TopoDS_Shape& anEmptyRes = aCBuilder.Shape(); // empty result, as nothing has been added yet 
+const TopoDS_Shape& anAllCells = aCBuilder.GetAllParts(); //all split parts 
+//
+TopTools_ListOfShape aLSToTake = ...; // parts of these arguments will be taken into result
+TopTools_ListOfShape aLSToAvoid = ...; // parts of these arguments will not be taken into result
+//
+Standard_Integer iMaterial = 1; // defines the material for the cells
+Standard_Boolean bUpdate = Standard_False; // defines whether to update the result right now or not
+// adding to result
+aCBuilder.AddToResult(aLSToTake, aLSToAvoid, iMaterial, bUpdate);
+aCBuilder.RemoveInternalBoundaries(); // removing of the boundaries
+TopoDS_Shape aResult = aCBuilder.Shape(); // the result
+// removing from result
+aCBuilder.AddAllToResult();
+aCBuilder.RemoveFromResult(aLSToTake, aLSToAvoid);
+aResult = aCBuilder.Shape(); // the result
+~~~~
+
+#### DRAW usage
+
+The following set of new commands has been implemented to run the algorithm in DRAW Test Harness:
+~~~~
+bcbuild          : Initialization of the Cells Builder. Use: *bcbuild r*
+bcadd            : Add parts to result. Use: *bcadd r s1 (0,1) s2 (0,1) ... [-m material [-u]]*
+bcaddall         : Add all parts to result. Use: *bcaddall r [-m material [-u]]*
+bcremove         : Remove parts from result. Use: *bcremove r s1 (0,1) s2 (0,1) ...*
+bcremoveall      : Remove all parts from result. Use: *bcremoveall*
+bcremoveint      : Remove internal boundaries. Use: *bcremoveint r*
+bcmakecontainers : Make containers from the parts added to result. Use: *bcmakecontainers r*
+~~~~
+
+Here is the example of the algorithm use on the DRAW level:
+~~~~
+psphere s1 15
+psphere s2 15
+psphere s3 15
+ttranslate s1 0 0 10
+ttranslate s2 20 0 10
+ttranslate s3 10 0 0 
+bclearobjects; bcleartools
+baddobjects s1 s2 s3
+bfillds
+# rx will contain all split parts
+bcbuild rx 
+# add to result the part that is common for all three spheres
+bcadd res s1 1 s2 1 s3 1 -m 1
+# add to result the part that is common only for first and third spheres
+bcadd res s1 1 s2 0 s3 1 -m 1
+# remove internal boundaries
+bcremoveint res
+~~~~
+
+@subsection occt_algorithms_10c_Cells_2 Examples
+
+The following simple example illustrates the possibilities of the algorithm working on a cylinder and a sphere intersected by a plane:
+~~~~
+pcylinder c 10 30 
+psphere s 15
+ttranslate s 0 0 30
+plane p 0 0 20 1 0 0
+mkface f p -25 30 -17 17
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_001.png,"Arguments",160} 
+
+~~~~
+bclearobjects
+bcleartools
+baddobjects c s f
+bfillds
+bcbuild r
+~~~~
+
+#### 1. Common for all arguments
+
+~~~~
+bcremoveall
+bcadd res c 1 s 1 f 1
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_002.png,"The result of COMMON operation",126} 
+
+#### 2. Common between cylinder and face
+
+~~~~
+bcremoveall
+bcadd res f 1 c 1
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_003.png,"The result of COMMON operation between cylinder and face",90} 
+
+#### 3. Common between cylinder and sphere
+
+~~~~
+bcremoveall
+bcadd res c 1 s 1
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_004.png,"The result of COMMON operation between cylinder and sphere",120} 
+
+#### 4. Fuse of cylinder and sphere
+
+~~~~
+bcremoveall
+bcadd res c 1 -m 1
+bcadd res s 1 -m 1
+bcremoveint res
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_005.png,"The result of FUSE operation between cylinder and sphere",160} 
+
+#### 5. Parts of the face inside solids - FUSE(COMMON(f, c), COMMON(f, s))
+
+~~~~
+bcremoveall
+bcadd res f 1 s 1 -m 1
+bcadd res f 1 c 1 -m 1
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_006_1.png,"Parts of the face inside solids",160} 
+
+~~~~
+bcremoveint res
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_006_2.png,"Unified parts of the face inside solids",160} 
+
+#### 6. Part of the face outside solids
+
+~~~~
+bcremoveall
+bcadd res f 1 c 0 s 0
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_007.png,"Part of the face outside solids",160} 
+
+#### 7. Fuse operation (impossible using standard Boolean Fuse operation)
+
+~~~~
+bcremoveall
+bcadd res c 1 -m 1
+bcadd res s 1 -m 1
+bcadd res f 1 c 0 s 0
+bcremoveint res
+~~~~
+
+@figure{/user_guides/boolean_operations/images/cells_algorithm_008.png,"Fuse operation",160} 
+
+
+These examples may last forever. To define any new operation, it is just necessary to define, which Cells should be taken and which should be avoided.
 
 
 @section occt_algorithms_10	Algorithm Limitations 
@@ -1907,43 +2462,43 @@ The argument should not be self-interfered, i.e. all sub-shapes of the argument 
 #### Example 1: Compound of two edges
 The compound of two edges *E1* and *E2* is a self-interfered shape and cannot be used as the argument of the Algorithms.
 
-@figure{/user_guides/boolean_operations/images/operations_image036.svg, "Compound of two edges"}
+@figure{/user_guides/boolean_operations/images/operations_image036.svg,"Compound of two edges",230}
 
 #### Example 2: Self-interfered Edge
 The edge *E* is a self-interfered shape and cannot be used as an argument of the Algorithms.
 
-@figure{/user_guides/boolean_operations/images/operations_image037.svg, "Self-interfered Edge"}
+@figure{/user_guides/boolean_operations/images/operations_image037.svg,"Self-interfered Edge",140}
  
 #### Example 3: Self-interfered Face
 The face *F* is a self-interfered shape and cannot be used as an argument of the Algorithms.
 
-@figure{/user_guides/boolean_operations/images/operations_image038.svg, "Self-interfered Face"}
+@figure{/user_guides/boolean_operations/images/operations_image038.svg,"Self-interfered Face",230}
  
 ####	Example 4: Face of Revolution
 The face *F* has been obtained by revolution of edge *E* around line *L*.
 
-@figure{/user_guides/boolean_operations/images/operations_image039a.png, "Face of Revolution: Arguments"} 
-@figure{/user_guides/boolean_operations/images/operations_image039b.png, "Face of Revolution: Result"} 
+@figure{/user_guides/boolean_operations/images/operations_image039a.png,"Face of Revolution: Arguments",230}
+@figure{/user_guides/boolean_operations/images/operations_image039b.png,"Face of Revolution: Result",230}
 
 In spite of the fact that face *F* is valid (in terms of *BRepCheck_Analyzer*) it is a self-interfered shape and cannot be used as the argument of the Algorithms.
 
 @subsubsection occt_algorithms_10_1_4	Self-interferences due to tolerances
 #### Example 1: Non-closed Edge
 
-Let us consider edge *E* based on a non-closed circle. @figure{/user_guides/boolean_operations/images/operations_image040.png, "Edge based on a non-closed circle"}
+Let us consider edge *E* based on a non-closed circle. @figure{/user_guides/boolean_operations/images/operations_image040.png,"Edge based on a non-closed circle",230}
 
 The distance between the vertices of *E* is *D=0.69799*. The values of the tolerances *Tol(V1)=Tol(V2)=0.5*.
-@figure{/user_guides/boolean_operations/images/operations_image041.png,  "Distance and Tolerances"}
+@figure{/user_guides/boolean_operations/images/operations_image041.png,"Distance and Tolerances",230}
  
 In spite of the fact that the edge *E* is valid in terms of *BRepCheck_Analyzer*, it is a self-interfered shape because its vertices are interfered. Thus, edge *E* cannot be used as an argument of the Algorithms.
 
 #### Example 2: Solid containing an interfered vertex
 
-Let us consider solid *S* containing vertex V. @figure{/user_guides/boolean_operations/images/operations_image042.png,  "Solid containing an interfered vertex"}
+Let us consider solid *S* containing vertex V. @figure{/user_guides/boolean_operations/images/operations_image042.png,"Solid containing an interfered vertex",230}
 
 The value of  tolerance Tol(V)= 50.000075982061.
 
-@figure{/user_guides/boolean_operations/images/operations_image043.png,  "Tolerance"}
+@figure{/user_guides/boolean_operations/images/operations_image043.png,"Tolerance",230}
 
 In spite of the fact that solid *S* is valid in terms of *BRepCheck_Analyzer* it is a self-interfered shape because vertex *V* is interfered with a lot of sub-shapes from *S* without any topological connection with them. Thus solid *S* cannot be used as an argument of the Algorithms.
 
@@ -1953,21 +2508,21 @@ The parameterization of some surfaces (cylinder, cone, surface of revolution) ca
 ####	Example 1: Cylindrical surface
 The parameterization range for cylindrical surface is:
 
-@figure{/user_guides/boolean_operations/images/boolean_image135.png}
+@figure{/user_guides/boolean_operations/images/boolean_image135.png,"",230}
 
 The range of *U* coordinate is always restricted while the range of *V* coordinate is non-restricted.
 
 Let us consider a cylinder-based *Face 1* with radii *R=3* and *H=6*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image044.png, "Face 1"}
+@figure{/user_guides/boolean_operations/images/operations_image044.png,"Face 1",230}
 
-@figure{/user_guides/boolean_operations/images/operations_image045.png, "P-Curves for Face 1"}
+@figure{/user_guides/boolean_operations/images/operations_image045.png,"P-Curves for Face 1",230}
 
 Let us also consider a cylinder-based *Face 2* with radii *R=3000* and *H=6000* (resulting from scaling Face 1 with scale factor *ScF=1000*). 
 
-@figure{/user_guides/boolean_operations/images/operations_image046.png, "Face 2"}
+@figure{/user_guides/boolean_operations/images/operations_image046.png,"Face 2",230}
 
-@figure{/user_guides/boolean_operations/images/operations_image047.png, "P-Curves for Face 2"}
+@figure{/user_guides/boolean_operations/images/operations_image047.png,"P-Curves for Face 2",230}
 
 Please, pay attention to the Zoom value of the Figures.
 
@@ -1980,7 +2535,7 @@ It is possible to create shapes that use sub-shapes of lower order to avoid gaps
 
 Let us consider the following example:
 
-@figure{/user_guides/boolean_operations/images/operations_image048.png, "Example"}
+@figure{/user_guides/boolean_operations/images/operations_image048.png,"Example",230}
 
 * Face *F* has two edges *E1* and *E2* and two vertices, the base plane is <i>{0,0,0, 0,0,1}</i>;
 * Edge *E1* is based on line <i>{0,0,0, 1,0,0}, Tol(E1) = 1.e-7; </i>
@@ -2001,7 +2556,7 @@ Let us consider the intersection between two edges:
 * *E1* is based on a line: <i>{0,-10,0, 1,0,0}, Tol(E1)=2.</i>
 * *E2* is based on a circle: <i>{0,0,0, 0,0,1}, R=10, Tol(E2)=2.</i>
 
-@figure{/user_guides/boolean_operations/images/operations_image049.png, "Intersecting Edges"} 
+@figure{/user_guides/boolean_operations/images/operations_image049.png,"Intersecting Edges",320}
 
 The result of pure intersection between *E1* and *E2* is vertex *Vx {0,-10,0}*.
 
@@ -2021,7 +2576,7 @@ Let us consider two planar rectangular faces *F1* and *F2*.
 
 The intersection curve between the planes is curve *C12*. The curve produces a new intersection edge *EC12*. The edge goes through vertices *V1* and *V2* thanks to big tolerance values of vertices *Tol(V1)* and *Tol(V2)*. So, two straight edges *E12* and *EC12* go through two vertices, which is  impossible in this case.
 
-@figure{/user_guides/boolean_operations/images/operations_image050.svg, "Intersecting Faces"} 
+@figure{/user_guides/boolean_operations/images/operations_image050.svg,"Intersecting Faces",320}
 
 
 The problem cannot be solved in general, because the length of *E12* can be infinite and the values of *Tol(V1)* and *Tol(V2)* theoretically can be infinite too.
@@ -2038,11 +2593,11 @@ Let us consider two edges *E1* and *E2*, which have common vertices *V1* and *V2
 
 *C1* practically coincides in 3D with *C2*. The value of deflection is *Dmax* (e.g. *Dmax=1.e<sup>-6</sup>*). 
 
-@figure{/user_guides/boolean_operations/images/operations_image051.svg, "Intersecting Edges"} 
+@figure{/user_guides/boolean_operations/images/operations_image051.svg,"Intersecting Edges",420}
 
 The evident and prospective result should be the Common Block between *E1* and *E2*. However, the result of intersection differs. 
 
-@figure{/user_guides/boolean_operations/images/operations_image052.svg, "Result of Intersection"} 
+@figure{/user_guides/boolean_operations/images/operations_image052.svg,"Result of Intersection",420}
 
 The result contains three new vertices *Vx1, Vx2* and *Vx3*, 8 new edges <i>(V1, Vx1, Vx2, Vx3, V2)</i> and no Common Blocks. This is correct due to the source data: *Tol(E1)=1.e<sup>-7</sup>, Tol(E2)=1.e<sup>-7</sup>* and <i>Dmax=1.e<sup>-6</sup></i>.
 
@@ -2052,7 +2607,7 @@ In this particular case the problem can be solved by several ways:
 
 The example can be extended from 1D (edges) to 2D (faces).
 
-@figure{/user_guides/boolean_operations/images/operations_image053.svg, "Intersecting Faces"} 
+@figure{/user_guides/boolean_operations/images/operations_image053.svg,"Intersecting Faces",420}
 
 The comments and recommendations are the same as for 1D case above.
 
@@ -2062,7 +2617,7 @@ The comments and recommendations are the same as for 1D case above.
 
 Let us consider vertex *V1* and edge *E2*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image054.svg, "Vertex and Edge"} 
+@figure{/user_guides/boolean_operations/images/operations_image054.svg,"Vertex and Edge",171}
 
 Vertex *V1* interferes with vertices *V12* and *V22*.
 So vertex *V21* should interfere with vertex *V22*, which is impossible because vertices *V21* and *V22* are the vertices of edge *E2*, thus *V21* is not equal to *V22*.
@@ -2075,7 +2630,7 @@ In a particular case the problem can be solved by refinement of arguments, i.e. 
   
 Let us consider vertex *V2* and wire consisting of edges *E11* and *E12*. 
 
-@figure{/user_guides/boolean_operations/images/operations_image055.svg, "Vertex and Wire"} 
+@figure{/user_guides/boolean_operations/images/operations_image055.svg,"Vertex and Wire",200}
 
 The arguments themselves are not self-intersected.
 Vertex *V2* interferes with edges *E11* and *E12*. Thus, edge *E11* should interfere with edge *E22*, but it is impossible because edges *E11* and *E12* cannot interfere by the condition.
@@ -2090,9 +2645,9 @@ The chapter is devoted to Advanced Options. In some cases the usage of Advanced 
 
 @subsection occt_algorithms_11a_1  Fuzzy Boolean Operation
 
-Fuzzy Boolean operation is the option of Basic Operations (GFA, BOA, PA and SA), in which additional user-specified tolerance is used. This option allows operators to handle robustly cases of touching and near-coincident, misalignment entities of the arguments.
+Fuzzy Boolean operation is the option of Basic Operations such as General Fuse, Splitting, Boolean, Section, Maker Volume and Cells building operations, in which additional user-specified tolerance is used. This option allows operators to handle robustly cases of touching and near-coincident, misaligned entities of the arguments.
 
-The Fuzzy option is useful on the shapes with gaps or embeddings between the entities of these shapes which are not covered by the tolerance values of these entities. Such shapes can be the result of modeling mistakes, or translating process, or import from other systems with loss of precision, or errors in some algorithms. 
+The Fuzzy option is useful on the shapes with gaps or embeddings between the entities of these shapes, which are not covered by the tolerance values of these entities. Such shapes can be the result of modeling mistakes, or translating process, or import from other systems with loss of precision, or errors in some algorithms. 
 
 Most likely, the Basic Operations will give unsatisfactory results on such models. The result may contain unexpected and unwanted small entities, faulty entities (in terms of *BRepCheck_Analyzer*), or there can be no result at all.
 
@@ -2100,64 +2655,421 @@ With the Fuzzy option it is possible to get the expected result -- it is just ne
 
 Fuzzy option is included in interface of Intersection Part (class *BOPAlgo_PaveFiller*) and application programming interface (class  *BRepAlgoAPI_BooleanOperation*)
 
-@subsection occt_algorithms_11a_2 Examples
+@subsubsection occt_algorithms_11a_1_1 Examples
 The following examples demonstrate the advantages of usage Fuzzy option operations over the Basic Operations in typical situations.
 
-@subsubsection occt_algorithms_11a_1_1 Case 1
+#### Case 1
 
 In this example the cylinder (shown in yellow and transparent) is subtracted from the box (shown in red). The cylinder is shifted by  5e<sup>-5</sup> relatively to the box along its axis (the distance between rear faces of the box and cylinder is 5e<sup>-5</sup>).
 
-@figure{/user_guides/boolean_operations/images/boolean_image121.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image121.png,"",240}
   
 The following results are obtained using Basic Operations and the Fuzzy ones with the fuzzy value 5e<sup>-5</sup>:
 
-@figure{/user_guides/boolean_operations/images/boolean_image122.png, "Result of CUT operation obtained with Basic Operations"} 
+@figure{/user_guides/boolean_operations/images/boolean_image122.png,"Result of CUT operation obtained with Basic Operations",240}
 
-@figure{/user_guides/boolean_operations/images/boolean_image123.png, "Result of CUT operation obtained with Fuzzy Option"} 
+@figure{/user_guides/boolean_operations/images/boolean_image123.png,"Result of CUT operation obtained with Fuzzy Option",240}
 
 In this example Fuzzy option allows eliminating a very thin part of the result shape produced by Basic algorithm due to misalignment of rear faces of the box and the cylinder. 
 
-@subsubsection occt_algorithms_11a_1_2 Case 2
+#### Case 2
 
 In this example two boxes are fused. One of them has dimensions 10*10*10, and the other is 10*10.000001*10.000001 and adjacent to the first one. There is no gap in this case as the surfaces of the neighboring faces coincide, but one box is slightly greater than the other. 
 
-@figure{/user_guides/boolean_operations/images/boolean_image124.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image124.png,"",240}
 
 The following results are obtained using Basic Operations and the Fuzzy ones with the fuzzy value 1e<sup>-6</sup>: 
 
-@figure{/user_guides/boolean_operations/images/boolean_image125.png, "Result of CUT operation obtained with Basic Operations"} 
+@figure{/user_guides/boolean_operations/images/boolean_image125.png,"Result of CUT operation obtained with Basic Operations",240}
 
-@figure{/user_guides/boolean_operations/images/boolean_image126.png, "Result of CUT operation obtained with Fuzzy Option"} 
+@figure{/user_guides/boolean_operations/images/boolean_image126.png,"Result of CUT operation obtained with Fuzzy Option",240}
 
 In this example Fuzzy option allows eliminating an extremely narrow face in the result produced by Basic operation.
 
-@subsubsection occt_algorithms_11a_1_3 Case 3
+#### Case 3
 
 In this example the small planar face (shown in orange) is subtracted from the big one (shown in yellow). There is a gap 1e<sup>-5</sup> between the edges of these faces.
 
-@figure{/user_guides/boolean_operations/images/boolean_image127.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image127.png,"",240}
 
 The following results are obtained using Basic Operations and the Fuzzy ones with the fuzzy value 1e<sup>-5</sup>: 
 
-@figure{/user_guides/boolean_operations/images/boolean_image128.png, "Result of CUT operation obtained with Basic Operations"} 
+@figure{/user_guides/boolean_operations/images/boolean_image128.png,"Result of CUT operation obtained with Basic Operations",240}
 
-@figure{/user_guides/boolean_operations/images/boolean_image129.png, "Result of CUT operation obtained with Fuzzy Option"} 
+@figure{/user_guides/boolean_operations/images/boolean_image129.png,"Result of CUT operation obtained with Fuzzy Option",240}
 
 In this example Fuzzy options eliminated a pin-like protrusion resulting from the gap between edges of the argument faces.
 
-@subsubsection occt_algorithms_11a_1_4 Case 4
+#### Case 4
 
 In this example the small edge is subtracted from the big one. The edges are overlapping not precisely, with max deviation between them equal to 5.28004e<sup>-5</sup>. We will use 6e<sup>-5</sup> value for Fuzzy option.
 
-@figure{/user_guides/boolean_operations/images/boolean_image130.png} 
+@figure{/user_guides/boolean_operations/images/boolean_image130.png,"",240}
 
 The following results are obtained using Basic Operations and the Fuzzy ones with the fuzzy value 6e<sup>-5</sup>: 
 
-@figure{/user_guides/boolean_operations/images/boolean_image131.png, "Result of CUT operation obtained with Basic Operations"} 
+@figure{/user_guides/boolean_operations/images/boolean_image131.png,"Result of CUT operation obtained with Basic Operations",240}
 
-@figure{/user_guides/boolean_operations/images/boolean_image132.png, "Result of CUT operation obtained with Fuzzy Option"} 
+@figure{/user_guides/boolean_operations/images/boolean_image132.png,"Result of CUT operation obtained with Fuzzy Option",240}
 
 This example stresses not only the validity, but also the performance issue. The usage of Fuzzy option with the appropriate value allows processing the case much faster than with the pure Basic operation. The performance gain for the case is 45 (Processor: Intel(R) Core(TM) i5-3450 CPU @ 3.10 GHz).
+
+@subsection occt_algorithms_11a_2 Gluing Operation
+
+The Gluing operation is the option of the Basic Operations such as General Fuse, Splitting, Boolean, Section, Maker Volume and Cells building operations.
+It has been designed to speed up the computation of the interferences among arguments of the operations on special cases, in which the arguments may be overlapping but do not have real intersections between their sub-shapes.
+
+This option cannot be used on the shapes having real intersections, like intersection vertex between edges, or intersection vertex between edge and a face or intersection line between faces:
+
+@figure{/user_guides/boolean_operations/images/glue_options_image002.png,"Intersecting faces",240}
+
+There are two possibilities of overlapping shapes:
+* The shapes can be partially coinciding - the faces do not have intersection curves, but overlapping. The faces of such arguments will be split during the operation. The following picture illustrates such shapes:
+
+@figure{/user_guides/boolean_operations/images/glue_options_image001.png,"Partially coinciding faces",240}
+
+* The shapes can be fully coinciding - there should be no partial overlapping of the faces, thus no intersection of type EDGE/FACE at all. In such cases the faces will not be split during the operation.
+
+@figure{/user_guides/boolean_operations/images/glue_options_image003.png,"Full coinciding faces of the boxes",240}
+
+Thus, there are two possible options - for full and partial coincidence of the shapes.
+
+Even though there are no real intersections on such cases without Gluing options the algorithm will still intersect the sub-shapes of the arguments with interfering bounding boxes.
+
+The performance improvement in gluing mode is achieved by excluding the most time consuming computations and in some case can go up to 90%:
+* Exclude computation of FACE/FACE intersections for partial coincidence;
+* Exclude computation of VERTEX/FACE, EDGE/FACE and FACE/FACE intersections for full coincidence.
+
+By setting the Gluing option for the operation user should guarantee that the arguments are really coinciding. The algorithm does not check this itself. Setting inappropriate option for the operation is likely to lead to incorrect result.
+
+@subsubsection occt_algorithms_11a_2_1 Usage
+
+The Gluing option is an enumeration implemented in BOPAlgo_GlueEnum.hxx:
+* BOPAlgo_GlueOff - default value for the algorithms, Gluing is switched off;
+* BOPAlgo_GlueShift - Glue option for shapes with partial coincidence;
+* BOPAlgo_GlueFull - Glue option for shapes with full coincidence.
+
+#### API level
+For setting the Gluing options for the algorithm it is just necessary to call the SetGlue(const BOPAlgo_Glue) method with appropriate value:
+~~~~
+BOPAlgo_Builder aGF;
+//
+....
+// setting the gluing option to speed up intersection of the arguments
+aGF.SetGlue(BOPAlgo_GlueShift)
+//
+....
+~~~~
+
+#### TCL level
+For setting the Gluing options in DRAW it is necessary to call the <i>bglue</i> command with appropriate value:
+* 0 - default value, Gluing is off;
+* 1 - for partial coincidence;
+* 2 - for full coincidence
+
+~~~~
+bglue 1
+~~~~
+
+@subsubsection occt_algorithms_11a_2_2 Examples
+#### Case1 - Fusing the 64 bspline boxes into one solid
+
+@figure{/user_guides/boolean_operations/images/glue_options_image004.png,"BSpline Boxes with partial coincidence",240}
+
+Performance improvement from using the GlueShift option in this case is about 70 percent.
+
+#### Case2 - Sewing faces of the shape after reading from IGES
+
+@figure{/user_guides/boolean_operations/images/glue_options_image005.png,"Faces with coinciding but not shared edges",240}
+
+Performance improvement in this case is also about 70 percent.
+
+@subsection occt_algorithms_11a_3 Safe processing mode
+
+The safe processing mode is the advanced option in Boolean Operation component. This mode can be applied to all Basic operations such as General Fuse, Splitting, Boolean, Section, Maker Volume, Cells building.
+This option allows keeping the input arguments untouched. In other words, switching this option on prevents the input arguments from any modification such as tolerance increase, addition of the P-Curves on edges, etc.
+
+The option can be very useful for implementation of the Undo/Redo mechanism in the applications and allows performing the operation many times without changing the inputs.
+
+By default the safe processing option is switched off for the algorithms. Enabling this option might slightly decrease the performance of the operation, because instead of the modification of some entity it will be necessary to create the copy of this entity and modify it. However, this degradation should be very small because the copying is performed only in case of necessity.
+
+The option is also available in the Intersection algorithm - *BOPAlgo_PaveFiller*. To perform several different operations on the same arguments, the safe processing mode can be enabled in PaveFiller, prepared only once and then used in operations. It is enough to set this option to PaveFiller only and all algorithms taking this PaveFiller will also work in the safe mode.
+
+@subsubsection occt_algorithms_11a_3_1 Usage
+
+#### API level
+
+To enable/disable the safe processing mode for the algorithm, it is necessary to call *SetNonDestructive()* method with the  appropriate value:
+~~~~
+BOPAlgo_Builder aGF;
+//
+....
+// enabling the safe processing mode to prevent modification of the input shapes
+aGF.SetNonDestructive(Standard_True);
+//
+....
+~~~~
+
+#### TCL level
+To enable the safe processing mode for the operation in DRAW, it is necessary to call the <i>bnondestructive</i> command with the appropriate value:
+* 0 - default value, the safe mode is switched off;
+* 1 - the safe mode will be switched on.
+
+~~~~
+bnondestructive 1
+~~~~
+
+@subsection occt_algorithms_11a_4 How to disable check of input solids for inverted status
+
+By default, all input solids are checked for inverted status, i.e. the solids are classified to understand if they are holes in the space (negative volumes) or normal solids (positive volumes). The possibility to disable the check of the input solids for inverted status is the advanced option in Boolean Operation component. This option can be applied to all Basic operations, such as General Fuse, Splitting, Boolean, Section, Maker Volume and Cells building.
+This option allows avoiding time-consuming classification of the input solids and processing them in the same way as positive volumes, saving up to 10 percent of time on the cases with a big number of input solids.
+
+The classification should be disabled only if the user is sure that there are no negative volumes among the input solids, otherwise the result may be invalid.
+
+@subsubsection occt_algorithms_11a_4_1 Usage
+
+#### API level
+
+To enable/disable the classification of the input solids it is necessary to call *SetCheckInverted()* method with the appropriate value:
+~~~~
+BOPAlgo_Builder aGF;
+//
+....
+// disabling the classification of the input solid
+aGF.SetCheckInverted(Standard_False);
+//
+....
+~~~~
+
+#### TCL level
+To enable/disable the classification of the solids in DRAW, it is necessary to call *bcheckinverted* command with the appropriate value:
+* 0 - disabling the classification;
+* 1 - default value, enabling the classification.
+
+~~~~
+bcheckinverted 0
+~~~~
+
+@subsection occt_algorithms_11a_5_obb Usage of Oriented Bounding Boxes
+
+Since Oriented Bounding Boxes are usually much tighter than Axes Aligned Bounding Boxes (for more information on OBB see the @ref occt_modat_6 "Bounding boxes" chapter of Modeling data User guide) its usage can significantly speed-up the intersection stage of the operation by reducing the number of interfering objects.
+
+@subsubsection occt_algorithms_11a_5_obb_1 Usage
+
+#### API level
+To enable/disable the usage of OBB in the operation it is necessary to call the *SetUseOBB()* method with the approriate value:
+~~~~
+BOPAlgo_Builder aGF;
+//
+....
+// Enabling the usage of OBB in the operation
+aGF.SetUseOBB(Standard_True);
+//
+....
+~~~~
+
+#### TCL level
+To enable/disable the usage of OBB in the operation in DRAW it is necessary to call the *buseobb* command with the approriate value: 
+* 0 - disabling the usage of OBB;
+* 1 - enabling the usage of OBB.
+~~~~
+buseobb 1
+~~~~
+
+@section occt_algorithms_ers Errors and warnings reporting system
+
+The chapter describes the Error/Warning reporting system of the algorithms in the Boolean Component.
+
+The errors and warnings are collected in the instance of the class *Message_Report* maintained as a field by common base class of Boolean operation algorithms *BOPAlgo_Options*.
+
+The error is reported in for problems which cannot be treated and cause the algorithm to fail. 
+In this case the result of the operation will be incorrect or incomplete or there will be no result at all. 
+
+The warnings are reported for the problems which can be potentially handled or ignored and thus do not cause the algorithms to stop their work (but probably affect the result). 
+
+All possible errors and warnings that can be set by the algorithm are listed in its header file.
+The complete list of errors and warnings that can be generated by Boolean operations is defined in *BOPAlgo_Alerts.hxx*.
+
+Use method *HasErrors()* to check for presence of error; method *HasError()* can be used to check for particular error.
+Methods *DumpErrors()* outputs textual description of collected errors into the stream.
+Similar methods *HasWarnings()*, *HasWarning()*, and *DumpWarnings()* are provided for warnings.
+
+Note that messages corresponding to errors and warnings are defined in resource file *BOPAlgo.msg*.
+These messages can be localized; for that put translated version to separate file and load it in the application by call to *Message_MsgFile::Load()* .
+
+Here is the example of how to use this system:
+~~~~~
+BOPAlgo_PaveFiller aPF;
+aPF.SetArguments(...);
+aPF.Perform();
+if (aPF.HasErrors()) {
+  aPF.DumpErrors(std::cerr);
+  //
+  if (aPF.HasError(STANDARD_TYPE(BOPAlgo_AlertNullInputShapes)) {
+    // some actions
+  }
+  if (aPF.HasWarning(STANDARD_TYPE(BOPAlgo_AlertTooSmallEdge)) {
+    // some actions
+  }
+  ...
+}
+~~~~~
+
+DRAW commands executing Boolean operations output errors and warnings generated by these operations in textual form.
+Additional option allows saving shapes for which warnings have been generated, as DRAW variables. 
+To activate this option, run command *bdrawwarnshapes* with argument 1 (or with 0 to deactivate):
+~~~~
+bdrawwarnshapes 1
+~~~~
+
+After setting this option and running an algorithm the result will look as follows:
+~~~~
+Warning: The interfering vertices of the same argument: ws_1_1 ws_1_2
+Warning: The positioning of the shapes leads to creation of small edges without valid range: ws_2_1
+~~~~
+
+
+@section occt_algorithms_history History Information
+
+All operations in Boolean Component support @ref occt_modalg_hist "History information". This chapter describes how the History is filled for these operations.
+
+Additionally to Vertices, Edges and Faces the history is also available for the Solids.
+
+The rules for filling the History information about Deleted and Modified shapes are the same as for the API algorithms.
+
+Only the rules for Generated shapes require clarification.
+In terms of the algorithms in Boolean Component the shape from the arguments can have Generated shapes only if these new shapes 
+have been obtained as a result of pure intersection (not overlapping) of this shape with any other shapes from arguments. Thus, the Generated shapes are always:
+* VERTICES created from the intersection points and may be Generated from edges and faces only;
+* EDGES created from the intersection edges and may be Generated from faces only.
+
+So, only EDGES and FACES could have information about Generated shapes. For all other types of shapes the list of Generated shapes will be empty.
+
+@subsection occt_algorithms_history_ex Examples
+
+Here are some examples illustrating the History information.
+
+@subsubsection occt_algorithms_history_ex_del Deleted shapes
+
+The result of CUT operation of two overlapping planar faces (see the example below) does not contain any parts from the tool face. Thus, the tool face is considered as Deleted.
+If the faces are not fully coinciding, the result must contain some parts of the object face. In this case object face will be considered as not deleted.
+But if the faces are fully coinciding, the result must be empty, and both faces will be considered as Deleted.
+
+Example of the overlapping faces:
+
+~~~~
+plane p 0 0 0 0 0 1
+mkface f1 p -10 10 -10 10
+mkface f2 p 0 20 -10 10
+
+bclearobjects
+bcleartools
+baddobjects f1
+baddtools f2
+bfillds
+bbop r 2
+
+savehistory cut_hist
+isdeleted cut_hist f1
+# Not deleted
+
+isdeleted cut_hist f2
+# Deleted
+~~~~
+
+@subsubsection occt_algorithms_history_ex_modif Modified shapes
+
+In the FUSE operation of two edges intersecting in one point (see the example below), both edges will be split by the intersection point. All these splits will be contained in the result.
+Thus, each of the input edges will be Modified into its two splits.
+But in the CUT operation on the same edges, the tool edge will be Deleted from the result and, thus, will not have any Modified shapes.
+
+Example of the intersecting edges:
+~~~~
+line l1 0 0 0 1 0 0
+mkedge e1 l1 -10 10
+
+line l2 0 0 0 0 1 0
+mkedge e2 l2 -10 10
+
+bclearobjects
+bcleartools
+baddobjects e1
+baddtools e2
+bfillds
+
+# fuse operation
+bbop r 1
+
+savehistory fuse_hist
+
+modified m1 fuse_hist e1
+nbshapes m1
+# EDGES: 2
+
+modified m2 fuse_hist e2
+nbshapes m2
+# EDGES: 2
+
+# cut operation
+bbop r 2
+
+savehistory cut_hist
+
+modified m1 cut_hist e1
+nbshapes m1
+# EDGES: 2
+
+modified m2 cut_hist e2
+# The shape has not been modified
+~~~~
+
+
+@subsubsection occt_algorithms_history_gen Generated shapes
+
+Two intersecting edges will both have the intersection vertices Generated from them.
+
+As for the operation with intersecting faces, consider the following example:
+
+~~~~
+plane p1 0 0 0 0 0 1
+mkface f1 p1 -10 10 -10 10
+
+plane p2 0 0 0 1 0 0
+mkface f2 p2 -10 10 -10 10
+
+bclearobjects
+bcleartools
+baddobjects f1
+baddtools f2
+bfillds
+
+# fuse operation
+bbop r 1
+
+savehistory fuse_hist
+
+generated gf1 fuse_hist f1
+nbshapes gf1
+# EDGES: 1
+
+generated gf2 fuse_hist f2
+nbshapes gf2
+# EDGES: 1
+
+
+# common operation - result is empty
+bbop r 0
+
+savehistory com_hist
+
+generated gf1 com_hist f1
+# No shapes were generated from the shape
+
+generated gf2 com_hist f2
+# No shapes were generated from the shape
+
+~~~~
+
 
 @section occt_algorithms_11b Usage 
 
@@ -2170,13 +3082,14 @@ The package *BRepAlgoAPI* provides the Application Programming Interface of the 
 The package consists of the following classes:
 * *BRepAlgoAPI_Algo* -- the root class that provides the interface for algorithms. 
 * *BRepAlgoAPI_BuilderAlgo* -- the class API level of General Fuse algorithm.
+* *BRepAlgoAPI_Splitter* -- the class API level of the Splitter algorithm.
 * *BRepAlgoAPI_BooleanOperation* -- the root class for the classes *BRepAlgoAPI_Fuse*. *BRepAlgoAPI_Common*, *BRepAlgoAPI_Cut* and *BRepAlgoAPI_Section*.
 * *BRepAlgoAPI_Fuse* -- the class provides Boolean fusion operation. 
 * *BRepAlgoAPI_Common* -- the class provides Boolean common operation.
 * *BRepAlgoAPI_Cut* -- the class provides Boolean cut operation.
 * *BRepAlgoAPI_Section* -- the class provides Boolean section operation.
 
-@figure{/user_guides/boolean_operations/images/operations_image065.svg, "Diagram of BRepAlgoAPI package"} 
+@figure{/user_guides/boolean_operations/images/operations_image065.png,"Diagram of BRepAlgoAPI package",420}
 
 The detailed description of the classes can be found in the corresponding .hxx files. The examples are below in this chapter.
 
@@ -2184,11 +3097,12 @@ The detailed description of the classes can be found in the corresponding .hxx f
 The package *BOPTest* provides the usage of the Boolean Component on Tcl level. The method *BOPTest::APICommands* contains corresponding Tcl commands: 
 
 * *bapibuild* -- for General Fuse Operator;
+* *bapisplit* -- for Splitter Operator;
 * *bapibop* -- for Boolean Operator and Section Operator.
 
 The examples of how to use the commands are below in this chapter.
 
-@subsubsection occt_algorithms_11b_2_1 Case 1 General Fuse operation
+@subsubsection occt_algorithms_11b_2_1 Case 1. General Fuse operation
 
 The following example illustrates how to use General Fuse operator:
 
@@ -2199,33 +3113,21 @@ The following example illustrates how to use General Fuse operator:
 #include <TopTools_ListOfShape.hxx>
 #include <BRepAlgoAPI_BuilderAlgo.hxx>
  {…
-  Standard_Boolean bRunParallel;
-  Standard_Integer iErr;
-  Standard_Real aFuzzyValue;
   BRepAlgoAPI_BuilderAlgo aBuilder;
   //
   // prepare the arguments
   TopTools_ListOfShape& aLS=…;
   //
-  bRunParallel=Standard_True;
-  aFuzzyValue=2.1e-5;
-  //
   // set the arguments	
   aBuilder.SetArguments(aLS);
-  // set parallel processing mode 
-  // if  bRunParallel= Standard_True :  the parallel processing is switched on
-  // if  bRunParallel= Standard_False :  the parallel processing is switched off
-  aBuilder.SetRunParallel(bRunParallel);
-  //
-  // set Fuzzy value
-  // if aFuzzyValue=0.: the Fuzzy option is off
-  //  if aFuzzyValue>0.: the Fuzzy option is on
-  aBuilder.SetFuzzyValue(aFuzzyValue);
-  //
+  
+  // Set options for the algorithm
+  // setting options on this level is similar to setting options to GF algorithm on low level (see "GF Usage" chapter)
+  ...
+
   // run the algorithm 
   aBuilder.Build(); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
+  if (aBuilder.HasErrors()) {
     // an error treatment
     return;
   }
@@ -2249,21 +3151,82 @@ bclearobjects; bcleartools;
 #
 # set the arguments
 baddobjects b1 b2 b3
-# set parallel processing mode
-# 1:  the parallel processing is switched on
-# 0:  the parallel processing is switched off
-brunparallel 1 
-# set Fuzzy value
-# 0.    : the Fuzzy option is off
-# >0. : the Fuzzy option is on
-bfuzzyvalue 0.
-#
+
+# set options for the algorithm (see "GF Usage" chapter)
+...
+
 # run the algorithm
 # r is the result of the operation
 bapibuild r 
 ~~~~
 
-@subsubsection occt_algorithms_11b_2_2 Case 2. Common operation
+@subsubsection occt_algorithms_11b_2_2 Case 2. Splitting operation
+
+The following example illustrates how to use the Splitter operator:
+
+#### C++ Level
+
+~~~~
+#include <TopoDS_Shape.hxx>
+#include <TopTools_ListOfShape.hxx>
+#include <BRepAlgoAPI_Splitter.hxx>
+//
+BRepAlgoAPI_BuilderAlgo aSplitter;
+//
+// prepare the arguments
+// objects
+TopTools_ListOfShape& aLSObjects = … ;
+// tools
+TopTools_ListOfShape& aLSTools = … ;
+//
+// set the arguments
+aSplitter.SetArguments(aLSObjects);
+aSplitter.SetTools(aLSTools);
+//
+// Set options for the algorithm
+// setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+...
+//
+// run the algorithm 
+aSplitter.Build(); 
+// check error status
+if (aSplitter.HasErrors()) {
+  return;
+}
+//
+// result of the operation aResult
+const TopoDS_Shape& aResult = aSplitter.Shape();
+~~~~
+
+#### Tcl Level
+
+~~~~
+# prepare the arguments
+# objects
+box b1 10 10 10 
+box b2 7 0 0 10 10 10
+
+# tools
+plane p 10 5 5 0 1 0
+mkface f p -20 20 -20 20
+#
+# clear inner contents
+bclearobjects; bcleartools;
+#
+# set the objects
+baddobjects b1 b2
+# set the tools
+baddtools f
+#
+# set options for the algorithm (see "GF Usage" chapter)
+...
+#
+# run the algorithm
+# r is the result of the operation
+bapisplit r 
+~~~~
+
+@subsubsection occt_algorithms_11b_2_3 Case 3. Common operation
 
 The following example illustrates how to use Common operation:
 
@@ -2275,7 +3238,6 @@ The following example illustrates how to use Common operation:
 #include < BRepAlgoAPI_Common.hxx>
  {…
   Standard_Boolean bRunParallel;
-  Standard_Integer iErr;
   Standard_Real aFuzzyValue;
   BRepAlgoAPI_Common aBuilder;
   
@@ -2290,20 +3252,13 @@ The following example illustrates how to use Common operation:
   aBuilder.SetArguments(aLS);
   aBuilder.SetTools(aLT);
   //	
-  // set parallel processing mode 
-  // if  bRunParallel= Standard_True :  the parallel processing is switched on
-  // if  bRunParallel= Standard_False :  the parallel processing is switched off
-  aBuilder.SetRunParallel(bRunParallel);
-  //
-  // set Fuzzy value
-  // if aFuzzyValue=0.: the Fuzzy option is off
-  //  if aFuzzyValue>0.: the Fuzzy option is on
-  aBuilder.SetFuzzyValue(aFuzzyValue);
+  // Set options for the algorithm
+  // setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+  ...
   //
   // run the algorithm 
   aBuilder.Build(); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
+  if (aBuilder.HasErrors()) {
     // an error treatment
     return;
   }
@@ -2329,15 +3284,8 @@ bclearobjects; bcleartools;
 baddobjects b1 b3
 baddtools b2
 #
-# set parallel processing mode
-# 1:  the parallel processing is switched on
-# 0:  the parallel processing is switched off
-brunparallel 1
-#
-# set Fuzzy value
-# 0.    : the Fuzzy option is off
-# >0. : the Fuzzy option is on
-bfuzzyvalue 0.
+# set options for the algorithm (see "GF Usage" chapter)
+...
 #
 # run the algorithm
 # r is the result of the operation
@@ -2345,7 +3293,7 @@ bfuzzyvalue 0.
 bapibop r 0
 ~~~~
 
-@subsubsection occt_algorithms_11b_2_3 Case 3. Fuse operation
+@subsubsection occt_algorithms_11b_2_4 Case 4. Fuse operation
 
 The following example illustrates how to use Fuse operation:
 
@@ -2357,7 +3305,6 @@ The following example illustrates how to use Fuse operation:
 #include < BRepAlgoAPI_Fuse.hxx>
  {…
   Standard_Boolean bRunParallel;
-  Standard_Integer iErr;
   Standard_Real aFuzzyValue;
   BRepAlgoAPI_Fuse aBuilder;
   
@@ -2372,20 +3319,13 @@ The following example illustrates how to use Fuse operation:
   aBuilder.SetArguments(aLS);
   aBuilder.SetTools(aLT);
   //	
-  // set parallel processing mode 
-  // if  bRunParallel= Standard_True :  the parallel processing is switched on
-  // if  bRunParallel= Standard_False :  the parallel processing is switched off
-  aBuilder.SetRunParallel(bRunParallel);
-  //
-  // set Fuzzy value
-  // if aFuzzyValue=0.: the Fuzzy option is off
-  //  if aFuzzyValue>0.: the Fuzzy option is on
-  aBuilder.SetFuzzyValue(aFuzzyValue);
+  // Set options for the algorithm
+  // setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+  ...
   //
   // run the algorithm 
   aBuilder.Build(); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
+  if (aBuilder.HasErrors()) {
     // an error treatment
     return;
   }
@@ -2411,15 +3351,8 @@ bclearobjects; bcleartools;
 baddobjects b1 b3
 baddtools b2
 #
-# set parallel processing mode
-# 1:  the parallel processing is switched on
-# 0:  the parallel processing is switched off
-brunparallel 1
-#
-# set Fuzzy value
-# 0.    : the Fuzzy option is off
-# >0. : the Fuzzy option is on
-bfuzzyvalue 0.
+# set options for the algorithm (see "GF Usage" chapter)
+...
 #
 # run the algorithm
 # r is the result of the operation
@@ -2427,7 +3360,7 @@ bfuzzyvalue 0.
 bapibop r 1
 ~~~~
 
-@subsubsection occt_algorithms_11b_2_4 Case 4. Cut operation
+@subsubsection occt_algorithms_11b_2_5 Case 5. Cut operation
 
 The following example illustrates how to use Cut operation:
 
@@ -2439,7 +3372,6 @@ The following example illustrates how to use Cut operation:
 #include < BRepAlgoAPI_Cut.hxx>
  {…
   Standard_Boolean bRunParallel;
-  Standard_Integer iErr;
   Standard_Real aFuzzyValue;
   BRepAlgoAPI_Cut aBuilder;
   
@@ -2454,20 +3386,13 @@ The following example illustrates how to use Cut operation:
   aBuilder.SetArguments(aLS);
   aBuilder.SetTools(aLT);
   //	
-  // set parallel processing mode 
-  // if  bRunParallel= Standard_True :  the parallel processing is switched on
-  // if  bRunParallel= Standard_False :  the parallel processing is switched off
-  aBuilder.SetRunParallel(bRunParallel);
-  //
-  // set Fuzzy value
-  // if aFuzzyValue=0.: the Fuzzy option is off
-  //  if aFuzzyValue>0.: the Fuzzy option is on
-  aBuilder.SetFuzzyValue(aFuzzyValue);
+  // Set options for the algorithm
+  // setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+  ...
   //
   // run the algorithm 
   aBuilder.Build(); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
+  if (aBuilder.HasErrors()) {
     // an error treatment
     return;
   }
@@ -2493,15 +3418,8 @@ bclearobjects; bcleartools;
 baddobjects b1 b3
 baddtools b2
 #
-# set parallel processing mode
-# 1:  the parallel processing is switched on
-# 0:  the parallel processing is switched off
-brunparallel 1
-#
-# set Fuzzy value
-# 0.    : the Fuzzy option is off
-# >0. : the Fuzzy option is on
-bfuzzyvalue 0.
+# set options for the algorithm (see "GF Usage" chapter)
+...
 #
 # run the algorithm
 # r is the result of the operation
@@ -2510,7 +3428,7 @@ bapibop r 2
 ~~~~
 
 
-@subsubsection occt_algorithms_11b_2_5 Case 5. Section operation
+@subsubsection occt_algorithms_11b_2_6 Case 6. Section operation
 
 The following example illustrates how to use Section operation:
 
@@ -2522,7 +3440,6 @@ The following example illustrates how to use Section operation:
 #include < BRepAlgoAPI_Section.hxx>
  {…
   Standard_Boolean bRunParallel;
-  Standard_Integer iErr;
   Standard_Real aFuzzyValue;
   BRepAlgoAPI_Section aBuilder;
   
@@ -2537,20 +3454,13 @@ The following example illustrates how to use Section operation:
   aBuilder.SetArguments(aLS);
   aBuilder.SetTools(aLT);
   //	
-  // set parallel processing mode 
-  // if  bRunParallel= Standard_True :  the parallel processing is switched on
-  // if  bRunParallel= Standard_False :  the parallel processing is switched off
-  aBuilder.SetRunParallel(bRunParallel);
-  //
-  // set Fuzzy value
-  // if aFuzzyValue=0.: the Fuzzy option is off
-  //  if aFuzzyValue>0.: the Fuzzy option is on
-  aBuilder.SetFuzzyValue(aFuzzyValue);
+  // Set options for the algorithm
+  // setting options for this algorithm is similar to setting options for GF algorithm (see "GF Usage" chapter)
+  ...
   //
   // run the algorithm 
   aBuilder.Build(); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
+  if (aBuilder.HasErrors()) {
     // an error treatment
     return;
   }
@@ -2576,18 +3486,12 @@ bclearobjects; bcleartools;
 baddobjects b1 b3
 baddtools b2
 #
-# set parallel processing mode
-# 1:  the parallel processing is switched on
-# 0:  the parallel processing is switched off
-brunparallel 1
-#
-# set Fuzzy value
-# 0.    : the Fuzzy option is off
-# >0. : the Fuzzy option is on
-bfuzzyvalue 0.
+# set options for the algorithm (see "GF Usage" chapter)
+...
 #
 # run the algorithm
 # r is the result of the operation
 # 4 means Section operation
 bapibop r 4
 ~~~~
+

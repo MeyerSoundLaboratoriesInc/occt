@@ -55,7 +55,7 @@
 #include <GeomPlate_BuildAveragePlane.hxx>
 #include <GeomPlate_Surface.hxx>
 #include <GeomPlate_BuildAveragePlane.hxx>
-#include <GeomPlate_HArray1OfHCurveOnSurface.hxx>
+#include <GeomPlate_HArray1OfHCurve.hxx>
 
 #include <GeomPlate_MakeApprox.hxx>
 #include <GeomPlate_PlateG0Criterion.hxx>
@@ -137,7 +137,7 @@ static Standard_Integer plate (Draw_Interpretor & di,Standard_Integer n,const ch
 {
   if (n < 8 ) return 1;
   Standard_Integer NbCurFront=Draw::Atoi(a[3]);
-  Handle(GeomPlate_HArray1OfHCurveOnSurface) Fronts = new GeomPlate_HArray1OfHCurveOnSurface(1,NbCurFront);
+  Handle(GeomPlate_HArray1OfHCurve) Fronts = new GeomPlate_HArray1OfHCurve(1,NbCurFront);
   Handle(TColStd_HArray1OfInteger) Tang = new TColStd_HArray1OfInteger(1,NbCurFront);
   Handle(TColStd_HArray1OfInteger) NbPtsCur = new TColStd_HArray1OfInteger(1,NbCurFront);
   BRep_Builder B;
@@ -204,13 +204,13 @@ static Standard_Integer plate (Draw_Interpretor & di,Standard_Integer n,const ch
     DBRep::Set(name, E);
     MW.Add(E);
     if (MW.IsDone()==Standard_False) {
-      Standard_Failure::Raise("mkWire is over ");
+      throw Standard_Failure("mkWire is over ");
     }
       
   }
   TopoDS_Wire W;
   W=MW.Wire();
-  if (!(W.Closed())) Standard_Failure::Raise("Wire is not closed");
+  if (!(W.Closed())) throw Standard_Failure("Wire is not closed");
   BRepBuilderAPI_MakeFace MF(Henri.Surface(),W,Standard_True);
   DBRep::Set(a[1],MF.Face());
   return 0;
@@ -338,7 +338,7 @@ static Standard_Integer approxplate (Draw_Interpretor & di,Standard_Integer n,co
   if (n < 9 ) return 1;
   Standard_Integer NbMedium=Draw::Atoi(a[2]);
   Standard_Integer NbCurFront=Draw::Atoi(a[3]);
-  Handle(GeomPlate_HArray1OfHCurveOnSurface) Fronts = new GeomPlate_HArray1OfHCurveOnSurface(1,NbCurFront);
+  Handle(GeomPlate_HArray1OfHCurve) Fronts = new GeomPlate_HArray1OfHCurve(1,NbCurFront);
   Handle(TColStd_HArray1OfInteger) Tang = new TColStd_HArray1OfInteger(1,NbCurFront);
   Handle(TColStd_HArray1OfInteger) NbPtsCur = new TColStd_HArray1OfInteger(1,NbCurFront);
   
@@ -437,12 +437,12 @@ static Standard_Integer approxplate (Draw_Interpretor & di,Standard_Integer n,co
     BRepLib::BuildCurve3d(E);
     MW.Add(E);
     if (MW.IsDone()==Standard_False) {
-      Standard_Failure::Raise("mkWire is over ");
+      throw Standard_Failure("mkWire is over ");
     }
   }
   TopoDS_Wire W;
   W=MW.Wire();
-  if (!(W.Closed())) Standard_Failure::Raise("Wire is not closed");
+  if (!(W.Closed())) throw Standard_Failure("Wire is not closed");
   BRepBuilderAPI_MakeFace MF(support,W,Standard_True);
   DBRep::Set(a[1],MF.Face());
 
@@ -669,7 +669,7 @@ static Standard_Integer fillingparam( Draw_Interpretor & di, Standard_Integer n,
 	  Degree      = Draw::Atoi( a[2] );
 	  NbPtsOnCur  = Draw::Atoi( a[3] );
 	  NbIter      = Draw::Atoi( a[4] );
-	  Anisotropie = Draw::Atoi( a[5] );
+	  Anisotropie = Draw::Atoi( a[5] ) != 0;
 	}
       else if (strcmp( flag, "-c" ) == 0 && n == 6)
 	{

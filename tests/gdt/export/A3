@@ -8,11 +8,12 @@ set ref_data {
   NbOfDimensionalLocation: 3
   NbOfAngular            : 0
   NbOfWithPath           : 0
+  NbOfCommonLabels       : 0
  NbOfTolerances          : 13
   NbOfGTWithModifiers    : 2
   NbOfGTWithMaxTolerance : 0
   NbOfGTWithDatums       : 11
- NbOfDatumFeature        : 5
- NbOfAttachedDatum       : 26
+ NbOfDatumFeature        : 8
+ NbOfAttachedDatum       : 47
  NbOfDatumTarget         : 0
 }

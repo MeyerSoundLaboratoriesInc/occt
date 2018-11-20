@@ -20,14 +20,14 @@
 #include <Standard_Type.hxx>
 
 #include <TCollection_AsciiString.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_CString.hxx>
 #include <Standard_Integer.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_Boolean.hxx>
 #include <XmlObjMgt_RRelocationTable.hxx>
 #include <XmlObjMgt_SRelocationTable.hxx>
-class CDM_MessageDriver;
+class Message_Messenger;
 class TDF_Attribute;
 class TCollection_AsciiString;
 class XmlObjMgt_Persistent;
@@ -35,10 +35,10 @@ class TCollection_ExtendedString;
 
 
 class XmlMDF_ADriver;
-DEFINE_STANDARD_HANDLE(XmlMDF_ADriver, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(XmlMDF_ADriver, Standard_Transient)
 
 //! Attribute Storage/Retrieval Driver.
-class XmlMDF_ADriver : public MMgt_TShared
+class XmlMDF_ADriver : public Standard_Transient
 {
 
 public:
@@ -67,28 +67,20 @@ public:
   //! into <aTarget>, using the relocation table
   //! <aRelocTable> to keep the sharings.
   Standard_EXPORT virtual void Paste (const Handle(TDF_Attribute)& aSource, XmlObjMgt_Persistent& aTarget, XmlObjMgt_SRelocationTable& aRelocTable) const = 0;
-  
-  //! Send message to Application (usually when error occurres)
-  Standard_EXPORT void WriteMessage (const TCollection_ExtendedString& theMessage) const;
 
-
-
-
-  DEFINE_STANDARD_RTTIEXT(XmlMDF_ADriver,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(XmlMDF_ADriver,Standard_Transient)
 
 protected:
 
-  
-  Standard_EXPORT XmlMDF_ADriver(const Handle(CDM_MessageDriver)& theMessageDriver, const Standard_CString theNamespace, const Standard_CString theName = NULL);
+  Standard_EXPORT XmlMDF_ADriver(const Handle(Message_Messenger)& theMessageDriver, const Standard_CString theNamespace, const Standard_CString theName = NULL);
 
   TCollection_AsciiString myTypeName;
 
+  Handle(Message_Messenger) myMessageDriver;
 
 private:
 
-
-  Handle(CDM_MessageDriver) myMessageDriver;
-
+friend class XmlMDF;
 
 };
 

@@ -18,9 +18,11 @@
 #include <BOPAlgo_Operation.hxx>
 #include <BOPAlgo_PaveFiller.hxx>
 #include <BOPAlgo_Section.hxx>
+#include <BOPAlgo_Splitter.hxx>
 #include <BOPTest.hxx>
 #include <BOPTest_DrawableShape.hxx>
 #include <BOPTest_Objects.hxx>
+#include <BRepTest_Objects.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
 #include <Draw_Color.hxx>
@@ -32,9 +34,10 @@
 #include <string.h>
 //
 //
-static Standard_Integer bfillds  (Draw_Interpretor&, Standard_Integer, const char**); 
+static Standard_Integer bfillds  (Draw_Interpretor&, Standard_Integer, const char**);
 static Standard_Integer bbuild   (Draw_Interpretor&, Standard_Integer, const char**);
 static Standard_Integer bbop     (Draw_Interpretor&, Standard_Integer, const char**);
+static Standard_Integer bsplit   (Draw_Interpretor&, Standard_Integer, const char**);
 
 //=======================================================================
 //function : PartitionCommands
@@ -51,6 +54,7 @@ void BOPTest::PartitionCommands(Draw_Interpretor& theCommands)
   theCommands.Add("bfillds", "use bfillds [-t]"  , __FILE__, bfillds, g);
   theCommands.Add("bbuild" , "use bbuild r [-t]" , __FILE__, bbuild, g);
   theCommands.Add("bbop"   , "use bbop r op [-t]", __FILE__, bbop, g);
+  theCommands.Add("bsplit" , "use bsplit r [-t]" , __FILE__, bsplit, g);
 }
 //=======================================================================
 //function : bfillds
@@ -67,11 +71,11 @@ Standard_Integer bfillds(Draw_Interpretor& di,
   //
   char buf[32];
   Standard_Boolean bRunParallel, bNonDestructive, bShowTime;
-  Standard_Integer i, aNbS, iErr;
+  Standard_Integer i, aNbS;
   Standard_Real aTol;
-  BOPCol_ListIteratorOfListOfShape aIt;
-  BOPCol_ListOfShape aLC;
-  BOPCol_ListOfShape& aLS=BOPTest_Objects::Shapes();
+  TopTools_ListIteratorOfListOfShape aIt;
+  TopTools_ListOfShape aLC;
+  TopTools_ListOfShape& aLS=BOPTest_Objects::Shapes();
   aNbS=aLS.Extent();
   if (!aNbS) {
     di << " no objects to process\n";
@@ -83,14 +87,15 @@ Standard_Integer bfillds(Draw_Interpretor& di,
   bRunParallel=BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
   aTol = BOPTest_Objects::FuzzyValue();
+  BOPAlgo_GlueEnum aGlue = BOPTest_Objects::Glue();
   //
   for (i=1; i<n; ++i) {
     if (!strcmp(a[i], "-t")) {
       bShowTime=Standard_True;
     }
-    }
+  }
   //
-  BOPCol_ListOfShape& aLT=BOPTest_Objects::Tools();
+  TopTools_ListOfShape& aLT=BOPTest_Objects::Tools();
   //
   aIt.Initialize(aLS);
   for (; aIt.More(); aIt.Next()) {
@@ -110,15 +115,15 @@ Standard_Integer bfillds(Draw_Interpretor& di,
   aPF.SetRunParallel(bRunParallel);
   aPF.SetNonDestructive(bNonDestructive);
   aPF.SetFuzzyValue(aTol);
+  aPF.SetGlue(aGlue);
+  aPF.SetUseOBB(BOPTest_Objects::UseOBB());
   //
   OSD_Timer aTimer;
   aTimer.Start();
   //
   aPF.Perform();
-  iErr=aPF.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " error: %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aPF.GetReport());
+  if (aPF.HasErrors()) {
     return 0;
   }
   //
@@ -153,9 +158,9 @@ Standard_Integer bbuild(Draw_Interpretor& di,
   //
   char buf[128];
   Standard_Boolean bRunParallel, bShowTime;
-  Standard_Integer i, iErr;
+  Standard_Integer i;
 
-  BOPCol_ListIteratorOfListOfShape aIt;
+  TopTools_ListIteratorOfListOfShape aIt;
   //
   BOPAlgo_PaveFiller& aPF=BOPTest_Objects::PaveFiller();
   //
@@ -163,14 +168,14 @@ Standard_Integer bbuild(Draw_Interpretor& di,
   BOPAlgo_Builder& aBuilder=BOPTest_Objects::Builder();
   aBuilder.Clear();
   //
-  BOPCol_ListOfShape& aLSObj=BOPTest_Objects::Shapes();
+  TopTools_ListOfShape& aLSObj=BOPTest_Objects::Shapes();
   aIt.Initialize(aLSObj);
   for (; aIt.More(); aIt.Next()) {
     const TopoDS_Shape& aS=aIt.Value();
     aBuilder.AddArgument(aS);
   }
   //
-  BOPCol_ListOfShape& aLSTool=BOPTest_Objects::Tools();
+  TopTools_ListOfShape& aLSTool=BOPTest_Objects::Tools();
   aIt.Initialize(aLSTool);
   for (; aIt.More(); aIt.Next()) {
     const TopoDS_Shape& aS=aIt.Value();
@@ -185,16 +190,19 @@ Standard_Integer bbuild(Draw_Interpretor& di,
     }
   }
   aBuilder.SetRunParallel(bRunParallel);
+  aBuilder.SetCheckInverted(BOPTest_Objects::CheckInverted());
   //
   //
   OSD_Timer aTimer;
   aTimer.Start();
   //
   aBuilder.PerformWithFiller(aPF); 
-  iErr=aBuilder.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " error: %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aBuilder.GetReport());
+
+  // Set history of GF operation into the session
+  BRepTest_Objects::SetHistory(aPF.Arguments(), aBuilder);
+
+  if (aBuilder.HasErrors()) {
     return 0;
   }
   //
@@ -236,9 +244,9 @@ Standard_Integer bbop(Draw_Interpretor& di,
   //
   char buf[32];
   Standard_Boolean bRunParallel, bShowTime;
-  Standard_Integer iErr, iOp, i;
+  Standard_Integer iOp, i;
   BOPAlgo_Operation aOp;
-  BOPCol_ListIteratorOfListOfShape aIt; 
+  TopTools_ListIteratorOfListOfShape aIt; 
   //
   iOp=Draw::Atoi(a[2]);
   if (iOp<0 || iOp>4) {
@@ -268,7 +276,7 @@ Standard_Integer bbop(Draw_Interpretor& di,
   //
   pBuilder->Clear();
   //
-  BOPCol_ListOfShape& aLSObj=BOPTest_Objects::Shapes();
+  TopTools_ListOfShape& aLSObj=BOPTest_Objects::Shapes();
   aIt.Initialize(aLSObj);
   for (; aIt.More(); aIt.Next()) {
     const TopoDS_Shape& aS=aIt.Value();
@@ -278,7 +286,7 @@ Standard_Integer bbop(Draw_Interpretor& di,
   if (aOp!=BOPAlgo_SECTION) {
     BOPAlgo_BOP *pBOP=(BOPAlgo_BOP *)pBuilder;
     //
-    BOPCol_ListOfShape& aLSTools=BOPTest_Objects::Tools();
+    TopTools_ListOfShape& aLSTools=BOPTest_Objects::Tools();
     aIt.Initialize(aLSTools);
     for (; aIt.More(); aIt.Next()) {
       const TopoDS_Shape& aS=aIt.Value();
@@ -288,7 +296,7 @@ Standard_Integer bbop(Draw_Interpretor& di,
     pBOP->SetOperation(aOp);
   }
   else {
-    BOPCol_ListOfShape& aLSTools=BOPTest_Objects::Tools();
+    TopTools_ListOfShape& aLSTools=BOPTest_Objects::Tools();
     aIt.Initialize(aLSTools);
     for (; aIt.More(); aIt.Next()) {
       const TopoDS_Shape& aS=aIt.Value();
@@ -297,15 +305,18 @@ Standard_Integer bbop(Draw_Interpretor& di,
   }
   //
   pBuilder->SetRunParallel(bRunParallel);
+  pBuilder->SetCheckInverted(BOPTest_Objects::CheckInverted());
   //
   OSD_Timer aTimer;
   aTimer.Start();
   //
   pBuilder->PerformWithFiller(aPF);
-  iErr=pBuilder->ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " error: %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(pBuilder->GetReport());
+
+  // Set history of Boolean operation into the session
+  BRepTest_Objects::SetHistory(aPF.Arguments(), *pBuilder);
+
+  if (pBuilder->HasErrors()) {
     return 0;
   }
   //
@@ -328,3 +339,77 @@ Standard_Integer bbop(Draw_Interpretor& di,
   return 0;
 }
 
+//=======================================================================
+//function : bsplit
+//purpose  : 
+//=======================================================================
+Standard_Integer bsplit(Draw_Interpretor& di,
+                        Standard_Integer n,
+                        const char** a)
+{ 
+  if (n < 2) {
+    di << " use bsplit r [-t (show time)]\n";
+    return 1;
+  }
+  //
+  BOPDS_PDS pDS = BOPTest_Objects::PDS();
+  if (!pDS) {
+    di << " prepare PaveFiller first\n";
+    return 0;
+  }
+  //
+  BOPAlgo_PaveFiller& aPF = BOPTest_Objects::PaveFiller();
+  //
+  BOPAlgo_Splitter* pSplitter = &BOPTest_Objects::Splitter();
+  pSplitter->Clear();
+  //
+  // set objects
+  const TopTools_ListOfShape& aLSObjects = BOPTest_Objects::Shapes();
+  pSplitter->SetArguments(aLSObjects);
+  //
+  // set tools
+  TopTools_ListOfShape& aLSTools = BOPTest_Objects::Tools();
+  pSplitter->SetTools(aLSTools);
+  //
+  // set options
+  pSplitter->SetRunParallel(BOPTest_Objects::RunParallel());
+  pSplitter->SetNonDestructive(BOPTest_Objects::NonDestructive());
+  pSplitter->SetFuzzyValue(BOPTest_Objects::FuzzyValue());
+  pSplitter->SetCheckInverted(BOPTest_Objects::CheckInverted());
+  //
+  // measure the time of the operation
+  OSD_Timer aTimer;
+  aTimer.Start();
+  //
+  // perform the operation
+  pSplitter->PerformWithFiller(aPF);
+  //
+  aTimer.Stop();
+  BOPTest::ReportAlerts(pSplitter->GetReport());
+
+  // Set history of Split operation into the session
+  BRepTest_Objects::SetHistory(aPF.Arguments(), *pSplitter);
+
+  if (pSplitter->HasErrors()) {
+    return 0;
+  }
+  //
+  // show time if necessary
+  if (n == 3 && !strcmp(a[2], "-t")) {
+    char buf[20];
+    Sprintf(buf, "  Tps: %7.2lf\n", aTimer.ElapsedTime());
+    di << buf;
+  }
+  //
+  // Debug commands support
+  BOPTest_Objects::SetBuilder(pSplitter);
+  //
+  const TopoDS_Shape& aR = pSplitter->Shape();
+  if (aR.IsNull()) {
+    di << " null shape\n";
+    return 0;
+  }
+  //
+  DBRep::Set(a[1], aR);
+  return 0;
+}

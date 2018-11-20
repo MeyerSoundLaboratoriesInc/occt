@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -60,18 +62,12 @@
 			<Add library="TKBRep" />
 			<Add library="TKG2d" />
 			<Add library="TKG3d" />
-			<Add library="TKMesh" />
 			<Add library="TKTopAlgo" />
 		</Linker>
-		<Unit filename="../../../src/StlMesh/StlMesh.cxx" />
-		<Unit filename="../../../src/StlMesh/StlMesh_Mesh.cxx" />
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshDomain.cxx" />
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshExplorer.cxx" />
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshTriangle.cxx" />
 		<Unit filename="../../../src/StlAPI/StlAPI.cxx" />
 		<Unit filename="../../../src/StlAPI/StlAPI_Reader.cxx" />
 		<Unit filename="../../../src/StlAPI/StlAPI_Writer.cxx" />
-		<Unit filename="../../../src/StlTransfer/StlTransfer.cxx" />
 		<Unit filename="../../../src/RWStl/RWStl.cxx" />
+		<Unit filename="../../../src/RWStl/RWStl_Reader.cxx" />
 	</Project>
 </CodeBlocks_project_file>

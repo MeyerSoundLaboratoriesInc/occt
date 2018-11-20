@@ -2,16 +2,16 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{95E42ACB-1316-02E6-12E2-3F6BD3C0088B}</UniqueIdentifier>
+      <UniqueIdentifier>{E2CEF478-1086-0627-06E4-526ED5EA7203}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinDrivers">
-      <UniqueIdentifier>{7112E3E8-0708-139D-0CDD-469ACC5CD0F7}</UniqueIdentifier>
+      <UniqueIdentifier>{E3529D44-116F-0DE9-101F-A9E3167BE2B9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMDataXtd">
-      <UniqueIdentifier>{9B085093-175B-1516-190B-53E9A610B03B}</UniqueIdentifier>
+      <UniqueIdentifier>{62014554-01BB-141B-0724-8745DCFB90A3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMNaming">
-      <UniqueIdentifier>{A2068D05-134B-0DFE-0FE7-7BC59DEAFC85}</UniqueIdentifier>
+      <UniqueIdentifier>{D4DDA2E2-0D7B-04BB-16D8-50346DA1FA6C}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +55,9 @@
       <Filter>Source files\BinMDataXtd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BinMDataXtd\BinMDataXtd_ShapeDriver.cxx">
+      <Filter>Source files\BinMDataXtd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BinMDataXtd\BinMDataXtd_TriangulationDriver.cxx">
       <Filter>Source files\BinMDataXtd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BinMNaming\BinMNaming.cxx">

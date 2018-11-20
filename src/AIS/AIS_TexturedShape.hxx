@@ -63,7 +63,7 @@ public: //! @name main methods
   //! Sets the texture source. <theTexturePixMap> specifies image data.
   //! Please note that the data should be in Bottom-Up order, the flag of Image_PixMap::IsTopDown() will be ignored by graphic driver.
   //! Setting texture source using this method resets the source by filename (if was set previously).
-  Standard_EXPORT virtual void SetTexturePixMap (const Image_PixMap_Handle& theTexturePixMap);
+  Standard_EXPORT virtual void SetTexturePixMap (const Handle(Image_PixMap)& theTexturePixMap);
 
   //! @return flag to control texture mapping (for presentation mode 3)
   Standard_Boolean TextureMapState() const { return myToMapTexture; }
@@ -196,11 +196,8 @@ protected: //! @name texture mapping properties
 
   Standard_Boolean                   myToMapTexture;
   Standard_Boolean                   myModulate;
-  gp_Pnt2d                           myUVOrigin;
   Standard_Boolean                   myIsCustomOrigin;
-  gp_Pnt2d                           myUVRepeat;
   Standard_Boolean                   myToRepeat;
-  gp_Pnt2d                           myUVScale;
   Standard_Boolean                   myToScale;
   Standard_Boolean                   myToShowTriangles;
 

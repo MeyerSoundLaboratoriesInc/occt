@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -170,7 +172,6 @@
 		<Unit filename="../../../src/BlendFunc/BlendFunc_Ruled.cxx" />
 		<Unit filename="../../../src/BlendFunc/BlendFunc_RuledInv.cxx" />
 		<Unit filename="../../../src/BlendFunc/BlendFunc_Tensor.cxx" />
-		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_LocalOperation.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeChamfer.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeFillet.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeFillet2d.cxx" />

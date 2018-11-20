@@ -43,8 +43,9 @@ This documentation describes:
   * The graphical commands.
   * The Geometry set of commands.
   * The Topology set of commands.
-
-This document does not describe other sets of commands and does not explain how to extend Draw using C++. 
+  * OCAF commands.
+  * Data Exchange commands
+  * Shape Healing commands
 
 This document is a reference manual. It contains a full description of each command. All descriptions have the format illustrated below for the exit command. 
 
@@ -203,18 +204,18 @@ Braces *quoting* prevents all substitutions. Braces are also nested. The main us
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
 set x 0 
 # this will loop for ever 
-# because while argument is ;0  3; 
-while ;$x  3; {set x [expr $x+1]} 
+# because while argument is ;0 < 3; 
+while ;$x < 3; {set x [expr $x+1]} 
 # this will terminate as expected because 
-# while argument is {$x  3} 
-while {$x  3} {set x [expr $x+1]} 
+# while argument is {$x < 3} 
+while {$x < 3} {set x [expr $x+1]} 
 # this can be written also 
-while {$x  3} { 
+while {$x < 3} { 
 set x [expr $x+1] 
 } 
 # the following cannot be written 
 # because while requires two arguments 
-while {$x  3} 
+while {$x < 3} 
 { 
 set x [expr $x+1] 
 } 
@@ -325,6 +326,17 @@ puts ;x = [dval x], cos(x/pi) = [dval cos(x/pi)];
 
 **Note,** that in TCL, parentheses are not considered to be special characters. Do not forget to quote an expression if it contains spaces in order to avoid parsing different words. <i>(a + b)</i> is parsed as three words: <i>"(a + b)"</i> or <i>(a+b)</i> are correct.
 
+@subsubsection occt_draw_2_3_3 del, dall
+
+Syntax:      
+~~~~~
+del varname_pattern [varname_pattern ...] 
+dall
+~~~~~
+
+*del* command does the same thing as *unset*, but it deletes the variables matched by the pattern.
+
+*dall* command deletes all variables in the session.
 
 @subsection occt_draw_2_4 lists
 
@@ -365,7 +377,7 @@ if condition script [elseif script .... else script]
 
 **Example:** 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
-if {$x  0} { 
+if {$x > 0} { 
 puts ;positive; 
 } elseif {$x == 0} { 
 puts ;null; 
@@ -379,7 +391,7 @@ puts ;negative;
 Syntax:                  
 
 
-~~~~~~
+~~~~~
 while condition script 
 for init condition reinit script 
 foreach varname list script 
@@ -391,13 +403,13 @@ The three loop structures are similar to their C or csh equivalent. It is import
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
 # while example 
 dset x 1.1 
-while {[dval x]  100} { 
+while {[dval x] < 100} { 
   circle c 0 0 x 
   dset x x*x 
 } 
 # for example 
 # incr var d, increments a variable of d (default 1) 
-for {set i 0} {$i  10} {incr i} { 
+for {set i 0} {$i < 10} {incr i} { 
   dset angle $i*pi/10 
   point p$i cos(angle0 sin(angle) 0 
 } 
@@ -421,7 +433,7 @@ Within loops, the **break** and **continue** commands have the same effect as in
 **Example:** 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
 # search the index for which t$i has value ;secret; 
-for {set i 1} {$i = 100} {incr i} { 
+for {set i 1} {$i <= 100} {incr i} { 
   if {[set t$i] == ;secret;} break; 
 } 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -610,7 +622,7 @@ wait
 Syntax:                  
 
 ~~~~~
-chrono [ name start/stop/reset/show] 
+chrono [ name start/stop/reset/show/restart/[counter text]]
 ~~~~~
 
 Without arguments, **chrono** activates Draw chronometers. The elapsed time ,cpu system and cpu user times for each command will be printed. 
@@ -619,7 +631,9 @@ With arguments, **chrono** is used to manage activated chronometers. You can per
   * run the chronometer (start).
   * stop the chronometer (stop).
   * reset the chronometer to 0 (reset).
+  * restart the chronometer (restart).
   * display the current time (show).
+  * display the current time with specified text (output example - *COUNTER text: N*), command <i>testdiff</i> will compare such outputs between two test runs (counter).
 
 **Example:** 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
@@ -696,21 +710,21 @@ Radius :5
 **Note** The behavior of *whatis* on other variables (not Draw) is not excellent. 
 
 
-@subsubsection occt_draw_3_2_3 rename, copy
+@subsubsection occt_draw_3_2_3 renamevar, copy
 
 Syntax:      
 ~~~~~
-rename varname tovarname [varname tovarname ...] 
+renamevar varname tovarname [varname tovarname ...] 
 copy varname tovarname [varname tovarname ...] 
 ~~~~~
 
-  * **rename** changes the name of a Draw variable. The original variable will no longer exist. Note that the content is not modified. Only the name is changed. 
+  * **renamevar** changes the name of a Draw variable. The original variable will no longer exist. Note that the content is not modified. Only the name is changed. 
   * **copy** creates a new variable with a copy of the content of an existing variable. The exact behavior of **copy** is type dependent; in the case of certain topological variables, the content may still be shared. 
 
 **Example:** 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
 circle c1 0 0 1 0 5 
-rename c1 c2 
+renamevar c1 c2 
 
 # curves are copied, c2 will not be modified 
 copy c2 c3 
@@ -1164,7 +1178,7 @@ point . x y z
 
 #Not OK. display points on a curve c 
 # with dot no variables are created 
-for {set i 0} {$i = 10} {incr i} { 
+for {set i 0} {$i <= 10} {incr i} { 
 cvalue c $i/10 x y z 
 point . x y z 
 } 
@@ -1178,7 +1192,7 @@ point . x y z
 # p0, p1, p2, .... 
 
 # give a name to a graphic object 
-rename . x 
+renamevar . x 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -1252,6 +1266,13 @@ foreach var [directory c_*] {erase $var}
 # clear 2d views 
 2dclear 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@subsubsection occt_draw_4_1_14_1 disp, don, era
+
+These commands have the same meaning as correspondingly display, donly and erase, but with the difference that they evaluate the arguments using glob pattern rules. For example, to display all objects with names d_1, d_2, d_3, etc. it is enouth to run the command:
+~~~~~{.cpp}
+disp d_*
+~~~~~
 
 @subsubsection occt_draw_4_1_15 repaint, dflush
 
@@ -1460,14 +1481,6 @@ Syntax:
 vnbselected
 ~~~~~
 Returns the number of selected objects in the interactive context.
-
-@subsubsection occt_draw_4_2_17  vantialiasing
-
-Syntax:     
-~~~~~
-vantialiasing 1|0
-~~~~~
-Sets antialiasing if the command is called with 1 or unsets otherwise.
 
 @subsubsection occt_draw_4_2_18  vpurgedisplay
 
@@ -1972,26 +1985,6 @@ vsensera
 
 Erases active entities. 
 
-@subsubsection occt_draw_4_3_22 vperf
-
-Syntax:                  
-~~~~~
-vperf shapename 1/0 (Transformation/Loacation) 1/0 (Primitives sensibles ON/OFF)
-~~~~~ 
-
-Tests the animation of an object along a predefined trajectory. 
-
-**Example:** 
-~~~~~
-vinit 
-box b 10 10 10 
-psphere s 20 
-vdisplay b s 
-vfit 
-vsetdispmode 0 
-vperf b 1 1
-~~~~~
- 
 @subsubsection occt_draw_4_3_23 vr
 
 Syntax:                  
@@ -2094,15 +2087,37 @@ vsetcolorbg 200 0 200
 
 Syntax:                  
 ~~~~~
-vtrihedron name [X0] [Y0] [Z0] [Zu] [Zv] [Zw] [Xu] [Xv] [Xw]
+vtrihedron name [-dispMode {wf|sh|wireframe|shading}]
+                [-origin x y z ]
+                [-zaxis u v w -xaxis u v w ]
+                [-drawaxes {X|Y|Z|XY|YZ|XZ|XYZ}]
+                [-hidelabels {on|off}]"
+                [-label {XAxis|YAxis|ZAxis} value]"
+                [-attribute {XAxisLength|YAxisLength|ZAxisLength
+                                        |TubeRadiusPercent|ConeRadiusPercent"
+                                        |ConeLengthPercent|OriginRadiusPercent"
+                                        |ShadingNumberOfFacettes} value]"
+                [-color {Origin|XAxis|YAxis|ZAxis|XOYAxis|YOZAxis"
+                                        |XOZAxis|Whole} {r g b | colorName}]"
+                [-textcolor {r g b | colorName}]"
+                [-arrowscolor {r g b | colorName}]"
+                [-priority {Origin|XAxis|YAxis|ZAxis|XArrow"
+                                        |YArrow|ZArrow|XOYAxis|YOZAxis"
+                                        |XOZAxis|Whole} value]
+
 ~~~~~ 
 
-Creates a new *AIS_Trihedron* object. If no argument is set, the default trihedron (0XYZ) is created.
- 
+Creates a new *AIS_Trihedron* object or changes existing trihedron. If no argument is set, the default trihedron (0XYZ) is created.
+
 **Example:** 
 ~~~~~
 vinit 
-vtrihedron tr
+vtrihedron tr1
+
+vtrihedron t2 -dispmode shading -origin -200 -200 -300
+vtrihedron t2 -color XAxis Quantity_NOC_RED
+vtrihedron t2 -color YAxis Quantity_NOC_GREEN
+vtrihedron t2 -color ZAxis|Origin Quantity_NOC_BLUE1
 ~~~~~ 
 
 @subsubsection occt_draw_4_4_2 vplanetri
@@ -2314,7 +2329,7 @@ Creates *AIS_ConnectedInteractive* object from the input object and location and
 
 **Example:** 
 ~~~~~
-Vinitvinit 
+vinit 
 vpoint p1 0 0 0 
 vpoint p2 50 0 0 
 vsegment segment p1 p2 
@@ -2433,9 +2448,10 @@ vdimension name {-angle|-length|-radius|-diameter} -shapes shape1 [shape2 [shape
                 [-label left|right|hcenter|hfit top|bottom|vcenter|vfit]
                 [-arrow external|internal|fit] [{-arrowlength|-arlen} RealArrowLength]
                 [{-arrowangle|-arangle} ArrowAngle(degrees)] [-plane xoy|yoz|zox]
-                [-flyout FloatValue -extension FloatValue] [-value CustomNumberValue]
-                [-dispunits DisplayUnitsString] [-modelunits ModelUnitsString]
-                [-showunits | -hideunits]
+                [-flyout FloatValue -extension FloatValue]
+				[-autovalue] [-value CustomRealValue] [-textvalue CustomTextValue]
+                [-dispunits DisplayUnitsString]
+                [-modelunits ModelUnitsString] [-showunits | -hideunits]
 ~~~~~
 
 Builds angle, length, radius or diameter dimension interactive object **name**.
@@ -2444,6 +2460,7 @@ Builds angle, length, radius or diameter dimension interactive object **name**.
 
 **Example:** 
 ~~~~~
+vinit
 vpoint p1 0 0 0
 vpoint p2 50 50 0
 vdimension dim1 -length -plane xoy -shapes p1 p2
@@ -2467,7 +2484,9 @@ vdimparam name [-text 3d|2d wf|sh|wireframe|shading IntegerSize]
                [{-arrowangle|-arangle} ArrowAngle(degrees)]
                [-plane xoy|yoz|zox]
                [-flyout FloatValue -extension FloatValue]
-               [-value CustomNumberValue]
+               [-autovalue]
+               [-value CustomRealValue]
+               [-textvalue CustomTextValue]
                [-dispunits DisplayUnitsString]
                [-modelunits ModelUnitsString]
                [-showunits | -hideunits]
@@ -2477,13 +2496,60 @@ Sets parameters for angle, length, radius and diameter dimension **name**.
 
 **Example:** 
 ~~~~~
+vinit
 vpoint p1 0 0 0
 vpoint p2 50 50 0
 vdimension dim1 -length -plane xoy -shapes p1 p2
 vdimparam dim1 -flyout -15 -arrowlength 4 -showunits -value 10
+vfit
+vdimparam dim1 -textvalue "w_1"
+vdimparam dim1 -autovalue
 ~~~~~
 
-@subsubsection occt_draw_4_4_22 vmovedim
+@subsubsection occt_draw_4_4_22 vangleparam
+
+Syntax:
+~~~~~
+vangleparam name [-type interior|exterior]
+                 [-showarrow first|second|both|none]
+~~~~~
+
+Sets parameters for angle dimension **name**.
+
+**Example:** 
+~~~~~
+vinit
+vpoint p1 0 0 0
+vpoint p2 10 0 0
+vpoint p3 10 5 0
+vdimension dim1 -angle -plane xoy -shapes p1 p2 p3
+vfit
+vangleparam dim1 -type exterior -showarrow first
+~~~~~
+
+@subsubsection occt_draw_4_4_23 vlengthparam
+
+Syntax:
+~~~~~
+vlengthparam name [-type interior|exterior]
+                  [-showarrow first|second|both|none]
+~~~~~
+
+Sets parameters for length dimension **name**.
+
+**Example:** 
+~~~~~
+vinit
+vpoint p1 20 20 0
+vpoint p2 80 80 0
+vdimension dim1 -length -plane xoy -shapes p1 p2
+vtop
+vfit
+vzoom 0.5
+vlengthparam dim1 -direction ox
+~~~~~
+
+@subsubsection occt_draw_4_4_24 vmovedim
 
 Syntax:
 ~~~~~
@@ -2497,6 +2563,7 @@ are adjusted.
 
 **Example:** 
 ~~~~~
+vinit
 vpoint p1 0 0 0
 vpoint p2 50 50 0
 vdimension dim1 -length -plane xoy -shapes p1 p2
@@ -2740,7 +2807,7 @@ ivtkinit
 
 Creates a window for VTK viewer.
 
-@figure{/user_guides/draw_test_harness/images/draw_image001.png}
+@figure{/user_guides/draw_test_harness/images/draw_image001.png,"",225}
 
 @subsubsection occt_draw_4_6_2	ivtkdisplay
 
@@ -2759,7 +2826,8 @@ pcone c 5 0 10
 ivtkdisplay c
 ~~~~~
 
-@figure{/user_guides/draw_test_harness/images/draw_image002.png}
+@figure{/user_guides/draw_test_harness/images/draw_image002.png,"",261}
+
 
 @subsubsection occt_draw_4_6_3	ivtkerase
 
@@ -2817,8 +2885,8 @@ ivtkdisplay c
 ivtksetdispmode c 1
 ~~~~~
 
-@figure{/user_guides/draw_test_harness/images/draw_image003.png}
- 
+@figure{/user_guides/draw_test_harness/images/draw_image003.png,"",262}
+
 @subsubsection occt_draw_4_6_6	ivtksetselmode
 
 Syntax:
@@ -2839,7 +2907,7 @@ ivtkdisplay a
 ivtksetselmode a 4 1
 ~~~~~
 
-@figure{/user_guides/draw_test_harness/images/draw_image004.png}
+@figure{/user_guides/draw_test_harness/images/draw_image004.png,"",291}
  
 @subsubsection occt_draw_4_6_7	ivtkmoveto
 
@@ -2912,17 +2980,15 @@ ivtkinit
 ivtkbgcolor 200 220 250
 ~~~~~
  
-@figure{/user_guides/draw_test_harness/images/draw_image005.png}
+@figure{/user_guides/draw_test_harness/images/draw_image005.png,"",196}
 
 ~~~~~
 ivtkbgcolor 10 30 80 255 255 255
 ~~~~~
 
-@figure{/user_guides/draw_test_harness/images/draw_image006.png}
-
+@figure{/user_guides/draw_test_harness/images/draw_image006.png,"",190}
 
 @section occt_draw_5 OCAF commands
-
 
 This chapter contains a set of commands for Open CASCADE Technology Application Framework (OCAF). 
 
@@ -4029,7 +4095,7 @@ Initializes the iteration on the tree of *TreeNode* attributes with tree *ID* (o
 ~~~~~
 InitChildNodeIterate D 0:5 1 
 set aChildNumber 0 
-for {set i 1} {$i  100} {incr i} { 
+for {set i 1} {$i < 100} {incr i} { 
     if {[ChildNodeMore] == *TRUE*} { 
         puts *Tree node = [ChildNodeValue]* 
         incr aChildNumber 
@@ -5249,10 +5315,10 @@ For a 2d rotation, you need only give the center point and the angle. In 2d or 3
 
 **Example:** 
 ~~~~~
-# make a helix of circles. create a scripte file with 
+# make a helix of circles. create a script file with 
 this code and execute it using **source**. 
 circle c0 10 0 0 3 
-for {set i 1} {$i = 10} {incr i} { 
+for {set i 1} {$i <= 10} {incr i} { 
 copy c[expr $i-1] c$i 
 translate c$i 0 0 3 
 rotate c$i 0 0 0 0 0 1 36 
@@ -5374,7 +5440,7 @@ Computes points and derivatives on a surface for a pair of parameter values. The
 ~~~~~
 # display points on a sphere 
 sphere s 10 
-for {dset t 0} {[dval t] = 1} {dset t t+0.01} { 
+for {dset t 0} {[dval t] <= 1} {dset t t+0.01} { 
 svalue s t*2*pi t*pi-pi/2 x y z 
 point . x y z 
 } 
@@ -5416,7 +5482,7 @@ parameters p 5 5 5 u v
 # the values of u and v are : 0 5 
 ~~~~~
 
-@subsubsection occt_draw_6_6_6  proj, dproj
+@subsubsection occt_draw_6_6_6  proj, 2dproj
 
 Syntax:      
 ~~~~~
@@ -5463,6 +5529,7 @@ surface_radius c pi 3 c1 c2
 
 * **intersect** computes intersections of surfaces; 
 * **2dintersect** computes intersections of 2d curves.
+* **intconcon** computes intersections of 2d conic curves.
 
 @subsubsection occt_draw_6_7_1  intersect
 
@@ -5481,21 +5548,43 @@ plane p 0 0 40 0 1 5
 intersect e c p 
 ~~~~~
 
-@subsubsection occt_draw_6_7_2  dintersect
+@subsubsection occt_draw_6_7_2  2dintersect
 
 Syntax:      
 ~~~~~
-2dintersect curve1 curve2 
+2dintersect curve1 [curve2] [-tol tol] [-state]
 ~~~~~
 
-Displays the intersection points between two 2d curves. 
+Displays the intersection points between 2d curves.
+Options:
+ -tol - allows changing the intersection tolerance (default value is 1.e-3);
+ -state - allows printing the intersection state for each point.
 
 **Example:** 
 ~~~~~
 # intersect two 2d ellipses 
 ellipse e1 0 0 5 2 
 ellipse e2 0 0 0 1 5 2 
-2dintersect e1 e2 
+2dintersect e1 e2 -tol 1.e-10 -state
+~~~~~
+
+@subsubsection occt_draw_6_7_3 intconcon
+
+Syntax:      
+~~~~~
+intconcon curve1 curve2 
+~~~~~
+
+Displays the intersection points between two 2d curves. 
+Curves must be only conic sections: 2d lines, circles, ellipses,
+hyperbolas, parabolas. The algorithm from *IntAna2d_AnaIntersection* is used.
+
+**Example:** 
+~~~~~
+# intersect two 2d ellipses 
+ellipse e1 0 0 5 2 
+ellipse e2 0 0 0 1 5 2 
+intconcon e1 e2 
 ~~~~~
 
 @subsection occt_draw_6_8  Approximations
@@ -5548,13 +5637,50 @@ surfapp s 3 4 \
 0 30 0 10 30 0 20 30 0 
 ~~~~~
 
-@subsection occt_draw_6_9  Constraints
+@subsection  occt_draw_6_9  Projections
+
+Draw provides commands to project points/curves on curves/surfaces.
+
+* **proj** projects point on the curve/surface (see @ref occt_draw_6_6_6 "proj command description");
+* **project** projects 3D curve on the surface (see @ref occt_draw_6_2_11 "project command description");
+* **projponf** projects point on the face.
+
+@subsubsection  occt_draw_6_9_1 projponf
+
+Syntax:
+~~~~~
+projponf face pnt [extrema flag: -min/-max/-minmax] [extrema algo: -g(grad)/-t(tree)]
+~~~~~
+
+**projponf** projects point *pnt* on the face *face*.
+You can change the Extrema options:
+* To change the Extrema search algorithm use the following options:<br>
+ -g - for Grad algorithm;<br>
+ -t - for Tree algorithm;
+* To change the Extrema search solutions use the following options:<br>
+ -min - to look for Min solutions;<br>
+ -max - to look for Max solutions;<br>
+ -minmax - to look for MinMax solutions.
+
+**Example**
+~~~~~
+plane p 0 0 0 0 0 1
+mkface f p
+point pnt 5 5 10
+
+projponf f pnt
+# proj dist = 10
+# uvproj = 5 5
+# pproj = 5 5 0
+~~~~~
+
+@subsection occt_draw_6_10  Constraints
 
 * **cirtang** constructs 2d circles tangent to curves;
 * **lintan** constructs 2d lines tangent to curves. 
 
 
-@subsubsection occt_draw_6_9_1  cirtang
+@subsubsection occt_draw_6_10_1  cirtang
 
 Syntax: 
 ~~~~~
@@ -5572,7 +5698,7 @@ cirtang c p 1 4
 == c_1 c_2 
 ~~~~~
 
-@subsubsection occt_draw_6_9_2  lintan
+@subsubsection occt_draw_6_10_2  lintan
 
 Syntax:      
 ~~~~~
@@ -5595,7 +5721,7 @@ line l 2 0 1 1
 lintan l1 c1 l 15 
 ~~~~~
 
-@subsection occt_draw_6_10  Display
+@subsection occt_draw_6_11  Display
 
 Draw provides commands to control the display of geometric objects. Some display parameters are used for all objects, others are valid for surfaces only, some for bezier and bspline only, and others for bspline only. 
 
@@ -5608,7 +5734,7 @@ On bezier and bspline curve and surface you can toggle the display of the contro
 On bspline curves and surfaces you can toggle the display of the knots with the **shknots** and **clknots** commands. 
 
 
-@subsubsection occt_draw_6_10_1  dmod, discr, defle
+@subsubsection occt_draw_6_11_1  dmod, discr, defle
 
 Syntax:      
 ~~~~~
@@ -5635,7 +5761,7 @@ discr 100
 dmode c u 
 ~~~~~
 
-@subsubsection occt_draw_6_10_2   nbiso
+@subsubsection occt_draw_6_11_2   nbiso
 
 Syntax:      
 ~~~~~
@@ -5652,7 +5778,7 @@ sphere s 20
 nbiso s 35 15 
 ~~~~~
 
-@subsubsection occt_draw_6_10_3  clpoles, shpoles
+@subsubsection occt_draw_6_11_3  clpoles, shpoles
 
 Syntax:      
 ~~~~~
@@ -5671,7 +5797,7 @@ beziercurve c 3 0 0 0 10 0 0 10 10 0
 clpoles c 
 ~~~~~
 
-@subsubsection occt_draw_6_10_4  clknots, shknots
+@subsubsection occt_draw_6_11_4  clknots, shknots
 
 Syntax:   
 ~~~~~
@@ -5718,6 +5844,7 @@ The following topics are covered in the eight sections of this chapter:
   * Transformations of shapes: translation, copy, etc.
   * Topological operations, or booleans.
   * Drafting and blending.
+  * Defeaturing.
   * Analysis of shapes.
 
 
@@ -5882,31 +6009,49 @@ box b3 6 0 0 1 1 1
 compound b1 b2 b3 c 
 ~~~~~
 
-@subsubsection occt_draw_7_1_5  checkshape
 
-Syntax:                  
+@subsubsection occt_draw_7_1_5  compare
+
+Syntax:
 ~~~~~
-checkshape [-top] shape [result] [-short] 
-~~~~~
-
-Where: 
-* *top* -- optional parameter, which allows checking only topological validity of a shape. 
-* *shape* -- the only required parameter which represents the name of the shape to check. 
-* *result* -- optional parameter which is the prefix of the output shape names. 
-* *short* -- a short description of the check. 
-
-**checkshape** examines the selected object for topological and geometric coherence. The object should be a three dimensional shape. 
-
-**Example:** 
-~~~~~
-# checkshape returns a comment valid or invalid 
-box b1 0 0 0 1 1 1 
-checkshape b1 
-# returns the comment 
-this shape seems to be valid 
+compare shape1 shape2
 ~~~~~
 
-**Note** that this test is performed using the tolerance set in the algorithm.
+**compare** compares the two shapes *shape1* and *shape2* using the methods *TopoDS_Shape::IsSame()* and *TopoDS_Shape::IsEqual()*.
+
+**Example**
+~~~~~
+box b1 1 1 1
+copy b1 b2
+compare b1 b2
+# same shapes
+# equal shapes
+
+orientation b2 R
+compare b1 b2
+# same shapes
+
+box b2 1 1 1
+compare b1 b2
+# shapes are not same
+~~~~~
+
+@subsubsection occt_draw_7_1_6  issubshape
+
+Syntax:
+~~~~~
+issubshape subshape shape
+~~~~~
+
+**issubshape** checks if the shape *subshape* is sub-shape of the shape *shape* and gets its index in the shape.
+
+**Example**
+~~~~~
+box b 1 1 1
+explode b f
+issubshape b_2 b
+# b_2 is sub-shape of b. Index in the shape: 2.
+~~~~~
 
 
 @subsection occt_draw_7_2  Curve and surface topology
@@ -5933,6 +6078,20 @@ Creates a vertex at either a 3d location x,y,z or the point at parameter p on an
 **Example:** 
 ~~~~~
 vertex v1 10 20 30 
+~~~~~
+
+@subsubsection occt_draw_7_2_1a  mkpoint
+
+Syntax:
+~~~~~
+mkpoint name vertex
+~~~~~
+
+Creates a point from the coordinates of a given vertex.
+
+**Example:** 
+~~~~~
+mkpoint p v1
 ~~~~~
 
 @subsubsection occt_draw_7_2_2  edge, mkedge, uisoedge, visoedge
@@ -6136,41 +6295,51 @@ bsplineprof res
 
 @subsubsection occt_draw_7_2_6  mkoffset
 
+**mkoffset** creates a parallel wire in the same plane using a face or an existing continuous set of wires as a reference. The number of occurrences is not limited. 
+The offset distance defines the spacing and the positioning of the occurrences. 
+
 Syntax:      
 ~~~~~
-mkoffset result face/compound of wires nboffset stepoffset 
+mkoffset result shape nboffset stepoffset [jointype(a/i) [alt]]
 ~~~~~
+where:
+* *result* - the base name for the resulting wires. The index of the occurrence (starting with 1) will be added to this name, so the resulting wires will have the names - *result_1*, *result_2* ...;
+* *shape* - input shape (face or compound of wires);
+* *nboffset* - the number of the parallel occurrences;
+* *stepoffset* - offset distance between occurrences;
+* *jointype(a/i)* - join type (a for *arc* (default) and i for *intersection*);
+* *alt* - altitude from the plane of the input face in relation to the normal to the face.
 
-**mkoffset** creates a parallel wire in the same plane using a face or an existing continuous set of wires as a reference. The number of occurences is not limited. 
-
-The offset distance defines the spacing and the positioning of the occurences. 
 
 **Example:** 
 ~~~~~
-#Create a box and select a face 
+# Create a box and select a face 
 box b 1 2 3 
 explode b f 
-#Create three exterior parallel contours with an offset 
-value of 2 
+# Create three exterior parallel contours with an offset value of 2 
 mkoffset r b_1 3 2 
-Create one interior parallel contour with an offset 
-value of 
-0.4 
+# wires r_1, r_2 and r_3 are created
+
+# Create three exterior parallel contours with an offset value of 2 without round corners
+mkoffset r b_1 3 2 i
+# wires r_1, r_2 and r_3 are created
+
+# Create one interior parallel contour with an offset value of 0.4 
 mkoffset r b_1 1 -0.4 
 ~~~~~
 
-**Note** that *mkoffset* command must be used with prudence, as angular contours produce offset contours with fillets. Interior parallel contours can produce more than one wire, normally these are refused. In the following example, any increase in the offset value is refused.
+**Note** that on a concave input contour for an interior step *mkoffset* command may produce several wires which will be contained in a single compound.
 
 **Example:** 
 ~~~~~
 # to create the example contour 
 profile p F 0 0 x 2 y 4 tt 1 1 tt 0 4 w 
-# to create an incoherent interior offset 
+# creates an incoherent interior offset 
 mkoffset r p 1 -0.50 
-==p is not a FACE but a WIRE 
-BRepFill_TrimEdgeTool: incoherent intersection 
-# to create two incoherent wires 
-mkoffset r p 1 -0.50 
+
+# creates two incoherent wires 
+mkoffset r p 1 -0.55 
+# r_1 is a compound of two wires
 ~~~~~
 
 @subsubsection occt_draw_7_2_7  mkplane, mkface
@@ -6642,7 +6811,7 @@ Locations are very economic in the data structure because multiple occurences of
 # make rotated copies of a sphere in between two cylinders 
 # create a file source toto.tcl 
 # toto.tcl code: 
-for {set i 0} {$i  360} {incr i 20} { 
+for {set i 0} {$i < 360} {incr i 20} { 
 copy s s$i 
 trotate s$i 0 0 0 0 0 1 $i 
 } 
@@ -6961,7 +7130,8 @@ Blending is the creation of a new shape by rounding edges to create a fillet.
   * Use the **depouille** command for drafting.
   * Use the **chamf** command to add a chamfer to an edge
   * Use the **blend** command for simple blending.
-  * Use **fubl** for a fusion + blending operation.
+  * Use **bfuseblend** for a fusion + blending operation.
+  * Use **bcutblend** for a cut + blending operation.
   * Use **buildevol**, **mkevol**, **updatevol** to realize varying radius blending.
 
 
@@ -7068,24 +7238,43 @@ blend b b 2 .
 ==- SetRegul 0s 
 ~~~~~
 
-@subsubsection occt_draw_7_8_4  fubl
+@subsubsection occt_draw_7_8_4  bfuseblend
 
-Syntax:      
+Syntax:
 ~~~~~
-fubl name shape1 shape2 radius
-~~~~~ 
+bfuseblend name shape1 shape2 radius [-d]
+~~~~~
  
-Creates a boolean fusion of two shapes and then blends (fillets) the intersection edges using the given radius. 
+Creates a boolean fusion of two shapes and then blends (fillets) the intersection edges using the given radius.
+Option [-d] enables the Debugging mode in which the error messages, if any, will be printed.
 
-**Example:** 
+**Example:**
 ~~~~~
-# fuse-blend two boxes 
-box b1 20 20 5 
-copy b1 b2 
-ttranslate b2 -10 10 3 
-fubl a b1 b2 1 
+# fuse-blend two boxes
+box b1 20 20 5
+copy b1 b2
+ttranslate b2 -10 10 3
+bfuseblend a b1 b2 1
 ~~~~~
 
+@subsubsection occt_draw_7_8_4a  bcutblend
+
+Syntax:
+~~~~~
+bcutblend name shape1 shape2 radius [-d]
+~~~~~
+
+Creates a boolean cut of two shapes and then blends (fillets) the intersection edges using the given radius.
+Option [-d] enables the Debugging mode in which the error messages, if any, will be printed.
+
+**Example:**
+~~~~~
+# cut-blend two boxes
+box b1 20 20 5
+copy b1 b2
+ttranslate b2 -10 10 3
+bcutblend a b1 b2 1
+~~~~~
 
 @subsubsection occt_draw_7_8_5  mkevol, updatevol, buildevol
 
@@ -7134,14 +7323,37 @@ buildevol
 ~~~~~
 
 
+@subsection occt_draw_defeaturing Defeaturing
+
+Draw command **removefeatures** is intended for performing @ref occt_modalg_defeaturing "3D Model Defeaturing", i.e. it performs the removal of the requested features from the shape.
+
+Syntax:
+~~~~
+removefeatures result shape f1 f2 ... [-nohist] [-parallel]
+
+Where:
+result   - result of the operation;
+shape    - the shape to remove the features from;
+f1, f2   - features to remove from the shape;
+
+Options:
+nohist   - disables the history collection;
+parallel - enables the parallel processing mode.
+~~~~
+
+
 @subsection occt_draw_7_9  Analysis of topology and geometry
 
-Analysis of shapes includes commands to compute length, area, volumes and inertial properties. 
+Analysis of shapes includes commands to compute length, area, volumes and inertial properties, as well as to compute some aspects impacting shape validity.
 
   * Use **lprops**, **sprops**, **vprops** to compute integral properties.
-  * Use **bounding** to display the bounding box of a shape.
+  * Use **bounding** to compute and to display the bounding box of a shape.
   * Use **distmini** to calculate the minimum distance between two shapes.
+  * Use **isbbinterf** to check if the two shapes are interfered by their bounding boxes. 
   * Use **xdistef**, **xdistcs**, **xdistcc**, **xdistc2dc2dss**, **xdistcc2ds** to check the distance between two objects on even grid.
+  * Use **checkshape** to check validity of the shape.
+  * Use **tolsphere** to see the tolerance spheres of all vertices in the shape.
+  * Use **validrange** to check range of an edge not covered by vertices.
 
 
 @subsubsection occt_draw_7_9_1  lprops, sprops, vprops
@@ -7190,20 +7402,135 @@ I.Z = 314159.265357595
 
 Syntax:      
 ~~~~~
-bounding shape 
+bounding {-s shape | -c xmin ymin zmin xmax ymax zmax} [-obb] [-shape name] [-dump] [-notriangulation] [-perfmeter name NbIters] [-save xmin ymin zmin xmax ymax zmax] [-nodraw] [-optimal] [-exttoler]
 ~~~~~
 
-Displays the bounding box of a shape. The bounding box is a cuboid created with faces parallel to the x, y, and z planes. The command returns the dimension values of the the box, *xmin ymin zmin xmax ymax zmax.* 
+Computes and displays the bounding box (BndBox) of a shape. The bounding box is a cuboid that circumscribes the source shape.
+Generaly, bounding boxes can be divided into two main types:
+  - axis-aligned BndBox (AABB). I.e. the box whose edges are parallel to an axis of World Coordinate System (WCS);
+  - oriented BndBox (OBB). I.e. not AABB.
 
-**Example:** 
+Detailed information about this command is availabe in DRAW help-system (enter "help bounding" in DRAW application).
+  
+**Example 1: Creation of AABB with given corners** 
 ~~~~~
-# bounding box of a torus 
+bounding -c 50 100 30 180 200 100 -shape result
+# look at the box
+vdisplay result
+vfit
+vsetdispmode 1
+~~~~~
+
+**Example 2: Compare AABB and OBB** 
+~~~~~
+# Create a torus and rotate it
 ptorus t 20 5 
-bounding t 
-==-27.059805107309852              -27.059805107309852 - 
-5.0000001000000003 
-==27.059805107309852               27.059805107309852 
-5.0000001000000003 
+trotate t 5 10 15 1 1 1 28
+
+# Create AABB from the torus
+bounding -s t -shape ra -dump -save x1 y1 z1 x2 y2 z2
+==Axes-aligned bounding box
+==X-range: -26.888704600189307 23.007685197265488
+==Y-range: -22.237699567214314 27.658690230240481
+==Z-range: -13.813966507560762 12.273995247458407
+
+# Obtain the boundaries
+dump x1 y1 z1 x2 y2 z2
+==*********** Dump of x1 *************
+==-26.8887046001893
+
+==*********** Dump of y1 *************
+==-22.2376995672143
+
+==*********** Dump of z1 *************
+==-13.8139665075608
+
+==*********** Dump of x2 *************
+==23.0076851972655
+
+==*********** Dump of y2 *************
+==27.6586902302405
+
+==*********** Dump of z2 *************
+==12.2739952474584
+
+# Compute the volume of AABB
+vprops ra 1.0e-12
+==Mass :         64949.9
+
+# Let us check this value
+dval (x2-x1)*(y2-y1)*(z2-z1)
+==64949.886543606823
+~~~~~
+
+The same result is obtained.
+
+~~~~~
+# Create OBB from the torus
+bounding -s t -shape ro -dump -obb
+==Oriented bounding box
+==Center: -1.9405097014619073 2.7104953315130857 -0.76998563005117782
+==X-axis: 0.31006700219833244 -0.23203206410428409 0.9219650619059514
+==Y-axis: 0.098302309139513336 -0.95673739537318336 -0.27384340837854165
+==Z-axis: 0.94561890324040099 0.17554109923901748 -0.27384340837854493
+==Half X: 5.0000002000000077
+==Half Y: 26.783728747002169
+==Half Z: 26.783728747002165
+
+# Compute the volume of OBB
+vprops ro 1.0e-12
+==Mass :         28694.7
+~~~~~
+
+As we can see, the volume of OBB is significantly less than the volume of AABB.
+
+@subsubsection occt_draw_7_9_2a   isbbinterf
+
+Syntax:      
+~~~~~
+isbbinterf shape1 shape2 [-o]
+~~~~~
+
+Checks whether the bounding boxes created from the given shapes are interfered. If "-o"-option is switched on then the oriented boxes will be checked. Otherwise, axis-aligned boxes will be checked.
+
+**Example 1: Not interfered AABB** 
+~~~~~
+box b1 100 60 140 20 10 80
+box b2 210 200 80 120 60 90
+isbbinterf b1 b2
+==The shapes are NOT interfered by AABB.
+~~~~~
+
+**Example 2: Interfered AABB** 
+~~~~~
+box b1 300 300 300
+box b2 100 100 100 50 50 50
+isbbinterf b1 b2
+==The shapes are interfered by AABB.
+~~~~~
+
+**Example 3: Not interfered OBB** 
+~~~~~
+box b1 100 150 200
+copy b1 b2
+trotate b1 -150 -150 -150 1 2 3 -40
+trotate b2 -150 -150 -150 1 5 2 60
+
+# Check of interference
+isbbinterf b1 b2 -o
+==The shapes are NOT interfered by OBB.
+~~~~~
+
+**Example 4: Interfered OBB** 
+~~~~~
+box b1 100 150 200
+copy b1 b2
+trotate b1 -50 -50 -50 1 1 1 -40
+trotate b2 -50 -50 -50 1 1 1 60
+
+# Check of interference
+isbbinterf b1 b2 -o
+==The shapes are interfered by OBB.
 ~~~~~
 
 @subsubsection occt_draw_7_9_3  distmini
@@ -7213,7 +7540,7 @@ Syntax:
 distmini name Shape1 Shape2 
 ~~~~~
 
-Calculates the minimum distance between two shapes. The calculation returns the number of solutions, If more than one solution exists. The options are displayed in the viewer(red) and the results are listed in the shell window. The *distmini* lines are considered as shapes which have a value v. 
+Calculates the minimum distance between two shapes. The calculation returns the number of solutions, if more than one solution exists. The options are displayed in the viewer in red and the results are listed in the shell window. The *distmini* lines are considered as shapes which have a value v. 
 
 **Example:** 
 ~~~~~
@@ -7272,6 +7599,80 @@ mksurf s2 b2
 xdistcs c_1 s1 0 1 100
 xdistcc2ds c_1 c2d2_1 s2 0 1
 xdistc2dc2dss c2d1_1 c2d2_1 s1 s2 0 1 1000
+~~~~~
+
+@subsubsection occt_draw_7_9_5  checkshape
+
+Syntax:                  
+~~~~~
+checkshape [-top] shape [result] [-short] 
+~~~~~
+
+Where: 
+* *top* -- optional parameter, which allows checking only topological validity of a shape. 
+* *shape* -- the only required parameter, defines the name of the shape to check. 
+* *result* -- optional parameter, defines custom prefix for the output shape names.
+* *short* -- a short description of the check. 
+
+**checkshape** examines the selected object for topological and geometric coherence. The object should be a three dimensional shape. 
+
+**Example:** 
+~~~~~
+# checkshape returns a comment valid or invalid 
+box b1 0 0 0 1 1 1 
+checkshape b1 
+# returns the comment 
+this shape seems to be valid 
+~~~~~
+
+@subsubsection occt_draw_7_9_6  tolsphere
+
+Syntax:                  
+~~~~~
+tolsphere shape
+~~~~~
+
+Where: 
+* *shape* -- the name of the shape to process. 
+
+**tolsphere** shows vertex tolerances by drawing spheres around each vertex in the shape. Each sphere is assigned a name of the shape with suffix "_vXXX", where XXX is the number of the vertex in the shape.
+
+**Example:** 
+~~~~~
+# tolsphere returns all names of created spheres.
+box b1 0 0 0 1 1 1 
+settolerance b1 0.05
+tolsphere b1
+# creates spheres and returns the names
+b1_v1 b1_v2 b1_v3 b1_v4 b1_v5 b1_v6 b1_v7 b1_v8
+~~~~~
+
+@subsubsection occt_draw_7_9_7  validrange
+
+Syntax:                  
+~~~~~
+validrange edge [(out) u1 u2]
+~~~~~
+
+Where: 
+* *edge* -- the name of the edge to analyze. 
+* *u1*, *u2* -- optional names of variables to put into the range.
+
+**validrange** computes valid range of the edge. If *u1* and *u2* are not given, it returns the first and the last parameters. Otherwise, it sets variables *u1* and *u2*.
+
+**Example:** 
+~~~~~
+circle c 0 0 0 10
+mkedge e c
+mkedge e c 0 pi
+validrange e
+# returns the range
+1.9884375000000002e-008 3.1415926337054181
+validrange e u1 u2
+dval u1
+1.9884375000000002e-008
+dval u2
+3.1415926337054181
 ~~~~~
 
 
@@ -7619,6 +8020,176 @@ nurbsconvert result name [result name]
 Changes the NURBS curve definition of a shape to a Bspline curve definition. This conversion is required for assymetric deformation and prepares the arguments for other commands such as **deform**. The conversion can be necessary when transferring shape data to other applications. 
 
 
+@subsubsection occt_draw_7_11_6 edgestofaces
+
+**edgestofaces** - The command allows building planar faces from the planar edges randomly located in 3D space.
+
+It has the following syntax:
+~~~~
+edgestofaces r_faces edges [-a AngTol -s Shared(0/1)]
+~~~~
+Options:
+ * -a AngTol - angular tolerance used for distinguishing the planar faces;
+ * -s Shared(0/1) - boolean flag which defines whether the input edges are already shared or have to be intersected.
+
+@subsection occt_draw_hist History commands
+
+Draw module for @ref occt_modalg_hist "History Information support" includes the command to save history of modifications performed by Boolean operation or sibling commands into a drawable object and the actual history commands:
+
+* *savehistory*;
+* *isdeleted*;
+* *modified*;
+* *generated*.
+
+@subsubsection occt_draw_hist_save savehistory
+
+*savehistory* command saves the history from the session into a drawable object with the given name.
+
+Syntax:
+~~~~
+savehistory     : savehistory name
+~~~~
+
+If the history of shape modifications performed during an operation is needed, the *savehistory* command should be called after the command performing the operation.
+If another operation supporting history will be performed before the history of the first operation is saved it will be overwritten with the new history.
+
+Example:
+~~~~
+box b1 10 10 10
+box b2 5 0 0 10 10 15
+bfuse r b1 b2
+savehistory fuse_hist
+
+dump fuse_hist
+#*********** Dump of fuse_hist *************
+# History contains:
+# - 4 Deleted shapes;
+# - 20 Modified shapes;
+# - 6 Generated shapes.
+
+unifysamedom ru r
+savehistory usd_hist
+dump usd_hist
+#*********** Dump of usd_hist *************
+#History contains:
+# - 14 Deleted shapes;
+# - 28 Modified shapes;
+# - 0 Generated shapes.
+~~~~
+
+@subsubsection occt_draw_hist_isdel isdeleted
+
+*isdeleted* command checks if the given shape has been deleted in the given history.
+
+Syntax:
+~~~~
+isdeleted       : isdeleted history shape
+~~~~
+
+Example:
+~~~~
+box b1 4 4 4 2 2 2
+box b2 10 10 10
+bcommon r b1 b2
+
+savehistory com_hist
+# all vertices, edges and faces of the b2 are deleted
+foreach s [join [list [explode b2 v] [explode b2 e] [explode b2 f] ] ] {
+  isdeleted com_hist $s
+  # Deleted
+}
+~~~~
+
+@subsubsection occt_draw_hist_mod modified
+
+*modified* command returns the shapes Modified from the given shape in the given history. All modified shapes are put into a compound. If the shape has not been modified, the resulting compound will be empty. Note that if the shape has been modified into a single shape only, it will be returned without enclosure into the compound.
+
+Syntax:
+~~~~
+modified        : modified modified_shapes history shape
+~~~~
+
+Example:
+~~~~
+box b 10 10 10
+explode b e
+fillet r b 2 b_1
+
+savehistory fillet_hist
+
+explode b f
+
+modified m3 fillet_hist b_3
+modified m5 fillet_hist b_5
+~~~~
+
+@subsubsection occt_draw_hist_gen generated
+
+*generated* command returns the shapes Generated from the given shape in the given history. All generated shapes are put into a compound. If no shapes have been generated from the shape, the resulting compound will be empty. Note that; if the shape has generated a single shape only, it will be returned without enclosure into the compound.
+
+Syntax:
+~~~~
+generated       : generated generated_shapes history shape
+~~~~
+
+Example:
+~~~~
+polyline w1 0 0 0 10 0 0 10 10 0
+polyline w2 5 1 10 9 1 10 9 5 10
+
+thrusections r 0 0 w1 w2
+
+savehistory loft_hist
+
+explode w1 e
+explode w2 e
+
+generated g11 loft_hist w1_1
+generated g12 loft_hist w1_2
+generated g21 loft_hist w2_1
+generated g22 loft_hist w2_2
+
+compare g11 g21
+# equal shapes
+
+compare g12 g22
+# equal shapes
+~~~~
+
+@subsubsection occt_draw_hist_extension Enabling Draw history support for the algorithms
+
+Draw History mechanism allows fast and easy enabling of the Draw history support for the OCCT algorithms supporting standard history methods.
+To enable History commands for the algorithm it is necessary to save the history of the algorithm into the session.
+For that, it is necessary to put the following code into the command implementation just after the command is done:
+~~~~
+BRepTest_Objects::SetHistory(ListOfArguments, Algorithm);
+~~~~
+
+Here is the example of how it is done in the command performing Split operation (see implementation of the *bapisplit* command):
+~~~~
+BRepAlgoAPI_Splitter aSplitter;
+// setting arguments
+aSplitter.SetArguments(BOPTest_Objects::Shapes());
+// setting tools
+aSplitter.SetTools(BOPTest_Objects::Tools());
+
+// setting options
+aSplitter.SetRunParallel(BOPTest_Objects::RunParallel());
+aSplitter.SetFuzzyValue(BOPTest_Objects::FuzzyValue());
+aSplitter.SetNonDestructive(BOPTest_Objects::NonDestructive());
+aSplitter.SetGlue(BOPTest_Objects::Glue());
+aSplitter.SetCheckInverted(BOPTest_Objects::CheckInverted());
+aSplitter.SetUseOBB(BOPTest_Objects::UseOBB());
+
+// performing operation
+aSplitter.Build();
+
+// Store the history for the Objects (overwrites the history in the session)
+BRepTest_Objects::SetHistory(BOPTest_Objects::Shapes(), aSplitter);
+// Add the history for the Tools
+BRepTest_Objects::AddHistory(BOPTest_Objects::Tools(), aSplitter);
+~~~~
+
 @subsection occt_draw_7_12  Texture Mapping to a Shape
 
 Texture mapping allows you to map textures on a shape. Textures are texture image files and several are predefined. You can control the number of occurrences of the texture on a face, the position of a texture and the scale factor of the texture. 
@@ -7692,7 +8263,7 @@ The defaults are:
  
 @section occt_draw_20 General Fuse Algorithm commands
 
-This chapter describes existing commands of Open CASCADE Draw Test Harness that are used for debugging of General Fuse Algorithm (GFA). It is also applicable for Boolean Operations Algorithm (BOA) and Partition Algorithm (PA) because these algorithms are subclasses of GFA. 
+This chapter describes existing commands of Open CASCADE Draw Test Harness that are used for debugging of General Fuse Algorithm (GFA). It is also applicable for all General Fuse based algorithms such as Boolean Operations Algorithm (BOA), Splitter Algorithm (SPA), Cells Builder Algorithm etc.
 
 See @ref occt_user_guides__boolean_operations "Boolean operations" user's guide for the description of these algorithms.
 
@@ -7700,7 +8271,7 @@ See @ref occt_user_guides__boolean_operations "Boolean operations" user's guide 
 
 The following terms and definitions are used in this document:
 * **Objects** -- list of shapes that are arguments of the algorithm.
-* **Tools** -- list of shapes that are arguments of the algorithm. Difference between Objects and Tools is defined by specific requirements of the operations (Boolean Operations, Partition Operation).
+* **Tools** -- list of shapes that are arguments of the algorithm. Difference between Objects and Tools is defined by specific requirements of the operations (Boolean Operations, Splitting Operation).
 * **DS** -- internal data structure used by the algorithm (*BOPDS_DS* object).
 * **PaveFiller** -- intersection part of the algorithm (*BOPAlgo_PaveFiller* object).
 * **Builder** -- builder part of the algorithm (*BOPAlgo_Builder* object).
@@ -7713,7 +8284,10 @@ The following terms and definitions are used in this document:
 * **baddobjects** *S1 S2...Sn*	-- adds shapes *S1, S2, ... Sn* as Objects;	
 * **baddtools** *S1 S2...Sn* -- adds shapes *S1, S2, ... Sn* as Tools;
 * **bfillds** -- performs the Intersection Part of the Algorithm;	
-* **bbuild** *r* -- performs the Building Part of the Algorithm; *r* is the resulting shape.
+* **bbuild** *r* -- performs the Building Part of the Algorithm (General Fuse operation); *r* is the resulting shape;
+* **bsplit** *r* -- performs the Splitting operation; *r* is the resulting shape;
+* **bbop** *r* *iOp* -- performs the Boolean operation; *r* is the resulting shape; *iOp* - type of the operation (0 - COMMON; 1 - FUSE; 2 - CUT; 3 - CUT21; 4 - SECTION);
+* **bcbuild** *rx* -- performs initialization of the *Cells Builder* algorithm (see @ref occt_algorithms_10c_Cells_1 "Usage of the Cells Builder algorithm" for more details).
 
 @subsection occt_draw_20_3 Commands for Intersection Part
 
@@ -8908,6 +9482,19 @@ Sets a shape at the indicated label.
 XSetShape D 0:1:1:3 b 
 ~~~~~
 
+@subsubsection occt_draw_8_6_15  XUpdateAssemblies
+
+Syntax:      
+~~~~~
+XUpdateAssemblies <document>
+~~~~~
+
+Updates all assembly compounds in the XDE document.
+
+**Example:**
+~~~~~
+XUpdateAssemblies D
+~~~~~
 
 @subsection occt_draw_8_7_  XDE color commands 
 
@@ -9605,7 +10192,34 @@ projcurve k_1 0 1 5
 ==Param = -0.20000000000000001  Gap = 5.0009999000199947 
 ~~~~~
 
-@subsubsection occt_draw_9_1_14 projface
+@subsubsection occt_draw_9_1_14 projpcurve
+
+Syntax:      
+~~~~~
+projpcurve <edge> <face>  <Tol> <X> <Y> <Z> [<start_param>]
+~~~~~
+
+**projpcurve** returns the projection of a given point on a given curve on surface. The curve on surface is defined by giving the edge and face names. Edge must have curve 2D repesentation on the face. Optional parameter <i>\<start_param\></i> is any parameter of pcurve, which is used by algoritm as start point for searching projection of given point with help of local Extrema algorithm. If this parameter is not set, algorithm uses whole parametric interval of pcurve for searching projection.   
+
+**Example:** 
+
+~~~~~ 
+# Using global searching   
+projpcurve f_1 f 1.e-7 0.877 0 0.479
+==Point: 0.87762772831890712 0 0.47934285275342808
+==Param: 0.49990578239977856
+==Dist: 0.0007152557954264938
+~~~~~
+
+~~~~~
+# Using starting parameter on edge
+projpcurve f_1 f 1.e-7 0.877 0 0.479 .6
+==Point: 0.87762772831890712 0 0.47934285275342808
+==Param: 0.49990578239977856
+==Dist: 0.0007152557954264938
+~~~~~
+
+@subsubsection occt_draw_9_1_15 projface
 
 Syntax:      
 ~~~~~
@@ -9621,7 +10235,7 @@ projface a_1 10.0 0.0
 ==   =   proj  X = -116  Y = -45  Z = 0 
 ~~~~~
 
-@subsubsection occt_draw_9_1_15 scaleshape
+@subsubsection occt_draw_9_1_16 scaleshape
 
 Syntax:   
 ~~~~~
@@ -9635,7 +10249,7 @@ Returns a new shape, which is the result of scaling of a given shape with a coef
 scaleshape r a_1 0.8 
 ~~~~~
 
-@subsubsection occt_draw_9_1_16 settolerance
+@subsubsection occt_draw_9_1_17 settolerance
 
 Syntax:      
 ~~~~~
@@ -9650,7 +10264,7 @@ Sets new values of tolerance for a given shape. If the second parameter <i>mode<
 settolerance a 0.001 
 ~~~~~
 
-@subsubsection occt_draw_9_1_17 splitface
+@subsubsection occt_draw_9_1_18 splitface
 
 Syntax:      
 ~~~~~
@@ -9668,7 +10282,7 @@ splitface r f u 5
 ==> Status:  DONE1 
 ~~~~~
 
-@subsubsection occt_draw_9_1_18 statshape
+@subsubsection occt_draw_9_1_19 statshape
 
 Syntax:      
 ~~~~~
@@ -9694,7 +10308,7 @@ statshape a
 ==> 34     bspsur: BSplineSurface 
 ~~~~~
 
-@subsubsection occt_draw_9_1_19 tolerance
+@subsubsection occt_draw_9_1_20 tolerance
 
 Syntax:
 ~~~~~
@@ -9883,6 +10497,591 @@ vdrawsphere s 200 1 1 1 500 1
 == CPU system time: 0.0000000000000000 msec 
 == CPU average time of scene redrawing: 15.6000999999998950 msec 
 ~~~~~
+
+
+@section occt_draw_12 Simple vector algebra and measurements
+
+This section contains description of auxiliary commands that can be useful for simple calculations and manipulations needed when analyzing complex models.
+
+@subsection occt_draw_12_1 Vector algebra commands
+
+This section describes commands providing simple calculations with 2D and 3D vectors. The vector is represented by a TCL list of double values (coordinates). The commands get input vector coordinates from the command line as distinct values. So, if you have a vector stored in a variable you need to use *eval* command as a prefix, for example, to compute the magnitude of cross products of two vectors given by 3 points the following commands can be used:
+~~~~~{.cpp}
+Draw[10]> set vec1 [vec 12 28 99 12 58 99]
+0 30 0
+Draw[13]> set vec2 [vec 12 28 99 16 21 89]
+4 -7 -10
+Draw[14]> set cross [eval cross $vec1 $vec2]
+-300 0 -120
+Draw[15]> eval module $cross
+323.10988842807024
+~~~~~
+
+@subsubsection occt_draw_12_1_1 vec
+
+Syntax:
+~~~~~
+vec <x1> <y1> <z1> <x2> <y2> <z2>
+~~~~~ 
+
+Returns coordinates of vector between two 3D points.
+
+Example:
+~~~~~{.cpp}
+vec 1 2 3 6 5 4
+~~~~~
+
+@subsubsection occt_draw_12_1_2 2dvec
+
+Syntax:
+~~~~~
+2dvec <x1> <y1> <x2> <y2>
+~~~~~ 
+
+Returns coordinates of vector between two 2D points.
+
+Example: 
+~~~~~{.cpp}
+2dvec 1 2 4 3
+~~~~~
+
+@subsubsection occt_draw_12_1_3 pln
+
+Syntax:
+~~~~~
+pln <x1> <y1> <z1> <x2> <y2> <z2> <x3> <y3> <z3>
+~~~~~ 
+
+Returns plane built on three points. A plane is represented by 6 double values: coordinates of the origin point and the normal directoin.
+
+Example: 
+~~~~~{.cpp}
+pln 1 2 3 6 5 4 9 8 7
+~~~~~
+
+@subsubsection occt_draw_12_1_4 module
+
+Syntax:
+~~~~~
+module <x> <y> <z>
+~~~~~ 
+
+Returns module of a vector.
+
+Example: 
+~~~~~{.cpp}
+module 1 2 3
+~~~~~
+
+@subsubsection occt_draw_12_1_5 2dmodule
+
+Syntax:
+~~~~~
+2dmodule <x> <y>
+~~~~~ 
+
+Returns module of a 2D vector.
+
+Example: 
+~~~~~{.cpp}
+2dmodule 1 2
+~~~~~
+
+@subsubsection occt_draw_12_1_6 norm
+
+Syntax:
+~~~~~
+norm <x> <y> <z>
+~~~~~ 
+
+Returns unified vector from a given 3D vector.
+
+Example: 
+~~~~~{.cpp}
+norm 1 2 3
+~~~~~
+
+@subsubsection occt_draw_12_1_7 2dnorm
+
+Syntax:
+~~~~~
+2dnorm <x> <y>
+~~~~~ 
+
+Returns unified vector from a given 2D vector.
+
+Example: 
+~~~~~{.cpp}
+2dnorm 1 2
+~~~~~
+
+@subsubsection occt_draw_12_1_8 inverse
+
+Syntax:
+~~~~~
+inverse <x> <y> <z>
+~~~~~ 
+
+Returns inversed 3D vector.
+
+Example: 
+~~~~~{.cpp}
+inverse 1 2 3
+~~~~~
+
+@subsubsection occt_draw_12_1_9 2dinverse
+
+Syntax:
+~~~~~
+2dinverse <x> <y>
+~~~~~ 
+
+Returns inversed 2D vector.
+
+Example: 
+~~~~~{.cpp}
+2dinverse 1 2
+~~~~~
+
+@subsubsection occt_draw_12_1_10 2dort
+
+Syntax:
+~~~~~
+2dort <x> <y>
+~~~~~ 
+
+Returns 2D vector rotated on 90 degrees.
+
+Example: 
+~~~~~{.cpp}
+2dort 1 2
+~~~~~
+
+@subsubsection occt_draw_12_1_11 distpp
+
+Syntax:
+~~~~~
+distpp <x1> <y1> <z1> <x2> <y2> <z2>
+~~~~~ 
+
+Returns distance between two 3D points.
+
+Example: 
+~~~~~{.cpp}
+distpp 1 2 3 4 5 6
+~~~~~
+
+@subsubsection occt_draw_12_1_12 2ddistpp
+
+Syntax:
+~~~~~
+2ddistpp <x1> <y1> <x2> <y2>
+~~~~~ 
+
+Returns distance between two 2D points.
+
+Example: 
+~~~~~{.cpp}
+2ddistpp 1 2 3 4
+~~~~~
+
+@subsubsection occt_draw_12_1_13 distplp
+
+Syntax:
+~~~~~
+distplp <x0> <y0> <z0> <nx> <ny> <nz> <xp> <yp> <zp>
+~~~~~ 
+
+Returns distance between plane defined by point and normal direction and another point.
+
+Example: 
+~~~~~{.cpp}
+distplp 0 0 0 0 0 1 5 6 7
+~~~~~
+
+@subsubsection occt_draw_12_1_14 distlp
+
+Syntax:
+~~~~~
+distlp <x0> <y0> <z0> <dx> <dy> <dz> <xp> <yp> <zp>
+~~~~~ 
+
+Returns distance between 3D line defined by point and direction and another point.
+
+Example: 
+~~~~~{.cpp}
+distlp 0 0 0 1 0 0 5 6 7
+~~~~~
+
+@subsubsection occt_draw_12_1_15 2ddistlp
+
+Syntax:
+~~~~~
+2ddistlp <x0> <y0> <dx> <dy> <xp> <yp>
+~~~~~ 
+
+Returns distance between 2D line defined by point and direction and another point.
+
+Example: 
+~~~~~{.cpp}
+2ddistlp 0 0 1 0 5 6
+~~~~~
+
+@subsubsection occt_draw_12_1_16 distppp
+
+Syntax:
+~~~~~
+distppp <x1> <y1> <z1> <x2> <y2> <z2> <x3> <y3> <z3>
+~~~~~ 
+
+Returns deviation of point (x2,y2,z2) from segment defined by points (x1,y1,z1) and (x3,y3,z3).
+
+Example: 
+~~~~~{.cpp}
+distppp 0 0 0 1 1 0 2 0 0
+~~~~~
+
+@subsubsection occt_draw_12_1_17 2ddistppp
+
+Syntax:
+~~~~~
+2ddistppp <x1> <y1> <x2> <y2> <x3> <y3>
+~~~~~ 
+
+Returns deviation of point (x2,y2) from segment defined by points (x1,y1) and (x3,y3). The result is a signed value. It is positive if the point (x2,y2) is on the left side of the segment, and negative otherwise.
+
+Example: 
+~~~~~{.cpp}
+2ddistppp 0 0 1 -1 2 0
+~~~~~
+
+@subsubsection occt_draw_12_1_18 barycen
+
+Syntax:
+~~~~~
+barycen <x1> <y1> <z1> <x2> <y2> <z2> <par>
+~~~~~ 
+
+Returns point of a given parameter between two 3D points.
+
+Example: 
+~~~~~{.cpp}
+barycen 0 0 0 1 1 1 0.3
+~~~~~
+
+@subsubsection occt_draw_12_1_19 2dbarycen
+
+Syntax:
+~~~~~
+2dbarycen <x1> <y1> <x2> <y2> <par>
+~~~~~ 
+
+Returns point of a given parameter between two 2D points.
+
+Example: 
+~~~~~{.cpp}
+2dbarycen 0 0 1 1 0.3
+~~~~~
+
+@subsubsection occt_draw_12_1_20 cross
+
+Syntax:
+~~~~~
+cross <x1> <y1> <z1> <x2> <y2> <z2>
+~~~~~ 
+
+Returns cross product of two 3D vectors.
+
+Example: 
+~~~~~{.cpp}
+cross 1 0 0 0 1 0
+~~~~~
+
+@subsubsection occt_draw_12_1_21 2dcross
+
+Syntax:
+~~~~~
+2dcross <x1> <y1> <x2> <y2>
+~~~~~ 
+
+Returns cross product of two 2D vectors.
+
+Example: 
+~~~~~{.cpp}
+2dcross 1 0 0 1
+~~~~~
+
+@subsubsection occt_draw_12_1_22 dot
+
+Syntax:
+~~~~~
+dot <x1> <y1> <z1> <x2> <y2> <z2>
+~~~~~ 
+
+Returns scalar product of two 3D vectors.
+
+Example: 
+~~~~~{.cpp}
+dot 1 0 0 0 1 0
+~~~~~
+
+@subsubsection occt_draw_12_1_23 2ddot
+
+Syntax:
+~~~~~
+2ddot <x1> <y1> <x2> <y2>
+~~~~~ 
+
+Returns scalar product of two 2D vectors.
+
+Example: 
+~~~~~{.cpp}
+2ddot 1 0 0 1
+~~~~~
+
+@subsubsection occt_draw_12_1_24 scale
+
+Syntax:
+~~~~~
+scale <x> <y> <z> <factor>
+~~~~~ 
+
+Returns 3D vector multiplied by scalar.
+
+Example: 
+~~~~~{.cpp}
+scale 1 0 0 5
+~~~~~
+
+@subsubsection occt_draw_12_1_25 2dscale
+
+Syntax:
+~~~~~
+2dscale <x> <y> <factor>
+~~~~~ 
+
+Returns 2D vector multiplied by scalar.
+
+Example: 
+~~~~~{.cpp}
+2dscale 1 0 5
+~~~~~
+
+@subsection occt_draw_12_2 Measurements commands
+
+This section describes commands that make possible to provide measurements on a model.
+
+@subsubsection occt_draw_12_2_1 pnt
+
+Syntax:
+~~~~~
+pnt <object>
+~~~~~ 
+
+Returns coordinates of point in the given Draw variable. Object can be of type point or vertex. Actually this command is built up from the commands @ref occt_draw_7_2_1a "mkpoint" and @ref occt_draw_6_6_1 "coord".
+
+Example: 
+~~~~~{.cpp}
+vertex v 0 1 0
+pnt v
+~~~~~
+
+@subsubsection occt_draw_12_2_2 pntc
+
+Syntax:
+~~~~~
+pntc <curv> <par>
+~~~~~ 
+
+Returns coordinates of point on 3D curve with given parameter. Actually this command is based on the command @ref occt_draw_6_6_2 "cvalue".
+
+Example: 
+~~~~~{.cpp}
+circle c 0 0 0 10
+pntc c [dval pi/2]
+~~~~~
+
+@subsubsection occt_draw_12_2_3 2dpntc
+
+Syntax:
+~~~~~
+2dpntc <curv2d> <par>
+~~~~~ 
+
+Returns coordinates of point on 2D curve with given parameter. Actually this command is based on the command @ref occt_draw_6_6_2 "2dcvalue".
+
+Example: 
+~~~~~{.cpp}
+circle c 0 0 10
+2dpntc c [dval pi/2]
+~~~~~
+
+@subsubsection occt_draw_12_2_4 pntsu
+
+Syntax:
+~~~~~
+pntsu <surf> <u> <v>
+~~~~~ 
+
+Returns coordinates of point on surface with given parameters. Actually this command is based on the command @ref occt_draw_6_6_3 "svalue".
+
+Example: 
+~~~~~{.cpp}
+cylinder s 10
+pntsu s [dval pi/2] 5
+~~~~~
+
+@subsubsection occt_draw_12_2_5 pntcons
+
+Syntax:
+~~~~~
+pntcons <curv2d> <surf> <par>
+~~~~~ 
+
+Returns coordinates of point on surface defined by point on 2D curve with given parameter. Actually this command is based on the commands @ref occt_draw_6_6_2 "2dcvalue" and @ref occt_draw_6_6_3 "svalue".
+
+Example: 
+~~~~~{.cpp}
+line c 0 0 1 0
+cylinder s 10
+pntcons c s [dval pi/2]
+~~~~~
+
+@subsubsection occt_draw_12_2_6 drseg
+
+Syntax:
+~~~~~
+drseg <name> <x1> <y1> <z1> <x2> <y2> <z2>
+~~~~~ 
+
+Creates a linear segment between two 3D points. The new object is given the *name*. The object is drawn in the axonometric view.
+
+Example: 
+~~~~~{.cpp}
+drseg s 0 0 0 1 0 0
+~~~~~
+
+@subsubsection occt_draw_12_2_7 2ddrseg
+
+Syntax:
+~~~~~
+2ddrseg <name> <x1> <y1> <x2> <y2>
+~~~~~ 
+
+Creates a linear segment between two 2D points. The new object is given the *name*. The object is drawn in the 2D view.
+
+Example: 
+~~~~~{.cpp}
+2ddrseg s 0 0 1 0
+~~~~~
+
+@subsubsection occt_draw_12_2_8 mpick
+
+Syntax:
+~~~~~
+mpick
+~~~~~ 
+
+Prints in the console the coordinates of a point clicked by mouse in a view (axonometric or 2D). This command will wait for mouse click event in a view.
+
+Example: 
+~~~~~{.cpp}
+mpick
+~~~~~
+
+@subsubsection occt_draw_12_2_9 mdist
+
+Syntax:
+~~~~~
+mdist
+~~~~~ 
+
+Prints in the console the distance between two points clicked by mouse in a view (axonometric or 2D). This command will wait for two mouse click events in a view.
+
+Example: 
+~~~~~{.cpp}
+mdist
+~~~~~
+
+@section occt_draw_13 Inspector commands
+
+
+This section describes commands that make possible to use Inspector.
+
+@subsection occt_draw_13_1 tinspector
+
+Syntax:                  
+~~~~~
+tinspector [-plugins {name1 ... [nameN] | all}]
+           [-activate name]
+           [-shape object [name1] ... [nameN]]
+           [-open file_name [name1] ... [nameN]]
+           [-update]
+           [-select {object | name1 ... [nameN]}]
+           [-show {0|1} = 1]
+~~~~~
+Starts inspection tool.
+Options:
+* *plugins* enters plugins that should be added in the inspector.
+Available names are: *dfbrowser*, *vinspector* and *shapeview*.
+Plugins order will be the same as defined in the arguments.
+'all' adds all available plugins in the order:
+DFBrowser, VInspector and ShapeView.
+If at the first call this option is not used, 'all' option is applied;
+* *activate* activates the plugin in the tool view.
+If at the first call this option is not used, the first plugin is activated;
+* *shape* initializes plugin(s) by the shape object. If 'name' is empty, initializes all plugins;
+* *open* gives the file to the plugin(s). If the plugin is active after open, the content will be updated;
+* *update* updates content of the active plugin;
+* *select* sets the parameter that should be selected in an active tool view.
+Depending on the active tool the parameter is:
+ShapeView: 'object' is an instance of *TopoDS_Shape TShape*,
+DFBrowser: 'name' is an entry of *TDF_Label* and 'name2' (optionally) for *TDF_Attribute* type name,
+VInspector: 'object' is an instance of *AIS_InteractiveObject*;
+* *show* sets Inspector view visible or hidden. The first call of this command will show it.
+
+**Example:** 
+~~~~~
+pload DCAF INSPECTOR
+
+NewDocument Doc BinOcaf
+
+set aSetAttr1 100
+set aLabel 0:2
+SetInteger Doc ${aLabel} ${aSetAttr1}
+
+tinspector -plugins dfbrowser -select 0:2 TDataStd_Integer
+~~~~~ 
+
+**Example:** 
+~~~~~
+pload ALL INSPECTOR
+
+box b1 200 100 120
+box b2 100 200 220 100 120 100
+
+tinspector -plugins shapeview -shape b1 -shape b2 -select b1
+~~~~~ 
+
+**Example:** 
+~~~~~
+pload ALL INSPECTOR
+
+tinspector -plugins vinspector
+
+vinit
+box box_1 100 100 100
+vdisplay box_1
+
+box box_2 180 120 200 150 150 150
+vdisplay box_2
+
+vfit
+vselmode box_1 1 1
+vselmode box_1 3 1
+
+tinspector -update -select box_1
+~~~~~ 
 
 
 @section occt_draw_11 Extending Test Harness with custom commands

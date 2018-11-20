@@ -16,7 +16,6 @@
 #include <Precision.hxx>
 #include <TColgp_HArray1OfPnt.hxx>
 
-
 IMPLEMENT_STANDARD_RTTIEXT(XCAFDimTolObjects_DimensionObject,Standard_Transient)
 
 //=======================================================================
@@ -28,6 +27,8 @@ XCAFDimTolObjects_DimensionObject::XCAFDimTolObjects_DimensionObject()
 {
   myHasPlane = Standard_False;
   myHasPntText = Standard_False;
+  myHasPoint1 = Standard_False;
+  myHasPoint2 = Standard_False;
 }
 
 //=======================================================================
@@ -48,11 +49,35 @@ XCAFDimTolObjects_DimensionObject::XCAFDimTolObjects_DimensionObject(const Handl
   myModifiers = theObj->myModifiers;
   myPath = theObj->myPath;
   myDir = theObj->myDir;
-  myPnts = theObj->myPnts;
+  myHasPoint1 = theObj->myHasPoint1;
+  myPnt1 = theObj->myPnt1;
+  myHasPoint2 = theObj->myHasPoint2;
+  myPnt2 = theObj->myPnt2;
   myPntText= theObj->myPntText;
   myHasPlane = theObj->myHasPlane;
   myPlane = theObj->myPlane;
   myHasPntText = theObj->myHasPntText;
+  mySemanticName = theObj->mySemanticName;
+}
+
+//=======================================================================
+//function : 
+//purpose  : 
+//=======================================================================
+
+Handle(TCollection_HAsciiString) XCAFDimTolObjects_DimensionObject::GetSemanticName() const
+{
+  return mySemanticName;
+}
+
+//=======================================================================
+//function : 
+//purpose  : 
+//=======================================================================
+
+void XCAFDimTolObjects_DimensionObject::SetSemanticName(const Handle(TCollection_HAsciiString)& theName)
+{
+  mySemanticName = theName;
 }
 
 //=======================================================================
@@ -427,19 +452,23 @@ Standard_Boolean XCAFDimTolObjects_DimensionObject::SetDirection (const gp_Dir& 
 }
 
 //=======================================================================
-//function : GetPoints
+//function : RemoveDescription
 //purpose  : 
 //=======================================================================
-Handle(TColgp_HArray1OfPnt) XCAFDimTolObjects_DimensionObject::GetPoints ()  const
+void XCAFDimTolObjects_DimensionObject::RemoveDescription(const Standard_Integer theNumber)
 {
-  return myPnts;
-}
-  
-//=======================================================================
-//function : SetPoints
-//purpose  : 
-//=======================================================================
-void XCAFDimTolObjects_DimensionObject::SetPoints (const Handle(TColgp_HArray1OfPnt)& thePnts)
-{
-  myPnts = thePnts;
+  if (theNumber < myDescriptions.Lower() || theNumber > myDescriptions.Upper())
+    return;
+  NCollection_Vector<Handle(TCollection_HAsciiString)> aDescriptions;
+  NCollection_Vector<Handle(TCollection_HAsciiString)> aDescriptionNames;
+  for (Standard_Integer i = aDescriptions.Lower(); i < theNumber; i++) {
+    aDescriptions.Append(myDescriptions.Value(i));
+    aDescriptionNames.Append(myDescriptionNames.Value(i));
+  }
+  for (Standard_Integer i = theNumber + 1; i <= aDescriptions.Upper(); i++) {
+    aDescriptions.Append(myDescriptions.Value(i));
+    aDescriptionNames.Append(myDescriptionNames.Value(i));
+  }
+  myDescriptions = aDescriptions;
+  myDescriptionNames = aDescriptionNames;
 }

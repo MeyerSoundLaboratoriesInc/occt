@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <NCollection_LocalArray.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_TreeNode.hxx>
@@ -22,6 +22,7 @@
 #include <XmlMDataStd_TreeNodeDriver.hxx>
 #include <XmlObjMgt.hxx>
 #include <XmlObjMgt_Persistent.hxx>
+#include <XmlLDrivers.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_TreeNodeDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (TreeIdString,   "treeid")
@@ -33,7 +34,7 @@ IMPLEMENT_DOMSTRING (ChildrenString, "children")
 //=======================================================================
 
 XmlMDataStd_TreeNodeDriver::XmlMDataStd_TreeNodeDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : XmlMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -59,8 +60,12 @@ Standard_Boolean XmlMDataStd_TreeNodeDriver::Paste
   const XmlObjMgt_Element& anElement = theSource;
 
   // tree id
+  Standard_GUID aGUID;
   XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::TreeIdString());
-  Standard_GUID aGUID (Standard_CString(aGUIDStr.GetString()));
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_TreeNode::GetDefaultTreeID();
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString()));
   aT->SetTreeID(aGUID);
 
   // children
@@ -111,11 +116,15 @@ void XmlMDataStd_TreeNodeDriver::Paste
   Handle(TDataStd_TreeNode) aS = Handle(TDataStd_TreeNode)::DownCast(theSource);
 
   // tree id
-  Standard_Integer aNb;
-  Standard_Character aGuidStr [40];
-  Standard_PCharacter pGuidStr=aGuidStr;
-  aS->ID().ToCString (pGuidStr);
-  theTarget.Element().setAttribute(::TreeIdString(), aGuidStr);
+  // A not default ID is skipped for storage version 8 and newer.
+  if (aS->ID() != TDataStd_TreeNode::GetDefaultTreeID() ||
+      XmlLDrivers::StorageVersion() < 8)
+  {
+    Standard_Character aGuidStr [40];
+    Standard_PCharacter pGuidStr=aGuidStr;
+    aS->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute(::TreeIdString(), aGuidStr);
+  }
 
   // Find number of children.
   int nbChildren = aS->NbChildren();
@@ -130,7 +139,7 @@ void XmlMDataStd_TreeNodeDriver::Paste
   Handle(TDataStd_TreeNode) aF = aS->First();
   while (!aF.IsNull())
   {
-    aNb = theRelocTable.FindIndex(aF);
+    Standard_Integer aNb = theRelocTable.FindIndex(aF);
     if (aNb == 0)
     {
       aNb = theRelocTable.Add(aF);

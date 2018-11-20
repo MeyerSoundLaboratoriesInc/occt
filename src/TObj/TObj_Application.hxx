@@ -24,12 +24,10 @@
 #include <Message_Messenger.hxx>
 #include <TColStd_SequenceOfExtendedString.hxx>
 
-
 //!
 //! This is a base class for OCAF based TObj models
 //!  with declared virtual methods
 //!
-
 class TObj_Application : public TDocStd_Application
 {
 public:
@@ -37,7 +35,7 @@ public:
   Standard_EXPORT static Handle(TObj_Application) GetInstance();
  
   //! Returns reference to associated messenger handle
-  Standard_EXPORT Handle(Message_Messenger) &Messenger() { return myMessenger; }
+  Handle(Message_Messenger) &Messenger() { return myMessenger; }
     
  public:
   /**
@@ -45,14 +43,14 @@ public:
   */
 
   //! Saving the OCAF document to a file
-  virtual Standard_EXPORT Standard_Boolean SaveDocument
-                         (const Handle(TDocStd_Document)& theSourceDoc,
-                          const char*                     theTargetFile);
+  Standard_EXPORT virtual Standard_Boolean SaveDocument
+                         (const Handle(TDocStd_Document)&   theSourceDoc,
+                          const TCollection_ExtendedString& theTargetFile);
 
   //! Loading the OCAF document from a file
-  virtual Standard_EXPORT Standard_Boolean LoadDocument
-                         (const char*                     theSourceFile,
-                          Handle(TDocStd_Document)&       theTargetDoc);
+  Standard_EXPORT virtual Standard_Boolean LoadDocument
+                         (const TCollection_ExtendedString& theSourceFile,
+                          Handle(TDocStd_Document)&         theTargetDoc);
 
   //! Create the OCAF document from scratch
   virtual Standard_EXPORT Standard_Boolean CreateNewDocument
@@ -67,7 +65,7 @@ public:
 
   //! Signal error during Load or Save
   //! Default imiplementation invoke previous declaration with 0
-  virtual Standard_EXPORT void ErrorMessage
+  virtual void ErrorMessage
                         (const TCollection_ExtendedString &theMsg)
   { ErrorMessage( theMsg, Message_Alarm ); }
 
@@ -89,13 +87,6 @@ public:
   //! Return name of resource (i.e. "TObj")
   virtual Standard_EXPORT Standard_CString ResourcesName() Standard_OVERRIDE;
 
-  //! Return format (i.e "TObj")
-  virtual Standard_EXPORT void Formats(TColStd_SequenceOfExtendedString& theFormats) Standard_OVERRIDE;
-
-  //! Defines message driver for CDM layer
-  virtual Standard_EXPORT Handle(CDM_MessageDriver) MessageDriver() Standard_OVERRIDE
-  { return myMessageDriver; }
-
  protected:
   /**
   * Constructor
@@ -113,7 +104,6 @@ public:
   Standard_Boolean          myIsError;       //!< error flag
   Standard_Boolean          myIsVerbose;     //!< verbose flag
   Handle(Message_Messenger) myMessenger;     //!< messenger
-  Handle(CDM_MessageDriver) myMessageDriver; //!< message driver
 
  public:
   //! CASCADE RTTI
@@ -124,8 +114,4 @@ public:
 //! Define handle class 
 DEFINE_STANDARD_HANDLE(TObj_Application,TDocStd_Application)
 
-#endif
-
-#ifdef _MSC_VER
-#pragma once
 #endif

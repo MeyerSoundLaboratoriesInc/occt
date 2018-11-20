@@ -46,10 +46,10 @@ COCCDemoDoc::COCCDemoDoc()
 	Handle(Graphic3d_GraphicDriver) aGraphicDriver = 
 		((COCCDemoApp*)AfxGetApp())->GetGraphicDriver();
 
-	myViewer = new V3d_Viewer(aGraphicDriver,(short *) "Visu3D");
+	myViewer = new V3d_Viewer(aGraphicDriver);
 	myViewer->SetDefaultLights();
 	myViewer->SetLightOn();
-  myViewer->SetDefaultBackgroundColor(Quantity_TOC_RGB, 0.,0.,0.);
+  myViewer->SetDefaultBackgroundColor (Quantity_NOC_BLACK);
 
 	myAISContext = new AIS_InteractiveContext(myViewer);
   myShowResult = FALSE;
@@ -73,8 +73,8 @@ BOOL COCCDemoDoc::OnNewDocument()
 	// (SDI documents will reuse this document)
   SetTitle(myPresentation->GetName());
 
-  myAISContext->EraseAll();
-  myAISContext->SetDisplayMode(AIS_Shaded);
+  myAISContext->EraseAll (Standard_False);
+  myAISContext->SetDisplayMode (AIS_Shaded, Standard_True);
 
   POSITION pos = GetFirstViewPosition();
   while (pos != NULL)
@@ -150,10 +150,10 @@ void COCCDemoDoc::DoSample()
     {
       myPresentation->DoSample();
     }
-    catch (Standard_Failure)
+    catch (Standard_Failure const& anException)
     {
       Standard_SStream aSStream;
-      aSStream << "An exception was caught: " << Standard_Failure::Caught() << ends;
+      aSStream << "An exception was caught: " << anException << ends;
       CString aMsg = aSStream.str().c_str();
       AfxMessageBox (aMsg);
     }
@@ -163,14 +163,14 @@ void COCCDemoDoc::DoSample()
 
 void COCCDemoDoc::OnBUTTONStart() 
 {
-  myAISContext->EraseAll();
+  myAISContext->EraseAll (Standard_True);
   myPresentation->FirstSample();
   DoSample();
 }
 
 void COCCDemoDoc::OnBUTTONEnd()
 {
-  myAISContext->EraseAll();
+  myAISContext->EraseAll (Standard_True);
   myPresentation->LastSample();
   DoSample();
 }

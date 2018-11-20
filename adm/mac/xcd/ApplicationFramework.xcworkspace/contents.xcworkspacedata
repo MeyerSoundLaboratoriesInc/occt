@@ -11,9 +11,6 @@
             location = "group:TKLCAF.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:FWOSPlugin.xcodeproj">
-         </FileRef>
-         <FileRef
             location = "group:TKCAF.xcodeproj">
          </FileRef>
          <FileRef

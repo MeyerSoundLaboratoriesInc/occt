@@ -30,7 +30,8 @@
 #include <Standard_Integer.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
 #include <AIS_SequenceOfInteractive.hxx>
-#include <MMgt_TShared.hxx>
+#include <AIS_SelectionModesConcurrency.hxx>
+#include <Standard_Transient.hxx>
 #include <AIS_ClearMode.hxx>
 #include <TopAbs_ShapeEnum.hxx>
 #include <SelectMgr_ListOfFilter.hxx>
@@ -40,6 +41,7 @@
 #include <TColStd_MapOfTransient.hxx>
 #include <Quantity_NameOfColor.hxx>
 #include <Standard_Real.hxx>
+#include <AIS_Selection.hxx>
 class AIS_InteractiveContext;
 class SelectMgr_SelectionManager;
 class SelectMgr_OrFilter;
@@ -56,7 +58,7 @@ class SelectMgr_SelectableObject;
 
 
 class AIS_LocalContext;
-DEFINE_STANDARD_HANDLE(AIS_LocalContext, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(AIS_LocalContext, Standard_Transient)
 
 //! Defines a specific context  for selection.
 //! It becomes possible to:
@@ -71,7 +73,7 @@ DEFINE_STANDARD_HANDLE(AIS_LocalContext, MMgt_TShared)
 //! -     automatically    highlight   shapes   and
 //! InteractiveObjects  (highlight of  detected shape +
 //! highlight of detected selectable...
-class AIS_LocalContext : public MMgt_TShared
+class AIS_LocalContext : public Standard_Transient
 {
 
 public:
@@ -90,8 +92,8 @@ public:
     Standard_Boolean AcceptErase() const;
   
   Standard_EXPORT void SetContext (const Handle(AIS_InteractiveContext)& aCtx);
-  
-    const TCollection_AsciiString& SelectionName() const;
+
+  const Handle(AIS_Selection)& Selection() const { return mySelection; }
   
   Standard_EXPORT void Terminate (const Standard_Boolean updateviewer = Standard_True);
   
@@ -119,12 +121,26 @@ public:
   //! the selector (filters, modeof activation, objects...)
   Standard_EXPORT void Clear (const AIS_ClearMode atype = AIS_CM_All);
   
+  Standard_EXPORT void SetSelectionModeActive (const Handle(AIS_InteractiveObject)& theObj,
+                                               const Standard_Integer theMode,
+                                               const Standard_Boolean theIsActive,
+                                               const AIS_SelectionModesConcurrency theActiveFilter);
+
   //! optional : activation of a mode which is not 0 for a selectable...
-  Standard_EXPORT void ActivateMode (const Handle(AIS_InteractiveObject)& aSelectable, const Standard_Integer aMode);
-  
-  Standard_EXPORT void DeactivateMode (const Handle(AIS_InteractiveObject)& aSelectable, const Standard_Integer aMode);
-  
-  Standard_EXPORT void Deactivate (const Handle(AIS_InteractiveObject)& aSelectable);
+  void ActivateMode (const Handle(AIS_InteractiveObject)& theObj, const Standard_Integer theMode)
+  {
+    SetSelectionModeActive (theObj, theMode, Standard_True, AIS_SelectionModesConcurrency_GlobalOrLocal);
+  }
+
+  void DeactivateMode (const Handle(AIS_InteractiveObject)& theObj, const Standard_Integer theMode)
+  {
+    SetSelectionModeActive (theObj, theMode, Standard_False, AIS_SelectionModesConcurrency_GlobalOrLocal);
+  }
+
+  void Deactivate (const Handle(AIS_InteractiveObject)& theObj)
+  {
+    SetSelectionModeActive (theObj, -1, Standard_False, AIS_SelectionModesConcurrency_Single);
+  }
   
   //! decomposition of shapes into <aType>
   Standard_EXPORT void ActivateStandardMode (const TopAbs_ShapeEnum aType);
@@ -163,9 +179,14 @@ public:
   Standard_EXPORT Standard_Integer HilightPreviousDetected (const Handle(V3d_View)& theView, const Standard_Boolean theToRedrawImmediate);
   
   //! returns True if something was done...
-  Standard_EXPORT Standard_Boolean UnhilightLastDetected (const Handle(V3d_View)& aView);
+  Standard_EXPORT Standard_Boolean UnhilightLastDetected (const Handle(V3d_Viewer)& theViewer);
+
+  //! returns True if something was done...
+  Standard_EXPORT Standard_Boolean UnhilightLastDetected (const Handle(V3d_View)& theView);
   
   //! returns the number of selected
+  Standard_EXPORT AIS_StatusOfPick AddSelect (const Handle(SelectMgr_EntityOwner)& theObject);
+
   Standard_EXPORT AIS_StatusOfPick Select (const Standard_Boolean updateviewer = Standard_True);
   
   Standard_EXPORT AIS_StatusOfPick ShiftSelect (const Standard_Boolean updateviewer = Standard_True);
@@ -231,12 +252,13 @@ public:
   //! Gets next current object during iteration through mouse-detected
   //! interactive objects.
   Standard_EXPORT void NextDetected();
-  
+
+  //! @return current mouse-detected Owner or null object if there is no current detected.
+  Standard_EXPORT Handle(SelectMgr_EntityOwner) DetectedCurrentOwner() const;
 
   //! @return current mouse-detected shape or empty (null) shape, if current interactive object
   //! is not a shape (AIS_Shape) or there is no current mouse-detected interactive object at all.
   Standard_EXPORT const TopoDS_Shape& DetectedCurrentShape() const;
-  
 
   //! @return current mouse-detected interactive object or null object if there is no current detected.
   Standard_EXPORT Handle(AIS_InteractiveObject) DetectedCurrentObject() const;
@@ -299,13 +321,15 @@ public:
   
   Standard_EXPORT void Hilight (const Handle(AIS_InteractiveObject)& anObject);
   
-  Standard_EXPORT void Hilight (const Handle(AIS_InteractiveObject)& anObject, const Quantity_NameOfColor aCol);
+  Standard_EXPORT void Hilight (const Handle(AIS_InteractiveObject)& theObj,
+                                const Handle(Prs3d_Drawer)& theStyle);
   
   Standard_EXPORT void Unhilight (const Handle(AIS_InteractiveObject)& anObject);
   
   Standard_EXPORT Standard_Boolean IsHilighted (const Handle(AIS_InteractiveObject)& anObject) const;
   
-  Standard_EXPORT Standard_Boolean IsHilighted (const Handle(AIS_InteractiveObject)& anObject, Standard_Boolean& WithColor, Quantity_NameOfColor& HiCol) const;
+  Standard_EXPORT Standard_Boolean HighlightStyle (const Handle(AIS_InteractiveObject)& theObject,
+                                                   Handle(Prs3d_Drawer)& theStyle) const;
   
   //! Define the current selection sensitivity for
   //! this local context according to the view size.
@@ -360,15 +384,7 @@ public:
   //! stored in local status
   Standard_EXPORT void RestoreActivatedModes() const;
 
-
-
-
-  DEFINE_STANDARD_RTTIEXT(AIS_LocalContext,MMgt_TShared)
-
-protected:
-
-
-
+  DEFINE_STANDARD_RTTIEXT(AIS_LocalContext,Standard_Transient)
 
 private:
 
@@ -411,7 +427,6 @@ private:
   Handle(SelectMgr_SelectionManager) mySM;
   Handle(StdSelect_ViewerSelector3d) myMainVS;
   Handle(PrsMgr_PresentationManager3d) myMainPM;
-  TCollection_AsciiString mySelName;
   Handle(StdSelect_ViewerSelector3d) myCollVS;
   AIS_DataMapOfSelStat myActiveObjects;
   Handle(SelectMgr_OrFilter) myFilters;
@@ -419,14 +434,14 @@ private:
   Handle(SelectMgr_Filter) myStdFilters[9];
   Standard_Boolean myAutoHilight;
   Handle(SelectMgr_IndexedMapOfOwner) myMapOfOwner;
+  Handle(AIS_Selection) mySelection;
   Standard_Integer mylastindex;
   Standard_Integer mylastgood;
   Standard_Integer myCurrentOwner;
   TColStd_SequenceOfInteger myDetectedSeq;
   Standard_Integer myCurDetected;
-  AIS_SequenceOfInteractive myAISDetectedSeq;
   Standard_Integer myAISCurDetected;
-
+  Handle(Prs3d_Drawer) mySubintStyle;
 
 };
 

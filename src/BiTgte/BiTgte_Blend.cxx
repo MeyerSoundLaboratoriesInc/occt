@@ -20,7 +20,6 @@
 #include <Approx_FitAndDivide.hxx>
 #include <BiTgte_Blend.hxx>
 #include <BiTgte_CurveOnEdge.hxx>
-#include <BiTgte_DataMapOfShapeBox.hxx>
 #include <Bnd_Box.hxx>
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
@@ -69,7 +68,6 @@
 #include <gp_Pnt.hxx>
 #include <gp_Pnt2d.hxx>
 #include <gp_Sphere.hxx>
-#include <OSD_Chronometer.hxx>
 #include <Precision.hxx>
 #include <Standard_NotImplemented.hxx>
 #include <Standard_OutOfRange.hxx>
@@ -92,14 +90,20 @@
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_SequenceOfShape.hxx>
 
+#ifdef OCCT_DEBUG
+#include <OSD_Chronometer.hxx>
+#endif
+
 #include <stdio.h>
 // include - all hxx,
 //         - all small static functions.
 //======================== START STATIC FUNCTIONS ============
 // variables for performance 
 Standard_Real t_mkcurve;
+#ifdef OCCT_DEBUG
 extern void ChFi3d_InitChron(OSD_Chronometer& ch);
 extern void ChFi3d_ResultChron(OSD_Chronometer & ch, Standard_Real&    time);
+#endif
 #ifdef DRAW
 static Standard_Boolean Affich = Standard_False;
 static char name[100];
@@ -949,7 +953,7 @@ void BiTgte_Blend::Perform(const Standard_Boolean BuildShape)
   for ( ;expf.More(); expf.Next()) Sew->Add(expf.Current());
   Sew->Perform();
   TopoDS_Shape SewedShape = Sew->SewedShape();
-  if ( SewedShape.IsNull()) Standard_Failure::Raise("Sewing aux fraises");
+  if ( SewedShape.IsNull()) throw Standard_Failure("Sewing aux fraises");
 
   // Check if the sewing modified the orientation.
   expf.Init(myShape,TopAbs_FACE);
@@ -981,12 +985,7 @@ void BiTgte_Blend::Perform(const Standard_Boolean BuildShape)
   for ( ; expf.More(); expf.Next()) {
     const TopoDS_Shape& F = expf.Current();
     if ( myFaces.Contains(F) && Sew->IsModified(F)) {
-      //myFaces.Remove(F);
-      TopoDS_Shape LastFace = myFaces(myFaces.Extent());
-      myFaces.RemoveLast();
-      if (myFaces.FindIndex(F) != 0)
-        myFaces.Substitute(myFaces.FindIndex(F), LastFace);
-      ////////////////////
+      myFaces.RemoveKey(F);
       myFaces.Add(Sew->Modified(F));
     }
   }
@@ -1009,12 +1008,7 @@ void BiTgte_Blend::Perform(const Standard_Boolean BuildShape)
   for ( ; exp.More(); exp.Next()) {
     const TopoDS_Shape& F = exp.Current();
     if ( myFaces.Contains(F)) {
-      //myFaces.Remove(F);
-      TopoDS_Shape LastFace = myFaces(myFaces.Extent());
-      myFaces.RemoveLast();
-      if (myFaces.FindIndex(F) != 0)
-        myFaces.Substitute(myFaces.FindIndex(F), LastFace);
-      ////////////////////
+      myFaces.RemoveKey(F);
       myFaces.Add(F);
     }
     else if ( myStopFaces.Contains(F)) {
@@ -1168,7 +1162,7 @@ const
 const TopoDS_Face& BiTgte_Blend::Face(const TopoDS_Shape& CenterLine) const
 {
   if ( !myMapSF.IsBound(CenterLine)) {
-    Standard_DomainError::Raise("BiTgte_Blend::Face");
+    throw Standard_DomainError("BiTgte_Blend::Face");
   }
 
   return myMapSF(CenterLine).Face();
@@ -1496,7 +1490,7 @@ void BiTgte_Blend::ComputeCenters()
   if (myRadius < 0.) Side = TopAbs_OUT;
   BRepOffset_Inter3d Inter(myAsDes,Side,myTol);
 
-  BiTgte_DataMapOfShapeBox         MapSBox;
+  TopTools_DataMapOfShapeBox         MapSBox;
   TopTools_MapOfShape              Done;
   //TopTools_MapIteratorOfMapOfShape it;
 
@@ -1726,7 +1720,7 @@ void BiTgte_Blend::ComputeCenters()
   // -------------------------------------------------------------------
 
   // Proceed with MakeLoops 
-
+  TopTools_IndexedDataMapOfShapeListOfShape aDMVV;
   BRepOffset_Type    OT = BRepOffset_Concave;
   if (myRadius < 0.) OT = BRepOffset_Convex; 
    
@@ -1779,7 +1773,8 @@ void BiTgte_Blend::ComputeCenters()
       BRepOffset_Inter2d::Compute(myAsDes,
 				  CurOF,
 				  myEdges,
-				  myTol);
+				  myTol,
+				  aDMVV);
     }
   }
 
@@ -1811,8 +1806,12 @@ void BiTgte_Blend::ComputeCenters()
     BRepOffset_Inter2d::Compute(myAsDes,
 				CurOF,
 				myEdges,
-				myTol);
+				myTol,
+				aDMVV);
   }
+  //
+  // fuse vertices on edges stored in AsDes
+  BRepOffset_Inter2d::FuseVertices(aDMVV, myAsDes);
   // ------------
   // unwinding 
   // ------------
@@ -2574,7 +2573,7 @@ void BiTgte_Blend::ComputeShape()
 Standard_Boolean BiTgte_Blend::Intersect
 (const TopoDS_Shape&             Init,
  const TopoDS_Face&              Face,
- const BiTgte_DataMapOfShapeBox& MapSBox,
+ const TopTools_DataMapOfShapeBox& MapSBox,
  const BRepOffset_Offset&        OF1,
        BRepOffset_Inter3d&       Inter) 
 {

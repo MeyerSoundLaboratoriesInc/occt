@@ -15,11 +15,19 @@
 
 
 #include <IVtkVTK_View.hxx>
+
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#endif
 #include <vtkAutoInit.h>
 #include <vtkCamera.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkTransform.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 IMPLEMENT_STANDARD_RTTIEXT(IVtkVTK_View,IVtk_IView)
 
@@ -27,7 +35,11 @@ IMPLEMENT_STANDARD_RTTIEXT(IVtkVTK_View,IVtk_IView)
 // Since VTK 6 the factory methods require "auto-initialization" depending on
 // what modules are enabled at VTK configure time.
 // Some defines are needed in order to make the factories work properly.
+#ifdef VTK_OPENGL2_BACKEND
+VTK_MODULE_INIT(vtkRenderingOpenGL2)
+#else
 VTK_MODULE_INIT(vtkRenderingOpenGL)
+#endif
 VTK_MODULE_INIT(vtkInteractionStyle)
 
 // Handle implementation
@@ -157,7 +169,8 @@ bool IVtkVTK_View::DisplayToWorld (const gp_XY& theDisplayPnt, gp_XYZ& theWorldP
     return false;
   }
 
-  theWorldPnt = gp_XYZ (aCoords[0] / aCoords[3], aCoords[1] / aCoords[3], aCoords[2] / aCoords[3]);
+  theWorldPnt = gp_XYZ (aCoords[0] / aCoords[3], 
+    aCoords[1] / aCoords[3], aCoords[2] / aCoords[3]);
 
   return true;
 }
@@ -184,9 +197,10 @@ void IVtkVTK_View::GetCamera (Graphic3d_Mat4d& theProj,
   theIsOrtho = !IsPerspective();
 
   vtkMatrix4x4* aCompositeProj =
-    myRenderer->GetActiveCamera()->GetCompositeProjectionTransformMatrix (myRenderer->GetTiledAspectRatio(),
-                                                                          0,
-                                                                          1);
+    myRenderer->GetActiveCamera()->
+    GetCompositeProjectionTransformMatrix (myRenderer->GetTiledAspectRatio(),
+                                           0,
+                                           1);
   for (Standard_Integer aRow = 0; aRow < 4; ++aRow)
   {
     for (Standard_Integer aCol = 0; aCol < 4; ++aCol)

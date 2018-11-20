@@ -62,6 +62,8 @@
 			<Add library="TKMath" />
 			<Add library="TKDraw" />
 			<Add library="TKDCAF" />
+			<Add library="TKBinTObj" />
+			<Add library="TKXmlTObj" />
 		</Linker>
 		<Unit filename="../../../src/TObjDRAW/TObjDRAW.cxx" />
 	</Project>

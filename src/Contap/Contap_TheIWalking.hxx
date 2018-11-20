@@ -31,11 +31,13 @@
 #include <gp_Vec.hxx>
 #include <gp_Dir2d.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
+#include <TColStd_DataMapOfIntegerListOfInteger.hxx>
 #include <Contap_SequenceOfIWLineOfTheIWalking.hxx>
 #include <IntSurf_SequenceOfInteriorPoint.hxx>
 #include <Standard_Integer.hxx>
 #include <TColStd_SequenceOfReal.hxx>
 #include <IntWalk_StatusDeflection.hxx>
+#include <Bnd_Range.hxx>
 class StdFail_NotDone;
 class Standard_OutOfRange;
 class IntSurf_PathPoint;
@@ -61,7 +63,11 @@ public:
   //! consecutive points (in 2d space).
   //! Epsilon is the tolerance beyond which 2 points
   //! are confused.
-  Standard_EXPORT Contap_TheIWalking(const Standard_Real Epsilon, const Standard_Real Deflection, const Standard_Real Step);
+  //! theToFillHoles is the flag defining whether possible holes
+  //! between resulting curves are filled or not
+  //! in case of Contap walking theToFillHoles is True
+  Standard_EXPORT Contap_TheIWalking(const Standard_Real Epsilon, const Standard_Real Deflection, const Standard_Real Step,
+                                     const Standard_Boolean theToFillHoles = Standard_False);
   
   //! Deflection is the maximum deflection admitted between two
   //! consecutive points on a resulting polyline.
@@ -117,6 +123,10 @@ protected:
   
   Standard_EXPORT Standard_Boolean TestArretAjout (Contap_SurfFunction& Section, math_Vector& UV, Standard_Integer& Irang, IntSurf_PntOn2S& PSol);
   
+  Standard_EXPORT void FillPntsInHoles (Contap_SurfFunction& Section,
+                                        TColStd_SequenceOfInteger& CopySeqAlone,
+                                        IntSurf_SequenceOfInteriorPoint& PntsInHoles);
+  
   Standard_EXPORT void TestArretCadre (const TColStd_SequenceOfReal& Umult, const TColStd_SequenceOfReal& Vmult, const Handle(Contap_TheIWLineOfTheIWalking)& Line, Contap_SurfFunction& Section, math_Vector& UV, Standard_Integer& Irang);
   
   Standard_EXPORT IntWalk_StatusDeflection TestDeflection (Contap_SurfFunction& Section, const Standard_Boolean Finished, const math_Vector& UV, const IntWalk_StatusDeflection StatusPrecedent, Standard_Integer& NbDivision, Standard_Real& Step, const Standard_Integer StepSign);
@@ -124,6 +134,12 @@ protected:
   Standard_EXPORT void ComputeOpenLine (const TColStd_SequenceOfReal& Umult, const TColStd_SequenceOfReal& Vmult, const IntSurf_SequenceOfPathPoint& Pnts1, Contap_SurfFunction& Section, Standard_Boolean& Rajout);
   
   Standard_EXPORT void OpenLine (const Standard_Integer N, const IntSurf_PntOn2S& Psol, const IntSurf_SequenceOfPathPoint& Pnts1, Contap_SurfFunction& Section, const Handle(Contap_TheIWLineOfTheIWalking)& Line);
+  
+  Standard_EXPORT Standard_Boolean IsValidEndPoint (const Standard_Integer IndOfPoint, const Standard_Integer IndOfLine);
+  
+  Standard_EXPORT void RemoveTwoEndPoints (const Standard_Integer IndOfPoint);
+  
+  Standard_EXPORT Standard_Boolean IsPointOnLine (const gp_Pnt2d& theP2d, const Standard_Integer Irang);
   
   Standard_EXPORT void ComputeCloseLine (const TColStd_SequenceOfReal& Umult, const TColStd_SequenceOfReal& Vmult, const IntSurf_SequenceOfPathPoint& Pnts1, const IntSurf_SequenceOfInteriorPoint& Pnts2, Contap_SurfFunction& Section, Standard_Boolean& Rajout);
   
@@ -151,6 +167,8 @@ private:
   IntWalk_VectorOfWalkingData wd1;
   IntWalk_VectorOfWalkingData wd2;
   IntWalk_VectorOfInteger nbMultiplicities;
+  Bnd_Range mySRangeU; // Estimated U-range for section curve
+  Bnd_Range mySRangeV; // Estimated V-range for section curve
   Standard_Real Um;
   Standard_Real UM;
   Standard_Real Vm;
@@ -159,7 +177,10 @@ private:
   gp_Vec previousd3d;
   gp_Dir2d previousd2d;
   TColStd_SequenceOfInteger seqAjout;
+  TColStd_SequenceOfInteger seqAlone;
+  TColStd_DataMapOfIntegerListOfInteger PointLineLine;
   Contap_SequenceOfIWLineOfTheIWalking lines;
+  Standard_Boolean ToFillHoles;
 
 
 };

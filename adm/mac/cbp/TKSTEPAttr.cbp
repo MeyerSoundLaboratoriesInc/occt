@@ -60,6 +60,9 @@
 			<Add library="TKSTEPBase" />
 		</Linker>
 		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationCurveOccurrence.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationFillArea.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationFillAreaOccurrence.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationOccurrence.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationPlane.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_AnnotationPlaneElement.cxx" />
@@ -75,7 +78,13 @@
 		<Unit filename="../../../src/StepVisual/StepVisual_CameraModel.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD2.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3MultiClipping.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3MultiClippingInterectionSelect.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3MultiClippingIntersection.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3MultiClippingUnion.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CameraModelD3MultiClippingUnionSelect.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_CameraUsage.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_Colour.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_ColourRgb.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_ColourSpecification.cxx" />
@@ -109,6 +118,7 @@
 		<Unit filename="../../../src/StepVisual/StepVisual_MarkerSelect.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_MechanicalDesignGeometricPresentationArea.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_MechanicalDesignGeometricPresentationRepresentation.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_NullStyleMember.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_OverRidingStyledItem.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_PlanarBox.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_PlanarExtent.cxx" />
@@ -133,6 +143,7 @@
 		<Unit filename="../../../src/StepVisual/StepVisual_PresentedItemRepresentation.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_StyleContextSelect.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_StyledItem.cxx" />
+		<Unit filename="../../../src/StepVisual/StepVisual_StyledItemTarget.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_SurfaceSideStyle.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_SurfaceStyleBoundary.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_SurfaceStyleControlGrid.cxx" />
@@ -155,6 +166,9 @@
 		<Unit filename="../../../src/StepVisual/StepVisual_TextStyleWithBoxCharacteristics.cxx" />
 		<Unit filename="../../../src/StepVisual/StepVisual_ViewVolume.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationCurveOccurrence.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationFillArea.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationFillAreaOccurrence.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationOccurrence.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAnnotationPlane.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWAreaInSet.cxx" />
@@ -163,7 +177,11 @@
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModel.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModelD2.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModelD3.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModelD3MultiClipping.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModelD3MultiClippingIntersection.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraModelD3MultiClippingUnion.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCameraUsage.cxx" />
+		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWCharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWColour.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWColourRgb.cxx" />
 		<Unit filename="../../../src/RWStepVisual/RWStepVisual_RWColourSpecification.cxx" />

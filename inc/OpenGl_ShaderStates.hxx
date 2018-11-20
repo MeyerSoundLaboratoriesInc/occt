@@ -16,11 +16,9 @@
 #ifndef _OpenGl_State_HeaderFile
 #define _OpenGl_State_HeaderFile
 
-#include <Graphic3d_TypeOfSurfaceDetail.hxx>
-#include <InterfaceGraphic_tgl_all.hxx>
 #include <NCollection_List.hxx>
+#include <Graphic3d_LightSet.hxx>
 #include <OpenGl_Element.hxx>
-#include <OpenGl_Light.hxx>
 #include <OpenGl_Vec.hxx>
 
 //! Defines interface for OpenGL state.
@@ -29,7 +27,7 @@ class OpenGl_StateInterface
 public:
 
   //! Creates new state.
-  OpenGl_StateInterface();
+  Standard_EXPORT OpenGl_StateInterface();
 
   //! Returns current state index.
   Standard_Size Index() const { return myIndex; }
@@ -49,16 +47,16 @@ class OpenGl_ProjectionState : public OpenGl_StateInterface
 public:
 
   //! Creates uninitialized projection state.
-  OpenGl_ProjectionState();
+  Standard_EXPORT OpenGl_ProjectionState();
 
   //! Sets new projection matrix.
-  void Set (const OpenGl_Mat4& theProjectionMatrix);
+  Standard_EXPORT void Set (const OpenGl_Mat4& theProjectionMatrix);
 
   //! Returns current projection matrix.
-  const OpenGl_Mat4& ProjectionMatrix() const;
+  Standard_EXPORT const OpenGl_Mat4& ProjectionMatrix() const;
 
   //! Returns inverse of current projection matrix.
-  const OpenGl_Mat4& ProjectionMatrixInverse() const;
+  Standard_EXPORT const OpenGl_Mat4& ProjectionMatrixInverse() const;
 
 private:
 
@@ -74,16 +72,16 @@ class OpenGl_ModelWorldState : public OpenGl_StateInterface
 public:
 
   //! Creates uninitialized model-world state.
-  OpenGl_ModelWorldState();
+  Standard_EXPORT OpenGl_ModelWorldState();
 
   //! Sets new model-world matrix.
-  void Set (const OpenGl_Mat4& theModelWorldMatrix);
+  Standard_EXPORT void Set (const OpenGl_Mat4& theModelWorldMatrix);
 
   //! Returns current model-world matrix.
-  const OpenGl_Mat4& ModelWorldMatrix() const;
+  Standard_EXPORT const OpenGl_Mat4& ModelWorldMatrix() const;
 
   //! Returns inverse of current model-world matrix.
-  const OpenGl_Mat4& ModelWorldMatrixInverse() const;
+  Standard_EXPORT const OpenGl_Mat4& ModelWorldMatrixInverse() const;
 
 private:
 
@@ -99,16 +97,16 @@ class OpenGl_WorldViewState : public OpenGl_StateInterface
 public:
 
   //! Creates uninitialized world-view state.
-  OpenGl_WorldViewState();
+  Standard_EXPORT OpenGl_WorldViewState();
 
   //! Sets new world-view matrix.
-  void Set (const OpenGl_Mat4& theWorldViewMatrix);
+  Standard_EXPORT void Set (const OpenGl_Mat4& theWorldViewMatrix);
 
   //! Returns current world-view matrix.
-  const OpenGl_Mat4& WorldViewMatrix() const;
+  Standard_EXPORT const OpenGl_Mat4& WorldViewMatrix() const;
 
   //! Returns inverse of current world-view matrix.
-  const OpenGl_Mat4& WorldViewMatrixInverse() const;
+  Standard_EXPORT const OpenGl_Mat4& WorldViewMatrixInverse() const;
 
 private:
 
@@ -124,37 +122,17 @@ class OpenGl_LightSourceState : public OpenGl_StateInterface
 public:
 
   //! Creates uninitialized state of light sources.
-  OpenGl_LightSourceState();
+  OpenGl_LightSourceState() {}
 
   //! Sets new light sources.
-  void Set (const OpenGl_ListOfLight* theLightSources);
+  void Set (const Handle(Graphic3d_LightSet)& theLightSources) { myLightSources = theLightSources; }
 
   //! Returns current list of light sources.
-  const OpenGl_ListOfLight* LightSources() const;
+  const Handle(Graphic3d_LightSet)& LightSources() const { return myLightSources; }
 
 private:
 
-  const OpenGl_ListOfLight* myLightSources; //!< List of OCCT light sources
-
-};
-
-//! Defines generic state of OCCT material properties.
-class OpenGl_MaterialState : public OpenGl_StateInterface
-{
-public:
-
-  //! Creates new material state.
-  OpenGl_MaterialState (const OpenGl_Element* theAspect = NULL);
-
-  //! Sets new material aspect.
-  void Set (const OpenGl_Element* theAspect);
-
-  //! Returns material aspect.
-  const OpenGl_Element* Aspect() const;
-
-private:
-
-  const OpenGl_Element* myAspect; //!< OCCT material aspect
+  Handle(Graphic3d_LightSet) myLightSources; //!< List of OCCT light sources
 
 };
 
@@ -164,16 +142,16 @@ class OpenGl_ClippingState
 public:
 
   //! Creates new clipping state.
-  OpenGl_ClippingState();
+  Standard_EXPORT OpenGl_ClippingState();
 
   //! Returns current state index.
   Standard_Size Index() const { return myIndex; }
 
   //! Updates current state.
-  void Update();
+  Standard_EXPORT void Update();
 
   //! Reverts current state.
-  void Revert();
+  Standard_EXPORT void Revert();
 
 protected:
 
@@ -183,28 +161,38 @@ protected:
 
 };
 
-//! Defines generic state of OCCT surface detail.
-class OpenGl_SurfaceDetailState : public OpenGl_StateInterface
+//! Defines generic state of order-independent transparency rendering properties.
+class OpenGl_OitState : public OpenGl_StateInterface
 {
 public:
 
-  //! Creates new surface detail state.
-  OpenGl_SurfaceDetailState (const Graphic3d_TypeOfSurfaceDetail theDetail = Graphic3d_TOD_NONE)
-  : myDetail (theDetail)
+  //! Creates new uniform state.
+  OpenGl_OitState() : myToEnableWrite (false), myDepthFactor (0.5f) {}
+
+  //! Sets the uniform values.
+  //! @param theToEnableWrite [in] flag indicating whether color and coverage
+  //!  values for OIT processing should be written by shader program.
+  //! @param theDepthFactor [in] scalar factor [0-1] defining influence of depth
+  //!  component of a fragment to its final coverage coefficient.
+  void Set (const bool  theToEnableWrite,
+            const float theDepthFactor)
   {
-    //
+    myToEnableWrite = theToEnableWrite;
+    myDepthFactor   = static_cast<float> (Max (0.f, Min (1.f, theDepthFactor)));
   }
 
-  //! Sets new surface detail.
-  void Set (const Graphic3d_TypeOfSurfaceDetail theDetail) { myDetail = theDetail; }
+  //! Returns flag indicating whether writing of output for OIT processing
+  //! should be enabled/disabled.
+  bool ToEnableWrite() const { return myToEnableWrite; }
 
-  //! Returns surface detail.
-  Graphic3d_TypeOfSurfaceDetail Detail() const { return myDetail; }
+  //! Returns factor defining influence of depth component of a fragment
+  //! to its final coverage coefficient.
+  float DepthFactor() const { return myDepthFactor; }
 
 private:
 
-  Graphic3d_TypeOfSurfaceDetail myDetail; //!< OCCT surface detail
-
+  bool  myToEnableWrite; //!< writing color and coverage.
+  float myDepthFactor;   //!< factor of depth influence to coverage.
 };
 
 #endif // _OpenGl_State_HeaderFile

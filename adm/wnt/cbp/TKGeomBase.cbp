@@ -17,28 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__ProjLib_DLL" />
-					<Add option="-D__GeomProjLib_DLL" />
-					<Add option="-D__GCPnts_DLL" />
-					<Add option="-D__CPnts_DLL" />
-					<Add option="-D__Approx_DLL" />
-					<Add option="-D__AppParCurves_DLL" />
-					<Add option="-D__FEmTool_DLL" />
-					<Add option="-D__AppCont_DLL" />
-					<Add option="-D__Extrema_DLL" />
-					<Add option="-D__IntAna_DLL" />
-					<Add option="-D__IntAna2d_DLL" />
-					<Add option="-D__GeomConvert_DLL" />
-					<Add option="-D__AdvApp2Var_DLL" />
-					<Add option="-D__GeomLib_DLL" />
-					<Add option="-D__Geom2dConvert_DLL" />
-					<Add option="-D__Hermit_DLL" />
-					<Add option="-D__BndLib_DLL" />
-					<Add option="-D__AppDef_DLL" />
-					<Add option="-D__GeomTools_DLL" />
-					<Add option="-D__GC_DLL" />
-					<Add option="-D__GCE2d_DLL" />
-					<Add option="-D__gce_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKGeomBase_obj.link" />
@@ -57,28 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__ProjLib_DLL" />
-					<Add option="-D__GeomProjLib_DLL" />
-					<Add option="-D__GCPnts_DLL" />
-					<Add option="-D__CPnts_DLL" />
-					<Add option="-D__Approx_DLL" />
-					<Add option="-D__AppParCurves_DLL" />
-					<Add option="-D__FEmTool_DLL" />
-					<Add option="-D__AppCont_DLL" />
-					<Add option="-D__Extrema_DLL" />
-					<Add option="-D__IntAna_DLL" />
-					<Add option="-D__IntAna2d_DLL" />
-					<Add option="-D__GeomConvert_DLL" />
-					<Add option="-D__AdvApp2Var_DLL" />
-					<Add option="-D__GeomLib_DLL" />
-					<Add option="-D__Geom2dConvert_DLL" />
-					<Add option="-D__Hermit_DLL" />
-					<Add option="-D__BndLib_DLL" />
-					<Add option="-D__AppDef_DLL" />
-					<Add option="-D__GeomTools_DLL" />
-					<Add option="-D__GC_DLL" />
-					<Add option="-D__GCE2d_DLL" />
-					<Add option="-D__gce_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKGeomBase_objd.link" />
@@ -159,6 +115,12 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/GCPnts/GCPnts_AbscissaPoint.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/GCPnts/GCPnts_DistFunction.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/GCPnts/GCPnts_DistFunction2d.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/GCPnts/GCPnts_QuasiUniformAbscissa.cxx">
@@ -368,10 +330,13 @@
 		<Unit filename="../../../src/Extrema/Extrema_FuncExtCS.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Extrema/Extrema_FuncExtPS.cxx">
+		<Unit filename="../../../src/Extrema/Extrema_FuncExtSS.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Extrema/Extrema_FuncExtSS.cxx">
+		<Unit filename="../../../src/Extrema/Extrema_FuncPSDist.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/Extrema/Extrema_FuncPSNorm.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Extrema/Extrema_GenExtCS.cxx">
@@ -444,12 +409,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Extrema/Extrema_POnCurv_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Extrema/Extrema_POnSurf.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Extrema/Extrema_POnSurfParams.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/IntAna/IntAna_Curve.cxx">
@@ -827,9 +786,6 @@
 		<Unit filename="../../../src/GC/GC_MakeTrimmedCylinder.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/GC/GC_Root.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeArcOfCircle.cxx">
 			<Option link="0" />
 		</Unit>
@@ -870,9 +826,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeTranslation.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/GCE2d/GCE2d_Root.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/gce/gce_MakeCirc.cxx">

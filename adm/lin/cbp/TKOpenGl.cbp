@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -55,21 +57,20 @@
 			<Add directory="../../../inc" />
 		</Compiler>
 		<Linker>
+			<Add library="tbb" />
+			<Add library="tbbmalloc" />
+			<Add library="freetype" />
+			<Add library="gl2ps" />
 			<Add library="GL" />
 			<Add library="X11" />
 			<Add library="Xext" />
 			<Add library="Xmu" />
 			<Add library="Xi" />
-			<Add library="freetype" />
-			<Add library="gl2ps" />
-			<Add library="tbb" />
-			<Add library="tbbmalloc" />
 			<Add library="TKernel" />
 			<Add library="TKService" />
 			<Add library="TKMath" />
 			<Add library="TKV3d" />
 		</Linker>
-		<Unit filename="../../../src/OpenGl/OpenGl_AVIWriter.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_AspectFace.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_AspectLine.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_AspectMarker.cxx" />
@@ -83,12 +84,12 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_Caps.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Clipping.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Context.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_Cylinder.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_Disk.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Element.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Flipper.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Font.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_FrameBuffer.cxx" />
+		<Unit filename="../../../src/OpenGl/OpenGl_FrameStats.cxx" />
+		<Unit filename="../../../src/OpenGl/OpenGl_FrameStatsPrs.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_GraduatedTrihedron.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_GraphicDriver.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Group.cxx" />
@@ -98,8 +99,6 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_LineAttributes.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_PointSprite.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_PrimitiveArray.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_PrinterContext.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_Quadric.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_RenderFilter.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Resource.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Sampler.cxx" />
@@ -108,7 +107,6 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_ShaderObject.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_ShaderProgram.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_ShaderStates.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_Sphere.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_StencilTest.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Structure.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_StructureShadow.cxx" />
@@ -116,11 +114,11 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_TextBuilder.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Texture.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_TextureBufferArb.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_Trihedron.cxx" />
+		<Unit filename="../../../src/OpenGl/OpenGl_TextureSet.cxx" />
+		<Unit filename="../../../src/OpenGl/OpenGl_TileSampler.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_VertexBuffer.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_VertexBufferCompat.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_View.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_View_Print.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_View_Raytrace.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_View_Redraw.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_Window.cxx" />

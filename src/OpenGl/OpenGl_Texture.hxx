@@ -16,10 +16,11 @@
 #define _OpenGl_Texture_H__
 
 #include <OpenGl_GlCore13.hxx>
-#include <OpenGl_Resource.hxx>
+#include <OpenGl_NamedResource.hxx>
+#include <OpenGl_Sampler.hxx>
 #include <Graphic3d_TypeOfTexture.hxx>
+#include <Graphic3d_TextureUnit.hxx>
 
-class OpenGl_Context;
 class Graphic3d_TextureParams;
 class Image_PixMap;
 
@@ -279,22 +280,25 @@ private:
 
 };
 
-class OpenGl_Texture;
-DEFINE_STANDARD_HANDLE(OpenGl_Texture, OpenGl_Resource)
-
 //! Texture resource.
-class OpenGl_Texture : public OpenGl_Resource
+class OpenGl_Texture : public OpenGl_NamedResource
 {
-
+  DEFINE_STANDARD_RTTIEXT(OpenGl_Texture, OpenGl_NamedResource)
 public:
 
   //! Helpful constants
   static const GLuint NO_TEXTURE = 0;
 
+  //! Return pixel size of pixel format in bytes.
+  //! Note that this method considers that OpenGL natively supports this pixel format,
+  //! which might be not the case - in the latter case, actual pixel size might differ!
+  Standard_EXPORT static Standard_Size PixelSizeOfPixelFormat (Standard_Integer theInternalFormat);
+
 public:
 
-  //! Create uninitialized VBO.
-  Standard_EXPORT OpenGl_Texture (const Handle(Graphic3d_TextureParams)& theParams = NULL);
+  //! Create uninitialized texture.
+  Standard_EXPORT OpenGl_Texture (const TCollection_AsciiString& theResourceId = TCollection_AsciiString(),
+                                  const Handle(Graphic3d_TextureParams)& theParams = Handle(Graphic3d_TextureParams)());
 
   //! Destroy object.
   Standard_EXPORT virtual ~OpenGl_Texture();
@@ -355,13 +359,45 @@ public:
   //! Destroy object - will release GPU memory if any.
   Standard_EXPORT virtual void Release (OpenGl_Context* theCtx) Standard_OVERRIDE;
 
+  //! Return texture sampler.
+  const Handle(OpenGl_Sampler)& Sampler() const { return mySampler; }
+
+  //! Set texture sampler.
+  void SetSampler (const Handle(OpenGl_Sampler)& theSampler) { mySampler = theSampler; }
+
+  //! Initialize the Sampler Object (as OpenGL object).
+  //! @param theCtx currently bound OpenGL context
+  Standard_EXPORT bool InitSamplerObject (const Handle(OpenGl_Context)& theCtx);
+
+  //! Bind this Texture to the unit specified in sampler parameters.
+  //! Also binds Sampler Object if it is allocated.
+  void Bind (const Handle(OpenGl_Context)& theCtx) const
+  {
+    Bind (theCtx, mySampler->Parameters()->TextureUnit());
+  }
+
+  //! Unbind texture from the unit specified in sampler parameters.
+  //! Also unbinds Sampler Object if it is allocated.
+  void Unbind (const Handle(OpenGl_Context)& theCtx) const
+  {
+    Unbind (theCtx, mySampler->Parameters()->TextureUnit());
+  }
+
   //! Bind this Texture to specified unit.
+  //! Also binds Sampler Object if it is allocated.
   Standard_EXPORT void Bind (const Handle(OpenGl_Context)& theCtx,
-                             const GLenum                  theTextureUnit = GL_TEXTURE0) const;
+                             const Graphic3d_TextureUnit   theTextureUnit) const;
 
   //! Unbind texture from specified unit.
+  //! Also unbinds Sampler Object if it is allocated.
   Standard_EXPORT void Unbind (const Handle(OpenGl_Context)& theCtx,
-                               const GLenum                  theTextureUnit = GL_TEXTURE0) const;
+                               const Graphic3d_TextureUnit   theTextureUnit) const;
+
+  //! Revision of associated data source.
+  Standard_Size Revision() const { return myRevision; }
+
+  //! Set revision of associated data source.
+  void SetRevision (const Standard_Size theRevision) { myRevision = theRevision; }
 
   //! Notice that texture will be unbound after this call.
   Standard_EXPORT bool Init (const Handle(OpenGl_Context)& theCtx,
@@ -405,13 +441,7 @@ public:
                                const void*                   thePixels);
 
   //! @return true if texture was generated within mipmaps
-  Standard_EXPORT Standard_Boolean HasMipmaps() const;
-
-  //! @return assigned texture parameters (not necessary applied)
-  Standard_EXPORT const Handle(Graphic3d_TextureParams)& GetParams() const;
-
-  //! @param texture parameters
-  Standard_EXPORT void SetParams (const Handle(Graphic3d_TextureParams)& theParams);
+  Standard_Boolean HasMipmaps() const { return myHasMipmaps; }
 
   //! Return texture type and format by Image_PixMap data format.
   Standard_EXPORT static bool GetDataFormat (const Handle(OpenGl_Context)& theCtx,
@@ -420,23 +450,31 @@ public:
                                              GLenum&                       thePixelFormat,
                                              GLenum&                       theDataType);
 
+  //! Returns estimated GPU memory usage for holding data without considering overheads and allocation alignment rules.
+  Standard_EXPORT virtual Standard_Size EstimatedDataSize() const Standard_OVERRIDE;
+
 protected:
 
+  //! Apply default sampler parameters after texture creation.
+  Standard_EXPORT void applyDefaultSamplerParams (const Handle(OpenGl_Context)& theCtx);
+
+protected:
+
+  Handle(OpenGl_Sampler) mySampler; //!< texture sampler
+  Standard_Size    myRevision;   //!< revision of associated data source
   GLuint           myTextureId;  //!< GL resource ID
   GLenum           myTarget;     //!< GL_TEXTURE_1D/GL_TEXTURE_2D/GL_TEXTURE_3D
   GLsizei          mySizeX;      //!< texture width
   GLsizei          mySizeY;      //!< texture height
   GLsizei          mySizeZ;      //!< texture depth
   GLenum           myTextFormat; //!< texture format - GL_RGB, GL_RGBA,...
+  GLint            mySizedFormat;//!< internal (sized) texture format
+  Standard_Integer myNbSamples;  //!< number of MSAA samples
   Standard_Boolean myHasMipmaps; //!< flag indicates that texture was uploaded with mipmaps
   bool             myIsAlpha;    //!< indicates alpha format
 
-  Handle(Graphic3d_TextureParams) myParams; //!< texture parameters
-
-public:
-
-  DEFINE_STANDARD_RTTIEXT(OpenGl_Texture,OpenGl_Resource) // Type definition
-
 };
+
+DEFINE_STANDARD_HANDLE(OpenGl_Texture, OpenGl_NamedResource)
 
 #endif // _OpenGl_Texture_H__

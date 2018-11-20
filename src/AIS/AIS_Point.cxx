@@ -14,9 +14,9 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <AIS_Point.hxx>
 
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_Point.hxx>
 #include <Aspect_TypeOfLine.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <Geom_Point.hxx>
@@ -48,7 +48,16 @@ myComponent(aComponent),
 myHasTOM(Standard_False),
 myTOM(Aspect_TOM_PLUS)
 {
-  myHilightMode=-99;
+  myHilightDrawer = new Prs3d_Drawer();
+  myHilightDrawer->SetDisplayMode (-99);
+  myHilightDrawer->SetPointAspect (new Prs3d_PointAspect (Aspect_TOM_PLUS, Quantity_NOC_GRAY80, 3.0));
+  myHilightDrawer->SetColor (Quantity_NOC_GRAY80);
+  myHilightDrawer->SetZLayer (Graphic3d_ZLayerId_UNKNOWN);
+  myDynHilightDrawer = new Prs3d_Drawer();
+  myDynHilightDrawer->SetDisplayMode (-99);
+  myDynHilightDrawer->SetPointAspect (new Prs3d_PointAspect (Aspect_TOM_PLUS, Quantity_NOC_CYAN1, 3.0));
+  myDynHilightDrawer->SetColor (Quantity_NOC_CYAN1);
+  myDynHilightDrawer->SetZLayer (Graphic3d_ZLayerId_Top);
 }
 
 //=======================================================================
@@ -79,21 +88,14 @@ void AIS_Point::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresentat
                         const Handle(Prs3d_Presentation)& aPresentation, 
                         const Standard_Integer aMode)
 {
-  aPresentation->Clear();
-
   aPresentation->SetInfiniteState(myInfiniteState);
 
   if (aMode==0)
     StdPrs_Point::Add(aPresentation,myComponent,myDrawer);
   else if (aMode== -99)
     {
-      // Beeurk.. a revoir - rob-25/04/97
-      static Handle(Graphic3d_AspectMarker3d) PtA = 
-	new Graphic3d_AspectMarker3d ();
-      PtA->SetType(Aspect_TOM_PLUS);
-      PtA->SetScale(3.);
       Handle(Graphic3d_Group) TheGroup = Prs3d_Root::CurrentGroup(aPresentation);
-      TheGroup->SetPrimitivesAspect(PtA);
+      TheGroup->SetPrimitivesAspect (myHilightDrawer->PointAspect()->Aspect());
       Handle(Graphic3d_ArrayOfPoints) aPoint = new Graphic3d_ArrayOfPoints (1);
       aPoint->AddVertex (myComponent->X(),myComponent->Y(),myComponent->Z());
       TheGroup->AddPrimitiveArray (aPoint);
@@ -110,7 +112,7 @@ void AIS_Point::Compute(const Handle(Prs3d_Projector)& aProjector,
                         const Handle(Geom_Transformation)& aTransformation,
                         const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_Point::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
+// throw Standard_NotImplemented("AIS_Point::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
  PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation) ;
 }
 
@@ -130,18 +132,12 @@ void AIS_Point::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
 
 //=======================================================================
 //function : SetColor
-//purpose  : 
+//purpose  :
 //=======================================================================
-
-void AIS_Point::SetColor(const Quantity_NameOfColor aCol)
-{
-  SetColor(Quantity_Color(aCol));
-}
-
-void AIS_Point::SetColor(const Quantity_Color &aCol)
+void AIS_Point::SetColor (const Quantity_Color& theCol)
 {
   hasOwnColor=Standard_True;
-  myOwnColor=aCol;
+  myDrawer->SetColor (theCol);
   UpdatePointValues();
 }
 
@@ -203,10 +199,11 @@ void AIS_Point::UnsetMarker()
 //purpose  : 
 //=======================================================================
 
- Standard_Boolean  AIS_Point::
-AcceptDisplayMode(const Standard_Integer aMode) const
-{return aMode == 0;}
-
+ Standard_Boolean AIS_Point::AcceptDisplayMode (const Standard_Integer theMode) const
+{
+  return theMode == 0
+      || theMode == -99;
+}
 
 //=======================================================================
 //function : UpdatePointValues
@@ -221,21 +218,17 @@ void AIS_Point::UpdatePointValues()
     myDrawer->SetPointAspect (Handle(Prs3d_PointAspect)());
     return;
   }
-  Quantity_Color aCol;
-  Quantity_Color QCO;
-  Aspect_TypeOfMarker  aTOM;
-  Standard_Real        aScale;
-  
-  if(myDrawer->HasLink()){
-    myDrawer->Link()->PointAspect()->Aspect()->Values(QCO,aTOM,aScale);
-    aCol = QCO.Name();
+  Quantity_Color      aCol (Quantity_NOC_YELLOW);
+  Aspect_TypeOfMarker aTOM = Aspect_TOM_PLUS;
+  Standard_Real       aScale = 1.0;
+  if (myDrawer->HasLink())
+  {
+    aCol   = myDrawer->Link()->PointAspect()->Aspect()->Color();
+    aTOM   = myDrawer->Link()->PointAspect()->Aspect()->Type();
+    aScale = myDrawer->Link()->PointAspect()->Aspect()->Scale();
   }
-  else{
-    aCol = Quantity_NOC_YELLOW;
-    aTOM = Aspect_TOM_PLUS;
-    aScale = 1;
-  }
-  if(hasOwnColor) aCol = myOwnColor;
+
+  if(hasOwnColor) aCol = myDrawer->Color();
   if(myOwnWidth!=0.0) aScale = myOwnWidth;
   if(myHasTOM) aTOM = myTOM;
   

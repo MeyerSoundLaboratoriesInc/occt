@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -75,6 +77,12 @@
 			<Add library="TKCAF" />
 			<Add library="TKVCAF" />
 			<Add library="TKViewerTest" />
+			<Add library="TKStd" />
+			<Add library="TKStdL" />
+			<Add library="TKBin" />
+			<Add library="TKBinL" />
+			<Add library="TKXml" />
+			<Add library="TKXmlL" />
 		</Linker>
 		<Unit filename="../../../src/DDF/DDF.cxx" />
 		<Unit filename="../../../src/DDF/DDF_AttributeBrowser.cxx" />
@@ -91,6 +99,7 @@
 		<Unit filename="../../../src/DDocStd/DDocStd_DocumentCommands.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_DrawDocument.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_MTMCommands.cxx" />
+		<Unit filename="../../../src/DDocStd/DDocStd_ShapeSchemaCommands.cxx" />
 		<Unit filename="../../../src/DDocStd/DDocStd_ToolsCommands.cxx" />
 		<Unit filename="../../../src/DNaming/DNaming.cxx" />
 		<Unit filename="../../../src/DNaming/DNaming_BasicCommands.cxx" />

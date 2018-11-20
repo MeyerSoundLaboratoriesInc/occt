@@ -17,8 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__BinXCAFDrivers_DLL" />
-					<Add option="-D__BinMXCAFDoc_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBinXCAF_obj.link" />
@@ -37,8 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__BinXCAFDrivers_DLL" />
-					<Add option="-D__BinMXCAFDoc_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBinXCAF_objd.link" />
@@ -86,7 +82,13 @@
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_AreaDriver.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_AssemblyItemRefDriver.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_CentroidDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_ClippingPlaneToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_ColorDriver.cxx">
@@ -128,7 +130,28 @@
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_MaterialToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_NoteBalloonDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_NoteBinDataDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_NoteCommentDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_NoteDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_NotesToolDriver.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_ShapeToolDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_ViewDriver.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_ViewToolDriver.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BinMXCAFDoc/BinMXCAFDoc_VolumeDriver.cxx">

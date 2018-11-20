@@ -37,7 +37,7 @@
 #include <TCollection_HAsciiString.hxx>
 
 #include <stdio.h>
-IMPLEMENT_STANDARD_RTTIEXT(IGESData_IGESEntity,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(IGESData_IGESEntity,Standard_Transient)
 
 #define ThisEntity  Handle(IGESData_IGESEntity)::DownCast(This())
 
@@ -337,13 +337,12 @@ Standard_Boolean IGESData_IGESEntity::CResValues (const Standard_CString res1,
     Handle(IGESData_IGESEntity) IGESData_IGESEntity::UniqueParent () const
 {
   if (NbTypedProperties(STANDARD_TYPE(IGESData_SingleParentEntity)) != 1)
-    Interface_InterfaceError::Raise ("IGESEntity : UniqueParent");
+    throw Interface_InterfaceError("IGESEntity : UniqueParent");
   else {
     DeclareAndCast(IGESData_SingleParentEntity,PP,
 		   TypedProperty(STANDARD_TYPE(IGESData_SingleParentEntity)));
     return PP->SingleParent();
   }
-  return this;  // ne rime a rien (cf exception) mais calme le compilateur
 }
 
 
@@ -409,7 +408,7 @@ Handle(TCollection_HAsciiString) IGESData_IGESEntity::NameValue () const
     Standard_Boolean IGESData_IGESEntity::ArePresentAssociativities () const
 {
   if (!theAssocs.IsEmpty()) return Standard_True;
-  return (theStatusNum & IGESFlagAssocs);
+  return (theStatusNum & IGESFlagAssocs) != 0;
 }
 
     Standard_Integer IGESData_IGESEntity::NbAssociativities () const
@@ -460,7 +459,7 @@ Handle(TCollection_HAsciiString) IGESData_IGESEntity::NameValue () const
     Standard_Boolean IGESData_IGESEntity::ArePresentProperties () const
 {
   if (!theProps.IsEmpty()) return Standard_True;
-  return (theStatusNum & IGESFlagProps);
+  return (theStatusNum & IGESFlagProps) != 0;
 }
 
     Standard_Integer IGESData_IGESEntity::NbProperties () const

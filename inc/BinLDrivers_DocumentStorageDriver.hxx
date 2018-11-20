@@ -30,7 +30,7 @@
 #include <Standard_Boolean.hxx>
 #include <Standard_Type.hxx>
 class BinMDF_ADriverTable;
-class CDM_MessageDriver;
+class Message_Messenger;
 class TCollection_ExtendedString;
 class CDM_Document;
 class TDF_Label;
@@ -50,17 +50,14 @@ public:
   
   //! Constructor
   Standard_EXPORT BinLDrivers_DocumentStorageDriver();
-  
-  //! pure virtual method definition
-  Standard_EXPORT virtual TCollection_ExtendedString SchemaName() const Standard_OVERRIDE;
-  
+    
   //! Write <theDocument> to the binary file <theFileName>
   Standard_EXPORT virtual void Write (const Handle(CDM_Document)& theDocument, const TCollection_ExtendedString& theFileName) Standard_OVERRIDE;
 
   //! Write <theDocument> to theOStream
   Standard_EXPORT virtual void Write (const Handle(CDM_Document)& theDocument, Standard_OStream& theOStream) Standard_OVERRIDE;
   
-  Standard_EXPORT virtual Handle(BinMDF_ADriverTable) AttributeDrivers (const Handle(CDM_MessageDriver)& theMsgDriver);
+  Standard_EXPORT virtual Handle(BinMDF_ADriverTable) AttributeDrivers (const Handle(Message_Messenger)& theMsgDriver);
   
   //! Create a section that should be written after the OCAF data
   Standard_EXPORT void AddSection (const TCollection_AsciiString& theName, const Standard_Boolean isPostRead = Standard_True);
@@ -81,14 +78,10 @@ protected:
   
   //! defines the procedure of writing a shape  section to file
   Standard_EXPORT virtual void WriteShapeSection (BinLDrivers_DocumentSection& theDocSection, Standard_OStream& theOS);
-  
-  //! write  theMessage  to  the  MessageDriver  of  the
-  //! Application
-  Standard_EXPORT void WriteMessage (const TCollection_ExtendedString& theMessage);
 
   Handle(BinMDF_ADriverTable) myDrivers;
   BinObjMgt_SRelocationTable myRelocTable;
-
+  Handle(Message_Messenger) myMsgDriver;
 
 private:
 
@@ -105,7 +98,6 @@ private:
   Standard_EXPORT void UnsupportedAttrMsg (const Handle(Standard_Type)& theType);
 
   BinObjMgt_Persistent myPAtt;
-  Handle(CDM_MessageDriver) myMsgDriver;
   TDF_LabelList myEmptyLabels;
   TColStd_MapOfTransient myMapUnsupported;
   TColStd_IndexedMapOfTransient myTypesMap;

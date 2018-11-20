@@ -24,6 +24,7 @@
 #include <Standard_Boolean.hxx>
 class TopoDS_Shape;
 class Bnd_Box;
+class Bnd_OBB;
 
 
 //! This package provides the bounding boxes for curves
@@ -68,8 +69,39 @@ public:
   //! box is closer to the shape S.
   Standard_EXPORT static void AddClose (const TopoDS_Shape& S, Bnd_Box& B);
 
+  //! Adds the shape S to the bounding box B.
+  //! This algorith builds precise bounding box,
+  //! which differs from exact geometry boundaries of shape only on shape entities tolerances
+  //! Algorithm is the same as for method Add(..), but uses more precise methods for building boxes 
+  //! for geometry objects.
+  //! If useShapeTolerance = True, bounding box is enlardged by shape tolerances and 
+  //! these tolerances are used for numerical methods of bounding box size calculations, 
+  //! otherwise bounding box is built according to sizes of uderlined geometrical entities,
+  //! numerical calculation use tolerance Precision::Confusion().
+  Standard_EXPORT static void AddOptimal (const TopoDS_Shape& S, Bnd_Box& B, 
+                                          const Standard_Boolean useTriangulation = Standard_True,
+                                          const Standard_Boolean useShapeTolerance = Standard_False);
 
 
+  //! Computes the Oriented Bounding box for the shape <theS>.
+  //! Two independent methods of computation are implemented:
+  //! first method based on set of points (so, it demands the
+  //! triangulated shape or shape with planar faces and linear edges).
+  //! The second method is based on use of inertia axes and is called
+  //! if use of the first method is impossible.
+  //! If theIsTriangulationUsed == FALSE then the triangulation will
+  //! be ignored at all. 
+  //! If theIsShapeToleranceUsed == TRUE then resulting box will be
+  //! extended on the tolerance of the shape.
+  //! theIsOptimal flag defines the algorithm for construction of initial
+  //! Bnd_Box for the second method (if theIsOptimal == TRUE then
+  //! this box will be created by AddOptimal(...) method).
+  Standard_EXPORT static 
+    void AddOBB(const TopoDS_Shape& theS,
+                Bnd_OBB& theOBB,
+                const Standard_Boolean theIsTriangulationUsed = Standard_True,
+                const Standard_Boolean theIsOptimal = Standard_False,
+                const Standard_Boolean theIsShapeToleranceUsed = Standard_True);
 
 protected:
 

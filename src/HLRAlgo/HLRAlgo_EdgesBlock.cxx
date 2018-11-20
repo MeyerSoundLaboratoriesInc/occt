@@ -22,7 +22,7 @@
 #include <HLRAlgo_EdgesBlock.hxx>
 #include <Standard_Type.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(HLRAlgo_EdgesBlock,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(HLRAlgo_EdgesBlock,Standard_Transient)
 
 //=======================================================================
 //function : HLRAlgo_EdgesBlock
@@ -31,14 +31,3 @@ IMPLEMENT_STANDARD_RTTIEXT(HLRAlgo_EdgesBlock,MMgt_TShared)
 HLRAlgo_EdgesBlock::HLRAlgo_EdgesBlock (const Standard_Integer NbEdges) :
   myEdges(1,NbEdges), myFlags(1,NbEdges)
 {}
-
-//=======================================================================
-//function : UpdateMinMax
-//purpose  : 
-//=======================================================================
-
-void HLRAlgo_EdgesBlock::UpdateMinMax (const Standard_Address TotMinMax)
-{
-  for (Standard_Integer i = 0; i <= 15; i++)
-    myMinMax[i] = ((Standard_Integer*)TotMinMax)[i];
-}

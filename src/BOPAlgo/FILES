@@ -3,6 +3,8 @@ BOPAlgo_Algo.hxx
 BOPAlgo_ArgumentAnalyzer.cxx
 BOPAlgo_ArgumentAnalyzer.hxx
 BOPAlgo_ArgumentAnalyzer.lxx
+BOPAlgo_ToolsProvider.cxx
+BOPAlgo_ToolsProvider.hxx
 BOPAlgo_BOP.cxx
 BOPAlgo_BOP.hxx
 BOPAlgo_Builder.cxx
@@ -21,6 +23,7 @@ BOPAlgo_BuilderSolid.cxx
 BOPAlgo_BuilderSolid.hxx
 BOPAlgo_CheckerSI.cxx
 BOPAlgo_CheckerSI.hxx
+BOPAlgo_CheckerSI_1.cxx
 BOPAlgo_CheckResult.cxx
 BOPAlgo_CheckResult.hxx
 BOPAlgo_CheckStatus.hxx
@@ -29,6 +32,8 @@ BOPAlgo_MakerVolume.cxx
 BOPAlgo_MakerVolume.hxx
 BOPAlgo_MakerVolume.lxx
 BOPAlgo_Operation.hxx
+BOPAlgo_Options.cxx
+BOPAlgo_Options.hxx
 BOPAlgo_PArgumentAnalyzer.hxx
 BOPAlgo_PaveFiller.cxx
 BOPAlgo_PaveFiller.hxx
@@ -48,16 +53,15 @@ BOPAlgo_PBuilder.hxx
 BOPAlgo_PPaveFiller.hxx
 BOPAlgo_PSection.hxx
 BOPAlgo_PWireEdgeSet.hxx
+BOPAlgo_RemoveFeatures.cxx
+BOPAlgo_RemoveFeatures.hxx
 BOPAlgo_Section.cxx
 BOPAlgo_Section.hxx
-BOPAlgo_SectionAttribute.cxx
 BOPAlgo_SectionAttribute.hxx
-BOPAlgo_SectionAttribute.lxx
 BOPAlgo_ShellSplitter.cxx
 BOPAlgo_ShellSplitter.hxx
 BOPAlgo_Tools.cxx
 BOPAlgo_Tools.hxx
-BOPAlgo_WireEdgeSet.cxx
 BOPAlgo_WireEdgeSet.hxx
 BOPAlgo_WireEdgeSet.lxx
 BOPAlgo_WireSplitter.cxx
@@ -66,3 +70,9 @@ BOPAlgo_WireSplitter.lxx
 BOPAlgo_WireSplitter_1.cxx
 BOPAlgo_CellsBuilder.cxx
 BOPAlgo_CellsBuilder.hxx
+BOPAlgo_GlueEnum.hxx
+BOPAlgo_Splitter.hxx
+BOPAlgo_Splitter.cxx
+BOPAlgo_Alerts.hxx
+BOPAlgo.msg
+BOPAlgo_BOPAlgo_msg.pxx

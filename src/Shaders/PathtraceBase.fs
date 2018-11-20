@@ -1,3 +1,15 @@
+#ifdef _MSC_VER
+  #define PATH_TRACING // just for editing in MS VS
+
+  #define in
+  #define out
+  #define inout
+
+  typedef struct { float x; float y; } vec2;
+  typedef struct { float x; float y; float z; } vec3;
+  typedef struct { float x; float y; float z; float w; } vec4;
+#endif
+
 #ifdef PATH_TRACING
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -17,38 +29,38 @@ struct SLocalSpace
 };
 
 //! Describes material properties (BSDF).
-struct SMaterial
+struct SBSDF
 {
-  //! Weight of the Lambertian BRDF.
+  //! Weight of coat specular/glossy BRDF.
+  vec4 Kc;
+
+  //! Weight of base diffuse BRDF.
   vec4 Kd;
 
-  //! Weight of the reflection BRDF.
-  vec3 Kr;
-
-  //! Weight of the transmission BTDF.
-  vec3 Kt;
-
-  //! Weight of the Blinn BRDF (and roughness).
+  //! Weight of base specular/glossy BRDF.
   vec4 Ks;
 
-  //! Fresnel coefficients.
-  vec3 Fresnel;
+  //! Weight of base specular/glossy BTDF.
+  vec3 Kt;
 
-  //! Absorption color and intensity of the media.
-  vec4 Absorption;
+  //! Fresnel coefficients of coat layer.
+  vec3 FresnelCoat;
+
+  //! Fresnel coefficients of base layer.
+  vec3 FresnelBase;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // Support subroutines
 
 //=======================================================================
-// function : LocalSpace
+// function : buildLocalSpace
 // purpose  : Generates local space for the given normal
 //=======================================================================
-SLocalSpace LocalSpace (in vec3 theNormal)
+SLocalSpace buildLocalSpace (in vec3 theNormal)
 {
-  vec3 anAxisX = cross (vec3 (0.f, 1.f, 0.f), theNormal);
-  vec3 anAxisY = cross (vec3 (1.f, 0.f, 0.f), theNormal);
+  vec3 anAxisX = vec3 (theNormal.z, 0.f, -theNormal.x);
+  vec3 anAxisY = vec3 (0.f, -theNormal.z, theNormal.y);
 
   float aSqrLenX = dot (anAxisX, anAxisX);
   float aSqrLenY = dot (anAxisY, anAxisY);
@@ -99,19 +111,6 @@ float convolve (in vec3 theVector, in vec3 theFactor)
 }
 
 //=======================================================================
-// function : sphericalDirection
-// purpose  : Constructs vector from spherical coordinates
-//=======================================================================
-vec3 sphericalDirection (in float theCosTheta, in float thePhi)
-{
-  float aSinTheta = sqrt (1.f - theCosTheta * theCosTheta);
-
-  return vec3 (aSinTheta * cos (thePhi),
-               aSinTheta * sin (thePhi),
-               theCosTheta);
-}
-
-//=======================================================================
 // function : fresnelSchlick
 // purpose  : Computes the Fresnel reflection formula using
 //            Schlick's approximation.
@@ -149,19 +148,19 @@ float fresnelDielectric (in float theCosI,
 //=======================================================================
 float fresnelDielectric (in float theCosI, in float theIndex)
 {
+  float aFresnel = 1.f;
+
   float anEtaI = theCosI > 0.f ? 1.f : theIndex;
   float anEtaT = theCosI > 0.f ? theIndex : 1.f;
 
-  float aSinT = (anEtaI / anEtaT) * sqrt (1.f - theCosI * theCosI);
+  float aSinT2 = (anEtaI * anEtaI) / (anEtaT * anEtaT) * (1.f - theCosI * theCosI);
 
-  if (aSinT >= 1.f)
+  if (aSinT2 < 1.f)
   {
-    return 1.f;
+    aFresnel = fresnelDielectric (abs (theCosI), sqrt (1.f - aSinT2), anEtaI, anEtaT);
   }
 
-  float aCosT = sqrt (1.f - aSinT * aSinT);
-
-  return fresnelDielectric (abs (theCosI), aCosT, anEtaI, anEtaT);
+  return aFresnel;
 }
 
 //=======================================================================
@@ -196,24 +195,28 @@ float fresnelConductor (in float theCosI, in float theEta, in float theK)
 // purpose  : Computes the Fresnel reflection formula for general medium
 //            in case of circularly polarized light.
 //=======================================================================
-vec3 fresnelMedia (in float theCosI, in vec3 theFresnelCoeffs)
+vec3 fresnelMedia (in float theCosI, in vec3 theFresnel)
 {
-  if (theFresnelCoeffs.x > FRESNEL_SCHLICK)
+  vec3 aFresnel;
+
+  if (theFresnel.x > FRESNEL_SCHLICK)
   {
-    return fresnelSchlick (abs (theCosI), theFresnelCoeffs);
+    aFresnel = fresnelSchlick (abs (theCosI), theFresnel);
+  }
+  else if (theFresnel.x > FRESNEL_CONSTANT)
+  {
+    aFresnel = vec3 (theFresnel.z);
+  }
+  else if (theFresnel.x > FRESNEL_CONDUCTOR)
+  {
+    aFresnel = vec3 (fresnelConductor (abs (theCosI), theFresnel.y, theFresnel.z));
+  }
+  else
+  {
+    aFresnel = vec3 (fresnelDielectric (theCosI, theFresnel.y));
   }
 
-  if (theFresnelCoeffs.x > FRESNEL_CONSTANT)
-  {
-    return vec3 (theFresnelCoeffs.z);
-  }
-
-  if (theFresnelCoeffs.x > FRESNEL_CONDUCTOR)
-  {
-    return vec3 (fresnelConductor (abs (theCosI), theFresnelCoeffs.y, theFresnelCoeffs.z));
-  }
-
-  return vec3 (fresnelDielectric (theCosI, theFresnelCoeffs.y));
+  return aFresnel;
 }
 
 //=======================================================================
@@ -226,11 +229,11 @@ void transmitted (in float theIndex, in vec3 theIncident, out vec3 theTransmit)
   // Compute relative index of refraction
   float anEta = (theIncident.z > 0.f) ? 1.f / theIndex : theIndex;
 
-  // Handle total internal reflection for transmission
+  // Handle total internal reflection (TIR)
   float aSinT2 = anEta * anEta * (1.f - theIncident.z * theIncident.z);
 
-  // Compute transmitted ray direction
-  float aCosT = sqrt (1.f - min (aSinT2, 1.f)) * (theIncident.z > 0.f ? -1.f : 1.f);
+  // Compute direction of transmitted ray
+  float aCosT = sqrt (1.f - min (aSinT2, 1.f)) * sign (-theIncident.z);
 
   theTransmit = normalize (vec3 (-anEta * theIncident.x,
                                  -anEta * theIncident.y,
@@ -242,145 +245,126 @@ void transmitted (in float theIndex, in vec3 theIncident, out vec3 theTransmit)
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 //=======================================================================
-// function : handleLambertianReflection
-// purpose  : Handles Lambertian BRDF, with cos(N, PSI)
+// function : EvalLambertianReflection
+// purpose  : Evaluates Lambertian BRDF, with cos(N, PSI)
 //=======================================================================
-float handleLambertianReflection (in vec3 theInput, in vec3 theOutput)
+float EvalLambertianReflection (in vec3 theWi, in vec3 theWo)
 {
-  return max (0.f, theInput.z) * (1.f / M_PI);
+  return (theWi.z <= 0.f || theWo.z <= 0.f) ? 0.f : theWi.z * (1.f / M_PI);
+}
+
+#define FLT_EPSILON 1.0e-5f
+
+//=======================================================================
+// function : SmithG1
+// purpose  :
+//=======================================================================
+float SmithG1 (in vec3 theDirection, in vec3 theM, in float theRoughness)
+{
+  float aResult = 0.f;
+
+  if (dot (theDirection, theM) * theDirection.z > 0.f)
+  {
+    float aTanThetaM = sqrt (1.f - theDirection.z * theDirection.z) / theDirection.z;
+
+    if (aTanThetaM == 0.f)
+    {
+      aResult = 1.f;
+    }
+    else
+    {
+      float aVal = 1.f / (theRoughness * aTanThetaM);
+
+      // Use rational approximation to shadowing-masking function (from Mitsuba)
+      aResult = (3.535f + 2.181f * aVal) / (1.f / aVal + 2.276f + 2.577f * aVal);
+    }
+  }
+
+  return min (aResult, 1.f);
 }
 
 //=======================================================================
-// function : handleBlinnReflection
-// purpose  : Handles Blinn glossy BRDF, with cos(N, PSI)
+// function : EvalBlinnReflection
+// purpose  : Evaluates Blinn glossy BRDF, with cos(N, PSI)
 //=======================================================================
-vec3 handleBlinnReflection (in vec3 theInput, in vec3 theOutput, in vec3 theFresnelCoeffs, in float theExponent)
+vec3 EvalBlinnReflection (in vec3 theWi, in vec3 theWo, in vec3 theFresnel, in float theRoughness)
 {
-  vec3 aWeight = ZERO;
+  // calculate the reflection half-vec
+  vec3 aH = normalize (theWi + theWo);
 
-  // Compute half-angle vector
-  vec3 aHalf = theInput + theOutput;
+  // roughness value -> Blinn exponent
+  float aPower = max (2.f / (theRoughness * theRoughness) - 2.f, 0.f);
 
-  if (aHalf.z < 0.f)
-    aHalf = -aHalf;
+  // calculate microfacet distribution
+  float aD = (aPower + 2.f) * (1.f / M_2_PI) * pow (aH.z, aPower);
 
-  float aLength = dot (aHalf, aHalf);
+  // calculate shadow-masking function
+  float aG = SmithG1 (theWo, aH, theRoughness) *
+             SmithG1 (theWi, aH, theRoughness);
 
-  if (aLength <= 0.f)
-    return ZERO;
-
-  aHalf *= inversesqrt (aLength);
-
-  // Compute Fresnel reflectance
-  float aCosDelta = dot (theOutput, aHalf);
-
-  vec3 aFresnel = fresnelMedia (aCosDelta, theFresnelCoeffs);
-
-  // Compute fraction of microfacets that reflect light
-  float aCosThetaH = max (0.f, aHalf.z);
-
-  float aFraction = (theExponent + 2.f) * (M_PI / 2.f) * pow (aCosThetaH, theExponent);
-
-  // Compute geometry attenuation term (already includes cos)
-  float aCosThetaI = max (0.f, theInput.z);
-  float aCosThetaO = max (0.f, theOutput.z);
-
-  float aGeom = min (1.f, 2.f * aCosThetaH / max (0.f, aCosDelta) * min (aCosThetaO, aCosThetaI));
-
-  return aCosThetaO < 1.0e-3f ? ZERO :
-    aFraction * aGeom / (4.f * aCosThetaO) * aFresnel;
+  // return total amount of reflection
+  return (theWi.z <= 0.f || theWo.z <= 0.f) ? ZERO :
+    aD * aG / (4.f * theWo.z) * fresnelMedia (dot (theWo, aH), theFresnel);
 }
 
 //=======================================================================
-// function : handleMaterial
-// purpose  : Returns BSDF value for specified material, with cos(N, PSI)
+// function : EvalBsdfLayered
+// purpose  : Evaluates BSDF for specified material, with cos(N, PSI)
 //=======================================================================
-vec3 handleMaterial (in SMaterial theMaterial, in vec3 theInput, in vec3 theOutput)
+vec3 EvalBsdfLayered (in SBSDF theBSDF, in vec3 theWi, in vec3 theWo)
 {
-  return theMaterial.Kd.rgb * handleLambertianReflection (theInput, theOutput) +
-    theMaterial.Ks.rgb * handleBlinnReflection (theInput, theOutput, theMaterial.Fresnel, theMaterial.Ks.w);
+#ifdef TWO_SIDED_BXDF
+  theWi.z *= sign (theWi.z);
+  theWo.z *= sign (theWo.z);
+#endif
+
+  vec3 aBxDF = theBSDF.Kd.rgb * EvalLambertianReflection (theWi, theWo);
+
+  if (theBSDF.Ks.w > FLT_EPSILON)
+  {
+    aBxDF += theBSDF.Ks.rgb * EvalBlinnReflection (theWi, theWo, theBSDF.FresnelBase, theBSDF.Ks.w);
+  }
+
+  aBxDF *= UNIT - fresnelMedia (theWo.z, theBSDF.FresnelCoat);
+
+  if (theBSDF.Kc.w > FLT_EPSILON)
+  {
+    aBxDF += theBSDF.Kc.rgb * EvalBlinnReflection (theWi, theWo, theBSDF.FresnelCoat, theBSDF.Kc.w);
+  }
+
+  return aBxDF;
 }
 
 //=======================================================================
-// function : sampleLambertianReflection
+// function : SampleLambertianReflection
 // purpose  : Samples Lambertian BRDF, W = BRDF * cos(N, PSI) / PDF(PSI)
 //=======================================================================
-void sampleLambertianReflection (in vec3 theOutput, out vec3 theInput)
+vec3 SampleLambertianReflection (in vec3 theWo, out vec3 theWi, inout float thePDF)
 {
   float aKsi1 = RandFloat();
   float aKsi2 = RandFloat();
 
-  float aTemp = sqrt (aKsi2);
+  theWi = vec3 (cos (M_2_PI * aKsi1),
+                sin (M_2_PI * aKsi1),
+                sqrt (1.f - aKsi2));
 
-  theInput = vec3 (aTemp * cos (2.f * M_PI * aKsi1),
-                   aTemp * sin (2.f * M_PI * aKsi1),
-                   sqrt (1.f - aKsi2));
+  theWi.xy *= sqrt (aKsi2);
 
-  theInput.z = mix (-theInput.z, theInput.z, step (0.f, theOutput.z));
-}
+#ifdef TWO_SIDED_BXDF
+  theWi.z *= sign (theWo.z);
+#endif
 
-// Types of bounces
-#define NON_SPECULAR_BOUNCE 0
-#define SPEC_REFLECT_BOUNCE 1
-#define SPEC_REFRACT_BOUNCE 2
+  thePDF *= theWi.z * (1.f / M_PI);
 
-#define IS_NON_SPEC_BOUNCE(theBounce) (theBounce == 0)
-#define IS_ANY_SPEC_BOUNCE(theBounce) (theBounce != 0)
-#define IS_REFL_SPEC_BOUNCE(theBounce) (theBounce == 1)
-#define IS_REFR_SPEC_BOUNCE(theBounce) (theBounce == 2)
-
-//=======================================================================
-// function : sampleSpecularTransmission
-// purpose  : Samples specular BTDF, W = BRDF * cos(N, PSI) / PDF(PSI)
-//=======================================================================
-vec3 sampleSpecularTransmission (in vec3 theOutput, out vec3 theInput,
-  out int theBounce, in vec3 theWeight, in vec3 theFresnelCoeffs)
-{
-  vec3 aFresnel = fresnelMedia (theOutput.z, theFresnelCoeffs);
-
-  float aProbability = convolve (aFresnel, theWeight);
-
-  // Check if transmission takes place
-  theBounce = RandFloat() <= aProbability ?
-    SPEC_REFLECT_BOUNCE : SPEC_REFRACT_BOUNCE;
-
-  // Sample input direction
-  if (theBounce == SPEC_REFLECT_BOUNCE)
-  {
-    theInput = vec3 (-theOutput.x,
-                     -theOutput.y,
-                      theOutput.z);
-
-    theWeight = aFresnel * (1.f / aProbability);
-  }
-  else
-  {
-    transmitted (theFresnelCoeffs.y, theOutput, theInput);
-
-    theWeight = (UNIT - aFresnel) * (1.f / (1.f - aProbability));
-  }
-
-  return theWeight;
+#ifdef TWO_SIDED_BXDF
+  return UNIT;
+#else
+  return UNIT * step (0.f, theWo.z);
+#endif
 }
 
 //=======================================================================
-// function : sampleSpecularReflection
-// purpose  : Samples specular BRDF, W = BRDF * cos(N, PSI) / PDF(PSI)
-//=======================================================================
-vec3 sampleSpecularReflection (in vec3 theOutput, out vec3 theInput, in vec3 theFresnelCoeffs)
-{
-  // Sample input direction
-  theInput = vec3 (-theOutput.x,
-                   -theOutput.y,
-                    theOutput.z);
-
-  return fresnelMedia (theOutput.z, theFresnelCoeffs);
-}
-
-#define MIN_COS 1.0e-20f
-
-//=======================================================================
-// function : sampleBlinnReflection
+// function : SampleGlossyBlinnReflection
 // purpose  : Samples Blinn BRDF, W = BRDF * cos(N, PSI) / PDF(PSI)
 //            The BRDF is a product of three main terms, D, G, and F,
 //            which is then divided by two cosine terms. Here we perform
@@ -389,154 +373,212 @@ vec3 sampleSpecularReflection (in vec3 theOutput, out vec3 theInput, in vec3 the
 //            terms would be complex, and it is the D term that accounts
 //            for most of the variation.
 //=======================================================================
-vec3 sampleBlinnReflection (in vec3 theOutput, out vec3 theInput, in vec3 theFresnelCoeffs, in float theExponent)
+vec3 SampleGlossyBlinnReflection (in vec3 theWo, out vec3 theWi, in vec3 theFresnel, in float theRoughness, inout float thePDF)
 {
-  vec3 aWeight = ZERO;
-
-  // Generate two random variables
   float aKsi1 = RandFloat();
   float aKsi2 = RandFloat();
 
-  // Compute sampled half-angle vector for Blinn distribution
-  float aCosThetaH = pow (aKsi1, 1.f / (theExponent + 1.f));
+  // roughness value --> Blinn exponent
+  float aPower = max (2.f / (theRoughness * theRoughness) - 2.f, 0.f);
 
-  vec3 aHalf = sphericalDirection (aCosThetaH, aKsi2 * 2.f * M_PI);
+  // normal from microface distribution
+  float aCosThetaM = pow (aKsi1, 1.f / (aPower + 2.f));
 
-  if (aHalf.z < 0)
-  {
-    aHalf = -aHalf;
-  }
+  vec3 aM = vec3 (cos (M_2_PI * aKsi2),
+                  sin (M_2_PI * aKsi2),
+                  aCosThetaM);
 
-  // Compute incident direction by reflecting about half-vector
-  float aCosDelta = dot (theOutput, aHalf);
+  aM.xy *= sqrt (1.f - aCosThetaM * aCosThetaM);
 
-  vec3 anInput = 2.f * aCosDelta * aHalf - theOutput;
+  // calculate PDF of sampled direction
+  thePDF *= (aPower + 2.f) * (1.f / M_2_PI) * pow (aCosThetaM, aPower + 1.f);
 
-  if (theOutput.z * anInput.z <= 0.f)
+#ifdef TWO_SIDED_BXDF
+  bool toFlip = theWo.z < 0.f;
+
+  if (toFlip)
+    theWo.z = -theWo.z;
+#endif
+
+  float aCosDelta = dot (theWo, aM);
+
+  // pick input based on half direction
+  theWi = -theWo + 2.f * aCosDelta * aM;
+
+  if (theWi.z <= 0.f || theWo.z <= 0.f)
   {
     return ZERO;
   }
 
-  theInput = anInput;
+  // Jacobian of half-direction mapping
+  thePDF /= 4.f * aCosDelta;
 
-  // Compute Fresnel reflectance
-  vec3 aFresnel = fresnelMedia (aCosDelta, theFresnelCoeffs);
+  // compute shadow-masking coefficient
+  float aG = SmithG1 (theWo, aM, theRoughness) *
+             SmithG1 (theWi, aM, theRoughness);
 
-  // Compute geometry attenuation term
-  float aCosThetaI = max (MIN_COS, theInput.z);
-  float aCosThetaO = max (MIN_COS, theOutput.z);
+#ifdef TWO_SIDED_BXDF
+  if (toFlip)
+    theWi.z = -theWi.z;
+#endif
 
-  float aGeom = min (max (MIN_COS, aCosDelta), 2.f * aCosThetaH * min (aCosThetaO, aCosThetaI));
-
-  // Compute weight of the ray sample
-  return aFresnel * ((theExponent + 2.f) / (theExponent + 1.f) * aGeom / aCosThetaO);
+  return (aG * aCosDelta) / (theWo.z * aM.z) * fresnelMedia (aCosDelta, theFresnel);
 }
 
 //=======================================================================
-// function : sampleMaterial
+// function : BsdfPdfLayered
+// purpose  : Calculates BSDF of sampling input knowing output
+//=======================================================================
+float BsdfPdfLayered (in SBSDF theBSDF, in vec3 theWo, in vec3 theWi, in vec3 theWeight)
+{
+  float aPDF = 0.f; // PDF of sampling input direction
+
+  // We choose whether the light is reflected or transmitted
+  // by the coating layer according to the Fresnel equations
+  vec3 aCoatF = fresnelMedia (theWo.z, theBSDF.FresnelCoat);
+
+  // Coat BRDF is scaled by its Fresnel reflectance term. For
+  // reasons of simplicity we scale base BxDFs only by coat's
+  // Fresnel transmittance term
+  vec3 aCoatT = UNIT - aCoatF;
+
+  float aPc = dot (theBSDF.Kc.rgb * aCoatF, theWeight);
+  float aPd = dot (theBSDF.Kd.rgb * aCoatT, theWeight);
+  float aPs = dot (theBSDF.Ks.rgb * aCoatT, theWeight);
+  float aPt = dot (theBSDF.Kt.rgb * aCoatT, theWeight);
+
+  if (theWi.z * theWo.z > 0.f)
+  {
+    vec3 aH = normalize (theWi + theWo);
+
+    aPDF = aPd * abs (theWi.z / M_PI);
+
+    if (theBSDF.Kc.w > FLT_EPSILON)
+    {
+      float aPower = max (2.f / (theBSDF.Kc.w * theBSDF.Kc.w) - 2.f, 0.f); // roughness --> exponent
+
+      aPDF += aPc * (aPower + 2.f) * (0.25f / M_2_PI) * pow (abs (aH.z), aPower + 1.f) / dot (theWi, aH);
+    }
+
+    if (theBSDF.Ks.w > FLT_EPSILON)
+    {
+      float aPower = max (2.f / (theBSDF.Ks.w * theBSDF.Ks.w) - 2.f, 0.f); // roughness --> exponent
+
+      aPDF += aPs * (aPower + 2.f) * (0.25f / M_2_PI) * pow (abs (aH.z), aPower + 1.f) / dot (theWi, aH);
+    }
+  }
+
+  return aPDF / (aPc + aPd + aPs + aPt);
+}
+
+//! Tool macro to handle sampling of particular BxDF
+#define PICK_BXDF_LAYER(p, k) aPDF = p / aTotalR; theWeight *= k / aPDF;
+
+//=======================================================================
+// function : SampleBsdfLayered
 // purpose  : Samples specified composite material (BSDF)
 //=======================================================================
-void sampleMaterial (in SMaterial theMaterial,
-                     in vec3      theOutput,
-                     out vec3     theInput,
-                     inout vec3   theWeight,
-                     inout int    theBounce)
+float SampleBsdfLayered (in SBSDF theBSDF, in vec3 theWo, out vec3 theWi, inout vec3 theWeight, inout bool theInside)
 {
-  // Compute the probability of ray reflection
-  float aPd = convolve (theMaterial.Kd.rgb, theWeight);
-  float aPs = convolve (theMaterial.Ks.rgb, theWeight);
-  float aPr = convolve (theMaterial.Kr.rgb, theWeight);
-  float aPt = convolve (theMaterial.Kt.rgb, theWeight);
+  // NOTE: OCCT uses two-layer material model. We have base diffuse, glossy, or transmissive
+  // layer, covered by one glossy/specular coat. In the current model, the layers themselves
+  // have no thickness; they can simply reflect light or transmits it to the layer under it.
+  // We use actual BRDF model only for direct reflection by the coat layer. For transmission
+  // through this layer, we approximate it as a flat specular surface.
 
-  float aReflection = aPd + aPs + aPr + aPt;
+  float aPDF = 0.f; // PDF of sampled direction
 
-  // Choose BSDF component to sample
-  float aKsi = aReflection * RandFloat();
+  // We choose whether the light is reflected or transmitted
+  // by the coating layer according to the Fresnel equations
+  vec3 aCoatF = fresnelMedia (theWo.z, theBSDF.FresnelCoat);
 
-  theBounce = NON_SPECULAR_BOUNCE;
+  // Coat BRDF is scaled by its Fresnel term. According to
+  // Wilkie-Weidlich layered BSDF model, transmission term
+  // for light passing through the coat at direction I and
+  // leaving it in O is T = ( 1 - F (O) ) x ( 1 - F (I) ).
+  // For reasons of simplicity, we discard the second term
+  // and scale base BxDFs only by the first term.
+  vec3 aCoatT = UNIT - aCoatF;
 
-  if (aKsi < aPd) // diffuse reflection
+  float aPc = dot (theBSDF.Kc.rgb * aCoatF, theWeight);
+  float aPd = dot (theBSDF.Kd.rgb * aCoatT, theWeight);
+  float aPs = dot (theBSDF.Ks.rgb * aCoatT, theWeight);
+  float aPt = dot (theBSDF.Kt.rgb * aCoatT, theWeight);
+
+  // Calculate total reflection probability
+  float aTotalR = (aPc + aPd) + (aPs + aPt);
+
+  // Generate random variable to select BxDF
+  float aKsi = aTotalR * RandFloat();
+
+  if (aKsi < aPc) // REFLECTION FROM COAT
   {
-    sampleLambertianReflection (theOutput, theInput);
+    PICK_BXDF_LAYER (aPc, theBSDF.Kc.rgb)
 
-    theWeight *= theMaterial.Kd.rgb * (aReflection / aPd);
+    if (theBSDF.Kc.w < FLT_EPSILON)
+    {
+      theWeight *= aCoatF;
+
+      theWi = vec3 (-theWo.x,
+                    -theWo.y,
+                     theWo.z);
+    }
+    else
+    {
+      theWeight *= SampleGlossyBlinnReflection (theWo, theWi, theBSDF.FresnelCoat, theBSDF.Kc.w, aPDF);
+    }
+
+    aPDF = mix (aPDF, MAXFLOAT, theBSDF.Kc.w < FLT_EPSILON);
   }
-  else if (aKsi < aPd + aPs) //  glossy reflection
+  else if (aKsi < aTotalR) // REFLECTION FROM BASE
   {
-    theWeight *= theMaterial.Ks.rgb * (aReflection / aPs) *
-      sampleBlinnReflection (theOutput, theInput, theMaterial.Fresnel, theMaterial.Ks.w);
-  }
-  else if (aKsi < aPd + aPs + aPr) //  specular reflection
-  {
-    theWeight *= theMaterial.Kr.rgb * (aReflection / aPr) *
-      sampleSpecularReflection (theOutput, theInput, theMaterial.Fresnel);
+    theWeight *= aCoatT;
 
-    theBounce = SPEC_REFLECT_BOUNCE; // specular bounce
-  }
-  else //  specular transmission
-  {
-    theWeight *= theMaterial.Kt.rgb * (aReflection / aPt) *
-      sampleSpecularTransmission (theOutput, theInput, theBounce, theWeight, theMaterial.Fresnel);
+    if (aKsi < aPc + aPd) // diffuse BRDF
+    {
+      PICK_BXDF_LAYER (aPd, theBSDF.Kd.rgb)
+
+      theWeight *= SampleLambertianReflection (theWo, theWi, aPDF);
+    }
+    else if (aKsi < (aPc + aPd) + aPs) // specular/glossy BRDF
+    {
+      PICK_BXDF_LAYER (aPs, theBSDF.Ks.rgb)
+
+      if (theBSDF.Ks.w < FLT_EPSILON)
+      {
+        theWeight *= fresnelMedia (theWo.z, theBSDF.FresnelBase);
+
+        theWi = vec3 (-theWo.x,
+                      -theWo.y,
+                       theWo.z);
+      }
+      else
+      {
+        theWeight *= SampleGlossyBlinnReflection (theWo, theWi, theBSDF.FresnelBase, theBSDF.Ks.w, aPDF);
+      }
+
+      aPDF = mix (aPDF, MAXFLOAT, theBSDF.Ks.w < FLT_EPSILON);
+    }
+    else // specular transmission
+    {
+      PICK_BXDF_LAYER (aPt, theBSDF.Kt.rgb)
+
+      // refracted direction should exist if we are here
+      transmitted (theBSDF.FresnelCoat.y, theWo, theWi);
+
+      theInside = !theInside; aPDF = MAXFLOAT;
+    }
   }
 
   // path termination for extra small weights
-  theWeight = mix (theWeight, ZERO, float (aReflection < 1e-3f));
+  theWeight = mix (ZERO, theWeight, step (FLT_EPSILON, aTotalR));
+
+  return aPDF;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // Handlers and samplers for light sources
 //////////////////////////////////////////////////////////////////////////////////////////////
-
-//=======================================================================
-// function : handlePointLight
-// purpose  :
-//=======================================================================
-float handlePointLight (in vec3 theInput, in vec3 theToLight, in float theRadius, in float theDistance)
-{
-  float aDistance = dot (theToLight, theToLight);
-
-  float aCosMax = inversesqrt (1.f + theRadius * theRadius / aDistance);
-
-  return float (aDistance < theDistance * theDistance) *
-    step (aCosMax, dot (theToLight, theInput) * inversesqrt (aDistance));
-}
-
-//=======================================================================
-// function : handleDirectLight
-// purpose  :
-//=======================================================================
-float handleDirectLight (in vec3 theInput, in vec3 theToLight, in float theCosMax)
-{
-  return step (theCosMax, dot (theInput, theToLight));
-}
-
-//=======================================================================
-// function : sampleLight
-// purpose  : general sampling function for directional and point lights
-//=======================================================================
-vec3 sampleLight (in vec3 theToLight, in bool isDirectional, in float theSmoothness, inout float thePDF)
-{
-  SLocalSpace aSpace = LocalSpace (theToLight);
-
-  // for point lights smoothness defines radius
-  float aCosMax = isDirectional ? theSmoothness :
-    inversesqrt (1.f + theSmoothness * theSmoothness / dot (theToLight, theToLight));
-
-  float aKsi1 = RandFloat();
-  float aKsi2 = RandFloat();
-
-  float aTmp = 1.f - aKsi2 * (1.f - aCosMax);
-
-  vec3 anInput = vec3 (cos (2.f * M_PI * aKsi1),
-                       sin (2.f * M_PI * aKsi1),
-                       aTmp);
-
-  anInput.xy *= sqrt (1.f - aTmp * aTmp);
-
-  thePDF *= (aCosMax < 1.f) ? 1.f / (2.f * M_PI) / (1.f - aCosMax) : 1.f;
-
-  return normalize (fromLocalSpace (anInput, aSpace));
-}
 
 // =======================================================================
 // function : Latlong
@@ -552,141 +594,238 @@ vec2 Latlong (in vec3 thePoint)
                aPsi * 0.3183098f);
 }
 
+//=======================================================================
+// function : SampleLight
+// purpose  : General sampling function for directional and point lights
+//=======================================================================
+vec3 SampleLight (in vec3 theToLight, inout float theDistance, in bool isInfinite, in float theSmoothness, inout float thePDF)
+{
+  SLocalSpace aSpace = buildLocalSpace (theToLight * (1.f / theDistance));
+
+  // for point lights smoothness defines radius
+  float aCosMax = isInfinite ? theSmoothness :
+    inversesqrt (1.f + theSmoothness * theSmoothness / (theDistance * theDistance));
+
+  float aKsi1 = RandFloat();
+  float aKsi2 = RandFloat();
+
+  float aTmp = 1.f - aKsi2 * (1.f - aCosMax);
+
+  vec3 anInput = vec3 (cos (M_2_PI * aKsi1),
+                       sin (M_2_PI * aKsi1),
+                       aTmp);
+
+  anInput.xy *= sqrt (1.f - aTmp * aTmp);
+
+  thePDF = (aCosMax < 1.f) ? (thePDF / M_2_PI) / (1.f - aCosMax) : MAXFLOAT;
+
+  return normalize (fromLocalSpace (anInput, aSpace));
+}
+
+//=======================================================================
+// function : HandlePointLight
+// purpose  :
+//=======================================================================
+float HandlePointLight (in vec3 theInput, in vec3 theToLight, in float theRadius, in float theDistance, inout float thePDF)
+{
+  float aCosMax = inversesqrt (1.f + theRadius * theRadius / (theDistance * theDistance));
+
+  float aVisibility = step (aCosMax, dot (theInput, theToLight));
+
+  thePDF *= step (-1.f, -aCosMax) * aVisibility * (1.f / M_2_PI) / (1.f - aCosMax);
+
+  return aVisibility;
+}
+
+//=======================================================================
+// function : HandleDistantLight
+// purpose  :
+//=======================================================================
+float HandleDistantLight (in vec3 theInput, in vec3 theToLight, in float theCosMax, inout float thePDF)
+{
+  float aVisibility = step (theCosMax, dot (theInput, theToLight));
+
+  thePDF *= step (-1.f, -theCosMax) * aVisibility * (1.f / M_2_PI) / (1.f - theCosMax);
+
+  return aVisibility;
+}
+
 // =======================================================================
-// function: intersectLight
+// function: IntersectLight
 // purpose : Checks intersections with light sources
 // =======================================================================
-vec3 intersectLight (in SRay theRay, in bool isViewRay, in int theBounce, in float theDistance)
+vec3 IntersectLight (in SRay theRay, in int theDepth, in float theHitDistance, out float thePDF)
 {
-  vec3 aRadiance = ZERO;
+  vec3 aTotalRadiance = ZERO;
 
-  if ((isViewRay || IS_REFR_SPEC_BOUNCE(theBounce)) && uSphereMapForBack == 0)
-  {
-    aRadiance = BackgroundColor().xyz;
-  }
-  else
-  {
-    aRadiance = FetchEnvironment (Latlong (theRay.Direct)).xyz;
-  }
+  thePDF = 0.f; // PDF of sampling light sources
 
-  // Apply gamma correction (gamma is 2)
-  aRadiance = aRadiance * aRadiance * float (theDistance == MAXFLOAT);
-
-  for (int aLightIdx = 0; aLightIdx < uLightCount && (isViewRay || IS_ANY_SPEC_BOUNCE(theBounce)); ++aLightIdx)
+  for (int aLightIdx = 0; aLightIdx < uLightCount; ++aLightIdx)
   {
     vec4 aLight = texelFetch (
       uRaytraceLightSrcTexture, LIGHT_POS (aLightIdx));
     vec4 aParam = texelFetch (
       uRaytraceLightSrcTexture, LIGHT_PWR (aLightIdx));
 
+    // W component: 0 for infinite light and 1 for point light
+    aLight.xyz -= mix (ZERO, theRay.Origin, aLight.w);
+
+    float aPDF = 1.f / uLightCount;
+
     if (aLight.w != 0.f) // point light source
     {
-      aRadiance += aParam.rgb * handlePointLight (
-        theRay.Direct, aLight.xyz - theRay.Origin, aParam.w /* radius */, theDistance);
+      float aCenterDst = length (aLight.xyz);
+
+      if (aCenterDst < theHitDistance)
+      {
+        float aVisibility = HandlePointLight (
+          theRay.Direct, normalize (aLight.xyz), aParam.w /* radius */, aCenterDst, aPDF);
+
+        if (aVisibility > 0.f)
+        {
+          theHitDistance = aCenterDst;
+          aTotalRadiance = aParam.rgb;
+
+          thePDF = aPDF;
+        }
+      }
     }
-    else if (theDistance == MAXFLOAT) // directional light source
+    else if (theHitDistance == MAXFLOAT) // directional light source
     {
-      aRadiance += aParam.rgb * handleDirectLight (theRay.Direct, aLight.xyz, aParam.w /* angle cosine */);
+      aTotalRadiance += aParam.rgb * HandleDistantLight (
+        theRay.Direct, aLight.xyz, aParam.w /* angle cosine */, aPDF);
+
+      thePDF += aPDF;
     }
   }
 
-  return aRadiance;
+  if (thePDF == 0.f && theHitDistance == MAXFLOAT) // light source not found
+  {
+    if (theDepth + uSphereMapForBack == 0) // view ray and map is hidden
+    {
+      aTotalRadiance = pow (BackgroundColor().rgb, vec3 (2.f));
+    }
+    else
+    {
+      aTotalRadiance = pow (FetchEnvironment (Latlong (theRay.Direct)).rgb, vec3 (2.f));
+    }
+  }
+  
+  return aTotalRadiance;
 }
 
-#define MIN_THROUGHPUT   vec3 (0.02f)
-#define MIN_CONTRIBUTION vec3 (0.01f)
+#define MIN_THROUGHPUT   vec3 (1.0e-3f)
+#define MIN_CONTRIBUTION vec3 (1.0e-2f)
 
-#define MATERIAL_KD(index)      (18 * index + 11)
-#define MATERIAL_KR(index)      (18 * index + 12)
-#define MATERIAL_KT(index)      (18 * index + 13)
-#define MATERIAL_KS(index)      (18 * index + 14)
-#define MATERIAL_LE(index)      (18 * index + 15)
-#define MATERIAL_FRESNEL(index) (18 * index + 16)
-#define MATERIAL_ABSORPT(index) (18 * index + 17)
+#define MATERIAL_KC(index)           (19 * index + 11)
+#define MATERIAL_KD(index)           (19 * index + 12)
+#define MATERIAL_KS(index)           (19 * index + 13)
+#define MATERIAL_KT(index)           (19 * index + 14)
+#define MATERIAL_LE(index)           (19 * index + 15)
+#define MATERIAL_FRESNEL_COAT(index) (19 * index + 16)
+#define MATERIAL_FRESNEL_BASE(index) (19 * index + 17)
+#define MATERIAL_ABSORPT_BASE(index) (19 * index + 18)
 
-// Enables expiremental russian roulette sampling
+//! Enables experimental Russian roulette sampling path termination.
+//! In most cases, it provides faster image convergence with minimal
+//! bias, so it is enabled by default.
 #define RUSSIAN_ROULETTE
+
+//! Frame step to increase number of bounces. This mode is used
+//! for interaction with the model, when path length is limited
+//! for the first samples, and gradually increasing when camera
+//! is stabilizing.
+#ifdef ADAPTIVE_SAMPLING
+  #define FRAME_STEP 4
+#else
+  #define FRAME_STEP 5
+#endif
+
+//=======================================================================
+// function : IsNotZero
+// purpose  : Checks whether BSDF reflects direct light
+//=======================================================================
+bool IsNotZero (in SBSDF theBSDF, in vec3 theThroughput)
+{
+  vec3 aGlossy = theBSDF.Kc.rgb * step (FLT_EPSILON, theBSDF.Kc.w) +
+                 theBSDF.Ks.rgb * step (FLT_EPSILON, theBSDF.Ks.w);
+
+  return convolve (theBSDF.Kd.rgb + aGlossy, theThroughput) > FLT_EPSILON;
+}
 
 //=======================================================================
 // function : PathTrace
 // purpose  : Calculates radiance along the given ray
 //=======================================================================
-vec4 PathTrace (in SRay theRay, in vec3 theInverse)
+vec4 PathTrace (in SRay theRay, in vec3 theInverse, in int theNbSamples)
 {
-  float anOpenGlDepth = ComputeOpenGlDepth (theRay);
   float aRaytraceDepth = MAXFLOAT;
 
   vec3 aRadiance   = ZERO;
   vec3 aThroughput = UNIT;
 
-  int aBounce = 0; // type of previous hit point
-  int aTrsfId = 0; // offset of object transform
+  int  aTransfID = 0;     // ID of object transformation
+  bool aInMedium = false; // is the ray inside an object
 
-  bool isInMedium = false;
+  float aExpPDF = 1.f;
+  float aImpPDF = 1.f;
 
   for (int aDepth = 0; aDepth < NB_BOUNCES; ++aDepth)
   {
     SIntersect aHit = SIntersect (MAXFLOAT, vec2 (ZERO), ZERO);
 
-    ivec4 aTriIndex = SceneNearestHit (theRay, theInverse, aHit, aTrsfId);
+    ivec4 aTriIndex = SceneNearestHit (theRay, theInverse, aHit, aTransfID);
 
     // check implicit path
-    vec3 aLe = intersectLight (theRay,
-      aDepth == 0 /* is view ray */, aBounce, aHit.Time);
+    vec3 aLe = IntersectLight (theRay, aDepth, aHit.Time, aExpPDF);
 
     if (any (greaterThan (aLe, ZERO)) || aTriIndex.x == -1)
     {
-      aRadiance += aThroughput * aLe; break; // terminate path
+      float aMIS = (aDepth == 0 || aImpPDF == MAXFLOAT) ? 1.f :
+        aImpPDF * aImpPDF / (aExpPDF * aExpPDF + aImpPDF * aImpPDF);
+
+      aRadiance += aThroughput * aLe * aMIS; break; // terminate path
     }
 
-    vec3 aInvTransf0 = texelFetch (uSceneTransformTexture, aTrsfId + 0).xyz;
-    vec3 aInvTransf1 = texelFetch (uSceneTransformTexture, aTrsfId + 1).xyz;
-    vec3 aInvTransf2 = texelFetch (uSceneTransformTexture, aTrsfId + 2).xyz;
+    vec3 aInvTransf0 = texelFetch (uSceneTransformTexture, aTransfID + 0).xyz;
+    vec3 aInvTransf1 = texelFetch (uSceneTransformTexture, aTransfID + 1).xyz;
+    vec3 aInvTransf2 = texelFetch (uSceneTransformTexture, aTransfID + 2).xyz;
 
     // compute geometrical normal
     aHit.Normal = normalize (vec3 (dot (aInvTransf0, aHit.Normal),
                                    dot (aInvTransf1, aHit.Normal),
                                    dot (aInvTransf2, aHit.Normal)));
 
-    // For polygons that are parallel to the screen plane, the depth slope
-    // is equal to 1, resulting in small polygon offset. For polygons that
-    // that are at a large angle to the screen, the depth slope tends to 1,
-    // resulting in a larger polygon offset
-    float aPolygonOffset = uSceneEpsilon * EPS_SCALE /
-      max (abs (dot (theRay.Direct, aHit.Normal)), MIN_SLOPE);
-
-    if (anOpenGlDepth < aHit.Time + aPolygonOffset)
-    {
-      vec4 aSrcColorRGBA = ComputeOpenGlColor();
-
-      aRadiance   += aThroughput.xyz * aSrcColorRGBA.xyz;
-
-      aDepth = INVALID_BOUNCES; // terminate path
-    }
-
     theRay.Origin += theRay.Direct * aHit.Time; // get new intersection point
 
-    // Evaluate depth
+    // evaluate depth on first hit
     if (aDepth == 0)
     {
-      // Hit point in NDC-space [-1,1] (the polygon offset is applied in the world space)
-      vec4 aNDCPoint = uViewMat * vec4 (theRay.Origin + theRay.Direct * aPolygonOffset, 1.f);
-      aNDCPoint.xyz *= 1.f / aNDCPoint.w;
+      vec4 aNDCPoint = uViewMat * vec4 (theRay.Origin, 1.f);
 
-      aRaytraceDepth = aNDCPoint.z * 0.5f + 0.5f;
+      float aPolygonOffset = PolygonOffset (aHit.Normal, theRay.Origin);
+      aRaytraceDepth = (aNDCPoint.z / aNDCPoint.w + aPolygonOffset * POLYGON_OFFSET_SCALE) * 0.5f + 0.5f;
     }
 
-    // fetch material (BSDF)
-    SMaterial aMaterial = SMaterial (
-      vec4 (texelFetch (uRaytraceMaterialTexture, MATERIAL_KD      (aTriIndex.w))),
-      vec3 (texelFetch (uRaytraceMaterialTexture, MATERIAL_KR      (aTriIndex.w))),
-      vec3 (texelFetch (uRaytraceMaterialTexture, MATERIAL_KT      (aTriIndex.w))),
-      vec4 (texelFetch (uRaytraceMaterialTexture, MATERIAL_KS      (aTriIndex.w))),
-      vec3 (texelFetch (uRaytraceMaterialTexture, MATERIAL_FRESNEL (aTriIndex.w))),
-      vec4 (texelFetch (uRaytraceMaterialTexture, MATERIAL_ABSORPT (aTriIndex.w))));
+    SBSDF aBSDF;
+
+    // fetch BxDF weights
+    aBSDF.Kc = texelFetch (uRaytraceMaterialTexture, MATERIAL_KC (aTriIndex.w));
+    aBSDF.Kd = texelFetch (uRaytraceMaterialTexture, MATERIAL_KD (aTriIndex.w));
+    aBSDF.Ks = texelFetch (uRaytraceMaterialTexture, MATERIAL_KS (aTriIndex.w));
+    aBSDF.Kt = texelFetch (uRaytraceMaterialTexture, MATERIAL_KT (aTriIndex.w)).rgb;
+
+    // compute smooth normal (in parallel with fetch)
+    vec3 aNormal = SmoothNormal (aHit.UV, aTriIndex);
+
+    aNormal = normalize (vec3 (dot (aInvTransf0, aNormal),
+                               dot (aInvTransf1, aNormal),
+                               dot (aInvTransf2, aNormal)));
+
+    SLocalSpace aSpace = buildLocalSpace (aNormal);
 
 #ifdef USE_TEXTURES
-    if (aMaterial.Kd.w >= 0.f)
+    if (aBSDF.Kd.w >= 0.f)
     {
       vec4 aTexCoord = vec4 (SmoothUV (aHit.UV, aTriIndex), 0.f, 1.f);
 
@@ -698,28 +837,27 @@ vec4 PathTrace (in SRay theRay, in vec3 theInverse)
       aTexCoord.st = vec2 (dot (aTrsfRow1, aTexCoord),
                            dot (aTrsfRow2, aTexCoord));
 
-      vec3 aTexColor = textureLod (
-        sampler2D (uTextureSamplers[int (aMaterial.Kd.w)]), aTexCoord.st, 0.f).rgb;
+      vec4 aTexColor = textureLod (
+        sampler2D (uTextureSamplers[int (aBSDF.Kd.w)]), aTexCoord.st, 0.f);
 
-      aMaterial.Kd.rgb *= aTexColor;
+      aBSDF.Kd.rgb *= (aTexColor.rgb * aTexColor.rgb) * aTexColor.w; // de-gamma correction (for gamma = 2)
+
+      if (aTexColor.w != 1.0f)
+      {
+        // mix transparency BTDF with texture alpha-channel
+        aBSDF.Kt = (UNIT - aTexColor.www) + aTexColor.w * aBSDF.Kt;
+      }
     }
 #endif
 
-    // compute smooth normal
-    vec3 aNormal = SmoothNormal (aHit.UV, aTriIndex);
+    // fetch Fresnel reflectance for both layers
+    aBSDF.FresnelCoat = texelFetch (uRaytraceMaterialTexture, MATERIAL_FRESNEL_COAT (aTriIndex.w)).xyz;
+    aBSDF.FresnelBase = texelFetch (uRaytraceMaterialTexture, MATERIAL_FRESNEL_BASE (aTriIndex.w)).xyz;
 
-    aNormal = normalize (vec3 (dot (aInvTransf0, aNormal),
-                               dot (aInvTransf1, aNormal),
-                               dot (aInvTransf2, aNormal)));
-
-    SLocalSpace aSpace = LocalSpace (aNormal);
-
-    // account for self-emission (not stored in the material)
-    aRadiance += aThroughput * texelFetch (
-      uRaytraceMaterialTexture, MATERIAL_LE (aTriIndex.w)).rgb;
-
-    if (uLightCount > 0 && convolve (aMaterial.Kd.rgb + aMaterial.Ks.rgb, aThroughput) > 0.f)
+    if (uLightCount > 0 && IsNotZero (aBSDF, aThroughput))
     {
+      aExpPDF = 1.f / uLightCount;
+
       int aLightIdx = min (int (floor (RandFloat() * uLightCount)), uLightCount - 1);
 
       vec4 aLight = texelFetch (
@@ -730,15 +868,21 @@ vec4 PathTrace (in SRay theRay, in vec3 theInverse)
       // 'w' component is 0 for infinite light and 1 for point light
       aLight.xyz -= mix (ZERO, theRay.Origin, aLight.w);
 
-      float aPDF = 1.f / uLightCount, aDistance = length (aLight.xyz);
+      float aDistance = length (aLight.xyz);
 
-      aLight.xyz = sampleLight (aLight.xyz * (1.f / aDistance),
-        aLight.w == 0.f /* is infinite */, aParam.w /* angle cosine */, aPDF);
+      aLight.xyz = SampleLight (aLight.xyz, aDistance,
+        aLight.w == 0.f /* is infinite */, aParam.w /* max cos or radius */, aExpPDF);
 
-      vec3 aContrib = (1.f / aPDF) * aParam.rgb /* Le */ * handleMaterial (
-          aMaterial, toLocalSpace (aLight.xyz, aSpace), toLocalSpace (-theRay.Direct, aSpace));
+      aImpPDF = BsdfPdfLayered (aBSDF,
+        toLocalSpace (-theRay.Direct, aSpace), toLocalSpace (aLight.xyz, aSpace), aThroughput);
 
-      if (any (greaterThan (aContrib, MIN_CONTRIBUTION))) // first check if light source is important
+      // MIS weight including division by explicit PDF
+      float aMIS = (aExpPDF == MAXFLOAT) ? 1.f : aExpPDF / (aExpPDF * aExpPDF + aImpPDF * aImpPDF);
+
+      vec3 aContrib = aMIS * aParam.rgb /* Le */ * EvalBsdfLayered (
+          aBSDF, toLocalSpace (aLight.xyz, aSpace), toLocalSpace (-theRay.Direct, aSpace));
+
+      if (any (greaterThan (aContrib, MIN_CONTRIBUTION))) // check if light source is important
       {
         SRay aShadow = SRay (theRay.Origin + aLight.xyz * uSceneEpsilon, aLight.xyz);
 
@@ -748,36 +892,38 @@ vec4 PathTrace (in SRay theRay, in vec3 theInverse)
         float aVisibility = SceneAnyHit (aShadow,
           InverseDirection (aLight.xyz), aLight.w == 0.f ? MAXFLOAT : aDistance);
 
-        aRadiance += aVisibility * aThroughput * aContrib;
+        aRadiance += aVisibility * (aThroughput * aContrib);
       }
     }
 
-    vec3 anInput;
+    // account for self-emission
+    aRadiance += aThroughput * texelFetch (uRaytraceMaterialTexture, MATERIAL_LE (aTriIndex.w)).rgb;
 
-    sampleMaterial (aMaterial,
-      toLocalSpace (-theRay.Direct, aSpace), anInput, aThroughput, aBounce);
-
-    if (isInMedium)
+    if (aInMedium) // handle attenuation
     {
-      aThroughput *= exp (-aHit.Time *
-        aMaterial.Absorption.w * (UNIT - aMaterial.Absorption.rgb));
+      vec4 aScattering = texelFetch (uRaytraceMaterialTexture, MATERIAL_ABSORPT_BASE (aTriIndex.w));
+
+      aThroughput *= exp (-aHit.Time * aScattering.w * (UNIT - aScattering.rgb));
     }
 
-    isInMedium = IS_REFR_SPEC_BOUNCE(aBounce) ? !isInMedium : isInMedium;
+    vec3 anInput = UNIT; // sampled input direction
 
-#ifndef RUSSIAN_ROULETTE
-    if (all (lessThan (aThroughput, MIN_THROUGHPUT)))
+    aImpPDF = SampleBsdfLayered (aBSDF,
+      toLocalSpace (-theRay.Direct, aSpace), anInput, aThroughput, aInMedium);
+
+    float aSurvive = float (any (greaterThan (aThroughput, MIN_THROUGHPUT)));
+
+#ifdef RUSSIAN_ROULETTE
+    aSurvive = aDepth < 3 ? aSurvive : min (dot (LUMA, aThroughput), 0.95f);
+#endif
+
+    // here, we additionally increase path length for non-diffuse bounces
+    if (RandFloat() > aSurvive || all (lessThan (aThroughput, MIN_THROUGHPUT)) || aDepth >= theNbSamples / FRAME_STEP + step (1.f / M_PI, aImpPDF))
     {
       aDepth = INVALID_BOUNCES; // terminate path
     }
-#else
-    float aSurvive = aDepth < 3 ? 1.f : min (dot (LUMA, aThroughput), 0.95f);
 
-    if (RandFloat() > aSurvive)
-    {
-      aDepth = INVALID_BOUNCES; // terminate path
-    }
-
+#ifdef RUSSIAN_ROULETTE
     aThroughput /= aSurvive;
 #endif
 
@@ -787,13 +933,11 @@ vec4 PathTrace (in SRay theRay, in vec3 theInverse)
       aHit.Normal * mix (-uSceneEpsilon, uSceneEpsilon, step (0.f, dot (aHit.Normal, anInput))), anInput);
 
     theInverse = InverseDirection (anInput);
-
-    anOpenGlDepth = MAXFLOAT; // disable combining image with OpenGL output
   }
 
   gl_FragDepth = aRaytraceDepth;
 
-  return vec4 (aRadiance, 0.f);
+  return vec4 (aRadiance, aRaytraceDepth);
 }
 
 #endif

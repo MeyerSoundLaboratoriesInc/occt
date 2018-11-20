@@ -14,7 +14,6 @@
 // commercial license or contractual agreement.
 
 #include <OpenGl_GlCore11.hxx>
-#include <InterfaceGraphic_Graphic3d.hxx>
 
 #include <OpenGl_GraduatedTrihedron.hxx>
 
@@ -27,7 +26,6 @@
 #include <OpenGl_AspectLine.hxx>
 #include <OpenGl_Workspace.hxx>
 #include <OpenGl_View.hxx>
-#include <OpenGl_Cylinder.hxx>
 #include <Precision.hxx>
 
 #ifndef _WIN32
@@ -112,16 +110,14 @@ void OpenGl_GraduatedTrihedron::initGlResources (const Handle(OpenGl_Context)& t
 
   myLabelValues.SetFontSize (theCtx, myData.ValuesSize());
 
-  myAspectLabels.SetFontAspect (myData.NamesFontAspect());
-  myAspectLabels.ChangeFontName() = myData.NamesFont();
+  myAspectLabels.Aspect()->SetTextFontAspect (myData.NamesFontAspect());
+  myAspectLabels.Aspect()->SetFont (myData.NamesFont());
 
-  myAspectValues.SetFontAspect (myData.ValuesFontAspect());
-  myAspectValues.ChangeFontName() = myData.ValuesFont();
+  myAspectValues.Aspect()->SetTextFontAspect (myData.ValuesFontAspect());
+  myAspectValues.Aspect()->SetFont (myData.ValuesFont());
 
   // Grid aspect
-  myGridLineAspect.ChangeColor().rgb[0] = (Standard_ShortReal) myData.GridColor().Red();
-  myGridLineAspect.ChangeColor().rgb[1] = (Standard_ShortReal) myData.GridColor().Green();
-  myGridLineAspect.ChangeColor().rgb[2] = (Standard_ShortReal) myData.GridColor().Blue();
+  myGridLineAspect.Aspect()->SetColor (myData.GridColor());
 }
 
 // =======================================================================
@@ -131,8 +127,7 @@ void OpenGl_GraduatedTrihedron::initGlResources (const Handle(OpenGl_Context)& t
 Standard_ShortReal OpenGl_GraduatedTrihedron::getNormal (const Handle(OpenGl_Context)& theContext,
                                                          OpenGl_Vec3& theNormal) const
 {
-  GLint aViewport[4] = {};
-  glGetIntegerv(GL_VIEWPORT, aViewport);
+  const Standard_Integer* aViewport = theContext->Viewport();
 
   OpenGl_Mat4 aModelMatrix;
   OpenGl_Mat4 aProjMatrix;
@@ -415,19 +410,16 @@ void OpenGl_GraduatedTrihedron::renderAxis (const Handle(OpenGl_Workspace)& theW
   // Render arrow
   OpenGl_Vec3 anArrowVec = myMin + anAxis.Direction * (myMax - myMin);
 
-  Graphic3d_TransformPers aTransMode;
-  aTransMode.Flags = Graphic3d_TMF_ZoomPers;
-  aTransMode.Point.x() = anArrowVec.x();
-  aTransMode.Point.y() = anArrowVec.y();
-  aTransMode.Point.z() = anArrowVec.z();
-
+  Graphic3d_TransformPers aTransMode (Graphic3d_TMF_ZoomPers, gp_Pnt (Standard_Real(anArrowVec.x()),
+                                                                      Standard_Real(anArrowVec.y()),
+                                                                      Standard_Real(anArrowVec.z())));
   const OpenGl_Mat4& aProjection = aContext->ProjectionState.Current();
   const OpenGl_Mat4& aWorldView  = aContext->WorldViewState.Current();
   const Standard_Integer aWidth  = theWorkspace->Width();
   const Standard_Integer aHeight = theWorkspace->Height();
 
   // Take into account Transform Persistence
-  aContext->ModelWorldState.SetCurrent (aTransMode.Compute (aProjection, aWorldView, aWidth, aHeight));
+  aContext->ModelWorldState.SetCurrent (aTransMode.Compute (theWorkspace->View()->Camera(), aProjection, aWorldView, aWidth, aHeight));
   aContext->ApplyModelViewMatrix();
 
   anAxis.Arrow.Render (theWorkspace);
@@ -435,8 +427,6 @@ void OpenGl_GraduatedTrihedron::renderAxis (const Handle(OpenGl_Workspace)& theW
   // Get current Model-View and Projection states
   OpenGl_Mat4 aModelMat;
   OpenGl_Mat4 aProjMat;
-  GLint aViewport[4];
-  aContext->core11fwd->glGetIntegerv (GL_VIEWPORT, aViewport);
   aModelMat.Convert (aContext->WorldViewState.Current() * aContext->ModelWorldState.Current());
   aProjMat .Convert (aContext->ProjectionState.Current());
 
@@ -444,7 +434,7 @@ void OpenGl_GraduatedTrihedron::renderAxis (const Handle(OpenGl_Workspace)& theW
   OpenGl_Vec3 aEndPoint = -anAxis.Direction * myData.ArrowsLength();
   OpenGl_Vec3 aWinPoint;
   Graphic3d_TransformUtils::Project<Standard_ShortReal> (aEndPoint.x(), aEndPoint.y(), aEndPoint.z(),
-                                                         aModelMat, aProjMat, aViewport,
+                                                         aModelMat, aProjMat, aContext->Viewport(),
                                                          aWinPoint.x(), aWinPoint.y(), aWinPoint.z());
 
   aContext->ModelWorldState.SetIdentity();
@@ -454,7 +444,7 @@ void OpenGl_GraduatedTrihedron::renderAxis (const Handle(OpenGl_Workspace)& theW
   // Get start point of zoom persistent arrow
   OpenGl_Vec3 anArrowStart;
   Graphic3d_TransformUtils::UnProject<Standard_ShortReal> (aWinPoint.x(), aWinPoint.y(), aWinPoint.z(),
-                                                           aModelMat, aProjMat, aViewport,
+                                                           aModelMat, aProjMat, aContext->Viewport(),
                                                            anArrowStart.x(), anArrowStart.y(), anArrowStart.z());
   // Render axis line
   aModelMat = theMat;
@@ -527,7 +517,7 @@ void OpenGl_GraduatedTrihedron::renderTickmarkLabels (const Handle(OpenGl_Worksp
 
     OpenGl_Vec3 aMiddle (theGridAxes.Ticks[theIndex] + aSizeVec * theGridAxes.Axes[theIndex] * 0.5f + aDir * (Standard_ShortReal)(theDpix * anOffset));
 
-    myAspectLabels.ChangeColor() = anAxis.NameColor;
+    myAspectLabels.Aspect()->SetColor (anAxis.NameColor);
     theWorkspace->SetAspectText (&myAspectLabels);
     anAxis.Label.SetPosition (aMiddle);
     anAxis.Label.Render (theWorkspace);
@@ -535,7 +525,7 @@ void OpenGl_GraduatedTrihedron::renderTickmarkLabels (const Handle(OpenGl_Worksp
 
   if (aCurAspect.ToDrawValues() && aCurAspect.TickmarksNumber() > 0)
   {
-    myAspectValues.ChangeColor() = anAxis.LineAspect.Color();
+    myAspectValues.Aspect()->SetColor (anAxis.LineAspect.Aspect()->Color());
     theWorkspace->SetAspectText (&myAspectValues);
     Standard_Real anOffset = aCurAspect.ValuesOffset() + aCurAspect.TickmarksLength();
 
@@ -615,8 +605,8 @@ void OpenGl_GraduatedTrihedron::Render (const Handle(OpenGl_Workspace)& theWorks
   Standard_ExtCharacter anAxesState = getGridAxes (aCorners, aGridAxes);
 
   // Remember current aspects
-  const OpenGl_AspectLine* anOldAspectLine = theWorkspace->AspectLine (Standard_False);
-  const OpenGl_AspectText* anOldAspectText = theWorkspace->AspectText (Standard_False);
+  const OpenGl_AspectLine* anOldAspectLine = theWorkspace->AspectLine();
+  const OpenGl_AspectText* anOldAspectText = theWorkspace->AspectText();
 
   OpenGl_Mat4 aModelMatrix;
   aModelMatrix.Convert (aContext->WorldViewState.Current());
@@ -729,14 +719,8 @@ OpenGl_GraduatedTrihedron::Axis::Axis (const Graphic3d_AxisAspect& theAspect,
   Line      (NULL),
   Arrow     (NULL)
 {
-  NameColor.rgb[0] = (Standard_ShortReal) theAspect.NameColor().Red();
-  NameColor.rgb[1] = (Standard_ShortReal) theAspect.NameColor().Green();
-  NameColor.rgb[2] = (Standard_ShortReal) theAspect.NameColor().Blue();
-  NameColor.rgb[3] = 1.0f;
-
-  LineAspect.ChangeColor().rgb[0] = (Standard_ShortReal) theAspect.Color().Red();
-  LineAspect.ChangeColor().rgb[1] = (Standard_ShortReal) theAspect.Color().Green();
-  LineAspect.ChangeColor().rgb[2] = (Standard_ShortReal) theAspect.Color().Blue();
+  NameColor = theAspect.NameColor();
+  LineAspect.Aspect()->SetColor (theAspect.Color());
 }
 
 // =======================================================================

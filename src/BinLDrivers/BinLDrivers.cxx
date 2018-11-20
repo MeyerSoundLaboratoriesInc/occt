@@ -22,17 +22,18 @@
 #include <BinMDF_ADriverTable.hxx>
 #include <BinMDocStd.hxx>
 #include <BinMFunction.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Plugin_Macro.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_GUID.hxx>
 #include <Standard_Transient.hxx>
 #include <TCollection_AsciiString.hxx>
+#include <TDocStd_Application.hxx>
 
 //#include <BinMNaming.hxx>
 static Standard_GUID BinLStorageDriver  ("13a56835-8269-11d5-aab2-0050044b1af1");
 static Standard_GUID BinLRetrievalDriver("13a56836-8269-11d5-aab2-0050044b1af1");
-#define CURRENT_DOCUMENT_VERSION 8
+#define CURRENT_DOCUMENT_VERSION 10
 
 //=======================================================================
 //function : Factory
@@ -60,9 +61,18 @@ const Handle(Standard_Transient)& BinLDrivers::Factory(const Standard_GUID& theG
     return model_rd;
   }
 
-  Standard_Failure::Raise ("BinLDrivers : unknown GUID");
-  static Handle(Standard_Transient) aNullHandle;
-  return aNullHandle;
+  throw Standard_Failure("BinLDrivers : unknown GUID");
+}
+
+//=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void BinLDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("BinLOcaf", "Binary Lite OCAF Document", "cbfl",
+                        new BinLDrivers_DocumentRetrievalDriver, 
+                        new BinLDrivers_DocumentStorageDriver);
 }
 
 //=======================================================================
@@ -71,7 +81,7 @@ const Handle(Standard_Transient)& BinLDrivers::Factory(const Standard_GUID& theG
 //=======================================================================
 
 Handle(BinMDF_ADriverTable) BinLDrivers::AttributeDrivers 
-                         (const Handle(CDM_MessageDriver)& aMsgDrv)
+                         (const Handle(Message_Messenger)& aMsgDrv)
 {
   Handle(BinMDF_ADriverTable) aTable = new BinMDF_ADriverTable;
 

@@ -22,27 +22,26 @@
 
 #include <TCollection_AsciiString.hxx>
 #include <MoniTool_ValueType.hxx>
+#include <NCollection_DataMap.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_Integer.hxx>
 #include <Standard_Real.hxx>
 #include <TColStd_HArray1OfAsciiString.hxx>
 #include <MoniTool_ValueInterpret.hxx>
 #include <MoniTool_ValueSatisfies.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_CString.hxx>
 #include <Standard_Boolean.hxx>
 #include <TColStd_HSequenceOfAsciiString.hxx>
-class Dico_DictionaryOfInteger;
 class TCollection_HAsciiString;
 class Standard_Transient;
 class Standard_ConstructionError;
 class TCollection_AsciiString;
 class Message_Messenger;
-class Dico_DictionaryOfTransient;
 
 
 class MoniTool_TypedValue;
-DEFINE_STANDARD_HANDLE(MoniTool_TypedValue, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(MoniTool_TypedValue, Standard_Transient)
 
 //! This class allows to dynamically manage .. typed values, i.e.
 //! values which have an alphanumeric expression, but with
@@ -56,7 +55,7 @@ DEFINE_STANDARD_HANDLE(MoniTool_TypedValue, MMgt_TShared)
 //! Its string content, which is a Handle(HAsciiString) can be
 //! shared by other data structures, hence gives a direct on line
 //! access to its value.
-class MoniTool_TypedValue : public MMgt_TShared
+class MoniTool_TypedValue : public Standard_Transient
 {
 
 public:
@@ -77,7 +76,7 @@ public:
   Standard_EXPORT MoniTool_TypedValue(const Handle(MoniTool_TypedValue)& other);
   
   //! Access to internal data which have no other access
-  Standard_EXPORT void Internals (MoniTool_ValueInterpret& interp, MoniTool_ValueSatisfies& satisf, Standard_CString& satisname, Handle(Dico_DictionaryOfInteger)& enums) const;
+  Standard_EXPORT void Internals (MoniTool_ValueInterpret& interp, MoniTool_ValueSatisfies& satisf, Standard_CString& satisname, NCollection_DataMap<TCollection_AsciiString, Standard_Integer>& enums) const;
   
   //! Returns the name
   Standard_EXPORT Standard_CString Name() const;
@@ -320,13 +319,13 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(MoniTool_TypedValue,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(MoniTool_TypedValue,Standard_Transient)
 
 protected:
 
   
   //! Gives the internal library of static values
-  Standard_EXPORT static Handle(Dico_DictionaryOfTransient) Stats();
+  Standard_EXPORT static NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>& Stats();
 
 
 
@@ -346,7 +345,7 @@ private:
   Standard_Real therealup;
   TCollection_AsciiString theunidef;
   Handle(TColStd_HArray1OfAsciiString) theenums;
-  Handle(Dico_DictionaryOfInteger) theeadds;
+  NCollection_DataMap<TCollection_AsciiString, Standard_Integer> theeadds;
   MoniTool_ValueInterpret theinterp;
   MoniTool_ValueSatisfies thesatisf;
   TCollection_AsciiString thesatisn;

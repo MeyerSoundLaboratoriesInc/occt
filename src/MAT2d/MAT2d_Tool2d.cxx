@@ -1070,7 +1070,7 @@ Standard_Real MAT2d_Tool2d::Distance(const Handle(MAT_Bisector)& Bis,
 void MAT2d_Tool2d::Dump(const Standard_Integer ,
   const Standard_Integer ) const
 {
-  Standard_NotImplemented::Raise();
+  throw Standard_NotImplemented();
 #else
 void MAT2d_Tool2d::Dump(const Standard_Integer bisector,
   const Standard_Integer) const
@@ -1078,7 +1078,7 @@ void MAT2d_Tool2d::Dump(const Standard_Integer bisector,
   if(bisector == -1) return;
   if(bisector > theNumberOfBisectors) return;
 
-  Handle(Geom2d_Curve) thebisector = GeomBis(bisector).Value();
+  Handle(Geom2d_Curve) thebisector = (Handle(Geom2d_Curve)) GeomBis(bisector).Value();
 
   MAT2d_DrawCurve(thebisector,3);
 

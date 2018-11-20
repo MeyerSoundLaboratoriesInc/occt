@@ -44,7 +44,7 @@ IGESDraw_RectArraySubfigure::IGESDraw_RectArraySubfigure ()    {  }
 {
   if (!allNumPos.IsNull())
     if (allNumPos->Lower() != 1)
-      Standard_DimensionMismatch::Raise("IGESDraw_RectArraySubfigure : Init");
+      throw Standard_DimensionMismatch("IGESDraw_RectArraySubfigure : Init");
   theBaseEntity       = aBase;
   theScaleFactor      = aScale;
   theLowerLeftCorner  = aCorner;
@@ -53,7 +53,7 @@ IGESDraw_RectArraySubfigure::IGESDraw_RectArraySubfigure ()    {  }
   theColumnSeparation = hDisp;
   theRowSeparation    = vtDisp;
   theRotationAngle    = rotationAngle;
-  theDoDontFlag       = doDont;
+  theDoDontFlag       = doDont != 0;
   thePositions        = allNumPos;
   InitTypeAndForm(412,0);
 }

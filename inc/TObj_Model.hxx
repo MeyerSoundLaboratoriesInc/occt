@@ -18,9 +18,10 @@
 #ifndef TObj_Model_HeaderFile
 #define TObj_Model_HeaderFile
 
+#include <Message_Messenger.hxx>
 #include <TDF_Label.hxx>
 #include <TObj_Partition.hxx>
-#include <Message_Messenger.hxx>
+#include <TCollection_ExtendedString.hxx>
 
 class TObj_TNameContainer;
 class TObj_Partition;
@@ -30,7 +31,7 @@ class TObj_CheckModel;
 class TObj_Application;
 
 class TObj_Model;
-DEFINE_STANDARD_HANDLE(TObj_Model,MMgt_TShared)
+DEFINE_STANDARD_HANDLE(TObj_Model,Standard_Transient)
 
 /**
 * Base class for OCAF based models.
@@ -40,7 +41,7 @@ DEFINE_STANDARD_HANDLE(TObj_Model,MMgt_TShared)
 * Provides default implementation for many methods.
 */
 
-class TObj_Model : public MMgt_TShared
+class TObj_Model : public Standard_Transient
 {
  protected:
 
@@ -64,8 +65,7 @@ class TObj_Model : public MMgt_TShared
   Standard_EXPORT ~TObj_Model ();
 
   //! Check whether the document contains the OCAF data.
-  //! This implementation checks theFile on NULL only.
-  Standard_EXPORT virtual Standard_Boolean checkDocumentEmpty (const char* theFile);
+  Standard_EXPORT virtual Standard_Boolean checkDocumentEmpty(const TCollection_ExtendedString& theFile);
 
  public:
   /**
@@ -73,22 +73,23 @@ class TObj_Model : public MMgt_TShared
   */
   
   //! Set messenger to use for messages output
-  Standard_EXPORT void SetMessenger (const Handle(Message_Messenger) &theMsgr) { myMessenger = theMsgr; }
+  void SetMessenger (const Handle(Message_Messenger) &theMsgr) { myMessenger = theMsgr; }
 
   //! Get messenger used for messages output (by default, the messenger from
   //! application is used)
-  Standard_EXPORT Handle(Message_Messenger) Messenger () const { return myMessenger; }
+  Handle(Message_Messenger) Messenger () const { return myMessenger; }
    
  public:
   /**
   * Implementation of Load/Save for OCAF based models
   */
   
-  //! Load the OCAF model from a file
-  virtual Standard_EXPORT Standard_Boolean Load (const char* theFile);
+  //! Load the OCAF model from a file. If the filename is empty or file does
+  //! not exists, it just initializes model by empty data.
+  Standard_EXPORT virtual Standard_Boolean Load (const TCollection_ExtendedString& theFile);
 
   //! Save the model to a file
-  virtual Standard_EXPORT Standard_Boolean SaveAs (const char* theFile);
+  Standard_EXPORT virtual Standard_Boolean SaveAs (const TCollection_ExtendedString& theFile);
 
   //! Save the model to the same file
   Standard_EXPORT Standard_Boolean Save ();
@@ -110,7 +111,7 @@ class TObj_Model : public MMgt_TShared
 
   //! Returns the full file name this model is to be saved to, 
   //! or null if the model was not saved yet
-  virtual Standard_EXPORT Handle(TCollection_HAsciiString) GetFile() const;
+  virtual Standard_EXPORT Handle(TCollection_HExtendedString) GetFile() const;
 
  public:
   /**
@@ -302,7 +303,7 @@ class TObj_Model : public MMgt_TShared
 
   //! Sets OCAF label on which model data are stored.
   //! Used by persistence mechanism.
-  void Standard_EXPORT SetLabel(const TDF_Label& theLabel) { myLabel = theLabel; }
+  void SetLabel(const TDF_Label& theLabel) { myLabel = theLabel; }
 
  protected:
 
@@ -322,7 +323,7 @@ class TObj_Model : public MMgt_TShared
   //! Returns boolean value is to check model in Init new model
   //! The check could be useful if version of model changed
   //! Default implementation returns FALSE (check turned OFF)
-  virtual Standard_EXPORT Standard_Boolean isToCheck() const
+  virtual Standard_Boolean isToCheck() const
   { return Standard_True; }
 
  public:
@@ -355,7 +356,7 @@ class TObj_Model : public MMgt_TShared
 
  public:
   //! CASCADE RTTI
-  DEFINE_STANDARD_RTTIEXT(TObj_Model,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(TObj_Model,Standard_Transient)
 };
 
 //! The Model Handle is defined in a separate header file

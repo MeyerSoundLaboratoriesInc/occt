@@ -15,8 +15,9 @@
 
 
 #include <BinMDataStd_BooleanListDriver.hxx>
+#include <BinMDataStd.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_Array1OfByte.hxx>
 #include <TDataStd_BooleanList.hxx>
@@ -29,7 +30,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_BooleanListDriver,BinMDF_ADriver)
 //function : BinMDataStd_BooleanListDriver
 //purpose  : Constructor
 //=======================================================================
-BinMDataStd_BooleanListDriver::BinMDataStd_BooleanListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+BinMDataStd_BooleanListDriver::BinMDataStd_BooleanListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_BooleanList)->Name())
 {
 
@@ -49,25 +50,28 @@ Handle(TDF_Attribute) BinMDataStd_BooleanListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean BinMDataStd_BooleanListDriver::Paste(const BinObjMgt_Persistent&  theSource,
-						      const Handle(TDF_Attribute)& theTarget,
-						      BinObjMgt_RRelocationTable&  ) const
+                                                      const Handle(TDF_Attribute)& theTarget,
+                                                      BinObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aIndex, aFirstInd, aLastInd;
   if (! (theSource >> aFirstInd >> aLastInd))
     return Standard_False;
-  if(aLastInd == 0) return Standard_True;
-
-  const Standard_Integer aLength = aLastInd - aFirstInd + 1;
-  if (aLength <= 0)
-    return Standard_False;
-  TColStd_Array1OfByte aTargetArray(aFirstInd, aLastInd);
-  theSource.GetByteArray (&aTargetArray(aFirstInd), aLength);
 
   const Handle(TDataStd_BooleanList) anAtt = Handle(TDataStd_BooleanList)::DownCast(theTarget);
-  for (aIndex = aFirstInd; aIndex <= aLastInd; aIndex++)
-  {
-    anAtt->Append(aTargetArray.Value(aIndex) ? Standard_True : Standard_False);
+  if(aLastInd > 0) {
+
+    const Standard_Integer aLength = aLastInd - aFirstInd + 1;
+    if (aLength > 0) {    
+      TColStd_Array1OfByte aTargetArray(aFirstInd, aLastInd);
+      theSource.GetByteArray (&aTargetArray(aFirstInd), aLength);
+      for (aIndex = aFirstInd; aIndex <= aLastInd; aIndex++)
+      {
+        anAtt->Append(aTargetArray.Value(aIndex) ? Standard_True : Standard_False);
+      }
+    }
   }
+
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return Standard_True;
 }
 
@@ -93,4 +97,8 @@ void BinMDataStd_BooleanListDriver::Paste(const Handle(TDF_Attribute)& theSource
   }
   Standard_Byte *aPtr = (Standard_Byte *) &aSourceArray(aFirstInd);
   theTarget.PutByteArray(aPtr, aLength);
+
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_BooleanList::GetID()) 
+    theTarget << anAtt->ID();
 }

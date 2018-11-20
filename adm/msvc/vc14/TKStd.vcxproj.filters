@@ -2,19 +2,22 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{AA65ABAF-0D82-1878-0BA2-0B46753EDA88}</UniqueIdentifier>
+      <UniqueIdentifier>{36D3A838-02D5-0931-005B-EDD37ED81578}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdDrivers">
-      <UniqueIdentifier>{7D4C2FE1-0253-0D61-11F5-35DF2ECF4BC8}</UniqueIdentifier>
+      <UniqueIdentifier>{69B2A5A4-167A-0F48-1026-6637BED5A982}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdObject">
-      <UniqueIdentifier>{785E5A27-1686-12D8-02CB-C4EC1E69E300}</UniqueIdentifier>
+      <UniqueIdentifier>{6BD4CEC6-1300-066D-1974-36729C9E7B0F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdPersistent">
-      <UniqueIdentifier>{B6262358-0D3E-08A0-157E-584BBBD3F210}</UniqueIdentifier>
+      <UniqueIdentifier>{A11AB80E-0034-1413-0B48-101882B8FF59}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\StdStorage">
+      <UniqueIdentifier>{8450D88D-04E0-039F-127E-C396A6D79A54}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapePersistent">
-      <UniqueIdentifier>{B9289001-1002-0BE3-124A-A21FC2D31FD5}</UniqueIdentifier>
+      <UniqueIdentifier>{D51D7057-118F-0F8D-1038-0E40F0C956D9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -51,6 +54,27 @@
     <ClCompile Include="..\..\..\src\StdPersistent\StdPersistent_TopLoc.cxx">
       <Filter>Source files\StdPersistent</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_BacketOfPersistent.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_Data.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_HeaderData.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_Root.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_RootData.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdStorage\StdStorage_TypeData.cxx">
+      <Filter>Source files\StdStorage</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\ShapePersistent\ShapePersistent.cxx">
       <Filter>Source files\ShapePersistent</Filter>
     </ClCompile>
@@ -58,6 +82,9 @@
       <Filter>Source files\ShapePersistent</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapePersistent\ShapePersistent_Geom.cxx">
+      <Filter>Source files\ShapePersistent</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\ShapePersistent\ShapePersistent_Geom2d.cxx">
       <Filter>Source files\ShapePersistent</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapePersistent\ShapePersistent_Geom2d_Curve.cxx">

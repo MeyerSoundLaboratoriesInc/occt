@@ -12,23 +12,23 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <PrsMgr_PresentationManager.hxx>
 
 #include <Geom_Transformation.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
+#include <Prs3d_Drawer.hxx>
 #include <Prs3d_Presentation.hxx>
 #include <Prs3d_PresentationShadow.hxx>
-#include <Prs3d_ShadingAspect.hxx>
 #include <PrsMgr_ModedPresentation.hxx>
 #include <PrsMgr_PresentableObject.hxx>
 #include <PrsMgr_Presentation.hxx>
-#include <PrsMgr_PresentationManager.hxx>
 #include <PrsMgr_Presentations.hxx>
 #include <Standard_NoSuchObject.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_ListIteratorOfListOfTransient.hxx>
 #include <V3d_View.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_PresentationManager,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_PresentationManager, Standard_Transient)
 
 // =======================================================================
 // function : PrsMgr_PresentationManager
@@ -36,8 +36,7 @@ IMPLEMENT_STANDARD_RTTIEXT(PrsMgr_PresentationManager,MMgt_TShared)
 // =======================================================================
 PrsMgr_PresentationManager::PrsMgr_PresentationManager (const Handle(Graphic3d_StructureManager)& theStructureManager)
 : myStructureManager (theStructureManager),
-  myImmediateModeOn  (0),
-  mySelectionColor   (Quantity_NOC_GRAY99)
+  myImmediateModeOn  (0)
 {
   //
 }
@@ -90,19 +89,31 @@ void PrsMgr_PresentationManager::Erase (const Handle(PrsMgr_PresentableObject)& 
   }
 
   PrsMgr_Presentations& aPrsList = thePrsObj->Presentations();
-  for (Standard_Integer aPrsIter = 1; aPrsIter <= aPrsList.Length(); ++aPrsIter)
+  for (PrsMgr_Presentations::Iterator anIt (aPrsList); anIt.More();)
   {
-    const PrsMgr_ModedPresentation&           aModedPrs = aPrsList.Value (aPrsIter);
-    const Handle(PrsMgr_PresentationManager)& aPrsMgr   = aModedPrs.Presentation()->PresentationManager();
-    if (theMode == aPrsList (aPrsIter).Mode()
-     && this    == aPrsMgr)
+    const PrsMgr_ModedPresentation& aModedPrs = anIt.Value();
+    if (aModedPrs.Presentation().IsNull())
     {
-      if (!aModedPrs.Presentation().IsNull())
+      anIt.Next();
+      continue;
+    }
+
+    const Handle(PrsMgr_PresentationManager)& aPrsMgr = aModedPrs.Presentation()->PresentationManager();
+    if ((theMode == aModedPrs.Mode() || theMode == -1)
+     && (this == aPrsMgr))
+    {
+      aModedPrs.Presentation()->Erase();
+
+      aPrsList.Remove (anIt);
+
+      if (theMode != -1)
       {
-        aModedPrs.Presentation()->Erase();
+        return;
       }
-      aPrsList.Remove (aPrsIter);
-      return;
+    }
+    else
+    {
+      anIt.Next();
     }
   }
 }
@@ -143,40 +154,10 @@ void PrsMgr_PresentationManager::SetVisibility (const Handle(PrsMgr_PresentableO
     return;
   }
 
-  Presentation (thePrsObj, theMode)->SetVisible (theValue);
-}
-
-// =======================================================================
-// function : Highlight
-// purpose  :
-// =======================================================================
-void PrsMgr_PresentationManager::Highlight (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                            const Standard_Integer                  theMode)
-{
-  for (PrsMgr_ListOfPresentableObjectsIter anIter (thePrsObj->Children()); anIter.More(); anIter.Next())
+  Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode);
+  if (!aPrs.IsNull())
   {
-    Highlight (anIter.Value(), theMode);
-  }
-  if (!thePrsObj->HasOwnPresentations())
-  {
-    return;
-  }
-
-  Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode, Standard_True);
-  if (aPrs->MustBeUpdated())
-  {
-    Update (thePrsObj, theMode);
-  }
-
-  if (myImmediateModeOn > 0)
-  {
-    Handle(Prs3d_PresentationShadow) aShadow = new Prs3d_PresentationShadow (myStructureManager, aPrs->Presentation());
-    aShadow->Highlight (Aspect_TOHM_COLOR, mySelectionColor);
-    AddToImmediateList (aShadow);
-  }
-  else
-  {
-    aPrs->Highlight (Aspect_TOHM_COLOR, mySelectionColor);
+    aPrs->SetVisible (theValue);
   }
 }
 
@@ -184,18 +165,24 @@ void PrsMgr_PresentationManager::Highlight (const Handle(PrsMgr_PresentableObjec
 // function : Unhighlight
 // purpose  :
 // =======================================================================
-void PrsMgr_PresentationManager::Unhighlight (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                              const Standard_Integer                  theMode)
+void PrsMgr_PresentationManager::Unhighlight (const Handle(PrsMgr_PresentableObject)& thePrsObj)
 {
   for (PrsMgr_ListOfPresentableObjectsIter anIter (thePrsObj->Children()); anIter.More(); anIter.Next())
   {
-    Unhighlight (anIter.Value(), theMode);
+    Unhighlight (anIter.Value());
   }
 
-  const Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode);
-  if (!aPrs.IsNull())
+  const PrsMgr_Presentations& aPrsList = thePrsObj->Presentations();
+  for (Standard_Integer aPrsIter = 1; aPrsIter <= aPrsList.Length(); ++aPrsIter)
   {
-    aPrs->Unhighlight();
+    const PrsMgr_ModedPresentation&           aModedPrs = aPrsList.Value (aPrsIter);
+    const Handle(PrsMgr_Presentation)&        aPrs      = aModedPrs.Presentation();
+    const Handle(PrsMgr_PresentationManager)& aPrsMgr   = aPrs->PresentationManager();
+    if (this == aPrsMgr
+    &&  aPrs->IsHighlighted())
+    {
+      aPrs->Unhighlight();
+    }
   }
 }
 
@@ -343,9 +330,9 @@ void PrsMgr_PresentationManager::ClearImmediateDraw()
 // =======================================================================
 void PrsMgr_PresentationManager::displayImmediate (const Handle(V3d_Viewer)& theViewer)
 {
-  for (theViewer->InitActiveViews(); theViewer->MoreActiveViews(); theViewer->NextActiveViews())
+  for (V3d_ListOfViewIterator anActiveViewIter (theViewer->ActiveViewIterator()); anActiveViewIter.More(); anActiveViewIter.Next())
   {
-    const Handle(Graphic3d_CView)& aView = theViewer->ActiveView()->View();
+    const Handle(Graphic3d_CView)& aView = anActiveViewIter.Value()->View();
     for (PrsMgr_ListOfPresentations::Iterator anIter (myImmediateList); anIter.More(); anIter.Next())
     {
       const Handle(Prs3d_Presentation)& aPrs = anIter.Value();
@@ -360,9 +347,9 @@ void PrsMgr_PresentationManager::displayImmediate (const Handle(V3d_Viewer)& the
         aShadowPrs = new Prs3d_PresentationShadow (myStructureManager, 
                                                    Handle(Prs3d_Presentation)::DownCast (aViewDepPrs));
         aShadowPrs->SetZLayer (aViewDepPrs->CStructure()->ZLayer());
-        aShadowPrs->SetClipPlanes (aViewDepPrs->GetClipPlanes());
+        aShadowPrs->SetClipPlanes (aViewDepPrs->ClipPlanes());
         aShadowPrs->CStructure()->IsForHighlight = 1;
-        aShadowPrs->Highlight (Aspect_TOHM_COLOR, aPrs->HighlightColor());
+        aShadowPrs->Highlight (aPrs->HighlightStyle());
         myViewDependentImmediateList.Append (aShadowPrs);
       }
       // handles custom highlight presentations which were defined in overridden
@@ -537,7 +524,7 @@ Standard_Boolean PrsMgr_PresentationManager::RemovePresentation (const Handle(Pr
 // purpose  :
 // =======================================================================
 void PrsMgr_PresentationManager::SetZLayer (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                            const Standard_Integer                  theLayerId)
+                                            const Graphic3d_ZLayerId                theLayerId)
 {
   for (PrsMgr_ListOfPresentableObjectsIter anIter (thePrsObj->Children()); anIter.More(); anIter.Next())
   {
@@ -555,7 +542,7 @@ void PrsMgr_PresentationManager::SetZLayer (const Handle(PrsMgr_PresentableObjec
 // function : GetZLayer
 // purpose  :
 // =======================================================================
-Standard_Integer PrsMgr_PresentationManager::GetZLayer (const Handle(PrsMgr_PresentableObject)& thePrsObj) const
+Graphic3d_ZLayerId PrsMgr_PresentationManager::GetZLayer (const Handle(PrsMgr_PresentableObject)& thePrsObj) const
 {
   return thePrsObj->ZLayer();
 }
@@ -582,23 +569,22 @@ void PrsMgr_PresentationManager::Transform (const Handle(PrsMgr_PresentableObjec
                                             const Handle(Geom_Transformation)&      theTransformation,
                                             const Standard_Integer                  theMode)
 {
-  Presentation (thePrsObj, theMode)->Transform (theTransformation);
+  Presentation (thePrsObj, theMode)->SetTransformation (theTransformation);
 }
-
 
 // =======================================================================
 // function : Color
 // purpose  :
 // =======================================================================
 void PrsMgr_PresentationManager::Color (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                        const Quantity_NameOfColor              theColor,
+                                        const Handle(Prs3d_Drawer)& theStyle,
                                         const Standard_Integer                  theMode,
                                         const Handle(PrsMgr_PresentableObject)& theSelObj,
                                         const Standard_Integer theImmediateStructLayerId)
 {
   for (PrsMgr_ListOfPresentableObjectsIter anIter (thePrsObj->Children()); anIter.More(); anIter.Next())
   {
-    Color (anIter.Value(), theColor, theMode, NULL, theImmediateStructLayerId);
+    Color (anIter.Value(), theStyle, theMode, NULL, theImmediateStructLayerId);
   }
   if (!thePrsObj->HasOwnPresentations())
   {
@@ -615,59 +601,14 @@ void PrsMgr_PresentationManager::Color (const Handle(PrsMgr_PresentableObject)& 
   {
     Handle(Prs3d_PresentationShadow) aShadow = new Prs3d_PresentationShadow (myStructureManager, aPrs->Presentation());
     aShadow->SetZLayer (theImmediateStructLayerId);
-    aShadow->SetClipPlanes (aPrs->Presentation()->GetClipPlanes());
+    aShadow->SetClipPlanes (aPrs->Presentation()->ClipPlanes());
     aShadow->CStructure()->IsForHighlight = 1;
-    aShadow->Highlight (Aspect_TOHM_COLOR, theColor);
+    aShadow->Highlight (theStyle);
     AddToImmediateList (aShadow);
   }
   else
   {
-    aPrs->Highlight (Aspect_TOHM_COLOR, theColor);
-  }
-}
-
-// =======================================================================
-// function : BoundBox
-// purpose  :
-// =======================================================================
-void PrsMgr_PresentationManager::BoundBox (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                           const Standard_Integer                  theMode)
-{
-  Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode, Standard_True);
-  if (aPrs->MustBeUpdated())
-  {
-    Update (thePrsObj, theMode);
-  }
-  aPrs->Highlight (Aspect_TOHM_BOUNDBOX, mySelectionColor);
-}
-
-// =======================================================================
-// function : SetShadingAspect
-// purpose  :
-// =======================================================================
-void PrsMgr_PresentationManager::SetShadingAspect (const Handle(PrsMgr_PresentableObject)& thePrsObject,
-                                                   const Quantity_NameOfColor              theColor,
-                                                   const Graphic3d_NameOfMaterial          theMaterial,
-                                                   const Standard_Integer                  theMode)
-{
-  Handle(Prs3d_ShadingAspect) anAspect = new Prs3d_ShadingAspect();
-  anAspect->SetColor    (theColor);
-  anAspect->SetMaterial (theMaterial);
-  SetShadingAspect (thePrsObject, anAspect, theMode);
-}
-
-// =======================================================================
-// function : SetShadingAspect
-// purpose  :
-// =======================================================================
-void PrsMgr_PresentationManager::SetShadingAspect (const Handle(PrsMgr_PresentableObject)& thePrsObj,
-                                                   const Handle(Prs3d_ShadingAspect)&      theShadingAspect,
-                                                   const Standard_Integer                  theMode)
-{
-  const Handle(PrsMgr_Presentation) aPrs = Presentation (thePrsObj, theMode);
-  if (!aPrs.IsNull())
-  {
-    aPrs->SetShadingAspect (theShadingAspect);
+    aPrs->Highlight (theStyle);
   }
 }
 
@@ -675,13 +616,13 @@ namespace
 {
   // =======================================================================
   // function : updatePrsTransformation
-  // purpose  : Internal funtion that scans thePrsList for shadow presentations
+  // purpose  : Internal function that scans thePrsList for shadow presentations
   //            and applies transformation theTrsf to them in case if parent ID
   //            of shadow presentation is equal to theRefId
   // =======================================================================
   void updatePrsTransformation (const PrsMgr_ListOfPresentations& thePrsList,
                                 const Standard_Integer theRefId,
-                                const Graphic3d_Mat4& theTrsf)
+                                const Handle(Geom_Transformation)& theTrsf)
   {
     for (PrsMgr_ListOfPresentations::Iterator anIter (thePrsList); anIter.More(); anIter.Next())
     {
@@ -693,7 +634,7 @@ namespace
       if (aShadowPrs.IsNull() || aShadowPrs->ParentId() != theRefId)
         continue;
 
-      aShadowPrs->CStructure()->Transformation = theTrsf;
+      aShadowPrs->CStructure()->SetTransformation (theTrsf);
     }
   }
 }
@@ -710,24 +651,27 @@ void PrsMgr_PresentationManager::UpdateHighlightTrsf (const Handle(V3d_Viewer)& 
   if (theObj.IsNull())
     return;
 
-  const Handle(Prs3d_Presentation)& aBasePrs = Presentation (theObj, theMode, Standard_False)->Presentation();
-  const Handle(Prs3d_Presentation)& aParentPrs = theSelObj.IsNull() ?
-    aBasePrs : Presentation (theSelObj, theMode, Standard_False)->Presentation();
-  const Standard_Integer aParentId = aParentPrs->CStructure()->Id;
+  Handle(PrsMgr_Presentation) aPrs = Presentation (!theSelObj.IsNull() ? theSelObj : theObj, theMode, Standard_False);
+  if (aPrs.IsNull())
+  {
+    return;
+  }
 
-  updatePrsTransformation (myImmediateList, aParentId, aBasePrs->CStructure()->Transformation);
+  Handle(Geom_Transformation) aTrsf = theObj->LocalTransformationGeom();
+  const Standard_Integer aParentId = aPrs->Presentation()->CStructure()->Id;
+  updatePrsTransformation (myImmediateList, aParentId, aTrsf);
 
   if (!myViewDependentImmediateList.IsEmpty())
   {
-    for (theViewer->InitActiveViews(); theViewer->MoreActiveViews(); theViewer->NextActiveViews())
+    for (V3d_ListOfViewIterator anActiveViewIter (theViewer->ActiveViewIterator()); anActiveViewIter.More(); anActiveViewIter.Next())
     {
-      const Handle(Graphic3d_CView)& aView = theViewer->ActiveView()->View();
+      const Handle(Graphic3d_CView)& aView = anActiveViewIter.Value()->View();
       Handle(Graphic3d_Structure) aViewDepParentPrs;
       if (aView->IsComputed (aParentId, aViewDepParentPrs))
       {
         updatePrsTransformation (myViewDependentImmediateList,
                                  aViewDepParentPrs->CStructure()->Id,
-                                 aBasePrs->CStructure()->Transformation);
+                                 aTrsf);
       }
     }
   }

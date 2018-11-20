@@ -25,9 +25,10 @@
 #include <BinMDataXtd_PointDriver.hxx>
 #include <BinMDataXtd_ShapeDriver.hxx>
 #include <BinMDF_ADriverTable.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <BinMDataXtd_PresentationDriver.hxx>
 #include <BinMDataXtd_PositionDriver.hxx>
+#include <BinMDataXtd_TriangulationDriver.hxx>
 
 static Standard_Integer myDocumentVersion = -1;
 //=======================================================================
@@ -36,19 +37,20 @@ static Standard_Integer myDocumentVersion = -1;
 //=======================================================================
 
 void BinMDataXtd::AddDrivers (const Handle(BinMDF_ADriverTable)& theDriverTable,
-                              const Handle(CDM_MessageDriver)&   theMsgDriver)
+                              const Handle(Message_Messenger)&   theMsgDriver)
 {
-  theDriverTable->AddDriver (new BinMDataXtd_ConstraintDriver  (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_GeometryDriver    (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_PatternStdDriver  (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_ShapeDriver       (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_PointDriver       (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_AxisDriver        (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_PlaneDriver       (theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_PlacementDriver   (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_ConstraintDriver   (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_GeometryDriver     (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PatternStdDriver   (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_ShapeDriver        (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PointDriver        (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_AxisDriver         (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PlaneDriver        (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PlacementDriver    (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_TriangulationDriver(theMsgDriver) );
 
-  theDriverTable->AddDriver (new BinMDataXtd_PresentationDriver(theMsgDriver) );
-  theDriverTable->AddDriver (new BinMDataXtd_PositionDriver    (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PresentationDriver (theMsgDriver) );
+  theDriverTable->AddDriver (new BinMDataXtd_PositionDriver     (theMsgDriver) );
 }
 
 //=======================================================================

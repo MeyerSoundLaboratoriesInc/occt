@@ -158,7 +158,7 @@ static void Hunt(const TColStd_Array1OfReal& Arr,
     Iloc = i;
   else
     if(Abs(Coord - Arr(i)) > Tol) 
-      Standard_NotImplemented::Raise("Adaptor3d_CurveOnSurface:Hunt");
+      throw Standard_NotImplemented("Adaptor3d_CurveOnSurface:Hunt");
 }
 
 //=======================================================================
@@ -730,31 +730,31 @@ void Adaptor3d_CurveOnSurface::Load(const Handle(Adaptor3d_HSurface)& S)
 
 //=======================================================================
 //function : Load
-//purpose  : 
+//purpose  :
 //=======================================================================
 
-void Adaptor3d_CurveOnSurface::Load(const Handle(Adaptor2d_HCurve2d)& C) 
+void Adaptor3d_CurveOnSurface::Load(const Handle(Adaptor2d_HCurve2d)& C)
 {
   myCurve = C;
-  if (!mySurface.IsNull()) 
-     {
-       EvalKPart();
-       GeomAbs_SurfaceType  SType ;
-       SType = mySurface->GetType();
-       if( SType == GeomAbs_BSplineSurface)
-	 EvalFirstLastSurf();
-       if( SType == GeomAbs_SurfaceOfExtrusion)
-	 EvalFirstLastSurf();
-	 if( SType == GeomAbs_SurfaceOfRevolution)
-	 EvalFirstLastSurf();
-	 if( SType == GeomAbs_OffsetSurface) {
-          SType = mySurface->BasisSurface()->GetType();
-	  if( SType == GeomAbs_SurfaceOfRevolution ||
-              SType == GeomAbs_SurfaceOfExtrusion ||
-	      SType == GeomAbs_BSplineSurface )
-	    EvalFirstLastSurf();
-	}
-     }
+  if (mySurface.IsNull())
+  {
+    return;
+  }
+
+  EvalKPart();
+
+  GeomAbs_SurfaceType SType = mySurface->GetType();
+  if (SType == GeomAbs_OffsetSurface)
+  {
+    SType = mySurface->BasisSurface()->GetType();
+  }
+
+  if (SType == GeomAbs_BSplineSurface ||  
+      SType == GeomAbs_SurfaceOfExtrusion ||
+      SType == GeomAbs_SurfaceOfRevolution)
+  {
+    EvalFirstLastSurf();
+  }
 }
 
 //=======================================================================
@@ -846,16 +846,19 @@ Standard_Integer Adaptor3d_CurveOnSurface::NbIntervals (const GeomAbs_Shape S) c
   Standard_Integer nu,nv,nc;
   nu=mySurface->NbUIntervals(S);
   nv=mySurface->NbVIntervals(S);
+  nc=myCurve->NbIntervals(S);
 
-  TColStd_Array1OfReal TabU(1,nu+1);
-  TColStd_Array1OfReal TabV(1,nv+1);
+  // Allocate the memory for arrays TabU, TabV, TabC only once using the buffer TabBuf.
+  TColStd_Array1OfReal TabBuf(1, nu + nv + nc + 3);
+  TColStd_Array1OfReal TabU(TabBuf(1), 1, nu+1);
+  TColStd_Array1OfReal TabV(TabBuf(nu + 2), 1, nv+1);
+  TColStd_Array1OfReal TabC(TabBuf(nu + nv + 3), 1, nc+1);
+
   Standard_Integer NbSample = 20;
   Standard_Real U,V,Tdeb,Tfin;
   Tdeb=myCurve->FirstParameter();
   Tfin=myCurve->LastParameter();
 
-  nc=myCurve->NbIntervals(S);
-  TColStd_Array1OfReal TabC(1,nc+1);
   myCurve->Intervals(TabC,S);
 
   Standard_Real Tol= Precision::PConfusion()/10;
@@ -1176,7 +1179,7 @@ gp_Vec Adaptor3d_CurveOnSurface::DN
     D3(U,P,V1,V2,V);
     break ;
   default:
-    Standard_NotImplemented::Raise("Adaptor3d_CurveOnSurface:DN");
+    throw Standard_NotImplemented("Adaptor3d_CurveOnSurface:DN");
     break;
   }
   return V;
@@ -1302,8 +1305,7 @@ Standard_Integer Adaptor3d_CurveOnSurface::NbKnots() const {
   if (mySurface->GetType()==GeomAbs_Plane)
     return myCurve->NbKnots();
   else {
-    Standard_NoSuchObject::Raise();
-    return 0;
+    throw Standard_NoSuchObject();
   }
 }
 
@@ -1632,7 +1634,7 @@ void Adaptor3d_CurveOnSurface::EvalFirstLastSurf()
       Ok = LocatePart_Offset(UV,DUV,mySurface,LeftBot,RightTop);
       break;
       default :
-	Standard_NotImplemented::Raise("Adaptor3d_CurveOnSurface::EvalFirstLastSurf");
+	throw Standard_NotImplemented("Adaptor3d_CurveOnSurface::EvalFirstLastSurf");
       break;
     }
   }
@@ -1670,7 +1672,7 @@ void Adaptor3d_CurveOnSurface::EvalFirstLastSurf()
       Ok = LocatePart_Offset(UV,DUV,mySurface,LeftBot,RightTop);
       break;
       default :
-	Standard_NotImplemented::Raise("Adaptor3d_CurveOnSurface::EvalFirstLastSurf");
+	throw Standard_NotImplemented("Adaptor3d_CurveOnSurface::EvalFirstLastSurf");
       break;
     }
   }

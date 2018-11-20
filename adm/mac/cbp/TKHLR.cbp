@@ -75,10 +75,7 @@
 		<Unit filename="../../../src/HLRBRep/HLRBRep_AreaLimit.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_BCurveTool.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_BSurfaceTool.cxx" />
-		<Unit filename="../../../src/HLRBRep/HLRBRep_BiPnt2D.cxx" />
-		<Unit filename="../../../src/HLRBRep/HLRBRep_BiPoint.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_CInter_0.cxx" />
-		<Unit filename="../../../src/HLRBRep/HLRBRep_CLPropsATool.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_CLProps_0.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_Curve.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_CurveTool.cxx" />
@@ -97,12 +94,10 @@
 		<Unit filename="../../../src/HLRBRep/HLRBRep_InterCSurf_0.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_InternalAlgo.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_Intersector.cxx" />
-		<Unit filename="../../../src/HLRBRep/HLRBRep_LineTool.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_MyImpParToolOfTheIntersectorOfTheIntConicCurveOfCInter_0.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_PCLocFOfTheLocateExtPCOfTheProjPCurOfCInter_0.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_PolyAlgo.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_PolyHLRToShape.cxx" />
-		<Unit filename="../../../src/HLRBRep/HLRBRep_SLPropsATool.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_SLProps_0.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_ShapeBounds.cxx" />
 		<Unit filename="../../../src/HLRBRep/HLRBRep_ShapeToHLR.cxx" />
@@ -128,7 +123,6 @@
 		<Unit filename="../../../src/HLRBRep/HLRBRep_VertexList.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_BiPoint.cxx" />
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_Coincidence.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_EdgeIterator.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_EdgeStatus.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_EdgesBlock.cxx" />
@@ -136,13 +130,10 @@
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_Intersection.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyAlgo.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyData.cxx" />
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyHidingData.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalData.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalNode.cxx" />
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalSegment.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyShellData.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_Projector.cxx" />
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_TriangleData.cxx" />
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_WiresBlock.cxx" />
 		<Unit filename="../../../src/HLRAppli/HLRAppli_ReflectLines.cxx" />
 		<Unit filename="../../../src/Intrv/Intrv_Interval.cxx" />

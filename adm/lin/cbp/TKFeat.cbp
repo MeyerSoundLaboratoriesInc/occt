@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -66,6 +68,7 @@
 			<Add library="TKBO" />
 			<Add library="TKG3d" />
 			<Add library="TKBool" />
+			<Add library="TKShHealing" />
 		</Linker>
 		<Unit filename="../../../src/LocOpe/LocOpe.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_BuildShape.cxx" />
@@ -79,10 +82,8 @@
 		<Unit filename="../../../src/LocOpe/LocOpe_Generator.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_GluedShape.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_Gluer.cxx" />
-		<Unit filename="../../../src/LocOpe/LocOpe_HBuilder.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_LinearForm.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_Pipe.cxx" />
-		<Unit filename="../../../src/LocOpe/LocOpe_PntFace.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_Prism.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_Revol.cxx" />
 		<Unit filename="../../../src/LocOpe/LocOpe_RevolutionForm.cxx" />

@@ -37,7 +37,6 @@
 #include <TopOpeBRepTool_ShapeTool.hxx>
 
 #ifdef OCCT_DEBUG
-extern Standard_Boolean TopOpeBRepDS_GettraceDSFK(); 
 static TCollection_AsciiString PRODINP("dinp ");
 #endif
 
@@ -86,7 +85,7 @@ const TopoDS_Shape&  TopOpeBRep_VPointInter::ArcOnS2() const
 const TopoDS_Shape& TopOpeBRep_VPointInter::VertexOnS1() const
 {
   if ( !myPPOI->IsVertexOnS1() )
-    Standard_DomainError::Raise("TopOpeBRep_VPointInter::VertexOnS1");
+    throw Standard_DomainError("TopOpeBRep_VPointInter::VertexOnS1");
 
   const Handle(BRepTopAdaptor_HVertex)* HBRTAHV = (Handle(BRepTopAdaptor_HVertex)*)&(myPPOI->VertexOnS1());
   return (*HBRTAHV)->Vertex();
@@ -99,7 +98,7 @@ const TopoDS_Shape& TopOpeBRep_VPointInter::VertexOnS1() const
 const TopoDS_Shape& TopOpeBRep_VPointInter::VertexOnS2() const 
 {
   if ( !myPPOI->IsVertexOnS2() )
-    Standard_DomainError::Raise("TopOpeBRep_VPointInter::VertexOnS2");
+    throw Standard_DomainError("TopOpeBRep_VPointInter::VertexOnS2");
 
   const Handle(BRepTopAdaptor_HVertex)* HBRTAHV = (Handle(BRepTopAdaptor_HVertex)*)&(myPPOI->VertexOnS2());
   return (*HBRTAHV)->Vertex();
@@ -113,7 +112,7 @@ void TopOpeBRep_VPointInter::State(const TopAbs_State S,const Standard_Integer I
 {
   if      (I == 1) myState1 = S;
   else if (I == 2) myState2 = S;
-  else Standard_DomainError::Raise("TopOpeBRep_VPointInter::State");
+  else throw Standard_DomainError("TopOpeBRep_VPointInter::State");
   UpdateKeep();
 }
 
@@ -125,7 +124,7 @@ TopAbs_State TopOpeBRep_VPointInter::State(const Standard_Integer I) const
 {
   if      (I == 1) return myState1;
   else if (I == 2) return myState2;
-  else { Standard_DomainError::Raise("TopOpeBRep_VPointInter::State"); return TopAbs_UNKNOWN; }
+  else { throw Standard_DomainError("TopOpeBRep_VPointInter::State");}
 }
 
 //=======================================================================
@@ -152,8 +151,7 @@ const TopoDS_Shape& TopOpeBRep_VPointInter::EdgeON(const Standard_Integer I) con
 {
   if      (I == 1) return myEdgeON1;
   else if (I == 2) return myEdgeON2;
-  else Standard_DomainError::Raise("TopOpeBRep_VPointInter::EdgeON");
-  return myNullShape;
+  else throw Standard_DomainError("TopOpeBRep_VPointInter::EdgeON");
 }
 
 //=======================================================================
@@ -164,8 +162,7 @@ Standard_Real TopOpeBRep_VPointInter::EdgeONParameter(const Standard_Integer I) 
 {
   if      (I == 1) return myEdgeONPar1;
   else if (I == 2) return myEdgeONPar2;
-  else Standard_DomainError::Raise("TopOpeBRep_VPointInter::EdgeONParameter");
-  return 0.;
+  else throw Standard_DomainError("TopOpeBRep_VPointInter::EdgeONParameter");
 }
 
 //=======================================================================
@@ -320,10 +317,10 @@ Standard_OStream& TopOpeBRep_VPointInter::Dump(const Standard_Integer I,const To
 #ifdef OCCT_DEBUG
   if (closingedge) OS<<"on closing edge "; else OS<<"on edge "; TopAbs::Print(O,cout);
   cout<<" of "<<I<<" : par : "<<Epar<<endl;
-  TopOpeBRepDS_Transition T = TopOpeBRep_FFTransitionTool::ProcessLineTransition(*this,I,O);
+  TopOpeBRep_FFTransitionTool::ProcessLineTransition(*this,I,O);
   OS<<"line transition ";
   if (closingedge) OS<<"on closing edge "; else OS<<"on edge "; TopAbs::Print(O,cout);
-  OS<<" of "<<I<<" : "; T.Dump(OS);OS<<endl;
+  OS<<" of "<<I<<endl;
 #endif
   
   return OS;
@@ -346,11 +343,6 @@ Standard_OStream& TopOpeBRep_VPointInter::Dump(const TopoDS_Face& FF1,const Topo
   OS<<PRODINP<<"P"<<myIndex<<" "; OS<<P.X()<<" "<<P.Y()<<" "<<P.Z();
   OS<<"; #draw"<<endl;
    
-  if (TopOpeBRepDS_GettraceDSFK()) { Standard_Real u,v;
-    ParametersOnS1(u,v); OS<<"u1,v1 : "<<u<<" "<<v; OS<<"   ";
-    ParametersOnS2(u,v); OS<<"u2,v2 : "<<u<<" "<<v; OS<<endl;
-  }
-  
   if (IsVertexOnS1()) { OS<<"is vertex of 1"<<endl; }
   if (IsVertexOnS2()) { OS<<"is vertex of 2"<<endl; }
   if (IsMultiple())   { OS<<"is multiple"<<endl; }

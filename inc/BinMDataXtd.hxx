@@ -22,7 +22,7 @@
 
 #include <Standard_Integer.hxx>
 class BinMDF_ADriverTable;
-class CDM_MessageDriver;
+class Message_Messenger;
 class BinMDataXtd_PointDriver;
 class BinMDataXtd_AxisDriver;
 class BinMDataXtd_PlaneDriver;
@@ -31,7 +31,7 @@ class BinMDataXtd_ConstraintDriver;
 class BinMDataXtd_PlacementDriver;
 class BinMDataXtd_PatternStdDriver;
 class BinMDataXtd_ShapeDriver;
-
+class BinMDataXtd_TriangulationDriver;
 
 //! Storage and Retrieval drivers for modelling attributes.
 class BinMDataXtd 
@@ -42,7 +42,7 @@ public:
 
   
   //! Adds the attribute drivers to <theDriverTable>.
-  Standard_EXPORT static void AddDrivers (const Handle(BinMDF_ADriverTable)& theDriverTable, const Handle(CDM_MessageDriver)& aMsgDrv);
+  Standard_EXPORT static void AddDrivers (const Handle(BinMDF_ADriverTable)& theDriverTable, const Handle(Message_Messenger)& aMsgDrv);
   
   Standard_EXPORT static void SetDocumentVersion (const Standard_Integer DocVersion);
   
@@ -70,6 +70,7 @@ friend class BinMDataXtd_ConstraintDriver;
 friend class BinMDataXtd_PlacementDriver;
 friend class BinMDataXtd_PatternStdDriver;
 friend class BinMDataXtd_ShapeDriver;
+friend class BinMDataXtd_TriangulationDriver;
 
 };
 

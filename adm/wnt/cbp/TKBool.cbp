@@ -17,13 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__TopOpeBRep_DLL" />
-					<Add option="-D__TopOpeBRepDS_DLL" />
-					<Add option="-D__TopOpeBRepBuild_DLL" />
-					<Add option="-D__TopOpeBRepTool_DLL" />
-					<Add option="-D__BRepAlgo_DLL" />
-					<Add option="-D__BRepFill_DLL" />
-					<Add option="-D__BRepProj_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBool_obj.link" />
@@ -42,13 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__TopOpeBRep_DLL" />
-					<Add option="-D__TopOpeBRepDS_DLL" />
-					<Add option="-D__TopOpeBRepBuild_DLL" />
-					<Add option="-D__TopOpeBRepTool_DLL" />
-					<Add option="-D__BRepAlgo_DLL" />
-					<Add option="-D__BRepFill_DLL" />
-					<Add option="-D__BRepProj_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBool_objd.link" />
@@ -121,9 +107,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesFiller_1.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesFiller_VPonR.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRep/TopOpeBRep_FacesIntersector.cxx">
@@ -238,9 +221,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DRAW.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DSS.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_DataStructure.cxx">
@@ -381,9 +361,6 @@
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_funk.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_reDEB.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_redu.cxx">
 			<Option link="0" />
 		</Unit>
@@ -391,12 +368,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_samdom.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_trace.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TopOpeBRepDS/TopOpeBRepDS_traceDSX.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepBuild/TopOpeBRepBuild.cxx">
@@ -682,9 +653,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_box.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_closing.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TopOpeBRepTool/TopOpeBRepTool_connexity.cxx">

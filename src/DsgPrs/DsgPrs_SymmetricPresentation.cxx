@@ -37,7 +37,6 @@
 #include <Graphic3d_AspectLine3d.hxx>
 #include <Graphic3d_AspectMarker3d.hxx>
 #include <Graphic3d_Group.hxx>
-#include <Graphic3d_Vertex.hxx>
 #include <IntAna2d_AnaIntersection.hxx>
 #include <Precision.hxx>
 #include <Prs3d_Arrow.hxx>
@@ -119,7 +118,7 @@ void DsgPrs_SymmetricPresentation::Add (const Handle(Prs3d_Presentation)& aPrese
   gp_Pnt PointMin = ElCLib::Value(parmin,L3);
   gp_Pnt PointMax = ElCLib::Value(parmax,L3);
 
-  Quantity_Length X,Y,Z;
+  Standard_Real X,Y,Z;
   Standard_Real D1(aAxis.Distance(AttachmentPoint1)),coeff(.5);
   gp_Pnt pint,Pj_P1,P1Previous = P1;
   
@@ -334,10 +333,10 @@ void DsgPrs_SymmetricPresentation::Add (const Handle(Prs3d_Presentation)& aPrese
   gp_Dir arrdir = L3.Direction().Reversed();
   if (outside) arrdir.Reverse();
   // arrow 1 ----
-  Prs3d_Arrow::Draw(aPresentation,P1,arrdir,LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+  Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P1, arrdir, LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
   
   // arrow 2 ----
-  Prs3d_Arrow::Draw(aPresentation,P2,arrdir.Reversed(),LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+  Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P2, arrdir.Reversed(), LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
 
   //-------------------------------------------------------------------------------------
   //|                                SYMBOL OF SYMMETRY                                 |
@@ -581,10 +580,10 @@ void DsgPrs_SymmetricPresentation::Add (const Handle(Prs3d_Presentation)& aPrese
   gp_Dir arrdir = L3.Direction().Reversed();
   if (outside) arrdir.Reverse();
   // arrow 1 ----
-  Prs3d_Arrow::Draw(aPresentation,P1,arrdir,LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+  Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P1, arrdir, LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
   
   // arrow 2 ----
-  Prs3d_Arrow::Draw(aPresentation,P2,arrdir.Reversed(),LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+  Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P2, arrdir.Reversed(), LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
 
   //-------------------------------------------------------------------------------------
   //|                                SYMBOL OF SYMMETRY                                 |
@@ -689,10 +688,7 @@ void DsgPrs_SymmetricPresentation::Add (const Handle(Prs3d_Presentation)& aPrese
     //  SYMMETRY WHEN THE REFERENCE POINT IS ON THE AXIS OF SYM.:
     //==============================================================
     //Marker of localisation of the face
-    Quantity_Color aColor;
-    Aspect_TypeOfLine aType;
-    Standard_Real aWidth;
-    LA->LineAspect()->Aspect()->Values(aColor, aType, aWidth);
+    Quantity_Color aColor = LA->LineAspect()->Aspect()->Color();
     Handle(Graphic3d_AspectMarker3d) aMarkerAsp = new Graphic3d_AspectMarker3d (Aspect_TOM_O, aColor, 1.0);
     Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect (aMarkerAsp);
     Handle(Graphic3d_ArrayOfPoints) anArrayOfPoints = new Graphic3d_ArrayOfPoints (1);
@@ -800,20 +796,17 @@ void DsgPrs_SymmetricPresentation::Add (const Handle(Prs3d_Presentation)& aPrese
     gp_Dir arrdir = L3.Direction().Reversed();
     if (outside) arrdir.Reverse();
     // arrow 1 ----
-    Prs3d_Arrow::Draw(aPresentation,P1,arrdir,LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+    Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P1, arrdir, LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
   
     // arrow 2 ----
-    Prs3d_Arrow::Draw(aPresentation,P2,arrdir.Reversed(),LA->ArrowAspect()->Angle(),LA->ArrowAspect()->Length());
+    Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), P2, arrdir.Reversed(), LA->ArrowAspect()->Angle(), LA->ArrowAspect()->Length());
     
     //==== POINTS ================
     //Marker of localization of attachment points:
     Prs3d_Root::NewGroup(aPresentation);
     Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect(LA->LineAspect()->Aspect());
 
-    Quantity_Color aColor;
-    Aspect_TypeOfLine aType;
-    Standard_Real aWidth;
-    LA->LineAspect()->Aspect()->Values (aColor, aType, aWidth);
+    Quantity_Color aColor = LA->LineAspect()->Aspect()->Color();
     Handle(Graphic3d_AspectMarker3d) aMarkerAspAtt = new Graphic3d_AspectMarker3d (Aspect_TOM_O, aColor, 1.0);
     Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect (aMarkerAspAtt);
     Handle(Graphic3d_ArrayOfPoints) anArrayOfPoints1 = new Graphic3d_ArrayOfPoints (1);

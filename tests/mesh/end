@@ -69,7 +69,7 @@ if { [string compare $bug_freelinks ""] != 0 } {
 # It may be different for different OS
     foreach os_freelinks [array names nbfree] {
 	if { $nbfree($os_freelinks) != 0 } { 
-	    puts "TODO $bug_freelinks $os_freelinks:^\\s*Error: Free links: $nbfree($os_freelinks)\\b\\s*"
+	    puts "TODO $bug_freelinks $os_freelinks:^\\s*Error: Free links"
 	}
     }
 }
@@ -148,8 +148,12 @@ set rel_err [expr abs([CheckTriArea res $area_eps])]
 if { $rel_err > $rel_tol } {
     puts "Error   : area by triangles differs from the actual area by $rel_err %"
 } else {
-    if { $rel_tol > 1 && $rel_tol < 100 } {
-	puts "Error: Improvement: The current area difference is $rel_err instead of $rel_tol"
+    if { [info exists max_rel_tol_diff] && $max_rel_tol_diff > 0 } {
+      checkreal "area difference" $rel_err $rel_tol $max_rel_tol_diff 0
+    } else {
+      if { $rel_tol > 1 && $rel_tol < 100 } {
+        puts "Error: Improvement: The current area difference is $rel_err instead of $rel_tol"
+      }
     }
 }
 

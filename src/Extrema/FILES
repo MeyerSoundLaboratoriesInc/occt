@@ -72,8 +72,10 @@ Extrema_FuncExtCC.lxx
 Extrema_FuncExtCS.cxx
 Extrema_FuncExtCS.hxx
 Extrema_FuncExtPC.gxx
-Extrema_FuncExtPS.cxx
-Extrema_FuncExtPS.hxx
+Extrema_FuncPSNorm.cxx
+Extrema_FuncPSNorm.hxx
+Extrema_FuncPSDist.cxx
+Extrema_FuncPSDist.hxx
 Extrema_FuncExtSS.cxx
 Extrema_FuncExtSS.hxx
 Extrema_GenExtCC.gxx
@@ -140,10 +142,8 @@ Extrema_POnCurv.hxx
 Extrema_POnCurv2d.hxx
 Extrema_POnCurv2d_0.cxx
 Extrema_POnCurv_0.cxx
-Extrema_POnSurf.cxx
 Extrema_POnSurf.hxx
 Extrema_POnSurf.lxx
-Extrema_POnSurfParams.cxx
 Extrema_POnSurfParams.hxx
 Extrema_POnSurfParams.lxx
 Extrema_SequenceOfPOnCurv.hxx

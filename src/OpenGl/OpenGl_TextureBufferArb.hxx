@@ -30,7 +30,7 @@
 //! are declared in this class.
 class OpenGl_TextureBufferArb : public OpenGl_VertexBuffer
 {
-
+  DEFINE_STANDARD_RTTIEXT(OpenGl_TextureBufferArb, OpenGl_VertexBuffer)
 public:
 
   //! Helpful constants
@@ -76,22 +76,38 @@ public:
                              const GLsizei  theElemsNb,
                              const GLuint*  theData);
 
+  //! Perform TBO initialization with specified data.
+  //! Existing data will be deleted.
+  Standard_EXPORT bool Init (const Handle(OpenGl_Context)& theGlCtx,
+                             const GLuint     theComponentsNb,
+                             const GLsizei    theElemsNb,
+                             const GLushort*  theData);
+
+  //! Perform TBO initialization with specified data.
+  //! Existing data will be deleted.
+  Standard_EXPORT bool Init (const Handle(OpenGl_Context)& theGlCtx,
+                             const GLuint    theComponentsNb,
+                             const GLsizei   theElemsNb,
+                             const GLubyte*  theData);
+
   //! Bind TBO to specified Texture Unit.
   Standard_EXPORT void BindTexture (const Handle(OpenGl_Context)& theGlCtx,
-                                    const GLenum theTextureUnit = GL_TEXTURE0) const;
+                                    const Graphic3d_TextureUnit   theTextureUnit) const;
 
   //! Unbind TBO.
   Standard_EXPORT void UnbindTexture (const Handle(OpenGl_Context)& theGlCtx,
-                                      const GLenum theTextureUnit = GL_TEXTURE0) const;
+                                      const Graphic3d_TextureUnit   theTextureUnit) const;
+
+  //! Returns name of TBO.
+  GLuint TextureId() const { return myTextureId; }
+
+  //! Returns internal texture format.
+  GLenum TextureFormat() const { return myTexFormat; }
 
 protected:
 
   GLuint myTextureId; //!< texture id
   GLenum myTexFormat; //!< internal texture format
-
-public:
-
-  DEFINE_STANDARD_RTTIEXT(OpenGl_TextureBufferArb,OpenGl_VertexBuffer) // Type definition
 
 };
 

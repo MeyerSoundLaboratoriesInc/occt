@@ -21,9 +21,10 @@
 #include <Standard_Handle.hxx>
 
 class BinMDF_ADriverTable;
-class CDM_MessageDriver;
+class Message_Messenger;
 class BinMXCAFDoc_AreaDriver;
 class BinMXCAFDoc_CentroidDriver;
+class BinMXCAFDoc_ClippingPlaneToolDriver;
 class BinMXCAFDoc_ColorDriver;
 class BinMXCAFDoc_GraphNodeDriver;
 class BinMXCAFDoc_LocationDriver;
@@ -39,6 +40,8 @@ class BinMXCAFDoc_LayerToolDriver;
 class BinMXCAFDoc_ShapeToolDriver;
 class BinMXCAFDoc_DimTolToolDriver;
 class BinMXCAFDoc_MaterialToolDriver;
+class BinMXCAFDoc_ViewDriver;
+class BinMXCAFDoc_ViewToolDriver;
 
 
 
@@ -50,7 +53,7 @@ public:
 
   
   //! Adds the attribute drivers to <theDriverTable>.
-  Standard_EXPORT static void AddDrivers (const Handle(BinMDF_ADriverTable)& theDriverTable, const Handle(CDM_MessageDriver)& theMsgDrv);
+  Standard_EXPORT static void AddDrivers (const Handle(BinMDF_ADriverTable)& theDriverTable, const Handle(Message_Messenger)& theMsgDrv);
 
 
 
@@ -68,6 +71,7 @@ private:
 
 friend class BinMXCAFDoc_AreaDriver;
 friend class BinMXCAFDoc_CentroidDriver;
+friend class BinMXCAFDoc_ClippingPlaneToolDriver;
 friend class BinMXCAFDoc_ColorDriver;
 friend class BinMXCAFDoc_GraphNodeDriver;
 friend class BinMXCAFDoc_LocationDriver;
@@ -83,6 +87,8 @@ friend class BinMXCAFDoc_LayerToolDriver;
 friend class BinMXCAFDoc_ShapeToolDriver;
 friend class BinMXCAFDoc_DimTolToolDriver;
 friend class BinMXCAFDoc_MaterialToolDriver;
+friend class BinMXCAFDoc_ViewDriver;
+friend class BinMXCAFDoc_ViewToolDriver;
 
 };
 

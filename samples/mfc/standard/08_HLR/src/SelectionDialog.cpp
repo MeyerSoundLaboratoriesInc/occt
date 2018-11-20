@@ -129,14 +129,14 @@ void CSelectionDialog::OnDisplay (bool isFit)
     Handle(Graphic3d_GraphicDriver) aGraphicDriver =
       ((CHLRApp*)AfxGetApp())->GetGraphicDriver();
 
-    myActiveViewer = new V3d_Viewer (aGraphicDriver, (short *) "Visu3D");
+    myActiveViewer = new V3d_Viewer (aGraphicDriver);
     myActiveViewer->SetDefaultLights();
     myActiveViewer->SetLightOn();
     myActiveView = myActiveViewer->CreateView();
 
     Handle(WNT_Window) aWNTWindow = new WNT_Window (GetDlgItem (IDC_HlrDlgView)->GetSafeHwnd(),
                                                     Quantity_NOC_GRAY);
-    myActiveView->SetComputedMode (m_HlrModeIsOn);
+    myActiveView->SetComputedMode (m_HlrModeIsOn != 0);
     myActiveView->SetWindow(aWNTWindow);
 
     myInteractiveContext = new AIS_InteractiveContext (myActiveViewer);
@@ -145,7 +145,7 @@ void CSelectionDialog::OnDisplay (bool isFit)
     Handle(Geom_Axis2Placement) aTrihedronAxis = new Geom_Axis2Placement (gp::XOY());
     myTrihedron = new AIS_Trihedron (aTrihedronAxis);
 
-    myInteractiveContext->Display (myTrihedron);
+    myInteractiveContext->Display (myTrihedron, Standard_False);
     myIsDisplayed = Standard_True;
   }
   if(isFit)
@@ -167,25 +167,25 @@ void CSelectionDialog::SetTitle (const CString & aTitle)
 void CSelectionDialog::UpdateViews()
 {
   // Clear HLR dialog view
-  myInteractiveContext->RemoveAll();
-  myInteractiveContext->Display (myTrihedron);
+  myInteractiveContext->RemoveAll (Standard_False);
+  myInteractiveContext->Display (myTrihedron, Standard_False);
 
   UpdateProjector();
 
   // Display chosen shapes in the HLR dialog view.
   Standard_Boolean OneOrMoreFound = Standard_False;
-  for (myDoc->GetAISContext()->InitCurrent();
-       myDoc->GetAISContext()->MoreCurrent();
-       myDoc->GetAISContext()->NextCurrent())
+  for (myDoc->GetAISContext()->InitSelected();
+       myDoc->GetAISContext()->MoreSelected();
+       myDoc->GetAISContext()->NextSelected())
   {
-    Handle(AIS_Shape) anAISShape = Handle(AIS_Shape)::DownCast (myDoc->GetAISContext()->Current());
+    Handle(AIS_Shape) anAISShape = Handle(AIS_Shape)::DownCast (myDoc->GetAISContext()->SelectedInteractive());
     if (!anAISShape.IsNull())
     {
       OneOrMoreFound = Standard_True;
-      myInteractiveContext->Display (anAISShape);
+      myInteractiveContext->Display (anAISShape, Standard_False);
     }
   }
-
+  myInteractiveContext->UpdateCurrentViewer();
   // Apply HLR to chosen shapes and display result into the 2d view.
   Apply();
   // Update viewer
@@ -203,15 +203,15 @@ void CSelectionDialog::OnGetSelectedShapes()
   myDisplayableShape->SetNbIsos (m_NbIsos);
 
   // Clear HLR dialog view
-  myInteractiveContext->RemoveAll();
-  myInteractiveContext->Display (myTrihedron);
+  myInteractiveContext->RemoveAll (Standard_False);
+  myInteractiveContext->Display (myTrihedron, Standard_False);
 
   Standard_Boolean OneOrMoreFound = Standard_False;
-  for (myDoc->GetAISContext()->InitCurrent();
-       myDoc->GetAISContext()->MoreCurrent();
-       myDoc->GetAISContext()->NextCurrent())
+  for (myDoc->GetAISContext()->InitSelected();
+       myDoc->GetAISContext()->MoreSelected();
+       myDoc->GetAISContext()->NextSelected())
   {
-    Handle(AIS_Shape) anAISShape = Handle(AIS_Shape)::DownCast (myDoc->GetAISContext()->Current());
+    Handle(AIS_Shape) anAISShape = Handle(AIS_Shape)::DownCast (myDoc->GetAISContext()->SelectedInteractive());
 
     if (!anAISShape.IsNull())
     {
@@ -219,10 +219,10 @@ void CSelectionDialog::OnGetSelectedShapes()
       TopoDS_Shape aShape = anAISShape->Shape();
       myDisplayableShape->Add (aShape);
       Handle(AIS_Shape) aSelectedShape = new AIS_Shape (aShape);
-      myInteractiveContext->Display (aSelectedShape);
+      myInteractiveContext->Display (aSelectedShape, Standard_False);
     }
   }
-
+  myInteractiveContext->UpdateCurrentViewer();
   // Apply HLR to chosen shapes and display result into the 2d view.
   Apply();
   // Update viewer
@@ -236,7 +236,7 @@ void CSelectionDialog::OnGetSelectedShapes()
 void CSelectionDialog::Apply()
 {
   SetCursor(AfxGetApp()->LoadStandardCursor (IDC_WAIT));
-  myDoc->GetInteractiveContext2D()->RemoveAll();
+  myDoc->GetInteractiveContext2D()->RemoveAll (Standard_False);
   UpdateData (true);
 
   Standard_Integer aDisplayMode = m_DisplayMode;
@@ -261,13 +261,13 @@ void CSelectionDialog::Apply()
 
 void CSelectionDialog::UpdateProjector()
 {
-  V3d_Coordinate DX,DY,DZ,XAt,YAt,ZAt, Vx,Vy,Vz ;
+  Standard_Real DX,DY,DZ,XAt,YAt,ZAt, Vx,Vy,Vz ;
   myActiveView->Proj(DX,DY,DZ);
   myActiveView->At(XAt,YAt,ZAt);
   myActiveView->Up( Vx,Vy,Vz );
   OnDisplay(false);
   Standard_Boolean IsPerspective = (myActiveView->Type() == V3d_PERSPECTIVE);
-  Quantity_Length aFocus = 1;
+  Standard_Real aFocus = 1;
   Prs3d_Projector aPrs3dProjector(IsPerspective,aFocus,DX,DY,DZ,XAt,YAt,ZAt,Vx,Vy,Vz);
   HLRAlgo_Projector aProjector = aPrs3dProjector.Projector();
 
@@ -434,12 +434,14 @@ void CSelectionDialog::OnHlrMode()
 
   if (!m_HlrModeIsOn)
   {
-    myActiveView->SetComputedMode (m_HlrModeIsOn);
+    myActiveView->SetComputedMode (m_HlrModeIsOn != 0);
+    myActiveView->Redraw();
   }
   else
   {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
-    myActiveView->SetComputedMode (m_HlrModeIsOn);
+    myActiveView->SetComputedMode (m_HlrModeIsOn != 0);
+    myActiveView->Redraw();
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
   }
   OnDisplay(false);
@@ -500,7 +502,11 @@ void CSelectionDialog::OnRButtonUp(UINT nFlags, CPoint point)
   SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
   // reset the good HLR mode according to the stored one
   //   --> dynamic rotation may have change it
-  myActiveView->SetComputedMode (m_HlrModeIsOn);
+  if (m_HlrModeIsOn != 0)
+  {
+    myActiveView->SetComputedMode (true);
+    myActiveView->Redraw();
+  }
   OnDisplay(false);
   SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
 }

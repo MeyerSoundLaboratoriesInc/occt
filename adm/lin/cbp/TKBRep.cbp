@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -61,17 +63,11 @@
 			<Add library="TKG3d" />
 			<Add library="TKGeomBase" />
 		</Linker>
-		<Unit filename="../../../src/TopoDS/TopoDS.cxx" />
+		<Unit filename="../../../src/TopoDS/TopoDS_AlertWithShape.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_Builder.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_CompSolid.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Compound.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Edge.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Face.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_HShape.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_Iterator.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_Shape.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Shell.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Solid.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_TCompSolid.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_TCompound.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_TEdge.cxx" />
@@ -81,15 +77,11 @@
 		<Unit filename="../../../src/TopoDS/TopoDS_TSolid.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_TVertex.cxx" />
 		<Unit filename="../../../src/TopoDS/TopoDS_TWire.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Vertex.cxx" />
-		<Unit filename="../../../src/TopoDS/TopoDS_Wire.cxx" />
 		<Unit filename="../../../src/TopExp/TopExp.cxx" />
 		<Unit filename="../../../src/TopExp/TopExp_Explorer.cxx" />
 		<Unit filename="../../../src/TopTools/TopTools.cxx" />
 		<Unit filename="../../../src/TopTools/TopTools_LocationSet.cxx" />
 		<Unit filename="../../../src/TopTools/TopTools_MutexForShapeProvider.cxx" />
-		<Unit filename="../../../src/TopTools/TopTools_OrientedShapeMapHasher.cxx" />
-		<Unit filename="../../../src/TopTools/TopTools_ShapeMapHasher.cxx" />
 		<Unit filename="../../../src/TopTools/TopTools_ShapeSet.cxx" />
 		<Unit filename="../../../src/BRep/BRep_Builder.cxx" />
 		<Unit filename="../../../src/BRep/BRep_Curve3D.cxx" />
@@ -128,6 +120,7 @@
 		<Unit filename="../../../src/BRepTools/BRepTools.cxx" />
 		<Unit filename="../../../src/BRepTools/BRepTools_Debug.cxx" />
 		<Unit filename="../../../src/BRepTools/BRepTools_GTrsfModification.cxx" />
+		<Unit filename="../../../src/BRepTools/BRepTools_History.cxx" />
 		<Unit filename="../../../src/BRepTools/BRepTools_Modification.cxx" />
 		<Unit filename="../../../src/BRepTools/BRepTools_Modifier.cxx" />
 		<Unit filename="../../../src/BRepTools/BRepTools_NurbsConvertModification.cxx" />

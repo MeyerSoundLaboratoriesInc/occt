@@ -38,6 +38,7 @@
 #include <BRep_Builder.hxx>
 #include <BRepBndLib.hxx>
 #include <Bnd_Box.hxx>
+#include <Bnd_Box2d.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <BRepTools_WireExplorer.hxx>
@@ -49,15 +50,35 @@
 #include <DrawTrSurf.hxx>
 #include <Geom_Plane.hxx>
 
+#include <OSD_Timer.hxx>
 #include <Draw_Segment3D.hxx>
 #include <Draw_Marker3D.hxx>
 #include <Draw_MarkerShape.hxx>
-
+#include <BRepPrimAPI_MakeBox.hxx>
 #include <stdio.h>
 
 Standard_IMPORT Draw_Viewer dout;
 
+//=======================================================================
+//function : ConvertBndToShape
+//purpose  : Creates TopoDS_Solid from theBox
+//=======================================================================
+static void ConvertBndToShape(const Bnd_OBB& theBox,
+                              const char* const theName)
+{
+  const gp_Pnt &aBaryCenter = theBox.Center();
+  const gp_XYZ &aXDir = theBox.XDirection(),
+               &aYDir = theBox.YDirection(),
+               &aZDir = theBox.ZDirection();
+  Standard_Real aHalfX = theBox.XHSize(),
+                aHalfY = theBox.YHSize(),
+                aHalfZ = theBox.ZHSize();
 
+  gp_Ax2 anAxes(aBaryCenter, aZDir, aXDir);
+  anAxes.SetLocation(aBaryCenter.XYZ() - aHalfX*aXDir - aHalfY*aYDir - aHalfZ*aZDir);
+  TopoDS_Solid aBox = BRepPrimAPI_MakeBox(anAxes, 2.0*aHalfX, 2.0*aHalfY, 2.0*aHalfZ);
+  DBRep::Set(theName, aBox);
+}
 
 //=======================================================================
 // addpcurve
@@ -94,6 +115,13 @@ static Standard_Integer transform(Draw_Interpretor& ,Standard_Integer n,const ch
   const char* aName = a[0];
 
   Standard_Boolean isBasic = Standard_False;
+  Standard_Boolean isCopy = Standard_False;
+
+  // Check "copy" flag.
+  if (!strcmp(a[n-1], "-copy")) {
+    isCopy = Standard_True;
+    last = --n;
+  }
 
   if (!strcmp(aName,"reset")) {
   }
@@ -155,7 +183,7 @@ static Standard_Integer transform(Draw_Interpretor& ,Standard_Integer n,const ch
         return 1;
       }
       else {
-        trf.Perform(S);
+        trf.Perform(S, isCopy);
         if (!trf.IsDone())
           return 1;
         DBRep::Set(a[i],trf.Shape());
@@ -304,36 +332,80 @@ static Standard_Integer mkedgecurve (Draw_Interpretor& ,Standard_Integer n,const
 // sameparameter
 //=======================================================================
 
-static Standard_Integer sameparameter(Draw_Interpretor& ,Standard_Integer n,const char** a)
+static Standard_Integer sameparameter(Draw_Interpretor& di,Standard_Integer n,const char** a)
 {
-  if (n < 2) return 1;
-  Standard_Real tol = 1.e-7;
-  TopoDS_Shape S = DBRep::Get(a[1]);
-  if (S.IsNull()) return 1;
+  if (n < 2) 
+  {
+    di << "Use sameparameter [result] shape [toler]\n";
+    di << "shape is an initial shape\n";
+    di << "result is a result shape. if skipped = > initial shape will be modified\n";
+    di << "toler is tolerance (default is 1.e-7)";
+    return 1;
+  }
+  Standard_Real aTol = 1.e-7;
   Standard_Boolean force  = !strcmp(a[0],"fsameparameter");
-  if (n == 3) tol = Draw::Atof(a[2]);
 
-  BRepLib::SameParameter(S,tol,force);
+  Standard_Real aTol1 = Draw::Atof(a[n-1]);
+  Standard_Boolean IsUseTol = aTol1>0;
+  if (IsUseTol)
+    aTol = aTol1;
 
-  DBRep::Set(a[1],S);
+  TopoDS_Shape anInpS = DBRep::Get(IsUseTol ? a[n-2] : a[n-1]);
+  if (anInpS.IsNull())
+    return 1;
+
+  if ((n == 4 && IsUseTol) || (n == 3 && !IsUseTol))
+  {
+    TopoDS_Shape aResultSh;
+    BRepTools_ReShape aResh;
+    BRepLib::SameParameter(anInpS,aResh,aTol,force);
+    aResultSh = aResh.Apply(anInpS);
+    DBRep::Set(a[1],aResultSh); 
+  }
+  else
+  {
+    BRepLib::SameParameter(anInpS,aTol,force);
+    DBRep::Set(a[1],anInpS); 
+  }
+
   return 0;
 }
 //=======================================================================
 //function : updatetol
 //purpose  : 
 //=======================================================================
-static Standard_Integer updatetol(Draw_Interpretor& ,Standard_Integer n,const char** a)
+static Standard_Integer updatetol(Draw_Interpretor& di,Standard_Integer n,const char** a)
 {
-  if (n < 2) return 1;
+  if (n < 2) 
+  {
+    di << "Use updatetololerance [result] shape [param]\n";
+    di << "shape is an initial shape\n";
+    di << "result is a result shape. if skipped = > initial shape will be modified\n";
+    di << "if [param] is absent - not verify of face tolerance, else - perform it";
+    return 1;
+  }
+  TopoDS_Shape aSh1 = DBRep::Get(a[n-1]);
+  Standard_Boolean IsF = aSh1.IsNull();
 
-  TopoDS_Shape S = DBRep::Get(a[1]);
-  if (S.IsNull()) return 1;
+  TopoDS_Shape anInpS = IsF ? DBRep::Get(a[n-2]) : aSh1;
+  if (anInpS.IsNull())
+    return 1;
 
-  if (n==2) BRepLib::UpdateTolerances(S);
-  else BRepLib::UpdateTolerances(S,Standard_True);
-  DBRep::Set(a[1],S);
+  if ((n == 4 && IsF) || (n == 3 && !IsF))
+  {
+    TopoDS_Shape aResultSh;
+    BRepTools_ReShape aResh;
+    BRepLib::UpdateTolerances(anInpS,aResh, IsF);
+    aResultSh = aResh.Apply(anInpS);
+    DBRep::Set(a[1],aResultSh); 
+  }
+  else
+  {
+    BRepLib::UpdateTolerances(anInpS, IsF);
+    DBRep::Set(a[1],anInpS); 
+  }
+
   return 0;
-
 }
 
 //=======================================================================
@@ -353,31 +425,6 @@ static Standard_Integer orientsolid(Draw_Interpretor& ,Standard_Integer n,const 
   DBRep::Set(a[1],S);
   return 0;
 
-}
-
-//=======================================================================
-//function : boundingstr
-//purpose  : 
-//=======================================================================
-static Standard_Integer boundingstr(Draw_Interpretor& di,Standard_Integer n,const char** a)
-{
-  if (n < 2) return 1;
-  TopoDS_Shape S = DBRep::Get(a[1]);
-  if (S.IsNull()) return 1;
-  Bnd_Box B;
-  BRepBndLib::Add(S,B);
-  Standard_Real axmin,aymin,azmin,axmax,aymax,azmax;
-  B.Get(axmin,aymin,azmin,axmax,aymax,azmax);
-  di << axmin<<" "<< aymin<<" "<< azmin<<" "<< axmax<<" "<< aymax<<" "<< azmax;
-  if (n >= 8) {
-    Draw::Set(a[2],axmin) ;
-    Draw::Set(a[3],aymin) ;
-    Draw::Set(a[4],azmin) ;
-    Draw::Set(a[5],axmax) ;
-    Draw::Set(a[6],aymax) ;
-    Draw::Set(a[7],azmax) ;
-  }
-  return 0;
 }
 
 //=======================================================================
@@ -409,36 +456,478 @@ static Standard_Integer getcoords(Draw_Interpretor& di,Standard_Integer n,const 
 }
 
 //=======================================================================
-//function : bounding
+//function : BoundBox
 //purpose  : 
 //=======================================================================
-static Standard_Integer bounding(Draw_Interpretor& di,Standard_Integer n,const char** a)
+static Standard_Integer BoundBox(Draw_Interpretor& theDI,
+                                 Standard_Integer theNArg,
+                                 const char** theArgVal)
 {
-  if (n < 2) return 1;
-  Standard_Real axmin,aymin,azmin,axmax,aymax,azmax;
-  Bnd_Box B; Handle(Draw_Box) DB;
-  
-  if (n == 2) { 
-    TopoDS_Shape S = DBRep::Get(a[1]);
-    if (S.IsNull()) return 1;
-    BRepBndLib::Add(S,B);
-    B.Get(axmin,aymin,azmin,axmax,aymax,azmax);
-    DB = new Draw_Box(gp_Pnt(axmin,aymin,azmin),gp_Pnt(axmax,aymax,azmax),Draw_orange);
-    dout<<DB;
-    di << axmin<<" "<< aymin<<" "<< azmin<<" "<< axmax<<" "<< aymax<<" "<< azmax;
+  if(theNArg < 2)
+  {
+    theDI << "Use: " << theArgVal[0] << " {-s shape | -c xmin ymin zmin xmax ymax zmax} "
+             "[-obb]\n\t\t[-shape name] [-dump] [-notriangulation]\n\t\t"
+             "[-perfmeter name NbIters] [-nodraw] [-optimal] [-exttoler]\n\t\t"
+             "[-save xmin ymin zmin xmax ymax zmax]\n\n\n";
+
+    theDI << "Computes a bounding box (BndBox). Two types of the source data are supported:\n";
+    theDI << "  * \"-s\"-option sets the shape, which will be circumscribed by the BndBox;\n";
+    theDI << "  * \"-c\"-option sets two opposite corners (having (xmin, ymin, zmin) and\n\t"
+             "(xmax, ymax, zmax) coordinates) of the resulting\n\taxis-aligned BndBox (AABB).\n";
+    theDI << "\nThe following options are supported:\n";
+    theDI << "  * \"-obb\". If it is switched on then the oriented BndBox (OBB) will "
+             "be\n\tcreated. Otherwise, AABB will be created.\n";
+    theDI << "  * \"-shape\". If it is switched on then the resulting BndBox will be "
+             "stored\n\tas a shape (solid) with specified name.\n";
+    theDI << "  * \"-nodraw\". If it is switched on then the resulting BndBox will not be\n\t"
+             "drawn as DRAW-object.\n";
+    theDI << "  * \"-dump\". Prints the information about the created BndBox.\n";
+    theDI << "  * \"-notriangulation\". By default, AABB is built from existing mesh.\n\t"
+             "This option allows ignoring triangulation.\n";
+    theDI << "  * \"-save\". Stores the information about created AABB in "
+             "specified variables.\n";
+    theDI << "  * \"-optimal\". If it is switched on then the AABB will be optimal.\n\t"
+             "This option is useful for OBB, too. It allows constructing\n\toptimal "
+             "initial AABB.\n";
+    theDI << "  * \"-exttoler\". If it is switched on then the resulting box will be "
+             "extended\n\ton the tolerance of the source shape.\n";
+    theDI << "  * \"-perfmeter\" - Auxiliary option. It provides compatibility "
+             "with\n\tOCCT-test system. \"name\" is the counter name for "
+             "\"chrono\"-TCL-command.\n\tNbIters is the number of iterations.\n";
+    return 1;
   }
-  else if (n == 7) {
-    axmin=Draw::Atof(a[1]);
-    aymin=Draw::Atof(a[2]);
-    azmin=Draw::Atof(a[3]);
-    axmax=Draw::Atof(a[4]);
-    aymax=Draw::Atof(a[5]);
-    azmax=Draw::Atof(a[6]);
-    DB = new Draw_Box(gp_Pnt(axmin,aymin,azmin),gp_Pnt(axmax,aymax,azmax),Draw_orange);
-    dout<<DB;
+
+  TopoDS_Shape aShape;
+  
+  Standard_Boolean isOBB = Standard_False;
+  Standard_Boolean hasToPrint = Standard_False,
+                   isTriangulationReq = Standard_True,
+                   isOptimal = Standard_False,
+                   isTolerUsed = Standard_False,
+                   hasToDraw = Standard_True;
+  Standard_Integer aNbIters = 1;
+  Standard_Integer aStartIdxToSave = -1,
+                   aStartIdxToCreate = -1,
+                   aNameToShape = -1,
+                   anIdxCounterName = -1;
+
+  for(Standard_Integer anAIdx = 1; anAIdx < theNArg; anAIdx++)
+  {
+    if(theArgVal[anAIdx][0] != '-')
+    {
+      theDI << "Error: Wrong option \"" << theArgVal[anAIdx] << 
+               "\". Please use \'-\' symbol\n";
+      return 1;
+    }
+
+    if(!strcmp(theArgVal[anAIdx], "-s"))
+    {
+      aShape = DBRep::Get(theArgVal[++anAIdx]);
+      if(aShape.IsNull())
+      {
+        theDI << "Error: Argument " << theArgVal[anAIdx] << " is not a shape.\n";
+        return 1;
+      }
+    }
+    else if(!strcmp(theArgVal[anAIdx], "-c"))
+    {
+      aStartIdxToCreate = anAIdx + 1;
+      anAIdx += 6;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-obb", 4))
+    {
+      isOBB = Standard_True;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-shape", 4))
+    {
+      aNameToShape = ++anAIdx;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-dump", 4))
+    {
+      hasToPrint = Standard_True;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-save", 4))
+    {
+      aStartIdxToSave = anAIdx+1;
+      anAIdx += 6;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-notriangulation", 9))
+    {
+      isTriangulationReq = Standard_False;
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-perfmeter", 8))
+    {
+      anIdxCounterName = ++anAIdx;
+      aNbIters = Draw::Atoi(theArgVal[++anAIdx]);
+    }
+    else if(!strncmp(theArgVal[anAIdx], "-optimal", 4))
+    {
+      isOptimal = Standard_True;
+    }
+    else if(!strcmp(theArgVal[anAIdx], "-exttoler"))
+    {
+      isTolerUsed = Standard_True;
+    }
+    else if(!strcmp(theArgVal[anAIdx], "-nodraw"))
+    {
+      hasToDraw = Standard_False;
+    }
+    else
+    {
+      theDI << "Error: Unknown option  \"" << theArgVal[anAIdx] << "\".\n";
+      return 1;
+    }
+  }
+
+  if(aShape.IsNull() && (aStartIdxToCreate < 0))
+  {
+    theDI << "Error: One of the options \'-s\' or \'-c\' must be set necessarily.\n";
+    return 1;
+  }
+
+  if(aStartIdxToCreate > 0)
+  {
+    if(!aShape.IsNull())
+    {
+      theDI << "Error: Options \'-s\' and \'-c\' are fail for using simultaneously.\n";
+      return 1;
+    }
+    else if(isOBB)
+    {
+      theDI << "Error: Options \'-c\' and \"-obb\" are fail for using simultaneously.\n";
+      return 1;
+    }
+  }
+
+  if(isOptimal)
+  {
+    if(aShape.IsNull())
+    {
+      theDI << "Error: Options \"-optimal\" is used without any shape. "
+               "Use \'-s\'-option.\n";
+      return 1;
+    }
+  }
+
+  if(isTolerUsed)
+  {
+    if(aShape.IsNull())
+    {
+      theDI << "Error: Option \"-exttoler\" is used without any shape. "
+        "Use \'-s\'-option.\n";
+      return 1;
+    }
+  }
+
+  Handle(Draw_Box) aDB;
+  OSD_Timer aTimer;
+
+  if(isOBB)
+  {
+    if(aStartIdxToSave > 0)
+    {
+      theDI << "Error: Option \"-save\" work only with axes-aligned boxes.\n";
+      return 1;
+    }
+
+    Bnd_OBB anOBB;
+    Standard_Integer aN = aNbIters;
+
+    aTimer.Start();
+    while(aN-- > 0)
+    {
+      anOBB.SetVoid();
+      BRepBndLib::AddOBB(aShape, anOBB, isTriangulationReq, isOptimal, isTolerUsed);
+    }
+    aTimer.Stop();
+
+    if(anOBB.IsVoid())
+    {
+      theDI << "Void box.\n";
+      hasToPrint = Standard_False;
+    }
+
+    const gp_Pnt &aBaryCenter= anOBB.Center();
+    const gp_XYZ &aXDir = anOBB.XDirection(),
+                 &aYDir = anOBB.YDirection(),
+                 &aZDir = anOBB.ZDirection();
+    Standard_Real aHalfX = anOBB.XHSize(), 
+                  aHalfY = anOBB.YHSize(),
+                  aHalfZ = anOBB.ZHSize();
+
+    if(hasToPrint)
+    {
+      theDI << "Oriented bounding box\n";
+      theDI << "Center: " << aBaryCenter.X() << " " << 
+                             aBaryCenter.Y() << " " <<
+                             aBaryCenter.Z() << "\n";
+      theDI << "X-axis: " << aXDir.X() << " " << aXDir.Y() << " " << aXDir.Z() << "\n";
+      theDI << "Y-axis: " << aYDir.X() << " " << aYDir.Y() << " " << aYDir.Z() << "\n";
+      theDI << "Z-axis: " << aZDir.X() << " " << aZDir.Y() << " " << aZDir.Z() << "\n";
+      theDI << "Half X: " << aHalfX << "\n" << 
+               "Half Y: " << aHalfY << "\n" << "Half Z: " << aHalfZ << "\n";
+    }
+    
+    if(hasToDraw)
+      aDB = new Draw_Box(anOBB, Draw_orange);
+
+    if(aNameToShape > 0)
+    {
+      ConvertBndToShape(anOBB, theArgVal[aNameToShape]);
+    }
+  }
+  else // if(!isOBB)
+  {
+    Standard_Real aXmin = RealFirst(), aYmin = RealFirst(), aZmin = RealFirst(),
+                  aXMax = RealLast(), aYMax = RealLast(), aZMax = RealLast();
+
+    Bnd_Box anAABB;
+
+    if(aStartIdxToCreate < 0)
+    {
+      Standard_Integer aN = aNbIters;
+      if(isOptimal)
+      {
+        aTimer.Start();
+        while(aN-- > 0)
+        {
+          anAABB.SetVoid();
+          BRepBndLib::AddOptimal(aShape, anAABB, isTriangulationReq, isTolerUsed);
+        }
+        aTimer.Stop();
+      }
+      else
+      {
+        aTimer.Start();
+        while(aN-- > 0)
+        {
+          anAABB.SetVoid();
+          BRepBndLib::Add(aShape, anAABB, isTriangulationReq);
+        }
+        aTimer.Stop();
+      }
+    }
+    else
+    {
+      if(anIdxCounterName > 0)
+      {
+        theDI << "Error: Option \"-perfmeter\"does not work if the option \'-c\' "
+                 "is switched on.\n";
+        return 1;
+      }
+
+      Standard_Integer anIdx = aStartIdxToCreate;
+      aXmin = Draw::Atof(theArgVal[anIdx++]);
+      aYmin = Draw::Atof(theArgVal[anIdx++]);
+      aZmin = Draw::Atof(theArgVal[anIdx++]);
+      aXMax = Draw::Atof(theArgVal[anIdx++]);
+      aYMax = Draw::Atof(theArgVal[anIdx++]);
+      aZMax = Draw::Atof(theArgVal[anIdx++]);
+
+      anAABB.Add(gp_Pnt(aXmin, aYmin, aZmin));
+      anAABB.Add(gp_Pnt(aXMax, aYMax, aZMax));
+    }
+
+    if(anAABB.IsVoid())
+    {
+      theDI << "Void box.\n";
+      hasToPrint = Standard_False;
+    }
+
+    if(hasToPrint || (aStartIdxToSave>0))
+    {
+      anAABB.Get(aXmin, aYmin, aZmin, aXMax, aYMax, aZMax);
+
+      if(hasToPrint)
+      {
+        theDI << "Axes-aligned bounding box\n";
+        theDI << "X-range: " << aXmin << " " << aXMax << "\n" <<
+                 "Y-range: " << aYmin << " " << aYMax << "\n" <<
+                 "Z-range: " << aZmin << " " << aZMax << "\n";
+      }
+
+      if(aStartIdxToSave > 0)
+      {
+        Draw::Set(theArgVal[aStartIdxToSave++], aXmin);
+        Draw::Set(theArgVal[aStartIdxToSave++], aYmin);
+        Draw::Set(theArgVal[aStartIdxToSave++], aZmin);
+        Draw::Set(theArgVal[aStartIdxToSave++], aXMax);
+        Draw::Set(theArgVal[aStartIdxToSave++], aYMax);
+        Draw::Set(theArgVal[aStartIdxToSave++], aZMax);
+      }
+    }
+
+    if(hasToDraw)
+      aDB = new Draw_Box(anAABB, Draw_orange);
+
+    if(aNameToShape > 0)
+    {
+      ConvertBndToShape(anAABB, theArgVal[aNameToShape]);
+    }
+  }
+
+  if(hasToDraw)
+    dout << aDB;
+
+  if(anIdxCounterName > 0)
+  {
+    theDI << "COUNTER " << theArgVal[anIdxCounterName] << ": " << aTimer.ElapsedTime() << "\n";
+  }
+
+  return 0;
+}
+
+//=======================================================================
+//function : IsBoxesInterfered
+//purpose  : 
+//=======================================================================
+static Standard_Integer IsBoxesInterfered(Draw_Interpretor& theDI,
+                                          Standard_Integer theNArg,
+                                          const char** theArgVal)
+{
+  if(theNArg < 2)
+  {
+    theDI << "Use: isbbinterf shape1 shape2 [-o].\n";
+    return 1;
+  }
+
+  const TopoDS_Shape aShape1 = DBRep::Get(theArgVal[1]);
+  const TopoDS_Shape aShape2 = DBRep::Get(theArgVal[2]);
+
+  Standard_Boolean isOBB = (theNArg > 3) && (!strcmp(theArgVal[3], "-o"));
+
+  if(isOBB)
+  {
+    Bnd_OBB anOBB1, anOBB2;
+    BRepBndLib::AddOBB(aShape1, anOBB1);
+    BRepBndLib::AddOBB(aShape2, anOBB2);
+
+    if(anOBB1.IsOut(anOBB2))
+    {
+      theDI << "The shapes are NOT interfered by OBB.\n";
+    }
+    else
+    {
+      theDI << "The shapes are interfered by OBB.\n";
+    }
+  }
+  else
+  {
+    Bnd_Box anAABB1, anAABB2;
+    BRepBndLib::Add(aShape1, anAABB1);
+    BRepBndLib::Add(aShape2, anAABB2);
+
+    if(anAABB1.IsOut(anAABB2))
+    {
+      theDI << "The shapes are NOT interfered by AABB.\n";
+    }
+    else
+    {
+      theDI << "The shapes are interfered by AABB.\n";
+    }
+  }
+
+  return 0;
+}
+
+//=======================================================================
+//function : gbounding
+//purpose  : 
+//=======================================================================
+#include <GeomAdaptor_Surface.hxx>
+#include <BndLib_AddSurface.hxx>
+#include <BndLib_Add3dCurve.hxx>
+#include <BndLib_Add2dCurve.hxx>
+#include <Draw_Segment2D.hxx>
+static Standard_Integer gbounding(Draw_Interpretor& di,Standard_Integer n,const char** a)
+{
+  if (n != 2 && n != 3) 
+  {
+    di << "Usage: gbounding surf/curve/curve2d [-o] \n";
+    di << "[-o] turn on Optimal mode ('off' by default) \n";
+    return 1;
+  }
+  else
+  {
+    Standard_Boolean IsOptimal = Standard_False;
+    if (n == 3 && !strcmp(a[2], "-o"))
+      IsOptimal = Standard_True;
+    
+    Standard_Real axmin,aymin,azmin,axmax,aymax,azmax;
+    Bnd_Box B;
+    Bnd_Box2d B2d;
+    Handle(Draw_Box) DB;
+    Standard_Boolean Is3d = Standard_True;
+    Handle(Geom_Curve) C;
+    Handle(Geom_Surface) S;
+    Handle_Geom2d_Curve C2d;
+    S = DrawTrSurf::GetSurface(a[1]);
+    if (!S.IsNull())
+    {
+      //add surf
+      GeomAdaptor_Surface aGAS(S);
+      if (IsOptimal)
+        BndLib_AddSurface::AddOptimal(aGAS, Precision::Confusion(), B);
+      else
+        BndLib_AddSurface::Add(aGAS, Precision::Confusion(), B);
+    }
+    else
+    {
+      C = DrawTrSurf::GetCurve(a[1]);
+      if (!C.IsNull())
+      {
+        // add cur
+        GeomAdaptor_Curve aGAC(C);
+        if (IsOptimal)
+          BndLib_Add3dCurve::AddOptimal(aGAC, Precision::Confusion(), B);
+        else
+          BndLib_Add3dCurve::Add(aGAC, Precision::Confusion(), B);
+      }
+      else
+      {
+        C2d = DrawTrSurf::GetCurve2d(a[1]);
+        if (!C2d.IsNull())
+        {
+          //add cur2d
+          Is3d = Standard_False;
+          if (IsOptimal)
+            BndLib_Add2dCurve::AddOptimal(C2d, C2d->FirstParameter(), C2d->LastParameter(), Precision::Confusion(), B2d); 
+          else
+            BndLib_Add2dCurve::Add(C2d, C2d->FirstParameter(), C2d->LastParameter(), Precision::Confusion(), B2d); 
+        }
+        else
+        {
+          di << "Wrong argument \n";
+          return 1;
+        }
+      }
+    }
+
+    if (Is3d)
+    {
+      B.Get(axmin,aymin,azmin,axmax,aymax,azmax);
+      DB = new Draw_Box(B, Draw_vert);
+      dout<<DB;
+      di << axmin<<" "<< aymin<<" "<< azmin<<" "<< axmax<<" "<< aymax<<" "<< azmax;
+    }
+    else
+    {
+      B2d.Get(axmin,aymin,axmax,aymax);
+      gp_Pnt2d p1(axmin, aymin);
+      gp_Pnt2d p2(axmax, aymin);
+      gp_Pnt2d p3(axmax, aymax);
+      gp_Pnt2d p4(axmin, aymax);
+      Draw_Segment2D* S1 = new Draw_Segment2D(p1, p2, Draw_vert);
+      Draw_Segment2D* S2 = new Draw_Segment2D(p2, p3, Draw_vert);
+      Draw_Segment2D* S3 = new Draw_Segment2D(p3, p4, Draw_vert);
+      Draw_Segment2D* S4 = new Draw_Segment2D(p4, p1, Draw_vert);
+      dout << S1 << S2 << S3 << S4;
+      di << axmin<<" "<< aymin<<" "<< axmax<<" "<< aymax;
+    }
   }
   return 0;
 }
+
 //=======================================================================
 //function : findplane
 //purpose  : 
@@ -831,11 +1320,88 @@ static Standard_Integer scalexyz(Draw_Interpretor& /*di*/, Standard_Integer n, c
   aGTrsf.SetVectorialPart(rot);
   BRepBuilderAPI_GTransform aBRepGTrsf (aShapeBase, aGTrsf, Standard_False);
   if (!aBRepGTrsf.IsDone())
-    Standard_ConstructionError::Raise("Scaling not done");
+    throw Standard_ConstructionError("Scaling not done");
   TopoDS_Shape Result = aBRepGTrsf.Shape();
 
   DBRep::Set(a[1], Result);
   return 0;  
+}
+
+//=======================================================================
+//function : compareshapes
+//purpose  : 
+//=======================================================================
+static Standard_Integer compareshapes(Draw_Interpretor& di,
+                                      Standard_Integer n,
+                                      const char** a)
+{
+  if (n != 3) {
+    di << "Compare shapes. Usage: compare shape1 shape2\n";
+    return 1;
+  }
+  // get shapes
+  TopoDS_Shape aS1 = DBRep::Get(a[1]);
+  TopoDS_Shape aS2 = DBRep::Get(a[2]);
+  // check shapes
+  if (aS1.IsNull() || aS2.IsNull()) {
+    di << "null shapes\n";
+    return 0;
+  }
+  // compare shapes
+  if (aS1.IsSame(aS2)) {
+    di << "same shapes\n";
+    if (aS1.IsEqual(aS2)) {
+      di << "equal shapes\n";
+    }
+  }
+  else {
+    di << "shapes are not same\n";
+  }
+  return 0;
+}
+
+//=======================================================================
+//function : issubshape
+//purpose  : 
+//=======================================================================
+static Standard_Integer issubshape(Draw_Interpretor& di,
+                                   Standard_Integer n,
+                                   const char** a)
+{  
+  if (n != 3) {
+    di << "Check if the shape is sub-shape of other shape and get its index in the shape.\n";
+    di << "Usage: issubshape subshape shape\n";
+    return 1;
+  }
+  // get shapes
+  TopoDS_Shape aSubShape = DBRep::Get(a[1]);
+  TopoDS_Shape aShape    = DBRep::Get(a[2]);
+  // check shapes
+  if (aSubShape.IsNull() || aShape.IsNull()) {
+    di << "null shapes\n";
+    return 0;
+  }
+  // find index of the sub-shape in the shape
+  TopTools_MapOfShape aMShapes;
+  // try to find the SubShape in Shape
+  TopExp_Explorer anExp(aShape, aSubShape.ShapeType());
+  for (; anExp.More(); anExp.Next()) {
+    const TopoDS_Shape& aSS = anExp.Current();
+    if (aMShapes.Add(aSS)) {
+      if (aSS.IsSame(aSubShape)) {
+        break;
+      }
+    }
+  }
+  //
+  if (anExp.More()) {
+    di << a[1] << " is sub-shape of " << a[2] << ". Index in the shape: " << aMShapes.Extent() << ".\n";
+  }
+  else {
+    di << a[1] << " is NOT sub-shape of " << a[2] << ".\n";
+  }
+  //
+  return 0;
 }
 
 void  BRepTest::BasicCommands(Draw_Interpretor& theCommands)
@@ -859,27 +1425,27 @@ void  BRepTest::BasicCommands(Draw_Interpretor& theCommands)
 		  transform,g);
 
   theCommands.Add("tmove",
-		  "tmove name1 name2 ... name, set location from name",
+		  "tmove name1 name2 ... name, set location from name [-copy]",
 		  __FILE__,
 		  transform,g);
 
   theCommands.Add("ttranslate",
-		  "ttranslate name1 name2 ... dx dy dz",
+		  "ttranslate name1 name2 ... dx dy dz [-copy]",
 		  __FILE__,
 		  transform,g);
 
   theCommands.Add("trotate",
-		  "trotate name1 name2 ... x y z dx dy dz angle",
+		  "trotate name1 name2 ... x y z dx dy dz angle [-copy]",
 		  __FILE__,
 		  transform,g);
 
   theCommands.Add("tmirror",
-		  "tmirror name x y z dx dy dz",
+		  "tmirror name x y z dx dy dz [-copy]",
 		  __FILE__,
 		  transform,g);
 
   theCommands.Add("tscale",
-		  "tscale name x y z scale",
+		  "tscale name x y z scale [-copy]",
 		  __FILE__,
 		  transform,g);
 
@@ -929,12 +1495,12 @@ void  BRepTest::BasicCommands(Draw_Interpretor& theCommands)
 		  sameparameter,g);
 
   theCommands.Add("sameparameter",
-		  "sameparameter shapename [tol (default 1.e-7)]",
+		  "sameparameter [result] shape [tol]",
 		  __FILE__,
 		  sameparameter,g);
 
   theCommands.Add("updatetolerance",
-		  "updatetolerance myShape [param] \n  if [param] is absent - not verify of face tolerance, else - perform it",
+		  "updatetolerance [result] shape [param] \n  if [param] is absent - not verify of face tolerance, else - perform it",
 		  __FILE__,
 		  updatetol,g);
 
@@ -948,15 +1514,21 @@ void  BRepTest::BasicCommands(Draw_Interpretor& theCommands)
     __FILE__,
     getcoords,g);
   
-  theCommands.Add("bounding",
-		  "bounding shape [ xmin ymin zmin xmax ymax zmax] ; draw bounds",
-		  __FILE__,
-		  bounding,g);
+  theCommands.Add("bounding", "enter the comand w/o any arguments to obtain the help.",
+                  __FILE__, BoundBox, g);
 
-  theCommands.Add("boundingstr",
-		  "boundingstr shape [ xmin ymin zmin xmax ymax zmax] ; print bounding box",
+ //
+  theCommands.Add("gbounding",
+		  "gbounding surf/curve/curve2d [-o] ",
 		  __FILE__,
-		  boundingstr,g);
+		  gbounding,g);
+
+  theCommands.Add("isbbinterf", "isbbinterf shape1 shape2 [-o]\n"
+                  "Checks whether the bounding-boxes created from "
+                  "the given shapes are interfered. If \"-o\"-option "
+                  "is switched on then the oriented boxes will be checked. "
+                  "Otherwise, axes-aligned boxes will be checked.",
+                  __FILE__, IsBoxesInterfered, g);
 
   theCommands.Add("nurbsconvert",
 		  "nurbsconvert result name [result name]",
@@ -1000,4 +1572,15 @@ void  BRepTest::BasicCommands(Draw_Interpretor& theCommands)
                   "scalexyz res shape factor_x factor_y factor_z",
 		  __FILE__,
 		  scalexyz, g);
+
+  theCommands.Add("compare",
+                  "Compare shapes. Usage: compare shape1 shape2",
+                  __FILE__,
+                  compareshapes, g);
+
+  theCommands.Add("issubshape",
+                  "issubshape subshape shape\n"
+                  "\t\tCheck if the shape is sub-shape of other shape and get its index in the shape.",
+                  __FILE__,
+                  issubshape, g);
 }

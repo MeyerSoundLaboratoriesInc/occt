@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_Integer.hxx>
 #include <TDF_Attribute.hxx>
@@ -23,13 +23,13 @@
 #include <XmlObjMgt_Persistent.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_IntegerDriver,XmlMDF_ADriver)
-
+IMPLEMENT_DOMSTRING (AttributeIDString, "intattguid")
 //=======================================================================
 //function : XmlMDataStd_IntegerDriver
 //purpose  : Constructor
 //=======================================================================
 XmlMDataStd_IntegerDriver::XmlMDataStd_IntegerDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : XmlMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -58,12 +58,23 @@ Standard_Boolean XmlMDataStd_IntegerDriver::Paste
     TCollection_ExtendedString aMessageString =
       TCollection_ExtendedString("Cannot retrieve Integer attribute from \"")
         + anIntStr + "\"";
-    WriteMessage (aMessageString);
-    return Standard_False;
+    myMessageDriver->Send (aMessageString, Message_Warning);
+    aValue = 0;
   }
 
   Handle(TDataStd_Integer) anInt= Handle(TDataStd_Integer)::DownCast(theTarget);
   anInt->Set(aValue);
+
+  // attribute id
+  Standard_GUID aGUID;
+  const XmlObjMgt_Element& anElement = theSource;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_Integer::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
+
+  Handle(TDataStd_Integer)::DownCast(theTarget)->SetID(aGUID);
 
   return Standard_True;
 }
@@ -78,4 +89,11 @@ void XmlMDataStd_IntegerDriver::Paste (const Handle(TDF_Attribute)& theSource,
 {
   Handle(TDataStd_Integer) anInt= Handle(TDataStd_Integer)::DownCast(theSource);
   XmlObjMgt::SetStringValue (theTarget, anInt->Get());
+  if(anInt->ID() != TDataStd_Integer::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    anInt->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
+  }
 }

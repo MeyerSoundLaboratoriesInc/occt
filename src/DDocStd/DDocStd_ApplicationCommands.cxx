@@ -34,6 +34,7 @@
 #include <OSD_Path.hxx>
 #include <OSD_OpenFile.hxx>
 #include <TDocStd_PathParser.hxx>
+#include <XmlLDrivers.hxx>
 
 #include <AIS_InteractiveContext.hxx>
 #include <TPrsStd_AISViewer.hxx>
@@ -56,8 +57,7 @@ static Standard_Integer DDocStd_ListDocuments (Draw_Interpretor& di,
 					       const char** /*a*/)
 {  
   if (nb == 1) {
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) return 1;
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     Handle(TDocStd_Document) D;
     Standard_Integer nbdoc = A->NbDocuments();
     for (Standard_Integer i = 1; i <= nbdoc; i++) {
@@ -105,8 +105,7 @@ static Standard_Integer DDocStd_NewDocument (Draw_Interpretor& di,
   }
   if (nb == 3) {   
     if (!DDocStd::GetDocument(a[1],D,Standard_False)) {  
-      Handle(TDocStd_Application) A;
-      if (!DDocStd::Find(A)) return 1;
+      Handle(TDocStd_Application) A = DDocStd::GetApplication();
       A->NewDocument(a[2],D);  
       DD = new DDocStd_DrawDocument(D);  
       TDataStd_Name::Set(D->GetData()->Root(),a[1]);  
@@ -132,8 +131,7 @@ static Standard_Integer DDocStd_Open (Draw_Interpretor& di,
 {   
   if (nb >= 3) {
     TCollection_ExtendedString path (a[1]); 
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) return 1;
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     Handle(TDocStd_Document) D;
     Standard_Integer insession = A->IsInSession(path);
     if (insession > 0) {  
@@ -216,8 +214,7 @@ static Standard_Integer DDocStd_Save (Draw_Interpretor& di,
   if (nb == 2) {
     Handle(TDocStd_Document) D;    
     if (!DDocStd::GetDocument(a[1],D)) return 1;
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) return 1;  
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     if (!D->IsSaved()) {
       di << "this document has never been saved\n";
       return 0;
@@ -235,18 +232,17 @@ static Standard_Integer DDocStd_Save (Draw_Interpretor& di,
 //=======================================================================
 
 static Standard_Integer DDocStd_SaveAs (Draw_Interpretor& di,
-					Standard_Integer nb,
-					const char** a)
-{  
+                                        Standard_Integer nb,
+                                        const char** a)
+{
   if (nb >= 3) {
     Handle(TDocStd_Document) D;    
     if (!DDocStd::GetDocument(a[1],D)) return 1;  
     TCollection_ExtendedString path (a[2]); 
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) return 1;
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     PCDM_StoreStatus theStatus;
-    
-    Standard_Boolean anUseStream = Standard_False;
+
+    Standard_Boolean anUseStream(Standard_False), isSaveEmptyLabels(Standard_False);
     for ( Standard_Integer i = 3; i < nb; i++ )
     {
       if (!strcmp (a[i], "-stream"))
@@ -254,9 +250,11 @@ static Standard_Integer DDocStd_SaveAs (Draw_Interpretor& di,
         di << "standard SEEKABLE stream is used\n";
         anUseStream = Standard_True;
         break;
+      } else {
+        isSaveEmptyLabels =  ((atoi (a[3])) != 0);
+        D->SetEmptyLabelsSavingMode(isSaveEmptyLabels);
       }
     }
-
     if (anUseStream)
     {
       std::ofstream aFileStream;
@@ -267,35 +265,35 @@ static Standard_Integer DDocStd_SaveAs (Draw_Interpretor& di,
     {
       theStatus = A->SaveAs(D,path);
     }
-    
+
     if (theStatus != PCDM_SS_OK ) {
       switch ( theStatus ) {
-        case PCDM_SS_DriverFailure: {
-          di << "Error saving document: Could not store , no driver found to make it\n";
-          break ;
-        }
-        case PCDM_SS_WriteFailure: {
-          di << "Error saving document: Write access failure\n";
-          break;
-        }
-        case PCDM_SS_Failure: {
-          di << "Error saving document: Write failure\n" ;
-          break;
-        }
-        case PCDM_SS_Doc_IsNull: {
-          di << "Error saving document: No document to save\n";
-          break ;
-        }
-        case PCDM_SS_No_Obj: {
-          di << "Error saving document: No objects written\n";
-          break;
-        }
-        case PCDM_SS_Info_Section_Error: {
-          di << "Error saving document: Write info section failure\n" ;
-          break;
-        }
-        default:
-          break;
+      case PCDM_SS_DriverFailure: {
+        di << "Error saving document: Could not store , no driver found to make it\n";
+        break ;
+                                  }
+      case PCDM_SS_WriteFailure: {
+        di << "Error saving document: Write access failure\n";
+        break;
+                                 }
+      case PCDM_SS_Failure: {
+        di << "Error saving document: Write failure\n" ;
+        break;
+                            }
+      case PCDM_SS_Doc_IsNull: {
+        di << "Error saving document: No document to save\n";
+        break ;
+                               }
+      case PCDM_SS_No_Obj: {
+        di << "Error saving document: No objects written\n";
+        break;
+                           }
+      case PCDM_SS_Info_Section_Error: {
+        di << "Error saving document: Write info section failure\n" ;
+        break;
+                                       }
+      default:
+        break;
       }
       return 1;
     } else {
@@ -334,18 +332,19 @@ static Standard_Integer DDocStd_Close (Draw_Interpretor& /*theDI*/,
    && !aDocViewer->GetInteractiveContext().IsNull())
   {
     Handle(V3d_Viewer) aViewer = aDocViewer->GetInteractiveContext()->CurrentViewer();
-    for (aViewer->InitDefinedViews(); aViewer->MoreDefinedViews(); aViewer->NextDefinedViews())
+    V3d_ListOfView aViews;
+    for (V3d_ListOfViewIterator aViewIter (aDocViewer->GetInteractiveContext()->CurrentViewer()->DefinedViewIterator()); aViewIter.More(); aViewIter.Next())
     {
-      Handle(V3d_View) aView = aViewer->DefinedView();
+      aViews.Append (aViewIter.Value());
+    }
+    for (V3d_ListOfViewIterator aViewIter (aViews); aViewIter.More(); aViewIter.Next())
+    {
+      Handle(V3d_View) aView = aViewIter.Value();
       ViewerTest::RemoveView (aView);
     }
   }
 
-  Handle(TDocStd_Application) aDocApp;
-  if (!DDocStd::Find (aDocApp))
-  {
-    return 1;
-  }
+  Handle(TDocStd_Application) aDocApp = DDocStd::GetApplication();
 
   aDocApp->Close (aDoc);
 
@@ -365,8 +364,7 @@ static Standard_Integer DDocStd_IsInSession (Draw_Interpretor& di,
 					     const char** a)
 {   
   if (nb == 2) {   
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) return 1;
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     di << A->IsInSession(a[1]);
     return 0;
   }  
@@ -441,8 +439,7 @@ static Standard_Integer DDocStd_AddComment (Draw_Interpretor& di,
     Handle(TDocStd_Document) D;    
     if (!DDocStd::GetDocument(a[1],D)) return 1;  
     TCollection_ExtendedString comment (a[2]); 
-//    Handle(TDocStd_Application) A;
-//    if (!DDocStd::Find(A)) return 1;
+//    Handle(TDocStd_Application) A = DDocStd::GetApplication();
 //    A->AddComment(D,comment);
     D->AddComment(comment);
     return 0; 
@@ -480,6 +477,35 @@ static Standard_Integer DDocStd_PrintComments (Draw_Interpretor& di,
 }
 
 //=======================================================================
+//function : SetStorageVerison
+//purpose  : 
+//=======================================================================
+static Standard_Integer DDocStd_SetStorageVersion (Draw_Interpretor& ,
+                                                   Standard_Integer nb,
+                                                   const char** a)
+{  
+  if (nb == 2)
+  {
+    const int version = atoi(a[1]);
+    XmlLDrivers::SetStorageVersion(version);
+    return 0;
+  }
+  return 1;
+}
+
+//=======================================================================
+//function : GetStorageVerison
+//purpose  : 
+//=======================================================================
+static Standard_Integer DDocStd_GetStorageVersion (Draw_Interpretor& di,
+                                                   Standard_Integer ,
+                                                   const char** )
+{  
+  di << XmlLDrivers::StorageVersion() << "\n" ;
+  return 0;
+}
+
+//=======================================================================
 //function : ApplicationCommands
 //purpose  : 
 //=======================================================================
@@ -507,7 +533,7 @@ void DDocStd::ApplicationCommands(Draw_Interpretor& theCommands)
 		  __FILE__, DDocStd_Open, g);   
 
   theCommands.Add("SaveAs",
-		  "SaveAs DOC path [-stream]",
+		  "SaveAs DOC path [saveEmptyLabels: 0|1] [-stream]",
 		  __FILE__, DDocStd_SaveAs, g);  
 
   theCommands.Add("Save",
@@ -537,4 +563,11 @@ void DDocStd::ApplicationCommands(Draw_Interpretor& theCommands)
   theCommands.Add("PrintComments",
 		  "PrintComments Doc",
 		  __FILE__, DDocStd_PrintComments, g);
+
+  theCommands.Add("GetStorageVersion",
+		  "GetStorageVersion",
+		  __FILE__, DDocStd_GetStorageVersion, g);
+  theCommands.Add("SetStorageVersion",
+		  "SetStorageVersion Version",
+		  __FILE__, DDocStd_SetStorageVersion, g);
 }

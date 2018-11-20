@@ -106,12 +106,12 @@ Geom2d_BezierCurve::Geom2d_BezierCurve
   Standard_Integer nbpoles = Poles.Length();
   
   if (Weights.Length() != nbpoles)
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   
   Standard_Integer i;
   for (i = 1; i <= nbpoles; i++) {
     if (Weights(i) <= gp::Resolution()) {
-      Standard_ConstructionError::Raise();
+      throw Standard_ConstructionError();
     }
   }
   
@@ -656,7 +656,7 @@ Standard_Integer Geom2d_BezierCurve::NbPoles () const
 //purpose  : 
 //=======================================================================
 
-gp_Pnt2d Geom2d_BezierCurve::Pole (const Standard_Integer Index) const
+const gp_Pnt2d& Geom2d_BezierCurve::Pole (const Standard_Integer Index) const
 {
   Standard_OutOfRange_Raise_if (Index < 1 || Index > poles->Length(),
 				"Geom2d_BezierCurve::Pole");

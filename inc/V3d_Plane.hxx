@@ -21,7 +21,7 @@
 #include <V3d_View.hxx>
 
 class V3d_Plane;
-DEFINE_STANDARD_HANDLE (V3d_Plane, MMgt_TShared)
+DEFINE_STANDARD_HANDLE (V3d_Plane, Standard_Transient)
 
 //! Obsolete clip plane presentation class.
 //! Ported on new core of Graphic3d_ClipPlane approach.
@@ -41,21 +41,21 @@ DEFINE_STANDARD_HANDLE (V3d_Plane, MMgt_TShared)
 //! @endcode
 //! Use interface of this class to modify plane equation synchronously
 //! with clipping equation.
-class V3d_Plane : public MMgt_TShared
+class V3d_Plane : public Standard_Transient
 {
 public:
 
   //! Creates a clipping plane from plane coefficients.
-  Standard_EXPORT V3d_Plane (const Quantity_Parameter theA = 0.0,
-                             const Quantity_Parameter theB = 0.0,
-                             const Quantity_Parameter theC = 1.0,
-                             const Quantity_Parameter theD = 0.0);
+  Standard_EXPORT V3d_Plane (const Standard_Real theA = 0.0,
+                             const Standard_Real theB = 0.0,
+                             const Standard_Real theC = 1.0,
+                             const Standard_Real theD = 0.0);
 
   //! Change plane equation.
-  Standard_EXPORT void SetPlane (const Quantity_Parameter theA,
-                                 const Quantity_Parameter theB,
-                                 const Quantity_Parameter theC,
-                                 const Quantity_Parameter theD);
+  Standard_EXPORT void SetPlane (const Standard_Real theA,
+                                 const Standard_Real theB,
+                                 const Standard_Real theC,
+                                 const Standard_Real theD);
 
   //! Display the plane representation in the choosen view.
   Standard_EXPORT virtual void Display (const Handle(V3d_View)& theView,
@@ -65,10 +65,10 @@ public:
   Standard_EXPORT void Erase();
 
   //! Returns the parameters of the plane.
-  Standard_EXPORT void Plane (Quantity_Parameter& theA,
-                              Quantity_Parameter& theB,
-                              Quantity_Parameter& theC,
-                              Quantity_Parameter& theD) const;
+  Standard_EXPORT void Plane (Standard_Real& theA,
+                              Standard_Real& theB,
+                              Standard_Real& theC,
+                              Standard_Real& theD) const;
 
   //! Returns TRUE when the plane representation is displayed.
   Standard_EXPORT Standard_Boolean IsDisplayed() const;
@@ -96,7 +96,7 @@ private:
 
 public:
 
-  DEFINE_STANDARD_RTTIEXT(V3d_Plane,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(V3d_Plane,Standard_Transient)
 };
 
 #endif

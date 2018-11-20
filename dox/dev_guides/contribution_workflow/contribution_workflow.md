@@ -35,8 +35,7 @@ According to his access level, the user can participate in the issue handling pr
 @subsection occt_contribution_workflow_general General scheme
 
 <center>
-@image html OCCT_ContributionWorkflow_V3_image001.svg "Standard life cycle of an issue"
-@image latex OCCT_ContributionWorkflow_V3_image001.svg "Standard life cycle of an issue"
+@figure{OCCT_ContributionWorkflow_V3_image001.svg,"Standard life cycle of an issue",360}
 </center>
   
 @subsection occt_contribution_workflow_issue Issue registration
@@ -205,7 +204,7 @@ In a general case, the following elements should be present:
 Example:
 
 > *0026330: BRepOffsetAPI_ThruSections creates invalid shape.*
-> 
+>
 > *Methods BRep_Tool::CurveOnSurface() and BRepCheck_Edge::InContext() now properly handle parametric range on a 3D curve when it is used to generate a p-curve dynamically (on a planar surface) and both the surface and the 3D curve have non-null locations.*
 
 Provide sufficient context so that potential user of the affected functionality can understand what has been changed and how the algorithm works now.
@@ -281,8 +280,7 @@ Each change is integrated as a single commit without preserving the history of c
 This is done to have the master branch history plain and clean.
 The following picture illustrates the process:
   
-@image html OCCT_ContributionWorkflow_V3_image002.png "Integration of several branches" width=\textwidth
-@image latex OCCT_ContributionWorkflow_V3_image002.png "Integration of several branches" width=\textwidth
+@figure{OCCT_ContributionWorkflow_V3_image002.png,"Integration of several branches",420}
   
 The new integration branch is tested against possible regressions that might appear due to interference between separate changes.
 When the tests are OK, the integration branch is pushed as the new master to the official repository.
@@ -358,7 +356,7 @@ In some cases review remarks or results of testing require only minor correction
 
 As an exception to general @ref occt_contribution_workflow_fix_git "single-commit rule", it is allowed to put such minor corrections on top of the existing branch as a separate commit, and re-submit it for further processing in the same branch, without squashing.
 
-Minor commits should have a single-line message starting with //.
+Minor commits should have a single-line message starting with #.
 These messages will be ignored when the branch is squashed at integration.
 
 Typical cases of minor corrections are:
@@ -463,3 +461,4 @@ The category corresponds to the component of OCCT where the issue is found:
   | Suspended             | The issue is postponed (for Acknowledged status).                            |
   | Documentation updated | The documentation has been updated to resolve a misunderstanding causing the issue. |
   | Won’t fix             | It is decided to keep the existing behavior.                                     |
+

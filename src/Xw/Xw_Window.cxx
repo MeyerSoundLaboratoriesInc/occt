@@ -19,10 +19,13 @@
 
 #include <Aspect_Convert.hxx>
 #include <Aspect_WindowDefinitionError.hxx>
+#include <Message.hxx>
+#include <Message_Messenger.hxx>
 
-#include <GL/glx.h>
-
-IMPLEMENT_STANDARD_RTTIEXT(Xw_Window,Aspect_Window)
+#if defined(HAVE_EGL) || defined(HAVE_GLES2)
+  #include <EGL/egl.h>
+#else
+  #include <GL/glx.h>
 
 namespace
 {
@@ -52,6 +55,10 @@ namespace
 
 }
 
+#endif
+
+IMPLEMENT_STANDARD_RTTIEXT(Xw_Window, Aspect_Window)
+
 // =======================================================================
 // function : Xw_Window
 // purpose  :
@@ -73,19 +80,13 @@ Xw_Window::Xw_Window (const Handle(Aspect_DisplayConnection)& theXDisplay,
   myYBottom  (thePxTop + thePxHeight),
   myIsOwnWin (Standard_True)
 {
-  int aDummy = 0;
   if (thePxWidth <= 0 || thePxHeight <= 0)
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, Coordinate(s) out of range");
+    throw Aspect_WindowDefinitionError("Xw_Window, Coordinate(s) out of range");
   }
   else if (theXDisplay.IsNull())
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, X Display connection is undefined");
-    return;
-  }
-  else if (!glXQueryExtension (myDisplay->GetDisplay(), &aDummy, &aDummy))
-  {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, GLX extension is unavailable");
+    throw Aspect_WindowDefinitionError("Xw_Window, X Display connection is undefined");
     return;
   }
 
@@ -94,6 +95,62 @@ Xw_Window::Xw_Window (const Handle(Aspect_DisplayConnection)& theXDisplay,
   Window   aParent = RootWindow   (aDisp, aScreen);
   XVisualInfo* aVisInfo = NULL;
 
+#if defined(HAVE_EGL) || defined(HAVE_GLES2)
+  EGLDisplay anEglDisplay = eglGetDisplay (aDisp);
+  EGLint aVerMajor = 0; EGLint aVerMinor = 0;
+  XVisualInfo aVisInfoTmp; memset (&aVisInfoTmp, 0, sizeof(aVisInfoTmp));
+  if (anEglDisplay != EGL_NO_DISPLAY
+   && eglInitialize (anEglDisplay, &aVerMajor, &aVerMinor) == EGL_TRUE)
+  {
+    EGLint aConfigAttribs[] =
+    {
+      EGL_RED_SIZE,     8,
+      EGL_GREEN_SIZE,   8,
+      EGL_BLUE_SIZE,    8,
+      EGL_ALPHA_SIZE,   0,
+      EGL_DEPTH_SIZE,   24,
+      EGL_STENCIL_SIZE, 8,
+    #if defined(HAVE_GLES2)
+      EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+    #else
+      EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+    #endif
+      EGL_NONE
+    };
+
+    EGLint aNbConfigs = 0;
+    void* anEglConfig = NULL;
+    if (eglChooseConfig (anEglDisplay, aConfigAttribs, &anEglConfig, 1, &aNbConfigs) != EGL_TRUE
+     || anEglConfig == NULL)
+    {
+      eglGetError();
+      aConfigAttribs[4 * 2 + 1] = 16; // try config with smaller depth buffer
+      if (eglChooseConfig (anEglDisplay, aConfigAttribs, &anEglConfig, 1, &aNbConfigs) != EGL_TRUE
+       || anEglConfig == NULL)
+      {
+        anEglConfig = NULL;
+      }
+    }
+
+    if (anEglConfig != NULL
+     && eglGetConfigAttrib (anEglDisplay, anEglConfig, EGL_NATIVE_VISUAL_ID, (EGLint* )&aVisInfoTmp.visualid) == EGL_TRUE)
+    {
+      int aNbVisuals = 0;
+      aVisInfoTmp.screen = DefaultScreen (aDisp);
+      aVisInfo = XGetVisualInfo (aDisp, VisualIDMask | VisualScreenMask, &aVisInfoTmp, &aNbVisuals);
+    }
+  }
+  if (aVisInfo == NULL)
+  {
+    Message::DefaultMessenger()->Send ("Warning: cannot choose Visual using EGL while creating Xw_Window", Message_Warning);
+  }
+#else
+  int aDummy = 0;
+  if (!glXQueryExtension (myDisplay->GetDisplay(), &aDummy, &aDummy))
+  {
+    throw Aspect_WindowDefinitionError("Xw_Window, GLX extension is unavailable");
+    return;
+  }
   if (myFBConfig == NULL)
   {
     // FBConfigs were added in GLX version 1.3
@@ -125,29 +182,37 @@ Xw_Window::Xw_Window (const Handle(Aspect_DisplayConnection)& theXDisplay,
   }
   if (aVisInfo == NULL)
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, couldn't find compatible Visual (RGBA, double-buffered)");
+    throw Aspect_WindowDefinitionError("Xw_Window, couldn't find compatible Visual (RGBA, double-buffered)");
     return;
   }
+#endif
 
   unsigned long aMask = 0;
   XSetWindowAttributes aWinAttr;
   memset(&aWinAttr, 0, sizeof(XSetWindowAttributes));
   aWinAttr.event_mask = ExposureMask | StructureNotifyMask;
   aMask |= CWEventMask;
-  aWinAttr.colormap = XCreateColormap(aDisp, aParent, aVisInfo->visual, AllocNone);
+  if (aVisInfo != NULL)
+  {
+    aWinAttr.colormap = XCreateColormap(aDisp, aParent, aVisInfo->visual, AllocNone);
+  }
   aWinAttr.border_pixel = 0;
   aWinAttr.override_redirect = False;
 
   myXWindow = XCreateWindow(aDisp, aParent,
                             myXLeft, myYTop, thePxWidth, thePxHeight,
-                            0, aVisInfo->depth,
+                            0, aVisInfo != NULL ? aVisInfo->depth : CopyFromParent,
                             InputOutput,
-                            aVisInfo->visual,
+                            aVisInfo != NULL ? aVisInfo->visual : CopyFromParent,
                             CWBorderPixel | CWColormap | CWEventMask | CWOverrideRedirect, &aWinAttr);
-  XFree (aVisInfo); aVisInfo = NULL;
+  if (aVisInfo != NULL)
+  {
+    XFree (aVisInfo);
+    aVisInfo = NULL;
+  }
   if (myXWindow == 0)
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, Unable to create window");
+    throw Aspect_WindowDefinitionError("Xw_Window, Unable to create window");
     return;
   }
 
@@ -189,38 +254,38 @@ Xw_Window::Xw_Window (const Handle(Aspect_DisplayConnection)& theXDisplay,
   myYBottom  (512),
   myIsOwnWin (Standard_False)
 {
-  int aDummy = 0;
   if (theXWin == 0)
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, given invalid X window");
+    throw Aspect_WindowDefinitionError("Xw_Window, given invalid X window");
     return;
   }
   else if (theXDisplay.IsNull())
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, X Display connection is undefined");
+    throw Aspect_WindowDefinitionError("Xw_Window, X Display connection is undefined");
     return;
   }
-  else if (!glXQueryExtension (myDisplay->GetDisplay(), &aDummy, &aDummy))
+#if !defined(HAVE_EGL) && !defined(HAVE_GLES2)
+  int aDummy = 0;
+  if (!glXQueryExtension (myDisplay->GetDisplay(), &aDummy, &aDummy))
   {
     myXWindow = 0;
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, GLX extension is unavailable");
+    throw Aspect_WindowDefinitionError("Xw_Window, GLX extension is unavailable");
     return;
   }
+#endif
 
   Display* aDisp = myDisplay->GetDisplay();
 
   XWindowAttributes aWinAttr;
   XGetWindowAttributes (aDisp, myXWindow, &aWinAttr);
-  const int  aScreen      = DefaultScreen (aDisp);
-  const long aVisInfoMask = VisualIDMask | VisualScreenMask;
   XVisualInfo aVisInfoTmp;
   aVisInfoTmp.visualid = aWinAttr.visual->visualid;
-  aVisInfoTmp.screen   = aScreen;
+  aVisInfoTmp.screen   = DefaultScreen (aDisp);
   int aNbItems = 0;
-  XVisualInfo* aVisInfo = XGetVisualInfo (aDisp, aVisInfoMask, &aVisInfoTmp, &aNbItems);
+  XVisualInfo* aVisInfo = XGetVisualInfo (aDisp, VisualIDMask | VisualScreenMask, &aVisInfoTmp, &aNbItems);
   if (aVisInfo == NULL)
   {
-    Aspect_WindowDefinitionError::Raise ("Xw_Window, Visual is unavailable");
+    throw Aspect_WindowDefinitionError("Xw_Window, Visual is unavailable");
     return;
   }
   XFree (aVisInfo);
@@ -360,7 +425,7 @@ Standard_Boolean Xw_Window::DoMapping() const
 // function : Ratio
 // purpose  :
 // =======================================================================
-Quantity_Ratio Xw_Window::Ratio() const
+Standard_Real Xw_Window::Ratio() const
 {
   if (myXWindow == 0)
   {
@@ -370,7 +435,7 @@ Quantity_Ratio Xw_Window::Ratio() const
   XFlush (myDisplay->GetDisplay());
   XWindowAttributes aWinAttr;
   XGetWindowAttributes (myDisplay->GetDisplay(), myXWindow, &aWinAttr);
-  return Quantity_Ratio(aWinAttr.width) / Quantity_Ratio(aWinAttr.height);
+  return Standard_Real(aWinAttr.width) / Standard_Real(aWinAttr.height);
 }
 
 // =======================================================================

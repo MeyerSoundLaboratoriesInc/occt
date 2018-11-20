@@ -14,26 +14,30 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <Prs3d.hxx>
 
 #include <Bnd_Box.hxx>
 #include <BRepBndLib.hxx>
 #include <gp_Pnt.hxx>
-#include <Prs3d.hxx>
+#include <Graphic3d_Group.hxx>
 #include <Prs3d_Drawer.hxx>
+#include <Prs3d_LineAspect.hxx>
+#include <Prs3d_Root.hxx>
 #include <TopoDS_Shape.hxx>
+#include <Graphic3d_ArrayOfSegments.hxx>
 
 //=======================================================================
 //function : MatchSegment
 //purpose  :
 //=======================================================================
 Standard_Boolean Prs3d::MatchSegment 
-                 (const Quantity_Length X,
-                  const Quantity_Length Y,
-                  const Quantity_Length Z,
-                  const Quantity_Length aDistance,
+                 (const Standard_Real X,
+                  const Standard_Real Y,
+                  const Standard_Real Z,
+                  const Standard_Real aDistance,
                   const gp_Pnt& P1,
                   const gp_Pnt& P2,
-                  Quantity_Length& dist)
+                  Standard_Real& dist)
 {
   Standard_Real X1,Y1,Z1,X2,Y2,Z2;
   P1.Coord(X1,Y1,Z1); P2.Coord(X2,Y2,Z2);
@@ -77,4 +81,57 @@ Standard_Real Prs3d::GetDeflection (const TopoDS_Shape&         theShape,
     }
   }
   return aDeflection;
+}
+
+//==================================================================
+// function: PrimitivesFromPolylines
+// purpose:
+//==================================================================
+Handle(Graphic3d_ArrayOfPrimitives) Prs3d::PrimitivesFromPolylines (const Prs3d_NListOfSequenceOfPnt& thePoints)
+{
+  if (thePoints.IsEmpty())
+  {
+    return Handle(Graphic3d_ArrayOfPrimitives)();
+  }
+
+  Standard_Integer aNbVertices = 0;
+  for (Prs3d_NListOfSequenceOfPnt::Iterator anIt (thePoints); anIt.More(); anIt.Next())
+  {
+    aNbVertices += anIt.Value()->Length();
+  }
+  const Standard_Integer aSegmentEdgeNb = (aNbVertices - thePoints.Size()) * 2;
+  Handle(Graphic3d_ArrayOfSegments) aSegments = new Graphic3d_ArrayOfSegments (aNbVertices, aSegmentEdgeNb);
+  for (Prs3d_NListOfSequenceOfPnt::Iterator anIt (thePoints); anIt.More(); anIt.Next())
+  {
+    const Handle(TColgp_HSequenceOfPnt)& aPoints = anIt.Value();
+
+    Standard_Integer aSegmentEdge = aSegments->VertexNumber() + 1;
+    aSegments->AddVertex (aPoints->First());
+    for (Standard_Integer aPntIter = aPoints->Lower() + 1; aPntIter <= aPoints->Upper(); ++aPntIter)
+    {
+      aSegments->AddVertex (aPoints->Value (aPntIter));
+      aSegments->AddEdge (  aSegmentEdge);
+      aSegments->AddEdge (++aSegmentEdge);
+    }
+  }
+
+  return aSegments;
+}
+
+//==================================================================
+// function: AddPrimitivesGroup
+// purpose:
+//==================================================================
+void Prs3d::AddPrimitivesGroup (const Handle(Prs3d_Presentation)& thePrs,
+                                const Handle(Prs3d_LineAspect)&   theAspect,
+                                Prs3d_NListOfSequenceOfPnt&       thePolylines)
+{
+  Handle(Graphic3d_ArrayOfPrimitives) aPrims = Prs3d::PrimitivesFromPolylines (thePolylines);
+  thePolylines.Clear();
+  if (!aPrims.IsNull())
+  {
+    Handle(Graphic3d_Group) aGroup = Prs3d_Root::NewGroup (thePrs);
+    aGroup->SetPrimitivesAspect (theAspect->Aspect());
+    aGroup->AddPrimitiveArray (aPrims);
+  }
 }

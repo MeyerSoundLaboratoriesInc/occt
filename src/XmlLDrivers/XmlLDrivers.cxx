@@ -14,10 +14,10 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Plugin_Macro.hxx>
 #include <Standard_GUID.hxx>
-#include <Standard_Transient.hxx>
+#include <TDocStd_Application.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <XmlLDrivers.hxx>
 #include <XmlLDrivers_DocumentRetrievalDriver.hxx>
@@ -32,7 +32,8 @@
 #include <time.h>
 static Standard_GUID XmlLStorageDriver  ("13a56820-8269-11d5-aab2-0050044b1af1");
 static Standard_GUID XmlLRetrievalDriver("13a56822-8269-11d5-aab2-0050044b1af1");
-#define CURRENT_DOCUMENT_VERSION 8
+
+static int CURRENT_DOCUMENT_VERSION(9);
 
 //=======================================================================
 //function : Factory
@@ -61,9 +62,7 @@ const Handle(Standard_Transient)& XmlLDrivers::Factory(const Standard_GUID& theG
     return model_rd;
   }
  
-  Standard_Failure::Raise ("XmlLDrivers : unknown GUID");
-  static Handle(Standard_Transient) aNullHandle;
-  return aNullHandle;
+  throw Standard_Failure("XmlLDrivers : unknown GUID");
 }
 
 #define SLENGTH 80
@@ -97,11 +96,22 @@ TCollection_AsciiString XmlLDrivers::CreationDate ()
 }
 
 //=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void XmlLDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("XmlLOcaf", "Xml Lite OCAF Document", "xmll",
+                        new XmlLDrivers_DocumentRetrievalDriver, 
+                        new XmlLDrivers_DocumentStorageDriver ("Copyright: Open Cascade, 2001-2002"));
+}
+
+//=======================================================================
 //function : AttributeDrivers
 //purpose  : 
 //=======================================================================
 Handle(XmlMDF_ADriverTable) XmlLDrivers::AttributeDrivers
-                (const Handle(CDM_MessageDriver)& theMessageDriver)
+                (const Handle(Message_Messenger)& theMessageDriver)
 {
   Handle(XmlMDF_ADriverTable) aTable = new XmlMDF_ADriverTable();
   //
@@ -118,10 +128,13 @@ Handle(XmlMDF_ADriverTable) XmlLDrivers::AttributeDrivers
 //purpose  : Document storage version
 //=======================================================================
 
-TCollection_AsciiString XmlLDrivers::StorageVersion()
+int XmlLDrivers::StorageVersion()
 {
-  TCollection_AsciiString aVersionStr (CURRENT_DOCUMENT_VERSION);
-  return aVersionStr;
+  return CURRENT_DOCUMENT_VERSION;
+}
+void XmlLDrivers::SetStorageVersion(const int version)
+{
+  CURRENT_DOCUMENT_VERSION = version;
 }
 
 // Declare entry point PLUGINFACTORY

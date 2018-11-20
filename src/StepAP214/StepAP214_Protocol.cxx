@@ -25,6 +25,7 @@ static Standard_CString schemaAP214CD  = "AUTOMOTIVE_DESIGN_CC2 { 1 2 10303 214 
 static Standard_CString schemaAP214DIS = "AUTOMOTIVE_DESIGN { 1 2 10303 214 0 1 1 1 }";
 static Standard_CString schemaAP214IS  = "AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }";
 static Standard_CString schemaAP203    = "CONFIG_CONTROL_DESIGN";
+static Standard_CString schemaAP242DIS = "AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF. {1 0 10303 442 1 1 4 }";
 
 #include <HeaderSection_Protocol.hxx>
 
@@ -738,10 +739,19 @@ static Standard_CString schemaAP203    = "CONFIG_CONTROL_DESIGN";
 #include <StepVisual_TessellatedGeometricSet.hxx>
 #include <StepVisual_TessellatedCurveSet.hxx>
 #include <StepVisual_CoordinatesList.hxx>
+#include <StepRepr_CharacterizedRepresentation.hxx>
+#include <StepRepr_ConstructiveGeometryRepresentation.hxx>
+#include <StepRepr_ConstructiveGeometryRepresentationRelationship.hxx>
+#include <StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.hxx>
+#include <StepVisual_AnnotationFillArea.hxx>
+#include <StepVisual_AnnotationFillAreaOccurrence.hxx>
+#include <StepVisual_CameraModelD3MultiClipping.hxx>
+#include <StepVisual_CameraModelD3MultiClippingIntersection.hxx>
+#include <StepVisual_CameraModelD3MultiClippingUnion.hxx>
+#include <StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.hxx>
 
-static int init = 0;
+static int THE_StepAP214_Protocol_init = 0;
 static Interface_DataMapOfTransientInteger types(800);
-
 
 //=======================================================================
 //function : StepAP214_Protocol
@@ -750,14 +760,18 @@ static Interface_DataMapOfTransientInteger types(800);
 
 StepAP214_Protocol::StepAP214_Protocol ()
 {
-  if (init) return;  init = 1;
+  if (THE_StepAP214_Protocol_init)
+  {
+    return;
+  }
+  THE_StepAP214_Protocol_init = 1;
 
   types.Bind (STANDARD_TYPE(StepBasic_Address), 1);
   types.Bind (STANDARD_TYPE(StepShape_AdvancedBrepShapeRepresentation), 2);
   types.Bind (STANDARD_TYPE(StepShape_AdvancedFace), 3);
   types.Bind (STANDARD_TYPE(StepVisual_AnnotationCurveOccurrence), 4);
-//  types.Bind (STANDARD_TYPE(StepVisual_AnnotationFillArea), 5);
-//  types.Bind (STANDARD_TYPE(StepVisual_AnnotationFillAreaOccurrence), 6);
+  types.Bind (STANDARD_TYPE(StepVisual_AnnotationFillArea), 5);
+  types.Bind (STANDARD_TYPE(StepVisual_AnnotationFillAreaOccurrence), 6);
   types.Bind (STANDARD_TYPE(StepVisual_AnnotationOccurrence), 7);
 //  types.Bind (STANDARD_TYPE(StepVisual_AnnotationSubfigureOccurrence), 8);
 //  types.Bind (STANDARD_TYPE(StepVisual_AnnotationSymbol), 9);
@@ -1436,8 +1450,15 @@ StepAP214_Protocol::StepAP214_Protocol ()
   types.Bind (STANDARD_TYPE(StepVisual_TessellatedItem), 708);
   types.Bind (STANDARD_TYPE(StepVisual_TessellatedGeometricSet), 709);
   types.Bind (STANDARD_TYPE(StepVisual_TessellatedCurveSet), 710);
-
   types.Bind (STANDARD_TYPE(StepVisual_CoordinatesList), 711);
+  types.Bind (STANDARD_TYPE(StepRepr_ConstructiveGeometryRepresentation), 712);
+  types.Bind (STANDARD_TYPE(StepRepr_ConstructiveGeometryRepresentationRelationship), 713);
+  types.Bind (STANDARD_TYPE(StepRepr_CharacterizedRepresentation), 714);
+  types.Bind (STANDARD_TYPE(StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation), 715);
+  types.Bind (STANDARD_TYPE(StepVisual_CameraModelD3MultiClipping), 716);
+  types.Bind (STANDARD_TYPE(StepVisual_CameraModelD3MultiClippingIntersection), 717);
+  types.Bind (STANDARD_TYPE(StepVisual_CameraModelD3MultiClippingUnion), 718);
+  types.Bind (STANDARD_TYPE(StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem), 719);
 }
 
 
@@ -1468,6 +1489,7 @@ Standard_CString StepAP214_Protocol::SchemaName() const
   case 2 : return schemaAP214DIS; break; 
   case 3 : return schemaAP203;    break;
   case 4:  return schemaAP214IS; break;
+  case 5 : return schemaAP242DIS; break;
   }
 }
 

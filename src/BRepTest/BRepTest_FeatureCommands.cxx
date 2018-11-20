@@ -54,13 +54,14 @@
 #include <LocOpe_FindEdges.hxx>
 #include <LocOpe_FindEdgesInFace.hxx>
 
-#include <BRepOffsetAPI_MakeOffsetShape.hxx>
-#include <BRepOffsetAPI_MakeThickSolid.hxx>
+#include <BRepOffset_MakeOffset.hxx>
+#include <BRepOffset_MakeSimpleOffset.hxx>
 #include <BRep_Tool.hxx>
 #include <BRep_Builder.hxx>
 #include <DBRep.hxx>
 #include <DBRep_DrawableShape.hxx>
 #include <BRepTest.hxx>
+#include <BRepTest_Objects.hxx>
 
 #include <BRepFilletAPI_MakeFillet.hxx>
 #include <ChFi3d_FilletShape.hxx>
@@ -202,7 +203,7 @@ static Standard_Integer Loc(Draw_Interpretor& theCommands,
   }
 #endif
   BLoc.PerformResult();
-  if (!BLoc.ErrorStatus()) {
+  if (!BLoc.HasErrors()) {
 //    dout.Clear();
     DBRep::Set(a[1],BLoc.Shape());
     dout.Flush();
@@ -237,7 +238,7 @@ static Standard_Integer HOLE1(Draw_Interpretor& theCommands,
   }
 
   theHole.Build();
-  if (!theHole.ErrorStatus()) {
+  if (!theHole.HasErrors()) {
 //    dout.Clear();
     DBRep::Set(a[1],theHole.Shape());
     dout.Flush();
@@ -263,7 +264,7 @@ static Standard_Integer HOLE2(Draw_Interpretor& theCommands,
   theHole.PerformThruNext(Radius,WithControl);
 
   theHole.Build();
-  if (!theHole.ErrorStatus()) {
+  if (!theHole.HasErrors()) {
 //    dout.Clear();
     DBRep::Set(a[1],theHole.Shape());
     dout.Flush();
@@ -288,7 +289,7 @@ static Standard_Integer HOLE3(Draw_Interpretor& theCommands,
   theHole.Init(S,gp_Ax1(Or,Di));
   theHole.PerformUntilEnd(Radius,WithControl);
   theHole.Build();
-  if (!theHole.ErrorStatus()) {
+  if (!theHole.HasErrors()) {
 //    dout.Clear();
     DBRep::Set(a[1],theHole.Shape());
     dout.Flush();
@@ -315,7 +316,7 @@ static Standard_Integer HOLE4(Draw_Interpretor& theCommands,
   theHole.Init(S,gp_Ax1(Or,Di));
   theHole.PerformBlind(Radius,Length,WithControl);
   theHole.Build();
-  if (!theHole.ErrorStatus()) {
+  if (!theHole.HasErrors()) {
 //    dout.Clear();
     DBRep::Set(a[1],theHole.Shape());
     dout.Flush();
@@ -330,7 +331,7 @@ static Standard_Integer CONTROL(Draw_Interpretor& theCommands,
 				Standard_Integer narg, const char** a)
 {
   if (narg >= 2) {
-    WithControl = strcmp("0",a[1]);
+    WithControl = strcmp("0", a[1]) != 0;
   }
   if (WithControl) {
     theCommands << "Mode avec controle";
@@ -732,10 +733,22 @@ static Standard_Integer PRF(Draw_Interpretor& theCommands,
 static Standard_Integer SPLS(Draw_Interpretor& ,
 			     Standard_Integer narg, const char** a)
 {
-  Standard_Integer newnarg ;
+  Standard_Integer newnarg;
 
-  if (narg<3) return 1;
+  if (narg < 3)
+  {
+    cout << "Invalid number of arguments. Should be : splitshape result shape [splitedges] \
+            [face wire/edge/compound [wire/edge/compound ...] \
+            [face wire/edge/compound [wire/edge/compound...] ...] \
+            [@ edgeonshape edgeonwire [edgeonshape edgeonwire...]]" << endl;
+    return 1;
+  }
   TopoDS_Shape S = DBRep::Get(a[2]);
+  if (S.IsNull())
+  {
+    cout << "Invalid input shape " << a[2]<<endl;
+    return 1;
+  }
   BRepFeat_SplitShape Spls(S);
   Standard_Boolean pick = Standard_False;
   TopoDS_Shape EF;
@@ -752,20 +765,42 @@ static Standard_Integer SPLS(Draw_Interpretor& ,
       (newnarg !=narg && ((narg-newnarg)<=2 || (narg-newnarg)%2 != 1))) {
     return 1;
   }
-
-  if (i<newnarg) {
+  Standard_Boolean isSplittingEdges = Standard_False;
+  TopTools_SequenceOfShape aSplitEdges;
+  if (i < newnarg) {
     pick = (a[i][0] == '.');
-    EF = DBRep::Get(a[i],TopAbs_FACE);
-    if (EF.IsNull()) return 1;
+   
+    TopoDS_Shape aSh = DBRep::Get(a[i]);
+    if (aSh.IsNull())
+    {
+      cout << "Invalid input shape " <<a[i]<<endl;
+      return 1;
+    }
+
+
+    if (aSh.ShapeType() == TopAbs_FACE)
+      EF = TopoDS::Face(aSh);
+    else
+    {
+      if (aSh.ShapeType() == TopAbs_COMPOUND || aSh.ShapeType() == TopAbs_WIRE || aSh.ShapeType() == TopAbs_EDGE)
+      {
+        TopExp_Explorer aExpE(aSh, TopAbs_EDGE, TopAbs_FACE);
+        for (; aExpE.More(); aExpE.Next())
+          aSplitEdges.Append(aExpE.Current());
+
+        isSplittingEdges = !aSplitEdges.IsEmpty();
+      }
+    }
+
   }
-  
+  i++;
   while (i < newnarg) {
     if (pick) {
       DBRep_DrawableShape::LastPick(EF,u,v);
     }
-    if (EF.ShapeType() == TopAbs_FACE) {
+    if (!isSplittingEdges  && !EF.IsNull() && EF.ShapeType() == TopAbs_FACE) {
       // face wire/edge ...
-      i++;
+     
       while (i < newnarg) {
 	TopoDS_Shape W;
 	Standard_Boolean rever = Standard_False;
@@ -811,11 +846,36 @@ static Standard_Integer SPLS(Draw_Interpretor& ,
       }
     }
     else
-      return 1;
+    {
+      if (isSplittingEdges)
+      {
+        TopoDS_Shape aSh = DBRep::Get(a[i]);
+        if (aSh.IsNull())
+        {
+          cout << "Invalid input shape " <<a[i]<< endl;
+          return 1;
+        }
+        TopExp_Explorer aExpE(aSh, TopAbs_EDGE, TopAbs_FACE);
+        for (; aExpE.More(); aExpE.Next())
+          aSplitEdges.Append(aExpE.Current());
+      }
+      else
+      {
+         cout << "Invalid input arguments. Should be : splitshape result shape [splitedges] \
+            [face wire/edge/compound [wire/edge/compound ...] \
+            [face wire/edge/compound [wire/edge/compound...] ...] \
+            [@ edgeonshape edgeonwire [edgeonshape edgeonwire...]]"<<endl;
+        return 1;
+      }
+    }
+    i++;
   }
   
+  if (isSplittingEdges)
+    Spls.Add(aSplitEdges);
+
   // ici, i vaut newnarg
-  for (i++; i<narg; i+=2) {
+  for (; i < narg; i += 2) {
     TopoDS_Shape Ew,Es;
     TopoDS_Shape aLocalShape(DBRep::Get(a[i],TopAbs_EDGE));
     Es = TopoDS::Edge(aLocalShape);
@@ -827,6 +887,7 @@ static Standard_Integer SPLS(Draw_Interpretor& ,
     Ew = TopoDS::Edge(aLocalShape);
 //    Ew = TopoDS::Edge(DBRep::Get(a[i+1],TopAbs_EDGE));
     if (Ew.IsNull()) {
+      cout << "Invalid input shape " <<a[i+1]<< endl;
       return 1;
     }
     Spls.Add(TopoDS::Edge(Ew),TopoDS::Edge(Es));
@@ -943,13 +1004,12 @@ static Standard_Real         TheTolerance = Precision::Confusion();
 static Standard_Boolean      TheInter     = Standard_False;
 static GeomAbs_JoinType      TheJoin      = GeomAbs_Arc;
 static Standard_Boolean      RemoveIntEdges = Standard_False;
-static Standard_Boolean      RemoveInvalidFaces = Standard_False;
 
 Standard_Integer offsetparameter(Draw_Interpretor& di,
                                  Standard_Integer n, const char** a)
 {
   if ( n == 1 ) { 
-    di << " OffsetParameter Tol Inter(c/p) JoinType(a/i/t) [RemoveInternalEdges(r/k) RemoveInvalidFaces(r/k)]\n";
+    di << " offsetparameter Tol Inter(c/p) JoinType(a/i/t) [RemoveInternalEdges(r/k)]\n";
     di << " Current Values\n";
     di << "   --> Tolerance : " << TheTolerance << "\n";
     di << "   --> TheInter  : ";
@@ -974,14 +1034,6 @@ Standard_Integer offsetparameter(Draw_Interpretor& di,
     else {
       di << "Keep";
     }
-    //
-    di << "\n   --> Invalid Faces : ";
-    if (RemoveInvalidFaces) {
-      di << "Remove";
-    }
-    else {
-      di << "Keep";
-    }
     di << "\n";
     //
     return 0;
@@ -990,14 +1042,13 @@ Standard_Integer offsetparameter(Draw_Interpretor& di,
   if ( n < 4 ) return 1;
   //
   TheTolerance = Draw::Atof(a[1]);
-  TheInter     = strcmp(a[2],"p");
+  TheInter     = strcmp(a[2],"p") != 0;
   //
   if      ( !strcmp(a[3],"a")) TheJoin = GeomAbs_Arc;
   else if ( !strcmp(a[3],"i")) TheJoin = GeomAbs_Intersection;
   else if ( !strcmp(a[3],"t")) TheJoin = GeomAbs_Tangent;
   //
   RemoveIntEdges = (n >= 5) ? !strcmp(a[4], "r") : Standard_False;
-  RemoveInvalidFaces = (n == 6) ? !strcmp(a[5], "r") : Standard_False;
   //
   return 0;
 }
@@ -1019,7 +1070,7 @@ Standard_Integer offsetload(Draw_Interpretor& ,
 //  Standard_Boolean Inter = Standard_True;
   
   TheOffset.Initialize(S,Of,TheTolerance,BRepOffset_Skin,TheInter,0,TheJoin,
-                       Standard_False, RemoveIntEdges, RemoveInvalidFaces);
+                       Standard_False, RemoveIntEdges);
   //------------------------------------------
   // recuperation et chargement des bouchons.
   //----------------------------------------
@@ -2043,9 +2094,9 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
   }
 
   if ((!strcasecmp(a[0],"ENDEDGES") && narg !=5) ||
-      (!strcasecmp(a[0],"FILLET") && narg <5 &&  narg%2 != 1) ||
+      (!strcasecmp(a[0],"FILLET") && (narg < 5 || narg%2 != 1)) ||
       (!strcasecmp(a[0],"BOSSAGE") && narg != 6)) {
-    theCommands << "invalid number of arguments";
+    theCommands.PrintHelp(a[0]);
     return 1;
   }
 
@@ -2121,6 +2172,8 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
 
     if(V.IsNull()) return 1;
     ChFi3d_FilletShape FSh = ChFi3d_Rational;
+    if (Rakk)
+      delete Rakk;
     Rakk = new BRepFilletAPI_MakeFillet(V,FSh);
     Rakk->SetParams(ta,t3d,t2d,t3d,t2d,fl);
     Rakk->SetContinuity(blend_cont, tapp_angle);
@@ -2183,12 +2236,65 @@ static Standard_Integer BOSS(Draw_Interpretor& theCommands,
       DBRep::Set(a[2],res);
     }
     dout.Flush();
+
+    // Save history for fillet
+    TopTools_ListOfShape anArg;
+    anArg.Append(V);
+    BRepTest_Objects::SetHistory(anArg, *Rakk);
+
     return 0;
   }
 
   return 1;
 }
 
+//=============================================================================
+//function : ComputeSimpleOffset
+//purpose  : Computes simple offset.
+//=============================================================================
+static Standard_Integer ComputeSimpleOffset(Draw_Interpretor& theCommands,
+                                            Standard_Integer narg, 
+                                            const char** a)
+{
+  if (narg < 4)
+  {
+    theCommands << "offsetshapesimple result shape offsetvalue [solid] [tolerance=1e-7]\n";
+    return 1;
+  }
+
+  // Input data.
+  TopoDS_Shape aShape = DBRep::Get(a[2]);
+  if (aShape.IsNull())
+  {
+    theCommands << "Input shape is null";
+    return 0;
+  }
+  const Standard_Real anOffsetValue = Draw::Atof(a[3]);
+  if (Abs(anOffsetValue) < gp::Resolution())
+  {
+    theCommands << "Null offset value";
+    return 0;
+  }
+
+  Standard_Boolean makeSolid = (narg > 4 && !strcasecmp(a[4],"solid"));
+  int iTolArg = (makeSolid ? 5 : 4);
+  Standard_Real aTol = (narg > iTolArg ? Draw::Atof(a[iTolArg]) : Precision::Confusion());
+
+  BRepOffset_MakeSimpleOffset aMaker(aShape, anOffsetValue);
+  aMaker.SetTolerance (aTol);
+  aMaker.SetBuildSolidFlag(makeSolid);
+  aMaker.Perform();
+
+  if (!aMaker.IsDone())
+  {
+    theCommands << "ERROR:" << aMaker.GetErrorMessage() << "\n";
+    return 0;
+  }
+
+  DBRep::Set(a[1], aMaker.GetResultShape());
+
+  return 0;
+}
 
 //=======================================================================
 //function : FeatureCommands
@@ -2250,8 +2356,8 @@ void BRepTest::FeatureCommands (Draw_Interpretor& theCommands)
 
 
   theCommands.Add("splitshape",
-		  "splitshape result shape face wire/edge/compound [wire/edge/compound ...][face wire/edge/compound [wire/edge/compound...] ...] [@ edgeonshape edgeonwire [edgeonshape edgeonwire...]]",
-		  __FILE__,SPLS,g);
+    "splitshape result shape [splitedges] [face wire/edge/compound [wire/edge/compound ...][face wire/edge/compound [wire/edge/compound...] ...] [@ edgeonshape edgeonwire [edgeonshape edgeonwire...]]",
+    __FILE__, SPLS, g);
 
 
   theCommands.Add("thickshell",
@@ -2267,7 +2373,7 @@ void BRepTest::FeatureCommands (Draw_Interpretor& theCommands)
 		  __FILE__,offsetshape,g);
 
   theCommands.Add("offsetparameter",
-		  "offsetparameter tol inter(a/i) join(a/i)",
+		  "offsetparameter Tol Inter(c/p) JoinType(a/i/t) [RemoveInternalEdges(r/k)]",
 		  __FILE__,offsetparameter);
 
   theCommands.Add("offsetload",
@@ -2335,4 +2441,7 @@ void BRepTest::FeatureCommands (Draw_Interpretor& theCommands)
 		  " Perform fillet on top and bottom edges of dprism :bossage dprism result radtop radbottom First/LastShape (1/2)",
 		  __FILE__,BOSS);
 
+  theCommands.Add("offsetshapesimple", 
+                  "offsetshapesimple result shape offsetvalue [solid] [tolerance=1e-7]",
+                  __FILE__, ComputeSimpleOffset);
 }

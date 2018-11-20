@@ -107,6 +107,8 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
       }
       else if (myTagPerStep && aHasRead)
       {
+        // in myTagPerStep mode, we should parse the buffer to the end before
+        // getting more characters from the stream.
       }
       else
       {
@@ -213,6 +215,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         return XML_UNKNOWN;
       case '\0':
         if (myEOF == Standard_True) continue;
+        Standard_FALLTHROUGH
       default:
         //      Limitation: we do not treat '&' as special character
         aPtr = (const char *) memchr (myPtr, '<', myEndPtr - myPtr);
@@ -225,6 +228,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         aState = STATE_TEXT;
         aStartData = myPtr;
         myPtr = myEndPtr;
+        aHasRead = Standard_False;
       }   // end of checking in STATE_WAITING
       continue;
 
@@ -244,6 +248,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         return XML_HEADER;
       }
       myPtr = myEndPtr - 1;
+      aHasRead = Standard_False;
       continue;
 
       // Checking the characters in STATE_DOCTYPE, seek for "]>" sequence
@@ -264,6 +269,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         }
       }
       myPtr = myEndPtr - 1;
+      aHasRead = Standard_False;
       continue;
 
     state_doctype_markup:
@@ -282,6 +288,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         return XML_DOCTYPE;
       }
       myPtr = myEndPtr - 1;
+      aHasRead = Standard_False;
       continue;
 
         // Checking the characters in STATE_COMMENT, seek for "-->" sequence
@@ -303,6 +310,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         }
       }
       myPtr = myEndPtr - 2;
+      aHasRead = Standard_False;
       continue;
 
         // Checking the characters in STATE_TEXT, seek for "<"
@@ -316,6 +324,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         return XML_TEXT;
       }
       myPtr = myEndPtr;
+      aHasRead = Standard_False;
       continue;
 
         // Checking the characters in STATE_CDATA, seek for "]]"
@@ -334,6 +343,7 @@ LDOM_XmlReader::RecordType LDOM_XmlReader::ReadRecord (Standard_IStream& theIStr
         return XML_CDATA;
       }
       myPtr = myEndPtr - 1;
+      aHasRead = Standard_False;
       continue;
 
         // Checking the characters in STATE_ELEMENT, seek the end of TagName
@@ -422,6 +432,7 @@ attr_name:
       switch (myPtr[0]) {
       case '=' :
         aState = STATE_ATTRIBUTE_VALUE;
+        Standard_FALLTHROUGH
       case ' ' :
       case '\t':
       case '\n':
@@ -489,8 +500,11 @@ attr_name:
           myPtr = aPtr + 1;
           aStartData = NULL;
           aState = STATE_ATTRIBUTE_NAME;
-        } else
+        }
+        else {
           myPtr = myEndPtr;
+          aHasRead = Standard_False;
+        }
         continue;
       }
         // Checking the characters in STATE_ELEMENT_END, seek for ">"
@@ -504,6 +518,7 @@ attr_name:
         return XML_END_ELEMENT;
       }
       myPtr = myEndPtr;
+      aHasRead = Standard_False;
       continue;
     }
   }
@@ -546,6 +561,7 @@ static Standard_Boolean isName (const char  * aString,
           aNameEnd = aPtr;
           return Standard_False;
         }
+        Standard_FALLTHROUGH
       case '.' :
       case '-' :
       case '_' :

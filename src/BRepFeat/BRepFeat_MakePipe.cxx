@@ -44,10 +44,6 @@
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 
-//modified by NIZNHY-PKV Thu Mar 21 17:54:27 2002 f
-//#include <BRepAlgo_Fuse.hxx>
-//#include <BRepAlgo_Cut.hxx> 
-//modified by NIZNHY-PKV Thu Mar 21 17:54:30 2002 t
 #ifdef OCCT_DEBUG
 extern Standard_Boolean BRepFeat_GettraceFEAT();
 #endif
@@ -143,7 +139,7 @@ void BRepFeat_MakePipe::Add(const TopoDS_Edge& E,
     }
   }
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
 
   for (exp.Init(myPbase,TopAbs_EDGE);exp.More();exp.Next()) {
@@ -152,7 +148,7 @@ void BRepFeat_MakePipe::Add(const TopoDS_Edge& E,
     }
   }
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
 
   if (!mySlface.IsBound(F)) {
@@ -200,25 +196,15 @@ void BRepFeat_MakePipe::Perform()
 
   if(myGluedF.IsEmpty()) {
     if(myFuse == 1) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:53:05 2002 f
-      //BRepAlgo_Fuse f(mySbase, myGShape);
-      //myShape = f.Shape();
-      //UpdateDescendants(f.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Fuse f(mySbase, myGShape);
       myShape = f.Shape();
       UpdateDescendants(f, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:53:10 2002 t
       Done();
     }
     else if(myFuse == 0) {
-      //modified by NIZNHY-PKV Thu Mar 21 17:53:37 2002 f
-      //BRepAlgo_Cut c(mySbase, myGShape);
-      //myShape = c.Shape();
-      //UpdateDescendants(c.Builder(), myShape, Standard_False);
       BRepAlgoAPI_Cut c(mySbase, myGShape);
       myShape = c.Shape();
       UpdateDescendants(c, myShape, Standard_False);
-      //modified by NIZNHY-PKV Thu Mar 21 17:53:50 2002 t
       Done();
     }
     else {
@@ -249,11 +235,11 @@ void BRepFeat_MakePipe::Perform(const TopoDS_Shape& Until)
   if (trc) cout << "BRepFeat_MakePipe::Perform(Until)" << endl;
 #endif
   if (Until.IsNull()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   TopExp_Explorer exp(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   myGluedF.Clear();
   myPerfSelection = BRepFeat_SelectionU;
@@ -293,7 +279,7 @@ void BRepFeat_MakePipe::Perform(const TopoDS_Shape& From,
   if (trc) cout << "BRepFeat_MakePipe::Perform(From,Until)" << endl;
 #endif
   if (From.IsNull() || Until.IsNull()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   if (!mySkface.IsNull()) {
     if (From.IsSame(mySkface)) {
@@ -310,11 +296,11 @@ void BRepFeat_MakePipe::Perform(const TopoDS_Shape& From,
   PerfSelectionValid();
   TopExp_Explorer exp(From, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   exp.Init(Until, TopAbs_FACE);
   if (!exp.More()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   mySFrom = From;
   TransformShapeFU(0);

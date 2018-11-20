@@ -32,7 +32,6 @@
 #include <BRepPrimAPI_MakeHalfSpace.hxx>
 #include <BRepAlgo_FaceRestrictor.hxx>
 #include <BRepExtrema_ExtPF.hxx>
-#include <BRepLProp_SLProps.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
@@ -45,6 +44,8 @@
 #include <gp_Pln.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <TopExp.hxx>
+
+Standard_DISABLE_DEPRECATION_WARNINGS
 
 //=======================================================================
 // topop
@@ -154,6 +155,8 @@ static Standard_Integer psection(Draw_Interpretor& , Standard_Integer n, const c
 
   return 0;
 }
+
+Standard_ENABLE_DEPRECATION_WARNINGS
 
 static Standard_Integer halfspace(Draw_Interpretor& di,
 				  Standard_Integer n, const char** a)

@@ -49,8 +49,7 @@ The class *Interpolate* from *Geom2dAPI* package allows building a constrained 2
 
 The class *Interpolate* from *GeomAPI* package allows building a constrained 3D BSpline curve, defined by a table of points through which the curve passes. If required, the parameter values and vectors of the tangents can be given for each point in the table. 
 
-@image html /user_guides/modeling_data/images/modeling_data_image003.png "Approximation of a BSpline from scattered points"
-@image latex /user_guides/modeling_data/images/modeling_data_image003.png "Approximation of a BSpline from scattered points"
+@figure{/user_guides/modeling_data/images/modeling_data_image003.png,"Approximation of a BSpline from scattered points",420}
 
 This class may be instantiated as follows:
 ~~~~~ 
@@ -110,8 +109,7 @@ The following low level services are provided:
 
   The class *MultiLine* allows defining a given number of multi-point constraints in order to build the multi-line, multiple lines passing through ordered multiple point constraints. 
 
-  @image html /user_guides/modeling_data/images/modeling_data_image004.png "Definition of a MultiLine using Multiple Point Constraints"
-  @image latex /user_guides/modeling_data/images/modeling_data_image004.png "Definition of a MultiLine using Multiple Point Constraints"
+  @figure{/user_guides/modeling_data/images/modeling_data_image004.png,"Definition of a MultiLine using Multiple Point Constraints",240}
 
   In this image:
   * *Pi*, *Qi*, *Ri* ... *Si* can be 2D or 3D points. 
@@ -406,19 +404,27 @@ These packages calculate the extrema of distance between:
 - a curve and a surface, 
 - two surfaces. 
 
+### Extrema between Point and Curve / Surface
+
+The *GeomAPI_ProjectPointOnCurve* class allows calculation of all extrema between a point and a curve. Extrema are the lengths of the segments orthogonal to the curve.
+The *GeomAPI_ProjectPointOnSurface* class allows calculation of all  extrema between a point and a surface. Extrema are the lengths of the segments orthogonal to the surface.
+These classes use the "Projection" criteria for optimization.
+
 ### Extrema between Curves
 
-The *Geom2dAPI_ExtremaCurveCurve* class allows calculation of all extrema between two 2D geometric curves. Extrema are the lengths of the segments orthogonal to two curves. 
-
-The *GeomAPI_ExtremaCurveCurve* class allows calculation of all extrema between two 3D geometric curves. Extrema are the lengths of the segments orthogonal to two curves. 
+The *Geom2dAPI_ExtremaCurveCurve* class allows calculation of all minimal distances between two 2D geometric curves.
+The *GeomAPI_ExtremaCurveCurve* class allows calculation of all minimal distances between two 3D geometric curves.
+These classes use Euclidean distance as the criteria for optimization.
 
 ### Extrema between Curve and Surface
 
-The *GeomAPI_ExtremaCurveSurface* class allows calculation of all  extrema between a 3D curve and a surface. Extrema are the lengths of the segments orthogonal to the curve and the surface. 
+The *GeomAPI_ExtremaCurveSurface* class allows calculation of one extrema between a 3D curve and a surface. Extrema are the lengths of the segments orthogonal to the curve and the surface.
+This class uses the "Projection" criteria for optimization.
 
 ### Extrema between Surfaces
 
-The *GeomAPI_ExtremaSurfaceSurface* class allows calculation of all extrema between two surfaces. Extrema are the lengths of the segments orthogonal to two surfaces. 
+The *GeomAPI_ExtremaSurfaceSurface* class allows calculation of one minimal and one maximal distance between two surfaces.
+This class uses Euclidean distance to compute the minimum, and "Projection" criteria to compute the maximum.
 
 @section occt_modat_2 2D Geometry
 
@@ -594,6 +600,48 @@ To check the concavity of a surface, proceed as follows:
   1. Sample the surface and compute at each point the Gaussian curvature.
   2. If the value of the curvature changes of sign, the surface is concave or convex depending on the point of view.
   3. To compute a Gaussian curvature, use the class <i> SLprops</i> from <i> GeomLProp</i>, which instantiates the generic class <i> SLProps </i>from <i> LProp</i> and use the method <i> GaussianCurvature</i>.
+
+@subsection occt_modat_4_2a Continuity of Curves and Surfaces
+
+Types of supported continuities for curves and surfaces are described in *GeomAbs_Shape* enumeration.
+
+In respect of curves, the following types of continuity are supported (see the figure below):
+  * C0 (*GeomAbs_C0*) - parametric continuity. It is the same as G0 (geometric continuity), so the last one is not represented by separate variable.
+  * G1 (*GeomAbs_G1*) - tangent vectors on left and on right are parallel.
+  * C1 (*GeomAbs_C1*) - indicates the continuity of the first derivative.
+  * G2 (*GeomAbs_G2*) - in addition to G1 continuity, the centers of curvature on left and on right are the same.
+  * C2 (*GeomAbs_C2*) - continuity of all derivatives till the second order.
+  * C3 (*GeomAbs_C3*) - continuity of all derivatives till the third order.
+  * CN (*GeomAbs_CN*) - continuity of all derivatives till the N-th order (infinite order of continuity).
+
+*Note:* Geometric continuity (G1, G2) means that the curve can be reparametrized to have parametric (C1, C2) continuity.
+
+@figure{/user_guides/modeling_data/images/modeling_data_continuity_curves.svg,"Continuity of Curves",420}
+
+The following types of surface continuity are supported:
+  * C0 (*GeomAbs_C0*) - parametric continuity (the surface has no points or curves of discontinuity).
+  * G1 (*GeomAbs_G1*) - surface has single tangent plane in each point.
+  * C1 (*GeomAbs_C1*) - indicates the continuity of the first derivatives.
+  * G2 (*GeomAbs_G2*) - in addition to G1 continuity, principal curvatures and directions are continuous.
+  * C2 (*GeomAbs_C2*) - continuity of all derivatives till the second order.
+  * C3 (*GeomAbs_C3*) - continuity of all derivatives till the third order.
+  * CN (*GeomAbs_CN*) - continuity of all derivatives till the N-th order (infinite order of continuity).
+
+@figure{/user_guides/modeling_data/images/modeling_data_continuity_surfaces.svg,"Continuity of Surfaces",420}
+
+Against single surface, the connection of two surfaces (see the figure above) defines its continuity in each intersection point only. Smoothness of connection is a minimal value of continuities on the intersection curve.
+
+
+@subsection occt_modat_4_2b Regularity of Shared Edges
+
+Regularity of an edge is a smoothness of connection of two faces sharing this edge. In other words, regularity is a minimal continuity between connected faces in each point on edge.
+
+Edge's regularity can be set by *BRep_Builder::Continuity* method. To get the regularity use *BRep_Tool::Continuity* method.
+
+Some algorithms like @ref occt_modalg_6 "Fillet" set regularity of produced edges by their own algorithms. On the other hand, some other algorithms (like @ref occt_user_guides__boolean_operations "Boolean Operations", @ref occt_user_guides__shape_healing "Shape Healing", etc.) do not set regularity. If the regularity is needed to be set correctly on a shape, the method *BRepLib::EncodeRegularity* can be used. It calculates and sets correct values for all edges of the shape.
+
+The regularity flag is extensively used by the following high level algorithms: @ref occt_modalg_6_1_2 "Chamfer", @ref occt_modalg_7_3 "Draft Angle", @ref occt_modalg_10 "Hidden Line Removal", @ref occt_modalg_9_2_3 "Gluer".
+
   
 @subsection occt_modat_4_3 Global Properties of Shapes
 
@@ -726,8 +774,7 @@ A local coordinate system can be viewed as either of the following:
 - *TopLoc_Datum3D* class provides the elementary reference coordinate, represented by a right-handed orthonormal system of axes or by a right-handed unitary transformation. 
 - *TopLoc_Location* class provides the composite reference coordinate made from elementary ones. It is a marker composed of a chain of references to elementary markers. The resulting cumulative transformation is stored in order to avoid recalculating the sum of the transformations for the whole list. 
 
-@image html /user_guides/modeling_data/images/modeling_data_image005.png "Structure of TopLoc_Location"
-@image latex /user_guides/modeling_data/images/modeling_data_image005.png "Structure of TopLoc_Location"
+@figure{/user_guides/modeling_data/images/modeling_data_image005.png,"Structure of TopLoc_Location",420}
 
 Two reference coordinates are equal if they are made up of the same elementary coordinates in the same order. There is no numerical comparison. Two coordinates can thus correspond to the same transformation without being equal if they were not built from the same elementary coordinates. 
 
@@ -746,7 +793,7 @@ The *TopLoc* package is chiefly targeted at the topological data structure, but 
 Change of coordinates
 ---------------------
 
-*TopLoc_Datum3D* class represents a change of elementary coordinates. Such changes must be shared so this class inherits from *MMgt_TShared*. The coordinate is represented by a transformation *gp_Trsfpackage*. This transformation has no scaling factor. 
+*TopLoc_Datum3D* class represents a change of elementary coordinates. Such changes must be shared so this class inherits from *Standard_Transient*. The coordinate is represented by a transformation *gp_Trsfpackage*. This transformation has no scaling factor. 
 
 @subsection occt_modat_5_2 Naming shapes, sub-shapes, their orientation and state
 
@@ -771,8 +818,7 @@ TopAbs contains the *TopAbs_ShapeEnum* enumeration,which lists the different top
 A topological model can be considered as a graph of objects with adjacency relationships. When modeling a part in 2D or 3D space it must belong to one of the categories listed in the ShapeEnum enumeration. The TopAbspackage lists all the objects, which can be found in any model. It cannot be extended but a subset can be used. For example, the notion of solid is useless in 2D. 
 
 The terms of the enumeration appear in order from the most complex to the most simple, because objects can contain simpler objects in their description. For example, a face references its wires, edges, and vertices. 
-@image html /user_guides/modeling_data/images/modeling_data_image006.png "ShapeEnum"
-@image latex /user_guides/modeling_data/images/modeling_data_image006.png "ShapeEnum"
+@figure{/user_guides/modeling_data/images/modeling_data_image006.png,"ShapeEnum",420}
 
 @subsubsection occt_modat_5_2_2 Orientation
 
@@ -798,8 +844,7 @@ Based on this default region the orientation allows definition of the region to 
 | INTERNAL	| The interior includes both regions. The boundary lies inside the material. For example a surface inside a solid. |
 | EXTERNAL	| The interior includes neither region. The boundary lies outside the material. For  example an edge in a wire-frame model. |
 
-@image html /user_guides/modeling_data/images/modeling_data_image007.png "Four Orientations"
-@image latex /user_guides/modeling_data/images/modeling_data_image007.png "Four Orientations"
+@figure{/user_guides/modeling_data/images/modeling_data_image007.png,"Four Orientations",420}
 
 The notion of orientation is a very general one, and it can be used in any context where regions or boundaries appear. Thus, for example, when describing the intersection of an edge and a contour it is possible to describe not only the vertex of intersection but also how the edge crosses the contour considering it as a boundary. The edge would therefore be divided into two regions: exterior and interior and the intersection vertex would be the boundary. Thus an orientation can be associated with an intersection vertex as in the following figure: 
 
@@ -810,8 +855,7 @@ The notion of orientation is a very general one, and it can be used in any conte
 | INTERNAL 	| Touching from inside |
 | EXTERNAL 	| Touching from outside |
 
-@image html /user_guides/modeling_data/images/modeling_data_image008.png "Four orientations of intersection vertices"
-@image latex /user_guides/modeling_data/images/modeling_data_image008.png "Four orientations of intersection vertices"
+@figure{/user_guides/modeling_data/images/modeling_data_image008.png,"Four orientations of intersection vertices",420}
 
 
 Along with the Orientation enumeration the *TopAbs* package defines four methods: 
@@ -829,13 +873,11 @@ The **TopAbs_State** enumeration described the position of a vertex or a set of 
 
 The UNKNOWN term has been introduced because this enumeration is often used to express the result of a calculation, which can fail. This term can be used when it is impossible to know if a point is inside or outside, which is the case with an open wire or face. 
 
-@image html /user_guides/modeling_data/images/modeling_data_image009.png "The four states"
-@image latex /user_guides/modeling_data/images/modeling_data_image009.png "The four states"
+@figure{/user_guides/modeling_data/images/modeling_data_image009.png,"The four states",420}
 
 The State enumeration can also be used to specify various parts of an object. The following figure shows the parts of an edge intersecting a face. 
 
-@image html /user_guides/modeling_data/images/modeling_data_image010.png  "State specifies the parts of an edge intersecting a face"
-@image latex /user_guides/modeling_data/images/modeling_data_image010.png  "State specifies the parts of an edge intersecting a face"
+@figure{/user_guides/modeling_data/images/modeling_data_image010.png,"State specifies the parts of an edge intersecting a face",420}
 
 @subsection occt_modat_5_3 Manipulating shapes and sub-shapes
 
@@ -861,11 +903,9 @@ The class representing the underlying abstract shape is never referenced directl
 
 The information specific to each shape (the geometric support) is always added by inheritance to classes deriving from **TopoDS_TShape**. The following figures show the example of a shell formed from two faces connected by an edge. 
 
-@image html /user_guides/modeling_data/images/modeling_data_image011.png "Structure of a shell formed from two faces"
-@image latex /user_guides/modeling_data/images/modeling_data_image011.png "Structure of a shell formed from two faces"
+@figure{/user_guides/modeling_data/images/modeling_data_image011.png,"Structure of a shell formed from two faces",420}
 
-@image html /user_guides/modeling_data/images/modeling_data_image012.png "Data structure of the above shell"
-@image latex /user_guides/modeling_data/images/modeling_data_image012.png "Data structure of the above shell"
+@figure{/user_guides/modeling_data/images/modeling_data_image012.png,"Data structure of the above shell",420}
 
 In the previous diagram, the shell is described by the underlying shape TS, and the faces by TF1 and TF2. There are seven edges from TE1 to TE7 and six vertices from TV1 to TV6. 
 
@@ -882,8 +922,7 @@ The compact data structure avoids the loss of information associated with copy o
 The following figure shows a data structure containing two versions of a solid. The second version presents a series of identical holes bored at different positions. The data structure is compact and yet keeps all information on the sub-elements. 
 
 The three references from *TSh2* to the underlying face *TFcyl* have associated local coordinate systems, which correspond to the successive positions of the hole. 
-@image html /user_guides/modeling_data/images/modeling_data_image013.png "Data structure containing two versions of a solid"
-@image latex /user_guides/modeling_data/images/modeling_data_image013.png "Data structure containing two versions of a solid"
+@figure{/user_guides/modeling_data/images/modeling_data_image013.png,"Data structure containing two versions of a solid",420}
 
 Classes inheriting TopoDS_Shape
 ------------------------------
@@ -1224,8 +1263,7 @@ Below is the auxiliary function, which copies the element of rank *i* from the m
 
 For example, in the wire in the image we want to recuperate the edges in the order {e1, e2, e3,e4, e5} :
 
-@image html /user_guides/modeling_data/images/modeling_data_image014.png "A wire composed of 6 edges."
-@image latex /user_guides/modeling_data/images/modeling_data_image014.png "A wire composed of 6 edges.
+@figure{/user_guides/modeling_data/images/modeling_data_image014.png,"A wire composed of 6 edges.",320}
 
 *TopExp_Explorer*, however, recuperates the lines in any order.
  
@@ -1239,4 +1277,117 @@ For example, in the wire in the image we want to recuperate the edges in the ord
   } 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+@subsection occt_modat_5_6 Storage of shapes
 
+*BRepTools* and *BinTools* packages contain methods *Read* and *Write* allowing to read and write a Shape to/from a stream or a file.
+The methods provided by *BRepTools* package use ASCII storage format; *BinTools* package uses binary format.
+Each of these methods has two arguments:
+- a *TopoDS_Shape* object to be read/written;
+- a stream object or a file name to read from/write to.
+
+The following sample code reads a shape from ASCII file and writes it to a binary one:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
+  TopoDS_Shape aShape;
+  if (BRepTools::Read (aShape, "source_file.txt")) {
+    BinTools::Write (aShape, "result_file.bin");
+  }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@section occt_modat_6 Bounding boxes
+
+Bounding boxes are used in many OCCT algorithms. The most common use is as a filter avoiding check of excess interferences between pairs of shapes (check of interferences between bounding boxes is much simpler then between shapes and if they do not interfere then there is no point in searching interferences between the corresponding shapes).
+Generally, bounding boxes can be divided into two main types: 
+  - axis-aligned bounding box (AABB) is the box whose edges are parallel to the axes of the World Coordinate System (WCS);
+  - oriented BndBox (OBB) is defined in its own coordinate system that can be rotated with respect to the WCS.
+Indeed, an AABB is a specific case of OBB.<br>
+
+The image below illustrates the example, when using OBB is better than AABB. 
+
+@figure{/user_guides/modeling_data/images/modeling_data_image015.png,"Illustrating the problem with AABB.",320}
+
+AABBs in this picture are interfered. Therefore, many OCCT algorithms will spend much time to interfere the shapes. However, if we check OBBs, which are not interfered, then searching of interferences between the shapes will not be necessary. At that, creation and analysis of OBBs takes significantly more time than the analogical operations with AABB.
+
+Later in this section, the bounding boxes having the smallest surface area will be called *optimal*.
+
+In OCCT, bounding boxes are defined in *Bnd* package. *Bnd_Box* class defines AABB, *Bnd_OBB* class defines OBB. These classes contain the following common methods (this list is not complete; see the documentation about the corresponding class for detailed information):
+
+  - *IsVoid* method indicates whether the bounding box is empty (uninitialized).
+  - *SetVoid* method clears the existing bounding box.
+  - *Enlarge(...)* extends the current bounding box.
+  - *Add(...)* extends the bounding box as necessary to include the object (a point, a shape, etc.) passed as the argument.
+  - *IsOut(...)* checks whether the argument is inside/outside of the current BndBox.
+  
+BRepBndLib class contains methods for creation of bounding boxes (both AABB and OBB) from the shapes.
+
+@subsection occt_modat_6_1 Brief description of some algorithms working with OBB
+
+@subsubsection occt_modat_6_1_1 Creation of OBB from set of points
+
+The algorithm is described in <a href="http://www.idt.mdh.se/~tla/publ/FastOBBs.pdf">"Fast Computation of Tight Fitting Oriented Bounding Boxes" by Thomas Larsson and Linus Källberg</a>. It includes the following steps:
+
+<span>1.</span> Choose \f$ N_{a} (N_{a} \geq 3) \f$ initial axes.<br>
+<span>2.</span> Project every given point to the every chosen (in item 1) axis. At that, "minimal" and "maximal" points of every axis (i.e. point having minimal and maximal parameter (correspondingly) of the projection to this axis) are chosen. I.e. \f$ 2*N_{a} \f$ points will be held and this set can contain equal points. Later (unless otherwise specified) in this algorithm we will work with these \f$ 2*N_{a} \f$ points only.<br>
+<span>3.</span> Choose one pair of points among all pairs of "minimal" and "maximal" points of every axis (from item 1), with two furthest points. Let \f$ p_{0} \f$  and \f$ p_{1} \f$  be the "minimal" and "maximal" point of this pair.<br>
+<span>4.</span> Create an axis \f$ \mathbf{e_{0}}\left \{ \overrightarrow{p_{0}p_{1}} \right \} \f$ (i.e. having direction \f$ \overrightarrow{p_{0}p_{1}} \f$ ).<br>
+<span>5.</span> Choose the point \f$ p_{2} \f$ (from the set defined in item 2) which is in the maximal distance from the infinite line directed along \f$ \mathbf{e_{0}} \f$ axis.<br>
+
+Further, let us consider the triangle \f$ T_{0}\left \langle p_{0}, p_{1}, p_{2} \right \rangle \f$ (i.e. having vertices \f$ p_{0}, p_{1} \f$ and \f$ p_{2} \f$). Namely:
+
+<span>6.</span> Create new axes: \f$ \mathbf{e_{1}}\left \{ \overrightarrow{p_{1}p_{2}} \right \} \f$, \f$ \mathbf{e_{2}}\left \{ \overrightarrow{p_{2}p_{0}} \right \} \f$, \f$ \mathbf{n}\left \{ \overrightarrow{\mathbf{e_{0}}} \times \overrightarrow{\mathbf{e_{1}}}  \right \} \f$, \f$ \mathbf{m_{0}}\left \{ \overrightarrow{\mathbf{e_{0}}} \times \overrightarrow{\mathbf{n}}  \right \} \f$, \f$ \mathbf{m_{1}}\left \{ \overrightarrow{\mathbf{e_{1}}} \times \overrightarrow{\mathbf{n}}  \right \} \f$, \f$ \mathbf{m_{2}}\left \{ \overrightarrow{\mathbf{e_{2}}} \times \overrightarrow{\mathbf{n}}  \right \} \f$.<br>
+<span>7.</span> Create OBBs based on the following axis: \f$ \left \{ \mathbf{e_{0}} \vdots \mathbf{m_{0}} \vdots \mathbf{n} \right \} \f$, \f$ \left \{ \mathbf{e_{1}} \vdots \mathbf{m_{1}} \vdots \mathbf{n} \right \} \f$ and \f$ \left \{ \mathbf{e_{2}} \vdots \mathbf{m_{2}} \vdots \mathbf{n} \right \} \f$ . Choose optimal OBB.<br>
+<span>8.</span> Choose the points \f$ q_{0} \f$ and \f$ q_{1} \f$ (from the set defined in item 2), which are in maximal distance from the plane of the triangle \f$ T_{0} \f$ (from both sides of this plane). At that, \f$ q_{0} \f$ has minimal coordinate along the axis \f$ \mathbf{n} \f$, \f$ q_{1} \f$ has a maximal coordinate.<br>
+<span>9.</span> Repeat the step 6...7 for the triangles \f$ T_{1}\left \langle p_{0}, p_{1}, q_{0} \right \rangle \f$, \f$ T_{2}\left \langle p_{1}, p_{2}, q_{0} \right \rangle \f$, \f$ T_{3}\left \langle p_{0}, p_{2}, q_{0} \right \rangle \f$, \f$ T_{4}\left \langle p_{0}, p_{1}, q_{1} \right \rangle \f$, \f$ T_{5}\left \langle p_{1}, p_{2}, q_{1} \right \rangle \f$, \f$ T_{6}\left \langle p_{0}, p_{2}, q_{1} \right \rangle \f$.<br>
+<span>10.</span> Compute the center of OBB and its half dimensions.<br>
+<span>11.</span> Create OBB using the center, axes and half dimensions.<br>
+
+This algorithm is implemented in the *Bnd_OBB::ReBuild(...)* method.
+
+@subsubsection occt_modat_6_1_2 Creation of OBB based on Axes of inertia
+
+The algorithm contains the following steps:
+1. Calculate three inertia axes, which will be the axes of the OBB.
+2. Transform the source object *(TopoDS_Shape)* into the local coordinate system based on the axes from item 1.
+3. Create an AABB for the shape obtained in the item 2.
+4. Compute the center of AABB and its half dimensions.
+5. Transform the center into the WCS.
+6. Create OBB using the center, axes and half dimensions.
+
+@subsubsection occt_modat_6_1_3 Method IsOut for a point
+
+1. Project the point to each axis.
+2. Check, whether the absolute value of the projection parameter greater than the correspond half-dimension. In this case, *IsOut* method will return TRUE.
+
+@subsubsection occt_modat_6_1_4 Method IsOut for another OBB
+
+According to the <a href="http://www.jkh.me/files/tutorials/Separating%20Axis%20Theorem%20for%20Oriented%20Bounding%20Boxes.pdf">"Separating Axis Theorem for Oriented Bounding Boxes"</a>, it is necessary to check the 15 separating axes: 6 axes of the boxes and 9 are their cross products.<br>
+The algorithm of analyzing axis \f$ \mathbf{l} \f$ is following:
+1. Compute the "length" according to the formula: \f$ L_{j}=\sum_{i=0}^{2}{H_{i}\cdot \left | \overrightarrow{\mathbf{a_{i}}} \cdot \overrightarrow{\mathbf{l}} \right |} \f$. Here, \f$ \mathbf{a_{i}} \f$ is an i-th axis (X-axis, Y-axis, Z-axis) of j-th BndBox (j=1...2). \f$ H_{i} \f$ is a half-dimension along i-th axis.
+2. If \f$ \left |\overrightarrow{C_{1}C_{2}} \cdot \overrightarrow{\mathbf{l}}  \right | > L_{1}+L_{2} \f$ (where \f$ C_{j} \f$ is the center of j-th OBB) then the considered OBBs are not interfered in terms of the axis \f$ \mathbf{l} \f$.
+
+If OBBs are not interfered in terms of at least one axis (of 15) then they are not interfered at all.
+
+@subsubsection occt_modat_6_1_5 Method Add for point or another bounding box
+
+Create a new OBB (see the section @ref occt_modat_6_1_1) based on the source point and all vertices of the given bounding boxes.
+
+@subsection occt_modat_6_2 Add a shape
+
+Method *BRepBndLib::AddOBB(...)* allows creating the bounding box from a complex object *(TopoDS_Shape)*. This method uses both algorithms described in the sections @ref occt_modat_6_1_1 and sections @ref occt_modat_6_1_2.
+
+The first algorithm is used if the outer shell of the shape can be represented by a set of points contained in it. Namely, only the following elements are the source of set of points:
+
+  - Nodes of triangulation;
+  - Nodes of *Poly_Polygon3D*;
+  - Vertices of edges with a linear 3D-curve lying in the planar face;
+  - Vertices of edges with a linear 3D-curve if the source shape does not contain a more complex topological structure (e.g. the source shape is a compound of edges);
+  - Vertices if the source shape does not contain a more complex topological structure (e.g. the source shape is a compound of vertices).
+
+If the required set of points cannot be extracted then the algorithm from section @ref occt_modat_6_1_2 is used for OBB creation.
+
+The package *BRepBndLib* contains methods *BRepBndLib::Add(...), BRepBndLib::AddClose(...)* and *BRepBndLib::AddOptimal(...)* for creation of AABB of a shape. See the reference manual for the detailed information.
+
+@subsection occt_modat_6_3 Limitations of algorithm for OBB creation.
+
+1. The algorithm described in the section @ref occt_modat_6_1_1 works significantly better (finds resulting OBB with less surface area) and faster than the algorithm from the section @ref occt_modat_6_1_2. Nevertheless, (in general) the result returned by both algorithms is not always optimal (i.e. sometimes another OBB exists with a smaller surface area). Moreover, the first method does not allow computing OBBs of shapes with a complex geometry.
+2. Currently, the algorithm of OBB creation is implemented for objects in 3D space only.

@@ -31,7 +31,6 @@
 #include <OpenGl_Workspace.hxx>
 
 #include <NCollection_List.hxx>
-#include <InterfaceGraphic_Graphic3d.hxx>
 
 class OpenGl_Structure;
 class OpenGl_GraphicDriver;
@@ -78,19 +77,22 @@ public:
   //! Disconnect other structure to this one
   Standard_EXPORT virtual void Disconnect (Graphic3d_CStructure& theStructure) Standard_OVERRIDE;
 
-  //! Synchronize structure aspects
-  Standard_EXPORT virtual void UpdateAspects() Standard_OVERRIDE;
-
   //! Synchronize structure transformation
-  Standard_EXPORT virtual void UpdateTransformation() Standard_OVERRIDE;
+  Standard_EXPORT virtual void SetTransformation (const Handle(Geom_Transformation)& theTrsf) Standard_OVERRIDE;
 
-  //! Highlight entire structure with color
-  Standard_EXPORT virtual void HighlightWithColor (const Graphic3d_Vec3&  theColor,
-                                                   const Standard_Boolean theToCreate) Standard_OVERRIDE;
+  //! Set transformation persistence.
+  Standard_EXPORT virtual void SetTransformPersistence (const Handle(Graphic3d_TransformPers)& theTrsfPers) Standard_OVERRIDE;
 
-  //! Highlight structure using boundary box
-  Standard_EXPORT virtual void HighlightWithBndBox (const Handle(Graphic3d_Structure)& theStruct,
-                                                    const Standard_Boolean             theToCreate) Standard_OVERRIDE;
+  //! Set z layer ID to display the structure in specified layer
+  Standard_EXPORT virtual void SetZLayer(const Graphic3d_ZLayerId theLayerIndex) Standard_OVERRIDE;
+
+  //! Highlights structure according to the given style and updates corresponding class fields
+  //! (highlight status and style)
+  Standard_EXPORT virtual void GraphicHighlight (const Handle(Graphic3d_PresentationAttributes)& theStyle,
+                                                 const Handle(Graphic3d_Structure)&  theStruct) Standard_OVERRIDE;
+
+  //! Unighlights structure and updates corresponding class fields (highlight status and style)
+  Standard_EXPORT virtual void GraphicUnhighlight() Standard_OVERRIDE;
 
   //! Create shadow link to this structure
   Standard_EXPORT virtual Handle(Graphic3d_CStructure) ShadowLink (const Handle(Graphic3d_StructureManager)& theManager) const Standard_OVERRIDE;
@@ -103,40 +105,13 @@ public:
 
 public:
 
-  //! @return graphic groups
-  virtual const Graphic3d_SequenceOfGroup& DrawGroups() const
-  {
-    return myGroups;
-  }
-
   //! Access graphic driver
   OpenGl_GraphicDriver* GlDriver() const
   {
     return (OpenGl_GraphicDriver* )myGraphicDriver.operator->();
   }
 
-  void SetAspectLine   (const CALL_DEF_CONTEXTLINE &theAspect);
-  void SetAspectFace   (const CALL_DEF_CONTEXTFILLAREA& theAspect);
-  void SetAspectMarker (const CALL_DEF_CONTEXTMARKER& theAspect);
-  void SetAspectText   (const CALL_DEF_CONTEXTTEXT &theAspect);
-
-  void clearHighlightBox (const Handle(OpenGl_Context)& theGlCtx);
-
-  void setHighlightColor (const Handle(OpenGl_Context)& theGlCtx,
-                          const Graphic3d_Vec3&         theColor);
-
-  void clearHighlightColor (const Handle(OpenGl_Context)& theGlCtx);
-
   Standard_EXPORT void Clear (const Handle(OpenGl_Context)& theGlCtx);
-
-  //! Renders groups of structure without applying any attributes (i.e. transform, material etc).
-  //! @param theWorkspace current workspace
-  //! @param theHasClosed flag will be set to TRUE if structure contains at least one group of closed primitives
-  virtual void renderGeometry (const Handle(OpenGl_Workspace)& theWorkspace,
-                               bool&                           theHasClosed) const;
-
-  //! Renders groups of closed primitives without applying any attributes (i.e. transform, material etc).
-  virtual void renderClosedGeometry (const Handle(OpenGl_Workspace)& theWorkspace) const;
 
   //! Renders the structure.
   virtual void Render  (const Handle(OpenGl_Workspace)& theWorkspace) const;
@@ -144,14 +119,8 @@ public:
   //! Releases structure resources.
   virtual void Release (const Handle(OpenGl_Context)& theGlCtx);
 
-  //! Marks structure as not overlapping view volume (as it is by default).
-  void ResetCullingStatus() const
-  {
-    if (!IsAlwaysRendered())
-    {
-      myIsCulled = Standard_True;
-    }
-  }
+  //! Marks structure as culled/not culled - note that IsAlwaysRendered() is ignored here!
+  void SetCulled (Standard_Boolean theIsCulled) const { myIsCulled = theIsCulled; }
 
   //! Marks structure as overlapping the current view volume one.
   //! The method is called during traverse of BVH tree.
@@ -169,9 +138,7 @@ public:
         || IsForHighlight
         || IsMutable
         || Is2dText
-        || (TransformPersistence.Flags & Graphic3d_TMF_2d)           != 0
-        || (TransformPersistence.Flags & Graphic3d_TMF_PanPers)      != 0
-        || (TransformPersistence.Flags & Graphic3d_TMF_TriedronPers) != 0;
+        || (!myTrsfPers.IsNull() && myTrsfPers->IsTrihedronOr2d());
   }
 
   //! This method releases GL resources without actual elements destruction.
@@ -185,9 +152,6 @@ public:
   //! Returns instanced OpenGL structure.
   const OpenGl_Structure* InstancedStructure() const { return myInstancedStructure; }
 
-  //! Returns OpenGL face aspect.
-  const OpenGl_AspectFace* AspectFace() const { return myAspectFace; }
-
   //! Returns structure modification state (for ray-tracing).
   Standard_Size ModificationState() const { return myModificationState; }
 
@@ -197,6 +161,9 @@ public:
   //! Is the structure ray-tracable (contains ray-tracable elements)?
   Standard_Boolean IsRaytracable() const;
 
+  //! Update render transformation matrix.
+  Standard_EXPORT void updateLayerTransformation();
+
 protected:
 
   Standard_EXPORT virtual ~OpenGl_Structure();
@@ -204,17 +171,24 @@ protected:
   //! Updates ray-tracable status for structure and its parents.
   void UpdateStateIfRaytracable (const Standard_Boolean toCheck = Standard_True) const;
 
+  //! Renders groups of structure without applying any attributes (i.e. transform, material etc).
+  //! @param theWorkspace current workspace
+  //! @param theHasClosed flag will be set to TRUE if structure contains at least one group of closed primitives
+  Standard_EXPORT void renderGeometry (const Handle(OpenGl_Workspace)& theWorkspace,
+                                       bool&                           theHasClosed) const;
+
+  //! Highlight structure using boundary box
+  Standard_EXPORT void highlightWithBndBox (const Handle(Graphic3d_Structure)& theStruct);
+
+  //! Invalidates highlight box and releases graphic resources it uses
+  Standard_EXPORT void clearHighlightBox (const Handle(OpenGl_Context)& theGlCtx);
+
 protected:
 
-  OpenGl_AspectLine*         myAspectLine;
-  OpenGl_AspectFace*         myAspectFace;
-  OpenGl_AspectMarker*       myAspectMarker;
-  OpenGl_AspectText*         myAspectText;
-
   Handle(OpenGl_Group)       myHighlightBox;
-  TEL_COLOUR*                myHighlightColor;
 
   OpenGl_Structure*          myInstancedStructure;
+  Graphic3d_Mat4             myRenderTrsf; //!< transformation, actually used for rendering (includes Local Origin shift)
 
   mutable Standard_Boolean   myIsRaytracable;
   mutable Standard_Size      myModificationState;

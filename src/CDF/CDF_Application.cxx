@@ -20,12 +20,10 @@
 #include <CDF_Directory.hxx>
 #include <CDF_MetaDataDriver.hxx>
 #include <CDF_Session.hxx>
-#include <CDF_Timer.hxx>
 #include <CDM_CanCloseStatus.hxx>
 #include <CDM_Document.hxx>
 #include <CDM_MetaData.hxx>
 #include <PCDM_Reader.hxx>
-#include <PCDM_ReaderStatus.hxx>
 #include <PCDM_ReadWriter.hxx>
 #include <PCDM_RetrievalDriver.hxx>
 #include <PCDM_StorageDriver.hxx>
@@ -34,8 +32,6 @@
 #include <Standard_GUID.hxx>
 #include <Standard_NoSuchObject.hxx>
 #include <Standard_ProgramError.hxx>
-#include <Standard_Type.hxx>
-#include <TCollection_ExtendedString.hxx>
 #include <UTL.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(CDF_Application,CDM_Application)
@@ -102,11 +98,8 @@ Handle(CDM_Document) CDF_Application::Retrieve(const TCollection_ExtendedString&
 Handle(CDM_Document)  CDF_Application::Retrieve(const TCollection_ExtendedString& aFolder, 
 				     const TCollection_ExtendedString& aName,
 				     const TCollection_ExtendedString& aVersion,
-				     const Standard_Boolean UseStorageConfiguration) {
-#ifdef OCCT_DEBUG
-  CDF_Timer theTimer;
-#endif
-
+				     const Standard_Boolean UseStorageConfiguration)
+{
   Handle(CDM_MetaData) theMetaData; 
   
   if(aVersion.Length() == 0) 
@@ -114,28 +107,14 @@ Handle(CDM_Document)  CDF_Application::Retrieve(const TCollection_ExtendedString
   else 
     theMetaData=theMetaDataDriver->MetaData(aFolder,aName,aVersion);
 
-#ifdef OCCT_DEBUG
-  theTimer.ShowAndRestart("Getting MetaData: ");
-#endif
-
   CDF_TypeOfActivation theTypeOfActivation=TypeOfActivation(theMetaData);
   Handle(CDM_Document) theDocument=Retrieve(theMetaData,UseStorageConfiguration,Standard_False);
-
-#ifdef OCCT_DEBUG
-  theTimer.ShowAndRestart("Creating Transient: ");
-#endif
 
   CDF_Session::CurrentSession()->Directory()->Add(theDocument);
   Activate(theDocument,theTypeOfActivation);
 
-#ifdef OCCT_DEBUG
-  theTimer.ShowAndStop("Activate: ");
-#endif
-
   theDocument->Open(this);
   return theDocument;
-
-
 }
 
 //=======================================================================
@@ -153,24 +132,12 @@ PCDM_ReaderStatus CDF_Application::CanRetrieve(const TCollection_ExtendedString&
 //=======================================================================
 PCDM_ReaderStatus CDF_Application::CanRetrieve(const TCollection_ExtendedString&  aFolder, const TCollection_ExtendedString&  aName, const TCollection_ExtendedString&  aVersion) {
   
-#ifdef OCCT_DEBUG
-  CDF_Timer theTimer;
-#endif
-
   if (!theMetaDataDriver->Find(aFolder,aName,aVersion))
     return PCDM_RS_UnknownDocument;
   else if (!theMetaDataDriver->HasReadPermission(aFolder,aName,aVersion))
     return PCDM_RS_PermissionDenied;
   else {
-#ifdef OCCT_DEBUG
-    theTimer.ShowAndRestart("theMetaDataDriver->Find: ");
-#endif
-
     Handle(CDM_MetaData) theMetaData = theMetaDataDriver->MetaData(aFolder,aName,aVersion);
-
-#ifdef OCCT_DEBUG
-    theTimer.ShowAndStop("Getting MetaData: ");
-#endif
 
     if(theMetaData->IsRetrieved()) {
       return theMetaData->Document()->IsModified()
@@ -188,14 +155,21 @@ PCDM_ReaderStatus CDF_Application::CanRetrieve(const TCollection_ExtendedString&
 	else
 	  return PCDM_RS_UnrecognizedFileFormat;
       }
-      if(!FindReaderFromFormat(theFormat)) return PCDM_RS_NoDriver;
+
+      // check actual availability of the driver
+      try {
+        Handle(PCDM_Reader) aReader = ReaderFromFormat(theFormat);
+        if (aReader.IsNull())
+          return PCDM_RS_NoDriver;
+      }
+      catch (Standard_Failure)
+      {
+        // no need to report error, this was just check for availability
+      }
     }
   }
   return PCDM_RS_OK;
-  
 }
-
-
 
 //=======================================================================
 //function : Activate
@@ -227,27 +201,6 @@ Standard_Boolean CDF_Application::SetDefaultFolder(const Standard_ExtString aFol
 }
 
 //=======================================================================
-//function : DefaultExtension
-//purpose  : 
-//=======================================================================
-Standard_ExtString CDF_Application::DefaultExtension() {
-  static TCollection_ExtendedString theDefaultExtension;
-  theDefaultExtension="*";
-  TColStd_SequenceOfExtendedString theFormats;
-  Formats(theFormats);
-  
-  for (Standard_Integer i=1; i<= theFormats.Length(); i++) {
-    TCollection_ExtendedString theResource(theFormats(i));
-    theResource+=".FileExtension";
-    if(UTL::Find(Resources(),theResource)) {
-      theDefaultExtension=UTL::Value(Resources(),theResource);
-      return theDefaultExtension.ToExtString();
-    }
-  }
-  return theDefaultExtension.ToExtString();
-}
-
-//=======================================================================
 //function : Retrieve
 //purpose  : 
 //=======================================================================
@@ -269,12 +222,12 @@ Handle(CDM_Document) CDF_Application::Retrieve(const Handle(CDM_MetaData)& aMeta
     case PCDM_RS_UnknownDocument: 
       aMsg << "could not find the referenced document: " << aMetaData->Path() << "; not found."  <<(char)0 << endl;
       myRetrievableStatus = PCDM_RS_UnknownDocument;
-      Standard_Failure::Raise(aMsg);
+      throw Standard_Failure(aMsg.str().c_str());
       break;
     case PCDM_RS_PermissionDenied:      
       aMsg << "Could not find the referenced document: " << aMetaData->Path() << "; permission denied. " <<(char)0 << endl;
       myRetrievableStatus = PCDM_RS_PermissionDenied;
-      Standard_Failure::Raise(aMsg);
+      throw Standard_Failure(aMsg.str().c_str());
       break;
     default:
       break;
@@ -285,11 +238,17 @@ Handle(CDM_Document) CDF_Application::Retrieve(const Handle(CDM_MetaData)& aMeta
   if(AlreadyRetrieved) myRetrievableStatus = PCDM_RS_AlreadyRetrieved;
   Standard_Boolean Modified=AlreadyRetrieved && aMetaData->Document()->IsModified();
   if(Modified) myRetrievableStatus = PCDM_RS_AlreadyRetrievedAndModified;
-  if(!AlreadyRetrieved || Modified) {
-
-    Handle(PCDM_Reader) theReader=Reader(aMetaData->FileName());
-    
-    
+  if(!AlreadyRetrieved || Modified)
+  {
+    TCollection_ExtendedString aFormat;
+    if (!Format(aMetaData->FileName(), aFormat))
+    {
+      Standard_SStream aMsg;
+      aMsg << "Could not determine format for the file " << aMetaData->FileName() << (char)0;
+      throw Standard_NoSuchObject(aMsg.str().c_str());
+    }
+    Handle(PCDM_Reader) theReader = ReaderFromFormat (aFormat);
+        
     Handle(CDM_Document) theDocument;
 
     if(Modified)  {
@@ -308,12 +267,12 @@ Handle(CDM_Document) CDF_Application::Retrieve(const Handle(CDM_MetaData)& aMeta
       OCC_CATCH_SIGNALS
       theReader->Read(aMetaData->FileName(),theDocument,this);
     } 
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       myRetrievableStatus = theReader->GetStatus();
       if(myRetrievableStatus  > PCDM_RS_AlreadyRetrieved){
 	Standard_SStream aMsg;
-	aMsg << Standard_Failure::Caught() << endl;
-	Standard_Failure::Raise(aMsg);
+	aMsg << anException << endl;
+	throw Standard_Failure(aMsg.str().c_str());
       }	
     }
     myRetrievableStatus = theReader->GetStatus();    
@@ -357,32 +316,6 @@ CDF_TypeOfActivation CDF_Application::TypeOfActivation(const Handle(CDM_MetaData
   return CDF_TOA_New;
 }
 
-
-//=======================================================================
-//function : FindReader
-//purpose  : 
-//=======================================================================
-Standard_Boolean CDF_Application::FindReader(const TCollection_ExtendedString& aFileName) {
-  Standard_GUID voidGUID;
-  TCollection_ExtendedString voidResourceName;
-  return FindReader(aFileName,voidGUID,voidResourceName);
-}
-
-//=======================================================================
-//function : Reader
-//purpose  : code dp
-//=======================================================================
-Handle(PCDM_Reader) CDF_Application::Reader (const TCollection_ExtendedString& aFileName) {
-  TCollection_ExtendedString theFormat;
-  if (!Format(aFileName,theFormat)) {
-    Standard_SStream aMsg; 
-    aMsg << "Could not found the format" <<(char)0;
-    Standard_NoSuchObject::Raise(aMsg);
-
-  }
-  return ReaderFromFormat (theFormat);
-}
-
 //=======================================================================
 //function : Read
 //purpose  : 
@@ -400,13 +333,13 @@ Handle(CDM_Document) CDF_Application::Read (Standard_IStream& theIStream)
     
     aFormat = PCDM_ReadWriter::FileFormat (theIStream, dData);
   }
-  catch (Standard_Failure)
+  catch (Standard_Failure const& anException)
   {
     myRetrievableStatus = PCDM_RS_FormatFailure;
     
     Standard_SStream aMsg;
-    aMsg << Standard_Failure::Caught() << endl;
-    Standard_Failure::Raise(aMsg);
+    aMsg << anException << endl;
+    throw Standard_Failure(aMsg.str().c_str());
   }
 
   if (aFormat.IsEmpty())
@@ -428,14 +361,14 @@ Handle(CDM_Document) CDF_Application::Read (Standard_IStream& theIStream)
   
     aReader->Read (theIStream, dData, aDoc, this);
   }
-  catch (Standard_Failure)
+  catch (Standard_Failure const& anException)
   {
     myRetrievableStatus = aReader->GetStatus();
     if (myRetrievableStatus  > PCDM_RS_AlreadyRetrieved)
     {
       Standard_SStream aMsg;
-      aMsg << Standard_Failure::Caught() << endl;
-      Standard_Failure::Raise(aMsg);
+      aMsg << anException << endl;
+      throw Standard_Failure(aMsg.str().c_str());
     }	
   }
 
@@ -445,70 +378,115 @@ Handle(CDM_Document) CDF_Application::Read (Standard_IStream& theIStream)
 }
 
 //=======================================================================
-//function : FindReaderFromFormat
-//purpose  : 
-//=======================================================================
-Standard_Boolean CDF_Application::FindReaderFromFormat(const TCollection_ExtendedString& aFormat) {
-  Standard_GUID voidGUID;
-  TCollection_ExtendedString voidResourceName;
-  return FindReaderFromFormat(aFormat,voidGUID,voidResourceName);
-}
-
-
-//=======================================================================
 //function : ReaderFromFormat
 //purpose  : 
 //=======================================================================
-Handle(PCDM_Reader) CDF_Application::ReaderFromFormat(const TCollection_ExtendedString& aFormat) {
-  TCollection_ExtendedString UnfoundResourceName;
-  Standard_GUID thePluginId;
-  if(!FindReaderFromFormat(aFormat,thePluginId,UnfoundResourceName)) {
+Handle(PCDM_Reader) CDF_Application::ReaderFromFormat(const TCollection_ExtendedString& theFormat)
+{
+  // check map of readers
+  Handle(PCDM_RetrievalDriver) aReader;
+  if (myReaders.FindFromKey (theFormat, aReader))
+    return aReader;
+
+  // support of legacy method of loading reader as plugin
+  TCollection_ExtendedString aResourceName = theFormat;
+  aResourceName += ".RetrievalPlugin";
+  if (!UTL::Find(Resources(), aResourceName))
+  {
+    myReaders.Add(theFormat, aReader);
     Standard_SStream aMsg; 
-    aMsg << "Could not found the item:" << UnfoundResourceName <<(char)0;
+    aMsg << "Could not found the item:" << aResourceName <<(char)0;
     myRetrievableStatus = PCDM_RS_WrongResource;
-    Standard_NoSuchObject::Raise(aMsg);
-  } 
-  Handle(PCDM_Reader) R;
+    throw Standard_NoSuchObject(aMsg.str().c_str());
+  }
+
+  // Get GUID as a string.
+  TCollection_ExtendedString strPluginId = UTL::Value(Resources(), aResourceName);
+    
+  // If the GUID (as a string) contains blanks, remove them.
+  if (strPluginId.Search(' ') != -1)
+    strPluginId.RemoveAll(' ');
+    
+  // Convert to GUID.
+  Standard_GUID aPluginId = UTL::GUID(strPluginId);
+
   try {
     OCC_CATCH_SIGNALS
-    R = Handle(PCDM_Reader)::DownCast(Plugin::Load(thePluginId));  
+    aReader = Handle(PCDM_RetrievalDriver)::DownCast(Plugin::Load(aPluginId));  
   } 
-  catch (Standard_Failure) {
+  catch (Standard_Failure const& anException)
+  {
+    myReaders.Add(theFormat, aReader);
     myRetrievableStatus = PCDM_RS_WrongResource;
-    Standard_SStream aMsg;
-    aMsg << Standard_Failure::Caught() << endl;
-    Standard_Failure::Raise(aMsg);
+    throw anException;
   }	
-  Handle(PCDM_RetrievalDriver) RD = Handle(PCDM_RetrievalDriver)::DownCast(R);
-  if (!RD.IsNull()) {
-    RD->SetFormat(aFormat);
-    return RD;
-  } else 
+  if (!aReader.IsNull()) {
+    aReader->SetFormat(theFormat);
+  }
+  else
+  {
     myRetrievableStatus = PCDM_RS_WrongResource;
-  return R;
+  }
+
+  // record in map
+  myReaders.Add(theFormat, aReader);
+  return aReader;
 }
 
 //=======================================================================
-//function : FindReader
+//function : WriterFromFormat
 //purpose  : 
 //=======================================================================
-Standard_Boolean CDF_Application::FindReader(const TCollection_ExtendedString& aFileName, Standard_GUID& thePluginId, TCollection_ExtendedString& ResourceName) {
-  
-  TCollection_ExtendedString theFormat=PCDM_ReadWriter::FileFormat(aFileName);
+Handle(PCDM_StorageDriver) CDF_Application::WriterFromFormat(const TCollection_ExtendedString& theFormat)
+{  
+  // check map of writers
+  Handle(PCDM_StorageDriver) aDriver;
+  if (myWriters.FindFromKey(theFormat, aDriver))
+    return aDriver;
 
-// It is good if the format is in the file. Otherwise base on the extension.
-  
-  if(theFormat.Length()==0) {
-    ResourceName=UTL::Extension(aFileName);
-    ResourceName+=".FileFormat";
-    
-    if(UTL::Find(Resources(),ResourceName))  {
-      theFormat=UTL::Value(Resources(),ResourceName);
-    }
-    else 
-      return Standard_False;
+  // support of legacy method of loading reader as plugin
+  TCollection_ExtendedString aResourceName = theFormat;
+  aResourceName += ".StoragePlugin";  
+  if(!UTL::Find(Resources(), aResourceName))
+  {
+    myWriters.Add(theFormat, aDriver);
+    Standard_SStream aMsg; 
+    aMsg << "Could not found the resource definition:" << aResourceName <<(char)0;
+    throw Standard_NoSuchObject(aMsg.str().c_str());
   }
-  return FindReaderFromFormat(theFormat,thePluginId,ResourceName);
+
+  // Get GUID as a string.
+  TCollection_ExtendedString strPluginId = UTL::Value(Resources(), aResourceName);
+    
+  // If the GUID (as a string) contains blanks, remove them.
+  if (strPluginId.Search(' ') != -1)
+    strPluginId.RemoveAll(' ');
+    
+  // Convert to GUID.
+  Standard_GUID aPluginId = UTL::GUID(strPluginId);
+
+  try {
+    OCC_CATCH_SIGNALS
+    aDriver = Handle(PCDM_StorageDriver)::DownCast(Plugin::Load(aPluginId));
+  } 
+  catch (Standard_Failure const& anException)
+  {
+    myWriters.Add(theFormat, aDriver);
+    myRetrievableStatus = PCDM_RS_WrongResource;
+    throw anException;
+  }	
+  if (aDriver.IsNull()) 
+  {
+    myRetrievableStatus = PCDM_RS_WrongResource;
+  }
+  else
+  {
+    aDriver->SetFormat(theFormat);
+  }
+
+  // record in map
+  myWriters.Add(theFormat, aDriver);
+  return aDriver;
 }
 
 //=======================================================================
@@ -532,30 +510,6 @@ Standard_Boolean CDF_Application::Format(const TCollection_ExtendedString& aFile
     else return Standard_False;
   }
   return Standard_True;
-}
-
-//=======================================================================
-//function : FindReaderFromFormat
-//purpose  : 
-//=======================================================================
-Standard_Boolean CDF_Application::FindReaderFromFormat(const TCollection_ExtendedString& aFormat, Standard_GUID& thePluginId, TCollection_ExtendedString& ResourceName) {
-  
-  ResourceName=aFormat;
-  ResourceName+=".RetrievalPlugin";
-  
-  if(UTL::Find(Resources(),ResourceName))  {
-    // Get GUID as a string.
-    TCollection_ExtendedString strPluginId = UTL::Value(Resources(),ResourceName);
-    
-    // If the GUID (as a string) contains blanks, remove them.
-    if (strPluginId.Search(' ') != -1)
-      strPluginId.RemoveAll(' ');
-    
-    // Convert to GUID.
-    thePluginId=UTL::GUID(strPluginId);
-    return Standard_True;
-  }
-  return Standard_False;
 }
 
 //=======================================================================

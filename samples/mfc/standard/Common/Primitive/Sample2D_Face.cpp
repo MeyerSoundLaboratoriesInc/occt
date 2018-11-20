@@ -267,7 +267,7 @@ void Sample2D_Face::HilightSelected
   Handle(Graphic3d_AspectLine3d) aLineAspect =
     new Graphic3d_AspectLine3d(Quantity_NOC_ANTIQUEWHITE, Aspect_TOL_SOLID,2);
   if( HasPresentation() )
-    aSelectionPrs->SetTransformPersistence( Presentation()->TransformPersistenceMode(), Presentation()->TransformPersistencePoint() );
+    aSelectionPrs->SetTransformPersistence (Presentation()->TransformPersistence());
 
   Standard_Integer aLength = theOwners.Length();
   Handle (SelectMgr_EntityOwner) anOwner;
@@ -331,13 +331,13 @@ void Sample2D_Face::ClearSelected ()
 
 //Method for advanced customizable highlighting of picked object
 void Sample2D_Face::HilightOwnerWithColor ( const Handle(PrsMgr_PresentationManager3d)& thePM,
-                                           const Quantity_NameOfColor theColor,
+                                           const Handle(Prs3d_Drawer)& theStyle,
                                            const Handle(SelectMgr_EntityOwner)& theOwner)
 {
   Handle( Prs3d_Presentation ) aHighlightPrs;
   aHighlightPrs = GetHilightPresentation( thePM );
   if( HasPresentation() )
-    aHighlightPrs->SetTransformPersistence( Presentation()->TransformPersistenceMode(), Presentation()->TransformPersistencePoint() );
+    aHighlightPrs->SetTransformPersistence (Presentation()->TransformPersistence());
   if(theOwner.IsNull())
     return;
   aHighlightPrs->Clear();
@@ -347,7 +347,7 @@ void Sample2D_Face::HilightOwnerWithColor ( const Handle(PrsMgr_PresentationMana
   Prs3d_Root::NewGroup ( aHighlightPrs );
   Handle (Graphic3d_Group) aHilightGroup = Prs3d_Root::CurrentGroup(aHighlightPrs);
   Handle(Graphic3d_AspectLine3d) aLineAspect =
-    new Graphic3d_AspectLine3d(theColor, Aspect_TOL_SOLID,2); 
+    new Graphic3d_AspectLine3d(theStyle->Color(), Aspect_TOL_SOLID,2);
   switch(theOwner->Priority())
   {
   case 7:

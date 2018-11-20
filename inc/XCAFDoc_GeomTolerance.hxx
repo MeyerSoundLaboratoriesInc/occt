@@ -26,11 +26,15 @@ class TDF_Attribute;
 class TDF_RelocationTable;
 class XCAFDimTolObjects_GeomToleranceObject;
 
+// resolve name collisions with WinAPI headers
+#ifdef GetObject
+  #undef GetObject
+#endif
 
 class XCAFDoc_GeomTolerance;
 DEFINE_STANDARD_HANDLE(XCAFDoc_GeomTolerance, TDF_Attribute)
 
-//! attribute to store dimension and tolerance
+//! Attribute to store dimension and tolerance
 class XCAFDoc_GeomTolerance : public TDF_Attribute
 {
 
@@ -45,8 +49,11 @@ public:
   
   Standard_EXPORT static Handle(XCAFDoc_GeomTolerance) Set (const TDF_Label& theLabel);
   
-  Standard_EXPORT void SetObject (const Handle(XCAFDimTolObjects_GeomToleranceObject)& theObject);
+  //! Updates parent's label and its sub-labels with data taken from theGeomToleranceObject.
+  //! Old data associated with the label will be lost.
+  Standard_EXPORT void SetObject(const Handle(XCAFDimTolObjects_GeomToleranceObject)& theGeomToleranceObject);
   
+  //! Returns geometry tolerance object data taken from the paren's label and its sub-labels.
   Standard_EXPORT Handle(XCAFDimTolObjects_GeomToleranceObject) GetObject() const;
   
   Standard_EXPORT const Standard_GUID& ID() const Standard_OVERRIDE;

@@ -87,7 +87,6 @@
 
 #ifdef OCCT_DEBUG
 #define DEBSHASET(sarg,meth,shaset,str) TCollection_AsciiString sarg((meth));(sarg)=(sarg)+(shaset).DEBNumber()+(str);
-extern Standard_Boolean TopOpeBRepDS_GettraceSTRANGE();
 Standard_EXPORT void debsplitf(const Standard_Integer i){cout<<"++ debsplitf "<<i<<endl;}
 Standard_EXPORT void debspanc(const Standard_Integer i){cout<<"++ debspanc "<<i<<endl;}
 Standard_Integer GLOBAL_iexF = 0;
@@ -154,10 +153,6 @@ static Standard_Boolean FUN_EPIforEvisoONperiodicF
   if (!ok) return Standard_False; // nyi FUN_Raise
   Standard_Integer iEinterf=0; Standard_Integer iG = FUN_getG(p3d,EPIlist,HDS,iEinterf);
   if (iG == 0) {
-#ifdef OCCT_DEBUG
-    Standard_Boolean strange = TopOpeBRepDS_GettraceSTRANGE();
-    if (strange) cout<<"strange : FUN_EPIforEvisoONperiodicF"<<endl;
-#endif
     return Standard_False;
   }
   if (HDS->Shape(iEinterf).ShapeType() != TopAbs_EDGE) iEinterf = 0;
@@ -970,19 +965,13 @@ static Standard_Boolean FUN_SplitEvisoONperiodicF(const Handle(TopOpeBRepDS_HDat
     TopOpeBRepDS_Kind GT,ST;Standard_Integer GI,SI;FDS_data(SSI,GT,GI,ST,SI);
       
     const TopoDS_Face& FS = TopoDS::Face( HDS->Shape(SI)); 
-#ifdef OCCT_DEBUG
-    Standard_Integer iFS =
-#endif
-              HDS->Shape(FS); 
+    HDS->Shape(FS); 
 //    Standard_Boolean FSper = FUN_periodicS(FS);
     Standard_Boolean FSper = FUN_tool_closedS(FS);
     if (!FSper) continue;
     
     const TopoDS_Edge& EG = TopoDS::Edge(HDS->Shape(GI));
-#ifdef OCCT_DEBUG
-    Standard_Integer iEG =
-#endif
-              HDS->Shape(EG);    
+    HDS->Shape(EG);
     Standard_Boolean isrest = HDS->DS().IsSectionEdge(EG);
     if (!isrest) continue;
     
@@ -994,7 +983,7 @@ static Standard_Boolean FUN_SplitEvisoONperiodicF(const Handle(TopOpeBRepDS_HDat
     Handle(Geom2d_Curve) PC = FC2D_CurveOnSurface(EG,FS,pf,pl,tol);
     if (PC.IsNull()) {
       TopoDS_Edge EEG = EG; Standard_Boolean ok = FUN_tool_pcurveonF(FS,EEG);
-      if (!ok) Standard_ProgramError::Raise("_Builder::SplitONVisolineonCyl");
+      if (!ok) throw Standard_ProgramError("_Builder::SplitONVisolineonCyl");
       Standard_Real f,l; PC = FC2D_CurveOnSurface(EEG,FS,f,l,tol);
     }
     
@@ -1014,19 +1003,10 @@ static Standard_Boolean FUN_SplitEvisoONperiodicF(const Handle(TopOpeBRepDS_HDat
     TopOpeBRepDS_DataStructure& BDS = HDS->ChangeDS();
     TopOpeBRepDS_ListOfInterference EPIlist; FUN_getEPIonEds(FS,HDS,EPIlist); 
     TopOpeBRepDS_ListOfInterference loCPI;
-#ifdef OCCT_DEBUG
-    Standard_Boolean recadre =
-#endif
-                  FUN_EPIforEvisoONperiodicF(EG,FS,EPIlist, HDS,loCPI);
+    FUN_EPIforEvisoONperiodicF(EG,FS,EPIlist, HDS,loCPI);
 
     TopOpeBRepDS_ListOfInterference& lIEG = BDS.ChangeShapeInterferences(EG);
     lIEG.Append(loCPI);
-    
-#ifdef OCCT_DEBUG
-    Standard_Boolean trc = TopOpeBRepDS_GettraceSTRANGE();
-    if (trc) {cout<<"!! recadre is "; if (!recadre) cout<<"not ";
-	      cout<<"done on face FS "<<iFS<<" for edge "<<iEG<<endl;}
-#endif
   } // ILI
   return Standard_True;
 }
@@ -1065,7 +1045,7 @@ void TopOpeBRepBuild_Builder::SplitEvisoONperiodicF()
     TopoDS_Shape FF = FOR; FF.Orientation(TopAbs_FORWARD);
     
     Standard_Boolean ok = FUN_SplitEvisoONperiodicF(myDataStructure,FF);
-    if (!ok) Standard_ProgramError::Raise("_Builder::SplitONVisolineonCyl");
+    if (!ok) throw Standard_ProgramError("_Builder::SplitONVisolineonCyl");
   } // i
 }
 

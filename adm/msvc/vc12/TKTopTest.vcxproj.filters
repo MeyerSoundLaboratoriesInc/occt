@@ -2,133 +2,34 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{63DD4495-0442-0A31-0865-211542FAC27C}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\TestTopOpeDraw">
-      <UniqueIdentifier>{F6740333-1664-0A09-04F3-2702E32EC232}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\TestTopOpeTools">
-      <UniqueIdentifier>{CF722654-1162-1484-08D2-8E5A29C14343}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\TestTopOpe">
-      <UniqueIdentifier>{27046859-020A-0C0F-0058-CB4B16AEBE61}</UniqueIdentifier>
+      <UniqueIdentifier>{A4C5ED3B-082A-11A5-0499-A708E839D04C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepTest">
-      <UniqueIdentifier>{550567CD-11B7-16D5-0CD2-BCE5FF9FF4D6}</UniqueIdentifier>
+      <UniqueIdentifier>{9A412F32-0445-0D2A-045A-B224FC9A46CE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\GeometryTest">
-      <UniqueIdentifier>{83139067-15A3-0916-0A40-05201C7F4942}</UniqueIdentifier>
+      <UniqueIdentifier>{9E95C5D7-018D-04F4-1171-A2ED9A9D380C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\HLRTest">
-      <UniqueIdentifier>{A2B7E82D-16E5-04F5-04CE-17DBB0581981}</UniqueIdentifier>
+      <UniqueIdentifier>{CABF88AE-02A1-1549-0757-141FFD405694}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\MeshTest">
-      <UniqueIdentifier>{F2831A77-0FF3-0D9D-14AF-C847A1D6D2D2}</UniqueIdentifier>
+      <UniqueIdentifier>{F43A45E1-177A-0910-07E2-204F4B35DC95}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\GeomliteTest">
-      <UniqueIdentifier>{AB027482-1806-115D-0177-FADA6C19F1AC}</UniqueIdentifier>
+      <UniqueIdentifier>{24E0C672-0520-007E-0FE4-E105BC3F8E18}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\DrawFairCurve">
-      <UniqueIdentifier>{498AA632-1987-13C8-0B69-C4BD3A633A1A}</UniqueIdentifier>
+      <UniqueIdentifier>{89DD4621-0A2F-0F4A-14EF-97662FB5D813}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BOPTest">
-      <UniqueIdentifier>{7BB1E2DD-14A5-0374-1256-7E58B6F23CFC}</UniqueIdentifier>
+      <UniqueIdentifier>{7CF7F8E7-0BCA-1550-16E8-3FD6841C7CF4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\SWDRAW">
-      <UniqueIdentifier>{81E9CE21-0E7F-05DC-11F6-0F224091C25A}</UniqueIdentifier>
+      <UniqueIdentifier>{4FB3C09A-139E-0593-0AA8-3DF52CAB3CA7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_Displayer.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableC2D.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableC3D.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableMesure.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableP2D.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableP3D.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableSHA.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_DrawableSUR.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_OtherCommands.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_SaveRestore.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeDraw\TestTopOpeDraw_TTOT.cxx">
-      <Filter>Source files\TestTopOpeDraw</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeTools\TestTopOpeTools.cxx">
-      <Filter>Source files\TestTopOpeTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeTools\TestTopOpeTools_Mesure.cxx">
-      <Filter>Source files\TestTopOpeTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeTools\TestTopOpeTools_OtherCommands.cxx">
-      <Filter>Source files\TestTopOpeTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeTools\TestTopOpeTools_Trace.cxx">
-      <Filter>Source files\TestTopOpeTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpeTools\TestTopOpeTools_TraceCommands.cxx">
-      <Filter>Source files\TestTopOpeTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_BOOP.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_BOOPCommands.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_CORCommands.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_DSF.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_EditBOOP.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_HDSCommands.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_HDSDisplayer.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_KroBOOP.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_MesureCommands.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_MiscBOOP.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_OtherCommands.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TestTopOpe\TestTopOpe_VarsTopo.cxx">
-      <Filter>Source files\TestTopOpe</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest.cxx">
       <Filter>Source files\BRepTest</Filter>
     </ClCompile>
@@ -145,6 +46,9 @@
       <Filter>Source files\BRepTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest_DraftAngleCommands.cxx">
+      <Filter>Source files\BRepTest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepTest\BRepTest_DrawableHistory.cxx">
       <Filter>Source files\BRepTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest_ExtremaCommands.cxx">
@@ -165,7 +69,13 @@
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest_GPropCommands.cxx">
       <Filter>Source files\BRepTest</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepTest\BRepTest_HistoryCommands.cxx">
+      <Filter>Source files\BRepTest</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest_MatCommands.cxx">
+      <Filter>Source files\BRepTest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepTest\BRepTest_Objects.cxx">
       <Filter>Source files\BRepTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTest\BRepTest_OtherCommands.cxx">
@@ -204,6 +114,12 @@
     <ClCompile Include="..\..\..\src\GeometryTest\GeometryTest_CurveCommands.cxx">
       <Filter>Source files\GeometryTest</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\GeometryTest\GeometryTest_CurveTanCommands.cxx">
+      <Filter>Source files\GeometryTest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GeometryTest\GeometryTest_DrawableQualifiedCurve2d.cxx">
+      <Filter>Source files\GeometryTest</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\GeometryTest\GeometryTest_FairCurveCommands.cxx">
       <Filter>Source files\GeometryTest</Filter>
     </ClCompile>
@@ -238,6 +154,9 @@
       <Filter>Source files\MeshTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\MeshTest\MeshTest_CheckTopology.cxx">
+      <Filter>Source files\MeshTest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\MeshTest\MeshTest_Debug.cxx">
       <Filter>Source files\MeshTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\MeshTest\MeshTest_DrawableMesh.cxx">
@@ -291,9 +210,6 @@
     <ClCompile Include="..\..\..\src\BOPTest\BOPTest_DrawableShape.cxx">
       <Filter>Source files\BOPTest</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\BOPTest\BOPTest_HistoryCommands.cxx">
-      <Filter>Source files\BOPTest</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\BOPTest\BOPTest_LowCommands.cxx">
       <Filter>Source files\BOPTest</Filter>
     </ClCompile>
@@ -307,6 +223,9 @@
       <Filter>Source files\BOPTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BOPTest\BOPTest_PartitionCommands.cxx">
+      <Filter>Source files\BOPTest</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BOPTest\BOPTest_RemoveFeaturesCommands.cxx">
       <Filter>Source files\BOPTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BOPTest\BOPTest_TolerCommands.cxx">

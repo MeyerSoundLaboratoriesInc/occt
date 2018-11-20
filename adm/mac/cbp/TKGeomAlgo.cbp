@@ -91,7 +91,6 @@
 		<Unit filename="../../../src/GeomInt/GeomInt_TheImpPrmSvSurfacesOfWLApprox_0.cxx" />
 		<Unit filename="../../../src/GeomInt/GeomInt_TheInt2SOfThePrmPrmSvSurfacesOfWLApprox_0.cxx" />
 		<Unit filename="../../../src/GeomInt/GeomInt_TheMultiLineOfWLApprox_0.cxx" />
-		<Unit filename="../../../src/GeomInt/GeomInt_TheMultiLineToolOfWLApprox_0.cxx" />
 		<Unit filename="../../../src/GeomInt/GeomInt_ThePrmPrmSvSurfacesOfWLApprox_0.cxx" />
 		<Unit filename="../../../src/GeomInt/GeomInt_TheZerImpFuncOfTheImpPrmSvSurfacesOfWLApprox_0.cxx" />
 		<Unit filename="../../../src/GeomInt/GeomInt_WLApprox_0.cxx" />
@@ -115,12 +114,9 @@
 		<Unit filename="../../../src/IntCurveSurface/IntCurveSurface_TheQuadCurvExactHInter_0.cxx" />
 		<Unit filename="../../../src/IntCurveSurface/IntCurveSurface_TheQuadCurvFuncOfTheQuadCurvExactHInter_0.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf.cxx" />
-		<Unit filename="../../../src/IntSurf/IntSurf_Couple.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_InteriorPoint.cxx" />
-		<Unit filename="../../../src/IntSurf/IntSurf_InteriorPointTool.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_LineOn2S.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_PathPoint.cxx" />
-		<Unit filename="../../../src/IntSurf/IntSurf_PathPointTool.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_PntOn2S.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_Quadric.cxx" />
 		<Unit filename="../../../src/IntSurf/IntSurf_QuadricTool.cxx" />
@@ -145,11 +141,11 @@
 		<Unit filename="../../../src/IntPatch/IntPatch_PolyLine.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_Polygo.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_Polyhedron.cxx" />
-		<Unit filename="../../../src/IntPatch/IntPatch_PolyhedronTool.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_PrmPrmIntersection.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_PrmPrmIntersection_T3Bits.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_RLine.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_RstInt.cxx" />
+		<Unit filename="../../../src/IntPatch/IntPatch_SpecialPoints.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_TheIWLineOfTheIWalking_0.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_TheIWalking_0.cxx" />
 		<Unit filename="../../../src/IntPatch/IntPatch_ThePathPointOfTheSOnBounds_0.cxx" />
@@ -174,7 +170,6 @@
 		<Unit filename="../../../src/Geom2dInt/Geom2dInt_ThePolygon2dOfTheIntPCurvePCurveOfGInter_0.cxx" />
 		<Unit filename="../../../src/Geom2dInt/Geom2dInt_TheProjPCurOfGInter_0.cxx" />
 		<Unit filename="../../../src/IntImpParGen/IntImpParGen.cxx" />
-		<Unit filename="../../../src/IntImpParGen/IntImpParGen_ImpTool.cxx" />
 		<Unit filename="../../../src/IntImpParGen/IntImpParGen_Tool.cxx" />
 		<Unit filename="../../../src/IntRes2d/IntRes2d_Domain.cxx" />
 		<Unit filename="../../../src/IntRes2d/IntRes2d_Intersection.cxx" />
@@ -311,7 +306,6 @@
 		<Unit filename="../../../src/GeomAPI/GeomAPI_ExtremaCurveSurface.cxx" />
 		<Unit filename="../../../src/GeomAPI/GeomAPI_ExtremaSurfaceSurface.cxx" />
 		<Unit filename="../../../src/GeomAPI/GeomAPI_IntCS.cxx" />
-		<Unit filename="../../../src/GeomAPI/GeomAPI_IntSS.cxx" />
 		<Unit filename="../../../src/GeomAPI/GeomAPI_Interpolate.cxx" />
 		<Unit filename="../../../src/GeomAPI/GeomAPI_PointsToBSpline.cxx" />
 		<Unit filename="../../../src/GeomAPI/GeomAPI_PointsToBSplineSurface.cxx" />
@@ -425,14 +419,13 @@
 		<Unit filename="../../../src/IntPolyh/IntPolyh_Couple.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_Edge.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_Intersection.cxx" />
-		<Unit filename="../../../src/IntPolyh/IntPolyh_Intersection_1.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_MaillageAffinage.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_Point.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_SectionLine.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_StartPoint.cxx" />
+		<Unit filename="../../../src/IntPolyh/IntPolyh_Tools.cxx" />
 		<Unit filename="../../../src/IntPolyh/IntPolyh_Triangle.cxx" />
 		<Unit filename="../../../src/TopClass/TopClass.cxx" />
-		<Unit filename="../../../src/TopClass/TopClass_Intersection3d.cxx" />
 		<Unit filename="../../../src/TopClass/TopClass_SolidExplorer.cxx" />
 	</Project>
 </CodeBlocks_project_file>

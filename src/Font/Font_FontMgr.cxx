@@ -26,7 +26,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
-IMPLEMENT_STANDARD_RTTIEXT(Font_FontMgr,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(Font_FontMgr,Standard_Transient)
 
 struct Font_FontMgr_FontAliasMapNode
 {
@@ -38,7 +38,7 @@ struct Font_FontMgr_FontAliasMapNode
 static const Font_FontMgr_FontAliasMapNode Font_FontMgr_MapOfFontsAliases[] =
 {
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
 
   { "Courier"                  , "Courier New"    , Font_FA_Regular },
   { "Times-Roman"              , "Times New Roman", Font_FA_Regular  },
@@ -49,7 +49,8 @@ static const Font_FontMgr_FontAliasMapNode Font_FontMgr_MapOfFontsAliases[] =
   { "Symbol"                   , "Symbol"         , Font_FA_Regular  },
   { "ZapfDingbats"             , "WingDings"      , Font_FA_Regular  },
   { "Rock"                     , "Arial"          , Font_FA_Regular  },
-  { "Iris"                     , "Lucida Console" , Font_FA_Regular  }
+  { "Iris"                     , "Lucida Console" , Font_FA_Regular  },
+  { "NSimSun"                  , "SimSun"         , Font_FA_Regular  }
 
 #elif defined(__ANDROID__)
 
@@ -122,15 +123,21 @@ static const Font_FontMgr_FontAliasMapNode Font_FontMgr_MapOfFontsAliases[] =
       "ttc",
       "pfa",
       "pfb",
+    #ifdef __APPLE__
+      // Datafork TrueType (OS X), obsolete
+      //"dfont",
+    #endif
       NULL
     };
 
+  #if !defined(__ANDROID__) && !defined(__APPLE__)
     // X11 configuration file in plain text format (obsolete - doesn't exists in modern distributives)
     static Standard_CString myFontServiceConf[] = {"/etc/X11/fs/config",
                                                    "/usr/X11R6/lib/X11/fs/config",
                                                    "/usr/X11/lib/X11/fs/config",
                                                    NULL
                                                   };
+  #endif
 
   #ifdef __APPLE__
     // default fonts paths in Mac OS X
@@ -212,6 +219,8 @@ static Handle(Font_SystemFont) checkFont (const Handle(Font_FTLibrary)& theFTLib
     Handle(TCollection_HAsciiString) aFontName = new TCollection_HAsciiString (aFontFace->family_name);
     Handle(TCollection_HAsciiString) aFontPath = new TCollection_HAsciiString (theFontPath);
     aResult = new Font_SystemFont (aFontName, anAspect, aFontPath);
+    // automatically identify some known single-line fonts
+    aResult->SetSingleStrokeFont (aFontName->String().StartsWith ("OLF "));
   }
 
   FT_Done_Face (aFontFace);
@@ -310,7 +319,10 @@ void Font_FontMgr::InitFontDataBase()
   myListOfFonts.Clear();
   Handle(Font_FTLibrary) aFtLibrary;
 
-#if defined(_WIN32)
+#if defined(OCCT_UWP)
+  // system font files are not accessible
+  (void )aFtLibrary;
+#elif defined(_WIN32)
 
   // font directory is placed in "C:\Windows\Fonts\"
   UINT aStrLength = GetSystemWindowsDirectoryA (NULL, 0);
@@ -384,6 +396,7 @@ void Font_FontMgr::InitFontDataBase()
 #else
 
   NCollection_Map<TCollection_AsciiString> aMapOfFontsDirs;
+#if !defined(__ANDROID__) && !defined(__APPLE__)
   const OSD_Protection aProtectRead (OSD_R, OSD_R, OSD_R, OSD_R);
 
   // read fonts directories from font service config file (obsolete)
@@ -440,6 +453,7 @@ void Font_FontMgr::InitFontDataBase()
     }
     aFile.Close();
   }
+#endif
 
   // append default directories
   for (Standard_Integer anIter = 0; myDefaultFontsDirs[anIter] != NULL; ++anIter)
@@ -461,7 +475,7 @@ void Font_FontMgr::InitFontDataBase()
   for (NCollection_Map<TCollection_AsciiString>::Iterator anIter (aMapOfFontsDirs);
        anIter.More(); anIter.Next())
   {
-  #ifdef __ANDROID__
+  #if defined(__ANDROID__) || defined(__APPLE__)
     OSD_Path aFolderPath (anIter.Value());
     for (OSD_FileIterator aFileIter (aFolderPath, "*"); aFileIter.More(); aFileIter.Next())
     {

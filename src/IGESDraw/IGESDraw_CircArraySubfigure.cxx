@@ -42,14 +42,14 @@ IGESDraw_CircArraySubfigure::IGESDraw_CircArraySubfigure ()    {  }
 {
   if (!allNumPos.IsNull())
     if (allNumPos->Lower() != 1)
-      Standard_DimensionMismatch::Raise("IGESDraw_CircArraySubfigure : Init");
+      throw Standard_DimensionMismatch("IGESDraw_CircArraySubfigure : Init");
   theBaseEntity  = aBase;
   theNbLocations = aNumLocs;
   theCenter      = aCenter;
   theRadius      = aRadius;
   theStartAngle  = aStAngle;
   theDeltaAngle  = aDelAngle;
-  theDoDontFlag  = aFlag;
+  theDoDontFlag  = aFlag != 0;
   thePositions   = allNumPos;
   InitTypeAndForm(414,0);
 }
@@ -109,7 +109,7 @@ IGESDraw_CircArraySubfigure::IGESDraw_CircArraySubfigure ()    {  }
 
     Standard_Boolean IGESDraw_CircArraySubfigure::DoDontFlag () const
 {
-  return (theDoDontFlag == 1);
+  return theDoDontFlag;
 }
 
     Standard_Boolean IGESDraw_CircArraySubfigure::PositionNum

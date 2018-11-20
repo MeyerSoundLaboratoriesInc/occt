@@ -255,8 +255,7 @@ inline Standard_Boolean CompareVerticesOnS2(const IntPatch_Point& vtx1, const In
 {return CompareVerticesOnSurf (vtx1, vtx2, Standard_False);}
 
 
-void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol,
-                                              const Standard_Boolean hasBeenAdded)
+void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol)
 {
   // MSV Oct 15, 2001: use tolerance of vertex instead of RTol where 
   //                   it is possible
@@ -480,7 +479,7 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol,
   //-- On detecte les points confondus dans la LineOn2S
   Standard_Real dmini = Precision::Confusion();
   dmini*=dmini;
-  for(i=2; i<=nbponline; i++) { 
+  for(i=2; (i<=nbponline) && (nbponline > 2); i++) { 
     const IntSurf_PntOn2S& aPnt1=curv->Value(i-1);
     const IntSurf_PntOn2S& aPnt2=curv->Value(i);
     Standard_Real d = (aPnt1.Value()).SquareDistance((aPnt2.Value()));
@@ -505,30 +504,8 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol,
   for(i=1; i<=nbvtx; i++) {
     const gp_Pnt& P    = svtx.Value(i).Value();
     Standard_Real vTol = svtx.Value(i).Tolerance();
-    
-    if(hasBeenAdded)
-    {
-      if(nbvtx == 2)
-      {
-        if(i == nbvtx)
-        {
-          indicevertex = curv->NbPoints();
-        }
-        else
-        {
-          indicevertex = svtx.Value(i).ParameterOnLine();
-        }
-      }
-      else
-      {
-        indicevertex = svtx.Value(i).ParameterOnLine();
-      }
-    }
-    else
-    {
-      indicevertex = svtx.Value(i).ParameterOnLine();
-    }
-    
+
+    indicevertex = svtx.Value(i).ParameterOnLine();
     indicevertexonline = (Standard_Integer)indicevertex;
     //--------------------------------------------------
     //-- On Compare le vertex avec les points de la ligne
@@ -603,7 +580,7 @@ void IntPatch_WLine::ComputeVertexParameters( const Standard_Real RTol,
       if (Substitution)
       {
         Standard_Integer ind_point;
-        for(ind_point = 2; (ind_point <= nbponline && nbponline > 2); ind_point++) { 
+        for(ind_point = 2; (ind_point <= nbponline && nbponline > 1); ind_point++) { 
           Standard_Real d = (curv->Value(ind_point-1).Value()).SquareDistance((curv->Value(ind_point).Value()));
           if(d < dmini) { 
             curv->RemovePoint(ind_point);

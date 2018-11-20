@@ -22,6 +22,9 @@
   #include <windows.h>
 #endif
 
+#include <Standard_Macro.hxx>
+#include <Standard_TypeDef.hxx>
+
 #ifndef APIENTRY
   #define APIENTRY
 #endif
@@ -33,8 +36,12 @@
 #endif
 
 // exclude modern definitions and system-provided glext.h, should be defined before gl.h inclusion
-#define GL_GLEXT_LEGACY
-#define GLX_GLXEXT_LEGACY
+#ifndef GL_GLEXT_LEGACY
+  #define GL_GLEXT_LEGACY
+#endif
+#ifndef GLX_GLXEXT_LEGACY
+  #define GLX_GLXEXT_LEGACY
+#endif
 
 // include main OpenGL header provided with system
 #if defined(__APPLE__)
@@ -45,7 +52,12 @@
     #include <OpenGL/gl.h>
   #endif
   #define __X_GL_H // prevent chaotic gl.h inclusions to avoid compile errors
-#elif defined(HAVE_GLES2) || defined(__ANDROID__) || defined(__QNX__)
+#elif defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__)
+  #if defined(_WIN32)
+    // Angle OpenGL ES headers do not define function prototypes even for core functions,
+    // however OCCT is expected to be linked against libGLESv2
+    #define GL_GLEXT_PROTOTYPES
+  #endif
   #include <GLES2/gl2.h>
   //#include <GLES3/gl3.h>
 #else
@@ -100,16 +112,38 @@
   #define GL_ALPHA8   0x803C
   #define GL_ALPHA16  0x803E
 
-  #define GL_RG       0x8227
-  #define GL_RG8      0x822B
-  #define GL_RG16     0x822C
-  #define GL_RG16F    0x822F
-  #define GL_RG32F    0x8230
+  #define GL_RG          0x8227
+  #define GL_RG8         0x822B
+  #define GL_RG16        0x822C
+  #define GL_RG16F       0x822F
+  #define GL_RG32F       0x8230
+  #define GL_RG_INTEGER  0x8228
+  #define GL_RED_INTEGER 0x8D94
 
+  #define GL_R8I      0x8231
+  #define GL_R8UI     0x8232
+  #define GL_R16I     0x8233
+  #define GL_R16UI    0x8234
   #define GL_R32I     0x8235
+  #define GL_R32UI    0x8236
+  #define GL_RG8I     0x8237
+  #define GL_RG8UI    0x8238
+  #define GL_RG16I    0x8239
+  #define GL_RG16UI   0x823A
   #define GL_RG32I    0x823B
-  #define GL_RGB32I   0x8D83
+  #define GL_RG32UI   0x823C
+  #define GL_RGBA32UI 0x8D70
+  #define GL_RGB32UI  0x8D71
+  #define GL_RGBA16UI 0x8D76
+  #define GL_RGB16UI  0x8D77
+  #define GL_RGBA8UI  0x8D7C
+  #define GL_RGB8UI   0x8D7D
   #define GL_RGBA32I  0x8D82
+  #define GL_RGB32I   0x8D83
+  #define GL_RGBA16I  0x8D88
+  #define GL_RGB16I   0x8D89
+  #define GL_RGBA8I   0x8D8E
+  #define GL_RGB8I    0x8D8F
 
   // GL_OES_packed_depth_stencil
   #define GL_DEPTH_STENCIL                  0x84F9
@@ -133,6 +167,7 @@
   #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT 0x84FF
 
   // debug ARB extension
+  #define GL_DEBUG_OUTPUT               0x92E0
   #define GL_DEBUG_OUTPUT_SYNCHRONOUS   0x8242
   #define GL_DEBUG_NEXT_LOGGED_MESSAGE_LENGTH 0x8243
   #define GL_DEBUG_CALLBACK_FUNCTION    0x8244
@@ -155,15 +190,34 @@
   #define GL_DEBUG_SEVERITY_HIGH        0x9146
   #define GL_DEBUG_SEVERITY_MEDIUM      0x9147
   #define GL_DEBUG_SEVERITY_LOW         0x9148
+
+  // GL_ARB_draw_buffers (GL_EXT_draw_buffers) extension
+  #define GL_MAX_COLOR_ATTACHMENTS      0x8CDF
+  #define GL_MAX_DRAW_BUFFERS           0x8824
+
+  // OpenGL ES 3.0+ or OES_texture_half_float
+  #define GL_HALF_FLOAT                 0x140B
+  #define GL_HALF_FLOAT_OES             0x8D61
+
+  // OpenGL ES 3.1+
+  #define GL_COMPUTE_SHADER             0x91B9
+
+  // OpenGL ES 3.2+
+  #define GL_GEOMETRY_SHADER            0x8DD9
+  #define GL_TESS_CONTROL_SHADER        0x8E88
+  #define GL_TESS_EVALUATION_SHADER     0x8E87
+  #define GL_LINES_ADJACENCY            0x000A
+  #define GL_LINE_STRIP_ADJACENCY       0x000B
+  #define GL_TRIANGLES_ADJACENCY        0x000C
+  #define GL_TRIANGLE_STRIP_ADJACENCY   0x000D
+  #define GL_PATCHES                    0x000E
 #endif
 
-#if defined(__ANDROID__) || defined(__QNX__)
+#if !defined(HAVE_EGL) && (defined(__ANDROID__) || defined(__QNX__) || defined(HAVE_GLES2) || defined(OCCT_UWP))
   #define HAVE_EGL
 #endif
 
 #include <InterfaceGraphic.hxx>
-#include <InterfaceGraphic_tgl_all.hxx>
-#include <InterfaceGraphic_telem.hxx>
 
 // GL version can be defined by system gl.h header
 #if !defined(GL_ES_VERSION_2_0)
@@ -717,21 +771,75 @@ public: //! @name OpenGL ES 2.0
 
 public: //! @name OpenGL ES 3.0
 
-  typedef void (*glBlitFramebuffer_t)(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+  typedef void (APIENTRY *glBlitFramebuffer_t)(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
   glBlitFramebuffer_t glBlitFramebuffer;
 
-  typedef void (*glTexImage3D_t)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid* data);
+  typedef void (APIENTRY *glTexImage3D_t)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid* data);
   glTexImage3D_t glTexImage3D;
+
+  typedef void (APIENTRY *glDrawBuffers_t)(GLsizei n, const GLenum* bufs);
+  glDrawBuffers_t glDrawBuffers;
+
+  typedef void (APIENTRY *glGenSamplers_t)(GLsizei count, GLuint* samplers);
+  glGenSamplers_t glGenSamplers;
+
+  typedef void (APIENTRY *glDeleteSamplers_t)(GLsizei count, const GLuint* samplers);
+  glDeleteSamplers_t glDeleteSamplers;
+
+  typedef GLboolean (APIENTRY *glIsSampler_t)(GLuint sampler);
+  glIsSampler_t glIsSampler;
+
+  typedef void (APIENTRY *glBindSampler_t)(GLuint unit, GLuint sampler);
+  glBindSampler_t glBindSampler;
+
+  typedef void (APIENTRY *glSamplerParameteri_t)(GLuint sampler, GLenum pname, GLint param);
+  glSamplerParameteri_t glSamplerParameteri;
+
+  typedef void (APIENTRY *glSamplerParameteriv_t)(GLuint sampler, GLenum pname, const GLint* param);
+  glSamplerParameteriv_t glSamplerParameteriv;
+
+  typedef void (APIENTRY *glSamplerParameterf_t)(GLuint sampler, GLenum pname, GLfloat param);
+  glSamplerParameterf_t glSamplerParameterf;
+
+  typedef void (APIENTRY *glSamplerParameterfv_t)(GLuint sampler, GLenum pname, const GLfloat* param);
+  glSamplerParameterfv_t glSamplerParameterfv;
+
+  typedef void (APIENTRY *glGetSamplerParameteriv_t)(GLuint sampler, GLenum pname, GLint* params);
+  glGetSamplerParameteriv_t glGetSamplerParameteriv;
+
+  typedef void (APIENTRY *glGetSamplerParameterfv_t)(GLuint sampler, GLenum pname, GLfloat* params);
+  glGetSamplerParameterfv_t glGetSamplerParameterfv;
 
 public: //! @name OpenGL ES 3.1
 
-  typedef void (*glTexStorage2DMultisample_t)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+  typedef void (APIENTRY *glTexStorage2DMultisample_t)(GLenum target, GLsizei samples, GLenum internalformat, GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
   glTexStorage2DMultisample_t glTexStorage2DMultisample;
 
 public: //! @name OpenGL ES 3.2
 
-  typedef void (*glTexBuffer_t)(GLenum target, GLenum internalFormat, GLuint buffer);
+  typedef void (APIENTRY *glTexBuffer_t)(GLenum target, GLenum internalFormat, GLuint buffer);
   glTexBuffer_t glTexBuffer;
+
+public: //! @name GL_KHR_debug (optional)
+
+  typedef void   (APIENTRY  *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam);
+
+  typedef void   (APIENTRYP glDebugMessageControl_t ) (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
+  typedef void   (APIENTRYP glDebugMessageInsert_t  ) (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* buf);
+  typedef void   (APIENTRYP glDebugMessageCallback_t) (GLDEBUGPROCARB callback, const void* userParam);
+  typedef GLuint (APIENTRYP glGetDebugMessageLog_t  ) (GLuint   count,
+                                                       GLsizei  bufSize,
+                                                       GLenum*  sources,
+                                                       GLenum*  types,
+                                                       GLuint*  ids,
+                                                       GLenum*  severities,
+                                                       GLsizei* lengths,
+                                                       GLchar*  messageLog);
+
+  glDebugMessageControl_t  glDebugMessageControl;
+  glDebugMessageInsert_t   glDebugMessageInsert;
+  glDebugMessageCallback_t glDebugMessageCallback;
+  glGetDebugMessageLog_t   glGetDebugMessageLog;
 
 #else // OpenGL ES vs. desktop
 
@@ -1419,13 +1527,6 @@ public: //! @name OpenGL 4.4
   PFNGLBINDIMAGETEXTURESPROC glBindImageTextures;
   PFNGLBINDVERTEXBUFFERSPROC glBindVertexBuffers;
 
-public: //! @name GL_ARB_debug_output (optional)
-
-  PFNGLDEBUGMESSAGECONTROLARBPROC  glDebugMessageControlARB;
-  PFNGLDEBUGMESSAGEINSERTARBPROC   glDebugMessageInsertARB;
-  PFNGLDEBUGMESSAGECALLBACKARBPROC glDebugMessageCallbackARB;
-  PFNGLGETDEBUGMESSAGELOGARBPROC   glGetDebugMessageLogARB;
-
 public: //! @name GL_EXT_geometry_shader4
 
   PFNGLPROGRAMPARAMETERIEXTPROC glProgramParameteriEXT;
@@ -1598,6 +1699,28 @@ public: //! @name wgl extensions
   #define WGL_ACCESS_WRITE_DISCARD_NV 0x0002
 #endif
 
+  // WGL_AMD_gpu_association
+
+#ifndef WGL_GPU_VENDOR_AMD
+  #define WGL_GPU_VENDOR_AMD                 0x1F00
+  #define WGL_GPU_RENDERER_STRING_AMD        0x1F01
+  #define WGL_GPU_OPENGL_VERSION_STRING_AMD  0x1F02
+  #define WGL_GPU_FASTEST_TARGET_GPUS_AMD    0x21A2
+  #define WGL_GPU_RAM_AMD                    0x21A3
+  #define WGL_GPU_CLOCK_AMD                  0x21A4
+  #define WGL_GPU_NUM_PIPES_AMD              0x21A5
+  #define WGL_GPU_NUM_SIMD_AMD               0x21A6
+  #define WGL_GPU_NUM_RB_AMD                 0x21A7
+  #define WGL_GPU_NUM_SPI_AMD                0x21A8
+#endif
+
+  typedef UINT (WINAPI *wglGetGPUIDsAMD_t       )(UINT theMaxCount, UINT* theIds);
+  typedef INT  (WINAPI *wglGetGPUInfoAMD_t      )(UINT theId, INT theProperty, GLenum theDataType, UINT theSize, void* theData);
+  typedef UINT (WINAPI *wglGetContextGPUIDAMD_t )(HGLRC theHglrc);
+  wglGetGPUIDsAMD_t       wglGetGPUIDsAMD;
+  wglGetGPUInfoAMD_t      wglGetGPUInfoAMD;
+  wglGetContextGPUIDAMD_t wglGetContextGPUIDAMD;
+
 #elif defined(__APPLE__)
 public: //! @name CGL extensions
 
@@ -1611,6 +1734,37 @@ public: //! @name glX extensions
 
   typedef int         (*glXSwapIntervalSGI_t)(int theInterval);
   glXSwapIntervalSGI_t glXSwapIntervalSGI;
+
+  // GLX_MESA_query_renderer
+#ifndef GLX_RENDERER_VENDOR_ID_MESA
+  // for glXQueryRendererIntegerMESA() and glXQueryCurrentRendererIntegerMESA()
+  #define GLX_RENDERER_VENDOR_ID_MESA                      0x8183
+  #define GLX_RENDERER_DEVICE_ID_MESA                      0x8184
+  #define GLX_RENDERER_VERSION_MESA                        0x8185
+  #define GLX_RENDERER_ACCELERATED_MESA                    0x8186
+  #define GLX_RENDERER_VIDEO_MEMORY_MESA                   0x8187
+  #define GLX_RENDERER_UNIFIED_MEMORY_ARCHITECTURE_MESA    0x8188
+  #define GLX_RENDERER_PREFERRED_PROFILE_MESA              0x8189
+  #define GLX_RENDERER_OPENGL_CORE_PROFILE_VERSION_MESA    0x818A
+  #define GLX_RENDERER_OPENGL_COMPATIBILITY_PROFILE_VERSION_MESA 0x818B
+  #define GLX_RENDERER_OPENGL_ES_PROFILE_VERSION_MESA      0x818C
+  #define GLX_RENDERER_OPENGL_ES2_PROFILE_VERSION_MESA     0x818D
+
+  #define GLX_RENDERER_ID_MESA                             0x818E
+#endif // GLX_RENDERER_VENDOR_ID_MESA
+
+  typedef Bool (*glXQueryRendererIntegerMESA_t)(Display* theDisplay, int theScreen,
+                                                int theRenderer, int theAttribute,
+                                                unsigned int* theValue);
+  typedef Bool (*glXQueryCurrentRendererIntegerMESA_t)(int theAttribute, unsigned int* theValue);
+  typedef const char* (*glXQueryRendererStringMESA_t)(Display* theDisplay, int theScreen,
+                                                      int theRenderer, int theAttribute);
+  typedef const char* (*glXQueryCurrentRendererStringMESA_t)(int theAttribute);
+
+  glXQueryRendererIntegerMESA_t        glXQueryRendererIntegerMESA;
+  glXQueryCurrentRendererIntegerMESA_t glXQueryCurrentRendererIntegerMESA;
+  glXQueryRendererStringMESA_t         glXQueryRendererStringMESA;
+  glXQueryCurrentRendererStringMESA_t  glXQueryCurrentRendererStringMESA;
 #endif
 
 #endif // OpenGL ES vs. desktop

@@ -33,6 +33,7 @@
 #include <TopExp_Explorer.hxx>
 #include <TopExp.hxx>
 #include <TopoDS.hxx>
+#include <TopTools_MapOfShape.hxx>
 
 #include <ChFi2d_FilletAPI.hxx>
 #include <ChFi2d_ChamferAPI.hxx>
@@ -239,12 +240,12 @@ static gp_Pnt findCommonPoint(const TopoDS_Shape& W)
   // The common point for two edges inside a wire
   // is a sharing vertex of two edges.
   TopTools_MapOfShape vertices;
-  TopExp_Explorer expl(W, TopAbs_VERTEX);
-  for (; expl.More(); expl.Next())
+  TopExp_Explorer aExp(W, TopAbs_VERTEX);
+  for (; aExp.More(); aExp.Next())
   {
-    if (!vertices.Add(expl.Current()))
+    if (!vertices.Add(aExp.Current()))
     {
-      return BRep_Tool::Pnt(TopoDS::Vertex(expl.Current()));
+      return BRep_Tool::Pnt(TopoDS::Vertex(aExp.Current()));
     }
   }
   return gp::Origin(); // not found

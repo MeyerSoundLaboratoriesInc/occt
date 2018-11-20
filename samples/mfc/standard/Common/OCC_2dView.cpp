@@ -80,6 +80,7 @@ BOOL OCC_2dView::PreCreateWindow(CREATESTRUCT& cs)
 {
   // TODO: Modify the Window class or styles here by modifying
   //  the CREATESTRUCT cs
+  cs.lpszClass = ::AfxRegisterWndClass(CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | CS_OWNDC, ::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
   return CView::PreCreateWindow(cs);
 }
 
@@ -99,8 +100,6 @@ void OCC_2dView::OnInitialUpdate()
   Handle(WNT_Window) aWNTWindow = new WNT_Window(GetSafeHwnd(),Quantity_NOC_MATRAGRAY);	  
   myV2dView =((OCC_2dDoc*)GetDocument())->GetViewer2D()->CreateView();
   myV2dView->SetWindow(aWNTWindow);
-  myV2dView->SetZClippingType(V3d_OFF);
-  myV2dView->SetSurfaceDetail(V3d_TEX_ALL);
   // initialize the grids dialogs
   TheRectangularGridDialog.Create(CRectangularGrid::IDD, NULL);
   TheCircularGridDialog.Create(CCircularGrid::IDD, NULL);
@@ -233,7 +232,7 @@ void OCC_2dView::OnBUTTONGridValues()
     TheCircularGridDialog.ShowWindow(SW_SHOW);
     break;
   default :
-    Standard_Failure::Raise("invalid Aspect_GridType");
+    throw Standard_Failure("invalid Aspect_GridType");
   }
 }
 void OCC_2dView::OnUpdateBUTTONGridValues(CCmdUI* pCmdUI) 
@@ -283,7 +282,7 @@ void OCC_2dView::OnLButtonDown(UINT nFlags, CPoint point)
     case CurAction2d_GlobalPanning :// nothing
       break;
     default :
-      Standard_Failure::Raise(" incompatible Current Mode ");
+      throw Standard_Failure(" incompatible Current Mode ");
       break;
     }
   }
@@ -345,7 +344,7 @@ void OCC_2dView::OnLButtonUp(UINT nFlags, CPoint point)
       myCurrentMode = CurAction2d_Nothing;
       break;
     default :
-      Standard_Failure::Raise(" incompatible Current Mode ");
+      throw Standard_Failure(" incompatible Current Mode ");
       break;
     } //switch (myCurrentMode)
   } //	else // if ( CASCADESHORTCUTKEY )	
@@ -433,7 +432,7 @@ void OCC_2dView::OnMouseMove(UINT nFlags, CPoint point)
       case CurAction2d_GlobalPanning : // nothing
         break;
       default :
-        Standard_Failure::Raise(" incompatible Current Mode ");
+        throw Standard_Failure(" incompatible Current Mode ");
         break;
       }//  switch (myCurrentMode)
     }// if ( nFlags & CASCADESHORTCUTKEY )  else 
@@ -472,12 +471,12 @@ void OCC_2dView::OnMouseMove(UINT nFlags, CPoint point)
 }
 
 
-void OCC_2dView::OnSize(UINT /*nType*/, int /*cx*/, int /*cy*/) 
+void OCC_2dView::OnSize(UINT nType, int cx, int cy)
 {
+  OCC_BaseView::OnSize (nType, cx, cy);
   // Take care : This fonction is call before OnInitialUpdate
   if (!myV2dView.IsNull())
     myV2dView->MustBeResized(); 
-
 }
 
 void OCC_2dView::OnBUTTONFitAll() 
@@ -580,8 +579,8 @@ void OCC_2dView::DragEvent2D(const Standard_Integer  x,
 
   if (TheState == 0)
   {
-    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo(x,y,myV2dView);
-    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->Select(theButtonDownX,theButtonDownY,x,y,myV2dView);
+    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo (x, y, myV2dView, Standard_False);
+    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->Select (theButtonDownX, theButtonDownY, x, y, myV2dView, Standard_True);
   }
 
   if (TheState == 1)
@@ -608,12 +607,12 @@ void OCC_2dView::MoveEvent2D(const Standard_Integer  x,
 {
   if(myV2dView->Viewer()->Grid()->IsActive())
   {
-    Quantity_Length aGridX=0,aGridY=0,aGridZ=0;
+    Standard_Real aGridX=0,aGridY=0,aGridZ=0;
     myV2dView->ConvertToGrid(x,y,aGridX,aGridY,aGridZ);
     //View is not updated automatically in ConvertToGrid
     myV2dView->Update();
   }
-  ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo(x,y,myV2dView);
+  ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo (x, y, myV2dView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -623,7 +622,7 @@ void OCC_2dView::MultiMoveEvent2D(const Standard_Integer  x,
                                   const Standard_Integer  y) 
 {
 // MultiMoveEvent2D means we move the mouse in a multi selection mode
-((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo(x,y,myV2dView);
+((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo (x, y, myV2dView, Standard_True);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -644,8 +643,8 @@ void OCC_2dView::MultiDragEvent2D(const Standard_Integer  x        ,
 
   if (TheState == 0)
   {
-    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo(x,y,myV2dView);
-    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->ShiftSelect(theButtonDownX,theButtonDownY,x,y,myV2dView);;
+    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->MoveTo (x, y, myV2dView, Standard_False);
+    ((OCC_2dDoc*)GetDocument())->GetInteractiveContext()->ShiftSelect (theButtonDownX, theButtonDownY, x, y, myV2dView, Standard_True);
   }
 
   if (TheState == 1)

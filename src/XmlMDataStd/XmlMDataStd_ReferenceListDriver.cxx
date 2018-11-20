@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <LDOM_MemManager.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_ReferenceList.hxx>
@@ -31,12 +31,12 @@ IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_ReferenceListDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (FirstIndexString, "first")
 IMPLEMENT_DOMSTRING (LastIndexString,  "last")
 IMPLEMENT_DOMSTRING (ExtString,        "string")
-
+IMPLEMENT_DOMSTRING (AttributeIDString, "reflistattguid")
 //=======================================================================
 //function : XmlMDataStd_ReferenceListDriver
 //purpose  : Constructor
 //=======================================================================
-XmlMDataStd_ReferenceListDriver::XmlMDataStd_ReferenceListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+XmlMDataStd_ReferenceListDriver::XmlMDataStd_ReferenceListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : XmlMDF_ADriver (theMsgDriver, NULL)
 {
 
@@ -56,8 +56,8 @@ Handle(TDF_Attribute) XmlMDataStd_ReferenceListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persistent&  theSource,
-							const Handle(TDF_Attribute)& theTarget,
-							XmlObjMgt_RRelocationTable&  ) const
+                                                        const Handle(TDF_Attribute)& theTarget,
+                                                        XmlObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aFirstInd, aLastInd;
   const XmlObjMgt_Element& anElement = theSource;
@@ -72,7 +72,7 @@ Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persiste
       TCollection_ExtendedString("Cannot retrieve the first index"
                                  " for ReferenceList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -83,57 +83,64 @@ Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persiste
       TCollection_ExtendedString("Cannot retrieve the last index"
                                  " for ReferenceList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
-  if(aLastInd == 0) return Standard_True;
   const Handle(TDataStd_ReferenceList) aReferenceList = Handle(TDataStd_ReferenceList)::DownCast(theTarget);
-  
-  if (!anElement.hasChildNodes())
-  {
-    TCollection_ExtendedString aMessageString = 
-      TCollection_ExtendedString("Cannot retrieve a list of reference");
-    WriteMessage (aMessageString);
-    return Standard_False;
-  }
+  // attribute id
+  Standard_GUID aGUID;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_ReferenceList::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
+  aReferenceList->SetID(aGUID);
 
-  LDOM_Node aCurNode = anElement.getFirstChild();
-  LDOM_Element* aCurElement = (LDOM_Element*)&aCurNode;
-  XmlObjMgt_DOMString aValueStr;
-  while (*aCurElement != anElement.getLastChild())
-  {
-    aValueStr = XmlObjMgt::GetStringValue( *aCurElement );
-    if (aValueStr == NULL)
+  if(aLastInd > 0) {
+    if (!anElement.hasChildNodes())
     {
-      WriteMessage ("Cannot retrieve reference string from element");
+      TCollection_ExtendedString aMessageString = 
+        TCollection_ExtendedString("Cannot retrieve a list of reference");
+      myMessageDriver->Send (aMessageString, Message_Fail);
       return Standard_False;
     }
-    TCollection_AsciiString anEntry;
-    if (XmlObjMgt::GetTagEntryString (aValueStr, anEntry) == Standard_False)
+
+    LDOM_Node aCurNode = anElement.getFirstChild();
+    LDOM_Element* aCurElement = (LDOM_Element*)&aCurNode;
+    XmlObjMgt_DOMString aValueStr;
+    while (*aCurElement != anElement.getLastChild())
     {
-      TCollection_ExtendedString aMessage =
-      TCollection_ExtendedString ("Cannot retrieve reference from \"")
-      + aValueStr + '\"';
-      WriteMessage (aMessage);
-      return Standard_False;
+      aValueStr = XmlObjMgt::GetStringValue( *aCurElement );
+      if (aValueStr == NULL)
+      {
+        myMessageDriver->Send ("Cannot retrieve reference string from element", Message_Fail);
+        return Standard_False;
+      }
+      TCollection_AsciiString anEntry;
+      if (XmlObjMgt::GetTagEntryString (aValueStr, anEntry) == Standard_False)
+      {
+        TCollection_ExtendedString aMessage =
+        TCollection_ExtendedString ("Cannot retrieve reference from \"")
+        + aValueStr + '\"';
+        myMessageDriver->Send (aMessage, Message_Fail);
+        return Standard_False;
+      }
+      // Find label by entry
+      TDF_Label tLab; // Null label.
+      if (anEntry.Length() > 0)
+        TDF_Tool::Label(aReferenceList->Label().Data(), anEntry, tLab, Standard_True);
+
+      aReferenceList->Append(tLab);
+      aCurNode = aCurElement->getNextSibling();
+      aCurElement = (LDOM_Element*)&aCurNode;
     }
-    // Find label by entry
-    TDF_Label tLab; // Null label.
-    if (anEntry.Length() > 0)
-    {
-      TDF_Tool::Label(aReferenceList->Label().Data(), anEntry, tLab, Standard_True);
-    }
-    aReferenceList->Append(tLab);
-    aCurNode = aCurElement->getNextSibling();
-    aCurElement = (LDOM_Element*)&aCurNode;
-  }
 
   // Last reference
   aValueStr = XmlObjMgt::GetStringValue( *aCurElement );
   if (aValueStr == NULL)
   {
-    WriteMessage ("Cannot retrieve reference string from element");
+    myMessageDriver->Send ("Cannot retrieve reference string from element", Message_Fail);
     return Standard_False;
   }
   TCollection_AsciiString anEntry;
@@ -142,7 +149,7 @@ Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persiste
     TCollection_ExtendedString aMessage =
     TCollection_ExtendedString ("Cannot retrieve reference from \"")
     + aValueStr + '\"';
-    WriteMessage (aMessage);
+    myMessageDriver->Send (aMessage, Message_Fail);
     return Standard_False;
   }
   // Find label by entry
@@ -152,6 +159,7 @@ Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persiste
     TDF_Tool::Label(aReferenceList->Label().Data(), anEntry, tLab, Standard_True);
   }
   aReferenceList->Append(tLab);
+  }
 
   return Standard_True;
 }
@@ -161,14 +169,14 @@ Standard_Boolean XmlMDataStd_ReferenceListDriver::Paste(const XmlObjMgt_Persiste
 //purpose  : transient -> persistent (store)
 //=======================================================================
 void XmlMDataStd_ReferenceListDriver::Paste(const Handle(TDF_Attribute)& theSource,
-					    XmlObjMgt_Persistent&        theTarget,
-					    XmlObjMgt_SRelocationTable&  ) const
+                                            XmlObjMgt_Persistent&        theTarget,
+                                            XmlObjMgt_SRelocationTable&  ) const
 {
   const Handle(TDataStd_ReferenceList) aReferenceList = Handle(TDataStd_ReferenceList)::DownCast(theSource);
   TDF_Label L = aReferenceList->Label();
   if (L.IsNull())
   {
-    WriteMessage ("Label of a ReferenceList is Null.");
+    myMessageDriver->Send ("Label of a ReferenceList is Null.", Message_Fail);
     return;
   }
 
@@ -193,5 +201,13 @@ void XmlMDataStd_ReferenceListDriver::Paste(const Handle(TDF_Attribute)& theSour
       XmlObjMgt::SetStringValue (aCurTarget, aDOMString, Standard_True);
       anElement.appendChild( aCurTarget );
     }
+  }
+
+  if(aReferenceList->ID() != TDataStd_ReferenceList::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    aReferenceList->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
   }
 }

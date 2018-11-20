@@ -78,11 +78,6 @@ TopAbs_Orientation  TopOpeBRepDS_PointIterator::Orientation
 
 Standard_Real  TopOpeBRepDS_PointIterator::Parameter()const 
 {
-
-#ifdef OCCT_DEBUG
-//  cout<<"PointIterator : I = "; Value()->Dump(cout); cout<<endl;
-#endif
-
   const Handle(TopOpeBRepDS_Interference)& I = Value();
   Handle(Standard_Type) T = I->DynamicType(); 
   if      ( T == STANDARD_TYPE(TopOpeBRepDS_CurvePointInterference) ) { 
@@ -92,10 +87,8 @@ Standard_Real  TopOpeBRepDS_PointIterator::Parameter()const
     return Handle(TopOpeBRepDS_EdgeVertexInterference)::DownCast (I)->Parameter();
   }
   else {
-    Standard_ProgramError::Raise("TopOpeBRepDS_PointIterator::Parameter()");
-    return 0.;  // windowsNT
+    throw Standard_ProgramError("TopOpeBRepDS_PointIterator::Parameter()");
   }
-//  return 0.;  // windowsNT
 }
 
 //=======================================================================
@@ -131,10 +124,8 @@ Standard_Boolean TopOpeBRepDS_PointIterator::DiffOriented() const
       ->Config() == TopOpeBRepDS_DIFFORIENTED;
   }
   else {
-    Standard_ProgramError::Raise("TopOpeBRepDS_PointIterator::DiffOriented()");
-    return Standard_False; // windowsNT
+    throw Standard_ProgramError("TopOpeBRepDS_PointIterator::DiffOriented()");
   }
-//  return Standard_False; // windowsNT
 }
 
 //=======================================================================
@@ -150,8 +141,7 @@ Standard_Boolean TopOpeBRepDS_PointIterator::SameOriented() const
       ->Config() == TopOpeBRepDS_SAMEORIENTED;
   }
   else {
-    Standard_ProgramError::Raise("TopOpeBRepDS_PointIterator::SameOriented()");
-    return Standard_False; // windowsNT
+    throw Standard_ProgramError("TopOpeBRepDS_PointIterator::SameOriented()");
   }
 }
 

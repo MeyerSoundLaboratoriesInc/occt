@@ -7,7 +7,6 @@
 
 #include <Standard_Macro.hxx>
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_LocalContext.hxx>
 #include <AIS_LengthDimension.hxx>
 #include <GC_MakePlane.hxx>
 #include <TopExp.hxx>
@@ -60,7 +59,6 @@ CButton* CLengthParamsEdgePage::GetButton()
   return (CButton*)GetDlgItem (IDC_ChooseEdgeBtn);
 }
 
-#include <AIS_Selection.hxx>
 //=======================================================================
 //function : OnBnClickedChooseEdgeBtn
 //purpose  :
@@ -68,20 +66,19 @@ CButton* CLengthParamsEdgePage::GetButton()
 
 void CLengthParamsEdgePage::OnBnClickedChooseEdgeBtn()
 {
-  myAISContext->LocalContext()->InitSelected();
+  myAISContext->InitSelected();
 
-  if (!myAISContext->LocalContext()->MoreSelected())
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_EDGE)
   {
-    AfxMessageBox ( _T("Choose the vertex and press the button again"), MB_ICONINFORMATION | MB_OK);
+    AfxMessageBox ( _T("Choose the edge and press the button again"), MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  // Workaround for AIS_LocalContext::SelectedShape()
-  //TopoDS_Shape aSelShape = myAISContext->LocalContext()->SelectedShape();
-  TopoDS_Shape aSelShape = CDimensionDlg::SelectedShape();
+  TopoDS_Shape aSelShape = myAISContext->SelectedShape();
   const TopoDS_Edge& anEdge = TopoDS::Edge (aSelShape);
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_False);
   TopoDS_Vertex aFirstVertex, aSecondVertex;
   TopExp::Vertices (TopoDS::Edge (anEdge), aFirstVertex, aSecondVertex);
 
@@ -110,8 +107,6 @@ void CLengthParamsEdgePage::OnBnClickedChooseEdgeBtn()
   aLenDim->SetDimensionAspect (anAspect);
   aLenDim->SetFlyout (aDimDlg->GetFlyout());
 
-  myAISContext->CloseAllContexts();
-  myAISContext->Display (aLenDim);
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode(TopAbs_EDGE);
+  myAISContext->Display (aLenDim, Standard_True);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
 }

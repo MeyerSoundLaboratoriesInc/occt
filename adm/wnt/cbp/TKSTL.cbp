@@ -17,10 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__StlMesh_DLL" />
-					<Add option="-D__StlAPI_DLL" />
-					<Add option="-D__StlTransfer_DLL" />
-					<Add option="-D__RWStl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKSTL_obj.link" />
@@ -39,10 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__StlMesh_DLL" />
-					<Add option="-D__StlAPI_DLL" />
-					<Add option="-D__StlTransfer_DLL" />
-					<Add option="-D__RWStl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKSTL_objd.link" />
@@ -70,35 +62,19 @@
 			<Add library="TKBRep" />
 			<Add library="TKG2d" />
 			<Add library="TKG3d" />
-			<Add library="TKMesh" />
 			<Add library="TKTopAlgo" />
 		</Linker>
-		<Unit filename="../../../src/StlMesh/StlMesh.cxx" />
-		<Unit filename="../../../src/StlMesh/StlMesh_Mesh.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshDomain.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshExplorer.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/StlMesh/StlMesh_MeshTriangle.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/StlAPI/StlAPI.cxx">
-			<Option link="0" />
-		</Unit>
+		<Unit filename="../../../src/StlAPI/StlAPI.cxx" />
 		<Unit filename="../../../src/StlAPI/StlAPI_Reader.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/StlAPI/StlAPI_Writer.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/StlTransfer/StlTransfer.cxx">
+		<Unit filename="../../../src/RWStl/RWStl.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/RWStl/RWStl.cxx">
+		<Unit filename="../../../src/RWStl/RWStl_Reader.cxx">
 			<Option link="0" />
 		</Unit>
 	</Project>

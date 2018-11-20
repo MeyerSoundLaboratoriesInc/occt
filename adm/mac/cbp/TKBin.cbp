@@ -79,6 +79,7 @@
 		<Unit filename="../../../src/BinMDataXtd/BinMDataXtd_PositionDriver.cxx" />
 		<Unit filename="../../../src/BinMDataXtd/BinMDataXtd_PresentationDriver.cxx" />
 		<Unit filename="../../../src/BinMDataXtd/BinMDataXtd_ShapeDriver.cxx" />
+		<Unit filename="../../../src/BinMDataXtd/BinMDataXtd_TriangulationDriver.cxx" />
 		<Unit filename="../../../src/BinMNaming/BinMNaming.cxx" />
 		<Unit filename="../../../src/BinMNaming/BinMNaming_NamedShapeDriver.cxx" />
 		<Unit filename="../../../src/BinMNaming/BinMNaming_NamingDriver.cxx" />

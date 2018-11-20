@@ -170,7 +170,6 @@
 		<Unit filename="../../../src/BlendFunc/BlendFunc_Ruled.cxx" />
 		<Unit filename="../../../src/BlendFunc/BlendFunc_RuledInv.cxx" />
 		<Unit filename="../../../src/BlendFunc/BlendFunc_Tensor.cxx" />
-		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_LocalOperation.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeChamfer.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeFillet.cxx" />
 		<Unit filename="../../../src/BRepFilletAPI/BRepFilletAPI_MakeFillet2d.cxx" />

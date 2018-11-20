@@ -27,13 +27,13 @@ namespace
   void computeFrustumNormals (const gp_Vec* theEdges, gp_Vec* theNormals)
   {
     // V0V1
-    theNormals[0] = theEdges[0].Crossed (theEdges[1]);
+    theNormals[0] = theEdges[0].Crossed (theEdges[3]);
     // V1V2
-    theNormals[1] = theEdges[1].Crossed (theEdges[2]);
+    theNormals[1] = theEdges[1].Crossed (theEdges[4]);
     // V0V2
-    theNormals[2] = theEdges[0].Crossed (theEdges[2]);
+    theNormals[2] = theEdges[0].Crossed (theEdges[5]);
     // Near
-    theNormals[3] = theEdges[3].Crossed (theEdges[5]);
+    theNormals[3] = theEdges[3].Crossed (theEdges[4]);
     // Far
     theNormals[4] = -theNormals[3];
   }
@@ -44,7 +44,7 @@ namespace
 // purpose  : Caches projection of frustum's vertices onto its plane directions
 //            and {i, j, k}
 // =======================================================================
-void SelectMgr_TriangularFrustum::cacheVertexProjections (SelectMgr_TriangularFrustum* theFrustum)
+void SelectMgr_TriangularFrustum::cacheVertexProjections (SelectMgr_TriangularFrustum* theFrustum) const
 {
   for (Standard_Integer aPlaneIdx = 0; aPlaneIdx < 5; ++aPlaneIdx)
   {
@@ -128,23 +128,17 @@ void SelectMgr_TriangularFrustum::Build (const gp_Pnt2d& theP1,
 //                  as any negative value;
 //                - scale only is needed: @theTrsf must be set to gp_Identity.
 //=======================================================================
-NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_TriangularFrustum::ScaleAndTransform (const Standard_Integer /*theScale*/,
-                                                                                          const gp_Trsf& theTrsf)
+Handle(SelectMgr_BaseFrustum) SelectMgr_TriangularFrustum::ScaleAndTransform (const Standard_Integer /*theScale*/,
+                                                                              const gp_GTrsf& theTrsf) const
 {
-  SelectMgr_TriangularFrustum* aRes = new SelectMgr_TriangularFrustum();
+  Handle(SelectMgr_TriangularFrustum) aRes = new SelectMgr_TriangularFrustum();
 
-  // V0_Near
-  aRes->myVertices[0] = myVertices[0].Transformed (theTrsf);
-  // V1_Near
-  aRes->myVertices[1] = myVertices[1].Transformed (theTrsf);
-  // V2_Near
-  aRes->myVertices[2] = myVertices[2].Transformed (theTrsf);
-  // V0_Far
-  aRes->myVertices[3] = myVertices[3].Transformed (theTrsf);
-  // V1_Far
-  aRes->myVertices[4] = myVertices[4].Transformed (theTrsf);
-  // V2_Far
-  aRes->myVertices[5] = myVertices[5].Transformed (theTrsf);
+  for (Standard_Integer anIt = 0; anIt < 6; anIt++)
+  {
+    gp_Pnt aPoint = myVertices[anIt];
+    theTrsf.Transforms (aPoint.ChangeCoord());
+    aRes->myVertices[anIt] = aPoint;
+  }
 
   aRes->myIsOrthographic = myIsOrthographic;
 
@@ -163,9 +157,9 @@ NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_TriangularFrustum::ScaleAndT
 
   computeFrustumNormals (aRes->myEdgeDirs, aRes->myPlanes);
 
-  cacheVertexProjections (aRes);
+  cacheVertexProjections (aRes.get());
 
-  return NCollection_Handle<SelectMgr_BaseFrustum> (aRes);
+  return aRes;
 }
 
 //=======================================================================
@@ -284,4 +278,22 @@ Standard_Boolean SelectMgr_TriangularFrustum::Overlaps (const gp_Pnt& thePnt1,
 void SelectMgr_TriangularFrustum::Clear()
 {
   myBuilder.Nullify();
+}
+
+// =======================================================================
+// function : GetPlanes
+// purpose  :
+// =======================================================================
+void SelectMgr_TriangularFrustum::GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const
+{
+  SelectMgr_Vec4 aPlaneEquation;
+  for (Standard_Integer aPlaneIdx = 0; aPlaneIdx < 5; ++aPlaneIdx)
+  {
+    const gp_Vec& aNorm = myPlanes[aPlaneIdx];
+    aPlaneEquation.x() = aNorm.X();
+    aPlaneEquation.y() = aNorm.Y();
+    aPlaneEquation.z() = aNorm.Z();
+    aPlaneEquation.w() = - (aNorm.XYZ().Dot (myVertices[aPlaneIdx % 2 == 0 ? aPlaneIdx : 1].XYZ()));
+    thePlaneEquations.Append (aPlaneEquation);
+  }
 }

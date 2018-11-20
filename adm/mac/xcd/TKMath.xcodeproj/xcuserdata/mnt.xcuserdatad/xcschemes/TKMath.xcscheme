@@ -13,7 +13,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "072D181B07BD01FF0D281670"
+               BlueprintIdentifier = "182B1333092E03CF0A91077A"
                BuildableName = "libTKMath.dylib"
                BlueprintName = "TKMath"
                ReferencedContainer = "container:TKMath.xcodeproj">

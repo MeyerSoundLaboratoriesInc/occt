@@ -17,13 +17,13 @@
 #include <OpenGl_ArbFBO.hxx>
 #include <OpenGl_Context.hxx>
 #include <OpenGl_GlCore32.hxx>
+#include <OpenGl_Sampler.hxx>
 #include <Graphic3d_TextureParams.hxx>
 #include <TCollection_ExtendedString.hxx>
 #include <Standard_Assert.hxx>
 #include <Image_PixMap.hxx>
 
-
-IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Texture,OpenGl_Resource)
+IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Texture, OpenGl_NamedResource)
 
 //! Simple class to reset unpack alignment settings
 struct OpenGl_UnpackAlignmentSentry
@@ -49,22 +49,23 @@ struct OpenGl_UnpackAlignmentSentry
 // function : OpenGl_Texture
 // purpose  :
 // =======================================================================
-OpenGl_Texture::OpenGl_Texture (const Handle(Graphic3d_TextureParams)& theParams)
-: OpenGl_Resource(),
+OpenGl_Texture::OpenGl_Texture (const TCollection_AsciiString& theResourceId,
+                                const Handle(Graphic3d_TextureParams)& theParams)
+: OpenGl_NamedResource (theResourceId),
+  mySampler (new OpenGl_Sampler (theParams)),
+  myRevision (0),
   myTextureId (NO_TEXTURE),
   myTarget (GL_TEXTURE_2D),
   mySizeX (0),
   mySizeY (0),
   mySizeZ (0),
   myTextFormat (GL_RGBA),
+  mySizedFormat(GL_RGBA8),
+  myNbSamples  (1),
   myHasMipmaps (Standard_False),
-  myIsAlpha    (false),
-  myParams     (theParams)
+  myIsAlpha    (false)
 {
-  if (myParams.IsNull())
-  {
-    myParams = new Graphic3d_TextureParams();
-  }
+  //
 }
 
 // =======================================================================
@@ -77,43 +78,24 @@ OpenGl_Texture::~OpenGl_Texture()
 }
 
 // =======================================================================
-// function : HasMipmaps
-// purpose  :
-// =======================================================================
-Standard_Boolean OpenGl_Texture::HasMipmaps() const
-{
-  return myHasMipmaps;
-}
-
-// =======================================================================
-// function : GetParams
-// purpose  :
-// =======================================================================
-const Handle(Graphic3d_TextureParams)& OpenGl_Texture::GetParams() const
-{
-  return myParams;
-}
-
-// =======================================================================
-// function : SetParams
-// purpose  :
-// =======================================================================
-void OpenGl_Texture::SetParams (const Handle(Graphic3d_TextureParams)& theParams)
-{
-  myParams = theParams;
-}
-
-// =======================================================================
 // function : Create
 // purpose  :
 // =======================================================================
-bool OpenGl_Texture::Create (const Handle(OpenGl_Context)& )
+bool OpenGl_Texture::Create (const Handle(OpenGl_Context)& theCtx)
 {
+  if (myTextureId != NO_TEXTURE)
+  {
+    return true;
+  }
+
+  theCtx->core11fwd->glGenTextures (1, &myTextureId);
   if (myTextureId == NO_TEXTURE)
   {
-    glGenTextures (1, &myTextureId);
+    return false;
   }
-  return myTextureId != NO_TEXTURE;
+
+  //mySampler->Create (theCtx); // do not create sampler object by default
+  return true;
 }
 
 // =======================================================================
@@ -122,6 +104,7 @@ bool OpenGl_Texture::Create (const Handle(OpenGl_Context)& )
 // =======================================================================
 void OpenGl_Texture::Release (OpenGl_Context* theGlCtx)
 {
+  mySampler->Release (theGlCtx);
   if (myTextureId == NO_TEXTURE)
   {
     return;
@@ -136,7 +119,20 @@ void OpenGl_Texture::Release (OpenGl_Context* theGlCtx)
     glDeleteTextures (1, &myTextureId);
   }
   myTextureId = NO_TEXTURE;
-  mySizeX = mySizeY = 0;
+  mySizeX = mySizeY = mySizeZ = 0;
+}
+
+// =======================================================================
+// function : applyDefaultSamplerParams
+// purpose  :
+// =======================================================================
+void OpenGl_Texture::applyDefaultSamplerParams (const Handle(OpenGl_Context)& theCtx)
+{
+  OpenGl_Sampler::applySamplerParams (theCtx, mySampler->Parameters(), NULL, myTarget, myHasMipmaps);
+  if (mySampler->IsValid() && !mySampler->IsImmutable())
+  {
+    OpenGl_Sampler::applySamplerParams (theCtx, mySampler->Parameters(), mySampler.get(), myTarget, myHasMipmaps);
+  }
 }
 
 // =======================================================================
@@ -144,12 +140,13 @@ void OpenGl_Texture::Release (OpenGl_Context* theGlCtx)
 // purpose  :
 // =======================================================================
 void OpenGl_Texture::Bind (const Handle(OpenGl_Context)& theCtx,
-                           const GLenum theTextureUnit) const
+                           const Graphic3d_TextureUnit   theTextureUnit) const
 {
   if (theCtx->core15fwd != NULL)
   {
-    theCtx->core15fwd->glActiveTexture (theTextureUnit);
+    theCtx->core15fwd->glActiveTexture (GL_TEXTURE0 + theTextureUnit);
   }
+  mySampler->Bind (theCtx, theTextureUnit);
   glBindTexture (myTarget, myTextureId);
 }
 
@@ -158,13 +155,24 @@ void OpenGl_Texture::Bind (const Handle(OpenGl_Context)& theCtx,
 // purpose  :
 // =======================================================================
 void OpenGl_Texture::Unbind (const Handle(OpenGl_Context)& theCtx,
-                             const GLenum theTextureUnit) const
+                             const Graphic3d_TextureUnit   theTextureUnit) const
 {
   if (theCtx->core15fwd != NULL)
   {
-    theCtx->core15fwd->glActiveTexture (theTextureUnit);
+    theCtx->core15fwd->glActiveTexture (GL_TEXTURE0 + theTextureUnit);
   }
+  mySampler->Unbind (theCtx, theTextureUnit);
   glBindTexture (myTarget, NO_TEXTURE);
+}
+
+//=======================================================================
+//function : InitSamplerObject
+//purpose  :
+//=======================================================================
+bool OpenGl_Texture::InitSamplerObject (const Handle(OpenGl_Context)& theCtx)
+{
+  return myTextureId != NO_TEXTURE
+      && mySampler->Init (theCtx, *this);
 }
 
 //=======================================================================
@@ -182,7 +190,7 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
   theDataType    = 0;
   switch (theData.Format())
   {
-    case Image_PixMap::ImgGrayF:
+    case Image_Format_GrayF:
     {
       if (theCtx->core11 == NULL)
       {
@@ -191,13 +199,17 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       }
       else
       {
+      #if !defined(GL_ES_VERSION_2_0)
         theTextFormat  = GL_LUMINANCE8;
+      #else
+        theTextFormat  = GL_LUMINANCE;
+      #endif
         thePixelFormat = GL_LUMINANCE;
       }
       theDataType = GL_FLOAT;
       return true;
     }
-    case Image_PixMap::ImgAlphaF:
+    case Image_Format_AlphaF:
     {
       if (theCtx->core11 == NULL)
       {
@@ -206,20 +218,24 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       }
       else
       {
+      #if !defined(GL_ES_VERSION_2_0)
         theTextFormat  = GL_ALPHA8;
+      #else
+        theTextFormat  = GL_ALPHA;
+      #endif
         thePixelFormat = GL_ALPHA;
       }
       theDataType = GL_FLOAT;
       return true;
     }
-    case Image_PixMap::ImgRGBAF:
+    case Image_Format_RGBAF:
     {
       theTextFormat  = GL_RGBA8; // GL_RGBA32F
       thePixelFormat = GL_RGBA;
       theDataType    = GL_FLOAT;
       return true;
     }
-    case Image_PixMap::ImgBGRAF:
+    case Image_Format_BGRAF:
     {
       if (!theCtx->IsGlGreaterEqual (1, 2) && !theCtx->extBgra)
       {
@@ -230,14 +246,14 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       theDataType    = GL_FLOAT;
       return true;
     }
-    case Image_PixMap::ImgRGBF:
+    case Image_Format_RGBF:
     {
       theTextFormat  = GL_RGB8; // GL_RGB32F
       thePixelFormat = GL_RGB;
       theDataType    = GL_FLOAT;
       return true;
     }
-    case Image_PixMap::ImgBGRF:
+    case Image_Format_BGRF:
     {
     #if !defined(GL_ES_VERSION_2_0)
       theTextFormat  = GL_RGB8; // GL_RGB32F
@@ -248,50 +264,72 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       return false;
     #endif
     }
-    case Image_PixMap::ImgRGBA:
+    case Image_Format_RGBA:
     {
       theTextFormat = GL_RGBA8;
       thePixelFormat = GL_RGBA;
       theDataType    = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgBGRA:
+    case Image_Format_BGRA:
     {
+    #if !defined(GL_ES_VERSION_2_0)
       if (!theCtx->IsGlGreaterEqual (1, 2) && !theCtx->extBgra)
       {
         return false;
       }
       theTextFormat  = GL_RGBA8;
+    #else
+      if (!theCtx->extBgra)
+      {
+        return false;
+      }
+      theTextFormat  = GL_BGRA_EXT;
+    #endif
       thePixelFormat = GL_BGRA_EXT; // equals to GL_BGRA
       theDataType    = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgRGB32:
+    case Image_Format_RGB32:
     {
-      theTextFormat = GL_RGB8;
+    #if !defined(GL_ES_VERSION_2_0)
+      // ask driver to convert data to RGB8 to save memory
+      theTextFormat  = GL_RGB8;
+    #else
+      // conversion is not supported
+      theTextFormat  = GL_RGBA8;
+    #endif
       thePixelFormat = GL_RGBA;
       theDataType    = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgBGR32:
+    case Image_Format_BGR32:
     {
-      if (!theCtx->IsGlGreaterEqual (1, 2) && !theCtx->extBgra)
+    #if !defined(GL_ES_VERSION_2_0)
+      if (!theCtx->IsGlGreaterEqual(1, 2) && !theCtx->extBgra)
       {
         return false;
       }
       theTextFormat  = GL_RGB8;
+    #else
+      if (!theCtx->extBgra)
+      {
+        return false;
+      }
+      theTextFormat  = GL_BGRA_EXT;
+    #endif
       thePixelFormat = GL_BGRA_EXT; // equals to GL_BGRA
       theDataType    = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgRGB:
+    case Image_Format_RGB:
     {
       theTextFormat = GL_RGB8;
       thePixelFormat = GL_RGB;
       theDataType    = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgBGR:
+    case Image_Format_BGR:
     {
     #if !defined(GL_ES_VERSION_2_0)
       if (!theCtx->IsGlGreaterEqual (1, 2) && !theCtx->extBgra)
@@ -306,7 +344,7 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       return false;
     #endif
     }
-    case Image_PixMap::ImgGray:
+    case Image_Format_Gray:
     {
       if (theCtx->core11 == NULL)
       {
@@ -315,13 +353,17 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       }
       else
       {
+      #if !defined(GL_ES_VERSION_2_0)
         theTextFormat  = GL_LUMINANCE8;
+      #else
+        theTextFormat  = GL_LUMINANCE;
+      #endif
         thePixelFormat = GL_LUMINANCE;
       }
       theDataType = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgAlpha:
+    case Image_Format_Alpha:
     {
       if (theCtx->core11 == NULL)
       {
@@ -330,13 +372,17 @@ bool OpenGl_Texture::GetDataFormat (const Handle(OpenGl_Context)& theCtx,
       }
       else
       {
+      #if !defined(GL_ES_VERSION_2_0)
         theTextFormat  = GL_ALPHA8;
+      #else
+        theTextFormat  = GL_ALPHA;
+      #endif
         thePixelFormat = GL_ALPHA;
       }
       theDataType = GL_UNSIGNED_BYTE;
       return true;
     }
-    case Image_PixMap::ImgUNKNOWN:
+    case Image_Format_UNKNOWN:
     {
       return false;
     }
@@ -357,6 +403,20 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
                            const Graphic3d_TypeOfTexture theType,
                            const Image_PixMap*           theImage)
 {
+#if !defined(GL_ES_VERSION_2_0)
+  const GLenum aTarget = theType == Graphic3d_TOT_1D
+                       ? GL_TEXTURE_1D
+                       : GL_TEXTURE_2D;
+#else
+  const GLenum aTarget = GL_TEXTURE_2D;
+#endif
+  const Standard_Boolean toCreateMipMaps = (theType == Graphic3d_TOT_2D_MIPMAP);
+  const bool toPatchExisting = IsValid()
+                            && myTextFormat == thePixelFormat
+                            && myTarget == aTarget
+                            && myHasMipmaps == toCreateMipMaps
+                            && mySizeX  == theSizeX
+                            && (mySizeY == theSizeY || theType == Graphic3d_TOT_1D);
   if (!Create (theCtx))
   {
     Release (theCtx.operator->());
@@ -365,31 +425,39 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
 
   if (theImage != NULL)
   {
-    myIsAlpha = theImage->Format() == Image_PixMap::ImgAlpha
-             || theImage->Format() == Image_PixMap::ImgAlphaF;
+    myIsAlpha = theImage->Format() == Image_Format_Alpha
+             || theImage->Format() == Image_Format_AlphaF;
   }
   else
   {
     myIsAlpha = thePixelFormat == GL_ALPHA;
   }
 
-  myHasMipmaps             = Standard_False;
+  myHasMipmaps             = toCreateMipMaps;
   myTextFormat             = thePixelFormat;
+  mySizedFormat            = theTextFormat;
+  myNbSamples              = 1;
 #if !defined(GL_ES_VERSION_2_0)
   const GLint anIntFormat  = theTextFormat;
 #else
-  // ES does not support sized formats and format conversions - them detected from data type
-  const GLint anIntFormat  = thePixelFormat;
-  (void) theTextFormat;
+  // ES 2.0 does not support sized formats and format conversions - them detected from data type
+  const GLint anIntFormat  = theCtx->IsGlGreaterEqual (3, 0) ? theTextFormat : thePixelFormat;
 #endif
-  const GLsizei aWidth     = theSizeX;
-  const GLsizei aHeight    = theSizeY;
-  const GLsizei aMaxSize   = theCtx->MaxTextureSize();
 
-  if (aWidth > aMaxSize || aHeight > aMaxSize)
+  if (theDataType == GL_FLOAT && !theCtx->arbTexFloat)
+  {
+    theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                         "Error: floating-point textures are not supported by hardware.");
+    Release (theCtx.operator->());
+    return false;
+  }
+
+  const GLsizei aMaxSize = theCtx->MaxTextureSize();
+  if (theSizeX > aMaxSize
+   || theSizeY > aMaxSize)
   {
     TCollection_ExtendedString aWarnMessage = TCollection_ExtendedString ("Error: Texture dimension - ")
-      + aWidth + "x" + aHeight + " exceeds hardware limits (" + aMaxSize + "x" + aMaxSize + ")";
+      + theSizeX + "x" + theSizeY + " exceeds hardware limits (" + aMaxSize + "x" + aMaxSize + ")";
 
     theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, aWarnMessage);
     Release (theCtx.operator->());
@@ -402,13 +470,14 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
     // however some hardware (NV30 - GeForce FX, RadeOn 9xxx and Xxxx) supports GLSL but not NPOT!
     // Trying to create NPOT textures on such hardware will not fail
     // but driver will fall back into software rendering,
-    const GLsizei aWidthP2  = OpenGl_Context::GetPowerOfTwo (aWidth, aMaxSize);
-    const GLsizei aHeightP2 = OpenGl_Context::GetPowerOfTwo (aHeight, aMaxSize);
+    const GLsizei aWidthP2  = OpenGl_Context::GetPowerOfTwo (theSizeX, aMaxSize);
+    const GLsizei aHeightP2 = OpenGl_Context::GetPowerOfTwo (theSizeY, aMaxSize);
 
-    if (aWidth != aWidthP2 || (theType != Graphic3d_TOT_1D && aHeight != aHeightP2))
+    if (theSizeX != aWidthP2
+     || (theType != Graphic3d_TOT_1D && theSizeY != aHeightP2))
     {
       TCollection_ExtendedString aWarnMessage =
-        TCollection_ExtendedString ("Error: NPOT Textures (") + aWidth + "x" + aHeight + ") are not supported by hardware.";
+        TCollection_ExtendedString ("Error: NPOT Textures (") + theSizeX + "x" + theSizeY + ") are not supported by hardware.";
 
       theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH, aWarnMessage);
 
@@ -420,13 +489,14 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
   else if (!theCtx->IsGlGreaterEqual (3, 0) && theType == Graphic3d_TOT_2D_MIPMAP)
   {
     // Mipmap NPOT textures are not supported by OpenGL ES 2.0.
-    const GLsizei aWidthP2  = OpenGl_Context::GetPowerOfTwo (aWidth, aMaxSize);
-    const GLsizei aHeightP2 = OpenGl_Context::GetPowerOfTwo (aHeight, aMaxSize);
+    const GLsizei aWidthP2  = OpenGl_Context::GetPowerOfTwo (theSizeX, aMaxSize);
+    const GLsizei aHeightP2 = OpenGl_Context::GetPowerOfTwo (theSizeY, aMaxSize);
 
-    if (aWidth != aWidthP2 || aHeight != aHeightP2)
+    if (theSizeX != aWidthP2
+     || theSizeY != aHeightP2)
     {
       TCollection_ExtendedString aWarnMessage =
-        TCollection_ExtendedString ("Error: Mipmap NPOT Textures (") + aWidth + "x" + aHeight + ") are not supported by OpenGL ES 2.0";
+        TCollection_ExtendedString ("Error: Mipmap NPOT Textures (") + theSizeX + "x" + theSizeY + ") are not supported by OpenGL ES 2.0";
 
       theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH, aWarnMessage);
 
@@ -435,9 +505,6 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
     }
   }
 #endif
-
-  const GLenum  aFilter   = (myParams->Filter() == Graphic3d_TOTF_NEAREST) ? GL_NEAREST : GL_LINEAR;
-  const GLenum  aWrapMode = myParams->IsRepeat() ? GL_REPEAT : theCtx->TextureWrapClamp();
 
 #if !defined(GL_ES_VERSION_2_0)
   GLint aTestWidth  = 0;
@@ -462,22 +529,28 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
   #endif
   }
 
+  myTarget = aTarget;
   switch (theType)
   {
     case Graphic3d_TOT_1D:
     {
     #if !defined(GL_ES_VERSION_2_0)
-      myTarget = GL_TEXTURE_1D;
       Bind (theCtx);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, aFilter);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, aFilter);
-      glTexParameteri (GL_TEXTURE_1D, GL_TEXTURE_WRAP_S,     aWrapMode);
+      applyDefaultSamplerParams (theCtx);
+      if (toPatchExisting)
+      {
+        glTexSubImage1D (GL_TEXTURE_1D, 0, 0,
+                         theSizeX, thePixelFormat, theDataType, aDataPtr);
+        Unbind (theCtx);
+        return true;
+      }
 
       // use proxy to check texture could be created or not
       glTexImage1D (GL_PROXY_TEXTURE_1D, 0, anIntFormat,
-                    aWidth, 0,
+                    theSizeX, 0,
                     thePixelFormat, theDataType, NULL);
-      glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &aTestWidth);
+      glGetTexLevelParameteriv (GL_PROXY_TEXTURE_1D, 0, GL_TEXTURE_WIDTH, &aTestWidth);
+      glGetTexLevelParameteriv (GL_PROXY_TEXTURE_1D, 0, GL_TEXTURE_INTERNAL_FORMAT, &mySizedFormat);
       if (aTestWidth == 0)
       {
         // no memory or broken input parameters
@@ -487,7 +560,7 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
       }
 
       glTexImage1D (GL_TEXTURE_1D, 0, anIntFormat,
-                    aWidth, 0,
+                    theSizeX, 0,
                     thePixelFormat, theDataType, aDataPtr);
       if (glGetError() != GL_NO_ERROR)
       {
@@ -496,32 +569,40 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
         return false;
       }
 
-      mySizeX = aWidth;
+      mySizeX = theSizeX;
       mySizeY = 1;
 
       Unbind (theCtx);
       return true;
     #else
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error: 1D textures are not supported by hardware.");
       Release (theCtx.operator->());
       return false;
     #endif
     }
     case Graphic3d_TOT_2D:
     {
-      myTarget = GL_TEXTURE_2D;
       Bind (theCtx);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, aFilter);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, aFilter);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     aWrapMode);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     aWrapMode);
+      applyDefaultSamplerParams (theCtx);
+      if (toPatchExisting)
+      {
+        glTexSubImage2D (GL_TEXTURE_2D, 0,
+                         0, 0,
+                         theSizeX, theSizeY,
+                         thePixelFormat, theDataType, aDataPtr);
+        Unbind (theCtx);
+        return true;
+      }
 
     #if !defined(GL_ES_VERSION_2_0)
       // use proxy to check texture could be created or not
       glTexImage2D (GL_PROXY_TEXTURE_2D, 0, anIntFormat,
-                    aWidth, aHeight, 0,
+                    theSizeX, theSizeY, 0,
                     thePixelFormat, theDataType, NULL);
       glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &aTestWidth);
       glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &aTestHeight);
+      glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &mySizedFormat);
       if (aTestWidth == 0 || aTestHeight == 0)
       {
         // no memory or broken input parameters
@@ -532,50 +613,60 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
     #endif
 
       glTexImage2D (GL_TEXTURE_2D, 0, anIntFormat,
-                    aWidth, aHeight, 0,
+                    theSizeX, theSizeY, 0,
                     thePixelFormat, theDataType, aDataPtr);
-      if (glGetError() != GL_NO_ERROR)
+      const GLenum anErr = glGetError();
+      if (anErr != GL_NO_ERROR)
       {
+        theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                             TCollection_AsciiString ("Error: 2D texture ") + theSizeX + "x" + theSizeY
+                                                   + " IF: " + int(anIntFormat) + " PF: " + int(thePixelFormat) + " DT: " + int(theDataType)
+                                                   + " can not be created with error " + int(anErr) + ".");
         Unbind (theCtx);
         Release (theCtx.operator->());
         return false;
       }
 
-      mySizeX = aWidth;
-      mySizeY = aHeight;
+      mySizeX = theSizeX;
+      mySizeY = theSizeY;
 
       Unbind (theCtx);
       return true;
     }
     case Graphic3d_TOT_2D_MIPMAP:
     {
-      myTarget     = GL_TEXTURE_2D;
-      myHasMipmaps = Standard_True;
-
-      GLenum aFilterMin = aFilter;
-      aFilterMin = GL_NEAREST_MIPMAP_NEAREST;
-      if (myParams->Filter() == Graphic3d_TOTF_BILINEAR)
-      {
-        aFilterMin = GL_LINEAR_MIPMAP_NEAREST;
-      }
-      else if (myParams->Filter() == Graphic3d_TOTF_TRILINEAR)
-      {
-        aFilterMin = GL_LINEAR_MIPMAP_LINEAR;
-      }
-
       Bind (theCtx);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, aFilterMin);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, aFilter);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     aWrapMode);
-      glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     aWrapMode);
+      applyDefaultSamplerParams (theCtx);
+      if (toPatchExisting)
+      {
+        glTexSubImage2D (GL_TEXTURE_2D, 0,
+                         0, 0,
+                         theSizeX, theSizeY,
+                         thePixelFormat, theDataType, aDataPtr);
+        if (theCtx->arbFBO != NULL)
+        {
+          // generate mipmaps
+          theCtx->arbFBO->glGenerateMipmap (GL_TEXTURE_2D);
+          if (glGetError() != GL_NO_ERROR)
+          {
+            Unbind (theCtx);
+            Release (theCtx.operator->());
+            return false;
+          }
+        }
+
+        Unbind (theCtx);
+        return true;
+      }
 
     #if !defined(GL_ES_VERSION_2_0)
       // use proxy to check texture could be created or not
       glTexImage2D (GL_PROXY_TEXTURE_2D, 0, anIntFormat,
-                    aWidth, aHeight, 0,
+                    theSizeX, theSizeY, 0,
                     thePixelFormat, theDataType, NULL);
       glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,  &aTestWidth);
       glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &aTestHeight);
+      glGetTexLevelParameteriv (GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &mySizedFormat);
       if (aTestWidth == 0 || aTestHeight == 0)
       {
         // no memory or broken input parameters
@@ -587,17 +678,22 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
 
       // upload main picture
       glTexImage2D (GL_TEXTURE_2D, 0, anIntFormat,
-                    aWidth, aHeight, 0,
+                    theSizeX, theSizeY, 0,
                     thePixelFormat, theDataType, theImage->Data());
-      if (glGetError() != GL_NO_ERROR)
+      const GLenum aTexImgErr = glGetError();
+      if (aTexImgErr != GL_NO_ERROR)
       {
+        theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                             TCollection_AsciiString ("Error: 2D texture ") + theSizeX + "x" + theSizeY
+                                                    + " IF: " + int(anIntFormat) + " PF: " + int(thePixelFormat) + " DT: " + int(theDataType)
+                                                    + " can not be created with error " + int(aTexImgErr) + ".");
         Unbind (theCtx);
         Release (theCtx.operator->());
         return false;
       }
 
-      mySizeX = aWidth;
-      mySizeY = aHeight;
+      mySizeX = theSizeX;
+      mySizeY = theSizeY;
 
       if (theCtx->arbFBO != NULL)
       {
@@ -626,12 +722,10 @@ bool OpenGl_Texture::Init (const Handle(OpenGl_Context)& theCtx,
       Unbind (theCtx);
       return true;
     }
-    default:
-    {
-      Release (theCtx.operator->());
-      return false;
-    }
   }
+
+  Release (theCtx.operator->());
+  return false;
 }
 
 // =======================================================================
@@ -681,8 +775,9 @@ bool OpenGl_Texture::Init2DMultisample (const Handle(OpenGl_Context)& theCtx,
     return false;
   }
 
-  const GLsizei aNbSamples = OpenGl_Context::GetPowerOfTwo (theNbSamples, theCtx->MaxMsaaSamples());
+  myNbSamples = OpenGl_Context::GetPowerOfTwo (theNbSamples, theCtx->MaxMsaaSamples());
   myTarget = GL_TEXTURE_2D_MULTISAMPLE;
+  myHasMipmaps = false;
   if(theSizeX > theCtx->MaxTextureSize()
   || theSizeY > theCtx->MaxTextureSize())
   {
@@ -691,17 +786,18 @@ bool OpenGl_Texture::Init2DMultisample (const Handle(OpenGl_Context)& theCtx,
 
   Bind (theCtx);
   //myTextFormat = theTextFormat;
+  mySizedFormat = theTextFormat;
 #if !defined(GL_ES_VERSION_2_0)
   if (theCtx->Functions()->glTexStorage2DMultisample != NULL)
   {
-    theCtx->Functions()->glTexStorage2DMultisample (myTarget, aNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
+    theCtx->Functions()->glTexStorage2DMultisample (myTarget, myNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
   }
   else
   {
-    theCtx->Functions()->glTexImage2DMultisample   (myTarget, aNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
+    theCtx->Functions()->glTexImage2DMultisample   (myTarget, myNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
   }
 #else
-  theCtx->Functions()  ->glTexStorage2DMultisample (myTarget, aNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
+  theCtx->Functions()  ->glTexStorage2DMultisample (myTarget, myNbSamples, theTextFormat, theSizeX, theSizeY, GL_FALSE);
 #endif
   if (theCtx->core11fwd->glGetError() != GL_NO_ERROR)
   {
@@ -732,38 +828,28 @@ bool OpenGl_Texture::InitRectangle (const Handle(OpenGl_Context)& theCtx,
 
 #if !defined(GL_ES_VERSION_2_0)
   myTarget = GL_TEXTURE_RECTANGLE;
+  myNbSamples = 1;
+  myHasMipmaps = false;
 
   const GLsizei aSizeX    = Min (theCtx->MaxTextureSize(), theSizeX);
   const GLsizei aSizeY    = Min (theCtx->MaxTextureSize(), theSizeY);
-  const GLenum  aFilter   = (myParams->Filter() == Graphic3d_TOTF_NEAREST) ? GL_NEAREST : GL_LINEAR;
-  const GLenum  aWrapMode = myParams->IsRepeat() ? GL_REPEAT : theCtx->TextureWrapClamp();
 
   Bind (theCtx);
-  glTexParameteri (myTarget, GL_TEXTURE_MIN_FILTER, aFilter);
-  glTexParameteri (myTarget, GL_TEXTURE_MAG_FILTER, aFilter);
-  glTexParameteri (myTarget, GL_TEXTURE_WRAP_S,     aWrapMode);
-  glTexParameteri (myTarget, GL_TEXTURE_WRAP_T,     aWrapMode);
+  applyDefaultSamplerParams (theCtx);
 
-  const GLint anIntFormat = theFormat.Internal();
-  myTextFormat = theFormat.Format();
+  myTextFormat  = theFormat.Format();
+  mySizedFormat = theFormat.Internal();
 
-  glTexImage2D (GL_PROXY_TEXTURE_RECTANGLE,
-                0,
-                anIntFormat,
-                aSizeX,
-                aSizeY,
-                0,
-                theFormat.Format(),
-                GL_FLOAT,
-                NULL);
+  glTexImage2D (GL_PROXY_TEXTURE_RECTANGLE, 0, mySizedFormat,
+                aSizeX, aSizeY, 0,
+                myTextFormat, GL_FLOAT, NULL);
 
   GLint aTestSizeX = 0;
   GLint aTestSizeY = 0;
 
-  glGetTexLevelParameteriv (
-    GL_PROXY_TEXTURE_RECTANGLE, 0, GL_TEXTURE_WIDTH,  &aTestSizeX);
-  glGetTexLevelParameteriv (
-    GL_PROXY_TEXTURE_RECTANGLE, 0, GL_TEXTURE_HEIGHT, &aTestSizeY);
+  glGetTexLevelParameteriv (GL_PROXY_TEXTURE_RECTANGLE, 0, GL_TEXTURE_WIDTH,  &aTestSizeX);
+  glGetTexLevelParameteriv (GL_PROXY_TEXTURE_RECTANGLE, 0, GL_TEXTURE_HEIGHT, &aTestSizeY);
+  glGetTexLevelParameteriv (GL_PROXY_TEXTURE_RECTANGLE, 0, GL_TEXTURE_INTERNAL_FORMAT, &mySizedFormat);
 
   if (aTestSizeX == 0 || aTestSizeY == 0)
   {
@@ -771,15 +857,9 @@ bool OpenGl_Texture::InitRectangle (const Handle(OpenGl_Context)& theCtx,
     return false;
   }
 
-  glTexImage2D (myTarget,
-                0,
-                anIntFormat,
-                aSizeX,
-                aSizeY,
-                0,
-                theFormat.Format(),
-                GL_FLOAT,
-                NULL);
+  glTexImage2D (myTarget, 0, mySizedFormat,
+                aSizeX, aSizeY, 0,
+                myTextFormat, GL_FLOAT, NULL);
 
   if (glGetError() != GL_NO_ERROR)
   {
@@ -832,6 +912,8 @@ bool OpenGl_Texture::Init3D (const Handle(OpenGl_Context)& theCtx,
   }
 
   myTarget = GL_TEXTURE_3D;
+  myNbSamples = 1;
+  myHasMipmaps = false;
 
   const GLsizei aSizeX = Min (theCtx->MaxTextureSize(), theSizeX);
   const GLsizei aSizeY = Min (theCtx->MaxTextureSize(), theSizeY);
@@ -854,19 +936,12 @@ bool OpenGl_Texture::Init3D (const Handle(OpenGl_Context)& theCtx,
     return false;
   }
 
-  const GLint anIntFormat = theTextFormat;
+  mySizedFormat = theTextFormat;
 
 #if !defined (GL_ES_VERSION_2_0)
-  theCtx->core15fwd->glTexImage3D (GL_PROXY_TEXTURE_3D,
-                                   0,
-                                   anIntFormat,
-                                   aSizeX,
-                                   aSizeY,
-                                   aSizeZ,
-                                   0,
-                                   thePixelFormat,
-                                   theDataType,
-                                   NULL);
+  theCtx->core15fwd->glTexImage3D (GL_PROXY_TEXTURE_3D, 0, mySizedFormat,
+                                   aSizeX, aSizeY, aSizeZ, 0,
+                                   thePixelFormat, theDataType, NULL);
 
   GLint aTestSizeX = 0;
   GLint aTestSizeY = 0;
@@ -875,6 +950,7 @@ bool OpenGl_Texture::Init3D (const Handle(OpenGl_Context)& theCtx,
   glGetTexLevelParameteriv (GL_PROXY_TEXTURE_3D, 0, GL_TEXTURE_WIDTH, &aTestSizeX);
   glGetTexLevelParameteriv (GL_PROXY_TEXTURE_3D, 0, GL_TEXTURE_HEIGHT, &aTestSizeY);
   glGetTexLevelParameteriv (GL_PROXY_TEXTURE_3D, 0, GL_TEXTURE_DEPTH, &aTestSizeZ);
+  glGetTexLevelParameteriv (GL_PROXY_TEXTURE_3D, 0, GL_TEXTURE_INTERNAL_FORMAT, &mySizedFormat);
 
   if (aTestSizeX == 0 || aTestSizeY == 0 || aTestSizeZ == 0)
   {
@@ -884,26 +960,10 @@ bool OpenGl_Texture::Init3D (const Handle(OpenGl_Context)& theCtx,
   }
 #endif
 
-  const GLenum aWrapMode = myParams->IsRepeat() ? GL_REPEAT :  theCtx->TextureWrapClamp();
-  const GLenum aFilter   = (myParams->Filter() == Graphic3d_TOTF_NEAREST) ? GL_NEAREST : GL_LINEAR;
-
-  glTexParameteri (myTarget, GL_TEXTURE_WRAP_S, aWrapMode);
-  glTexParameteri (myTarget, GL_TEXTURE_WRAP_T, aWrapMode);
-  glTexParameteri (myTarget, GL_TEXTURE_WRAP_R, aWrapMode);
-
-  glTexParameteri (myTarget, GL_TEXTURE_MIN_FILTER, aFilter);
-  glTexParameteri (myTarget, GL_TEXTURE_MAG_FILTER, aFilter);
-
-  theCtx->Functions()->glTexImage3D (myTarget,
-                                     0,
-                                     anIntFormat,
-                                     aSizeX,
-                                     aSizeY,
-                                     aSizeZ,
-                                     0,
-                                     thePixelFormat,
-                                     theDataType,
-                                     thePixels);
+  applyDefaultSamplerParams (theCtx);
+  theCtx->Functions()->glTexImage3D (myTarget, 0, mySizedFormat,
+                                     aSizeX, aSizeY, aSizeZ, 0,
+                                     thePixelFormat, theDataType, thePixels);
 
   if (glGetError() != GL_NO_ERROR)
   {
@@ -918,4 +978,77 @@ bool OpenGl_Texture::Init3D (const Handle(OpenGl_Context)& theCtx,
 
   Unbind (theCtx);
   return true;
+}
+
+// =======================================================================
+// function : PixelSizeOfPixelFormat
+// purpose  :
+// =======================================================================
+Standard_Size OpenGl_Texture::PixelSizeOfPixelFormat (Standard_Integer theInternalFormat)
+{
+  switch(theInternalFormat)
+  {
+    // RED variations (GL_RED, OpenGL 3.0+)
+    case GL_RED:
+    case GL_R8:       return 1;
+    case GL_R16:      return 2;
+    case GL_R16F:     return 2;
+    case GL_R32F:     return 4;
+    // RGB variations
+    case GL_RGB:      return 3;
+    case GL_RGB8:     return 3;
+    case GL_RGB16:    return 6;
+    case GL_RGB16F:   return 6;
+    case GL_RGB32F:   return 12;
+    // RGBA variations
+    case GL_RGBA:     return 4;
+    case GL_RGBA8:    return 4;
+    case GL_RGB10_A2: return 4;
+    case GL_RGBA12:   return 6;
+    case GL_RGBA16:   return 8;
+    case GL_RGBA16F:  return 8;
+    case GL_RGBA32F:  return 16;
+    //
+    case GL_BGRA_EXT:  return 4;
+    // ALPHA variations (deprecated)
+    case GL_ALPHA:
+    case GL_ALPHA8:    return 1;
+    case GL_ALPHA16:   return 2;
+    case GL_LUMINANCE: return 1;
+    case GL_LUMINANCE_ALPHA: return 2;
+    // depth-stencil
+    case GL_DEPTH24_STENCIL8:   return 4;
+    case GL_DEPTH32F_STENCIL8:  return 8;
+    case GL_DEPTH_COMPONENT16:  return 2;
+    case GL_DEPTH_COMPONENT24:  return 3;
+    case GL_DEPTH_COMPONENT32F: return 4;
+  }
+  return 0;
+}
+
+// =======================================================================
+// function : EstimatedDataSize
+// purpose  :
+// =======================================================================
+Standard_Size OpenGl_Texture::EstimatedDataSize() const
+{
+  if (!IsValid())
+  {
+    return 0;
+  }
+
+  Standard_Size aSize = PixelSizeOfPixelFormat (mySizedFormat) * mySizeX * myNbSamples;
+  if (mySizeY != 0)
+  {
+    aSize *= Standard_Size(mySizeY);
+  }
+  if (mySizeZ != 0)
+  {
+    aSize *= Standard_Size(mySizeZ);
+  }
+  if (myHasMipmaps)
+  {
+    aSize = aSize + aSize / 3;
+  }
+  return aSize;
 }

@@ -5,7 +5,6 @@
 #include "LengthParamsEdgesPage.h"
 #include "DimensionDlg.h"
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_LocalContext.hxx>
 #include <AIS_LengthDimension.hxx>
 #include <AIS_AngleDimension.hxx>
 #include <GC_MakePlane.hxx>
@@ -58,31 +57,22 @@ END_MESSAGE_MAP()
 
 void CLengthParamsEdgesPage::OnBnClickedEdge1Btn()
 {
-  // Open local context and choose the edge for length dimensions
-  if (!myAISContext->HasOpenedContext())
-  {
-    myAISContext->OpenLocalContext();
-    myAISContext->ActivateStandardMode (TopAbs_EDGE);
-    AfxMessageBox (_T("Local context was not opened. Choose the edge and press the button again"),
-                     MB_ICONINFORMATION | MB_OK);
-    return;
-  }
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
 
-  // Now it's ok, local context is opened and edge selection mode is activated
+  // Now it's ok, edge selection mode is activated
   // Check if some edge is selected
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_EDGE)
   {
     AfxMessageBox(_T("Choose the edge and press the button again"),
                     MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  // Workaround for AIS_LocalContext::SelectedShape()
-  myFirstEdge = TopoDS::Edge (CDimensionDlg::SelectedShape());
-  //myFirstEdge =  TopoDS::Edge (myAISContext->LocalContext()->SelectedShape());
+  myFirstEdge = TopoDS::Edge (myAISContext->SelectedShape());
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_True);
 }
 
 //=======================================================================
@@ -92,19 +82,18 @@ void CLengthParamsEdgesPage::OnBnClickedEdge1Btn()
 
 void CLengthParamsEdgesPage::OnBnClickedEdge2Btn()
 {
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_EDGE)
   {
     AfxMessageBox (_T("Choose the edge and press the button again"),
        MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  // Workaround for AIS_LocalContext::SelectedShape()
-  mySecondEdge = TopoDS::Edge (CDimensionDlg::SelectedShape());
-  //mySecondEdge = TopoDS::Edge (myAISContext->LocalContext()->SelectedShape());
+  mySecondEdge = TopoDS::Edge (myAISContext->SelectedShape());
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_True);
 
   // Build plane through three points
   BRepAdaptor_Curve aCurve1 (myFirstEdge);
@@ -119,8 +108,6 @@ void CLengthParamsEdgesPage::OnBnClickedEdge2Btn()
   Handle(Geom_Plane) aPlane = aMkPlane.Value();
 
   CDimensionDlg *aDimDlg = (CDimensionDlg*)(GetParentOwner());
-
-  myAISContext->CloseAllContexts();
 
   Handle(Prs3d_DimensionAspect) anAspect = new Prs3d_DimensionAspect();
   anAspect->MakeArrows3d (Standard_False);
@@ -149,7 +136,7 @@ void CLengthParamsEdgesPage::OnBnClickedEdge2Btn()
     }
 
     anAngleDim->SetFlyout (aDimDlg->GetFlyout());
-    myAISContext->Display (anAngleDim);
+    myAISContext->Display (anAngleDim, Standard_True);
   }
   else
   {
@@ -161,9 +148,8 @@ void CLengthParamsEdgesPage::OnBnClickedEdge2Btn()
       aLenDim->SetDisplayUnits (aDimDlg->GetUnits());
     }
 
-    myAISContext->Display (aLenDim);
+    myAISContext->Display (aLenDim, Standard_True);
   }
 
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_EDGE);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
 }

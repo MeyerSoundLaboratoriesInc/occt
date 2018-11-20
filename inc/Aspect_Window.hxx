@@ -24,35 +24,29 @@
 #include <Aspect_FBConfig.hxx>
 #include <Aspect_FillMethod.hxx>
 #include <Standard_Boolean.hxx>
-#include <MMgt_TShared.hxx>
-#include <Quantity_NameOfColor.hxx>
+#include <Standard_Transient.hxx>
+#include <Quantity_Color.hxx>
 #include <Aspect_GradientFillMethod.hxx>
 #include <Aspect_TypeOfResize.hxx>
-#include <Quantity_Ratio.hxx>
 #include <Standard_Integer.hxx>
 #include <Aspect_Drawable.hxx>
 class Aspect_WindowDefinitionError;
 class Aspect_WindowError;
 class Aspect_Background;
-class Quantity_Color;
 class Aspect_GradientBackground;
 
-
 class Aspect_Window;
-DEFINE_STANDARD_HANDLE(Aspect_Window, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(Aspect_Window, Standard_Transient)
 
 //! Defines a window.
-class Aspect_Window : public MMgt_TShared
+class Aspect_Window : public Standard_Transient
 {
 
 public:
   
   //! Modifies the window background.
   Standard_EXPORT void SetBackground (const Aspect_Background& ABack);
-  
-  //! Modifies the window background from a Named Color.
-  Standard_EXPORT void SetBackground (const Quantity_NameOfColor theNameOfColor);
-  
+
   //! Modifies the window background.
   Standard_EXPORT void SetBackground (const Quantity_Color& color);
   
@@ -96,7 +90,7 @@ public:
   
   //! Returns The Window RATIO equal to the physical
   //! WIDTH/HEIGHT dimensions
-  Standard_EXPORT virtual Quantity_Ratio Ratio() const = 0;
+  Standard_EXPORT virtual Standard_Real Ratio() const = 0;
   
   //! Returns The Window POSITION in PIXEL
   Standard_EXPORT virtual void Position (Standard_Integer& X1, Standard_Integer& Y1, Standard_Integer& X2, Standard_Integer& Y2) const = 0;
@@ -113,31 +107,20 @@ public:
   //! Returns native Window FB config (GLXFBConfig on Xlib)
   Standard_EXPORT virtual Aspect_FBConfig NativeFBConfig() const = 0;
 
-  DEFINE_STANDARD_RTTIEXT(Aspect_Window,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(Aspect_Window,Standard_Transient)
 
 protected:
 
-  
   //! Initializes the datas of a Window.
   Standard_EXPORT Aspect_Window();
+
+protected:
 
   Aspect_Background MyBackground;
   Aspect_GradientBackground MyGradientBackground;
   Aspect_FillMethod MyBackgroundFillMethod;
   Standard_Boolean MyIsVirtual;
 
-
-private:
-
-
-
-
 };
-
-
-
-
-
-
 
 #endif // _Aspect_Window_HeaderFile

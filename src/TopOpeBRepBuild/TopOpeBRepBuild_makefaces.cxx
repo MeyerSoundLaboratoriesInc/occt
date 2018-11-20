@@ -64,7 +64,6 @@
 extern Standard_Boolean TopOpeBRepBuild_GetcontextNOPURGE();
 extern Standard_Boolean TopOpeBRepBuild_GetcontextNOCORRISO();
 extern Standard_Boolean TopOpeBRepBuild_GettraceCHK();
-extern Standard_Boolean TopOpeBRepDS_GettraceSTRANGE();
 #define DEBSHASET(sarg,meth,shaset,str) \
 TCollection_AsciiString sarg((meth));(sarg)=(sarg)+(shaset).DEBNumber()+(str);
 Standard_EXPORT void debgfabu(const Standard_Integer i) {cout<<"++ debgfabu "<<i<<endl;}
@@ -208,7 +207,7 @@ void TopOpeBRepBuild_Builder::GWESMakeFaces
     
     const TopoDS_Face& FA = TopoDS::Face(FF);
     Standard_Boolean puok = TopOpeBRepTool::PurgeClosingEdges(FA,LOF,MWisOld,MshNOK);
-    if (!puok) Standard_Failure::Raise("TopOpeBRepBuild::GWESMakeFaces");
+    if (!puok) throw Standard_Failure("TopOpeBRepBuild::GWESMakeFaces");
     topurge = !MshNOK.IsEmpty();
 
 #ifdef OCCT_DEBUG
@@ -219,7 +218,7 @@ void TopOpeBRepBuild_Builder::GWESMakeFaces
   if (topurge) {
     TopTools_ListOfShape LOFF;
     Standard_Boolean puok = TopOpeBRepTool::MakeFaces(TopoDS::Face(FF),LOF,MshNOK,LOFF);
-    if (!puok) Standard_Failure::Raise("TopOpeBRepBuild::GWESMakeFaces");
+    if (!puok) throw Standard_Failure("TopOpeBRepBuild::GWESMakeFaces");
     LOF.Clear(); LOF.Assign(LOFF);
   }
 
@@ -423,7 +422,7 @@ void TopOpeBRepBuild_Builder::GFABUMakeFaces(const TopoDS_Shape& FF,TopOpeBRepBu
 		      Standard_Real f2,l2,tolpc; Handle(Geom2d_Curve) C2D;                                              // jyl980402+
 		      //C2D = FC2D_CurveOnSurface(newEdge,newFace,f2,l2,tolpc);                                         // jyl980402+
 		      C2D = FC2D_CurveOnSurface(newEdge,newFace,f2,l2,tolpc, Standard_True);                            // xpu051198 (CTS21701)
-		      if(C2D.IsNull()) Standard_ProgramError::Raise("TopOpeBRepBuild_Builder::GFABUMakeFaces null PC"); // jyl980402+
+		      if(C2D.IsNull()) throw Standard_ProgramError("TopOpeBRepBuild_Builder::GFABUMakeFaces null PC"); // jyl980402+
 		      Standard_Real tol = Max(tolE,tolpc);                                                              // jyl980402+
 		      BRep_Builder BB_PC; BB_PC.UpdateEdge(newEdge,C2D,newFace,tol);                                    // jyl980402+
 		    }                                                                                                   // jyl980402+
@@ -580,10 +579,6 @@ void TopOpeBRepBuild_Builder::GFABUMakeFaces(const TopoDS_Shape& FF,TopOpeBRepBu
 
     Standard_Boolean topurge = FUN_purgeFon1nonoriE(newFace);
     if (topurge) {
-#ifdef OCCT_DEBUG
-      if (TopOpeBRepDS_GettraceSTRANGE())
-        cout<<"Builder::GFABUMakeFaces -> purgeFon1nonoriE\n";
-#endif
       continue;
     }
     

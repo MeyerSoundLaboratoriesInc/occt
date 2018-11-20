@@ -21,10 +21,12 @@
 #include <IGESGraph_Color.hxx>
 #include <IGESGraph_DefinitionLevel.hxx>
 #include <IGESSolid_Face.hxx>
+#include <IGESBasic_Name.hxx>
 #include <NCollection_DataMap.hxx>
 #include <Standard_Transient.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TCollection_HAsciiString.hxx>
+#include <TCollection_HExtendedString.hxx>
 #include <TColStd_HSequenceOfExtendedString.hxx>
 #include <TDataStd_Name.hxx>
 #include <TDF_ChildIterator.hxx>
@@ -234,7 +236,7 @@ Standard_Boolean IGESCAFControl_Writer::WriteAttributes (const TDF_LabelSequence
     TDF_Label L = labels.Value(i);
 
     // collect color settings
-    XCAFPrs_DataMapOfShapeStyle settings;
+    XCAFPrs_IndexedDataMapOfShapeStyle settings;
     TopLoc_Location loc;
     XCAFPrs::CollectStyleSettings ( L, loc, settings );
     if ( settings.Extent() <=0 ) continue;
@@ -260,7 +262,7 @@ Standard_Boolean IGESCAFControl_Writer::WriteAttributes (const TDF_LabelSequence
 //=======================================================================
 
 void IGESCAFControl_Writer::MakeColors (const TopoDS_Shape &S, 
-					const XCAFPrs_DataMapOfShapeStyle &settings,
+					const XCAFPrs_IndexedDataMapOfShapeStyle &settings,
 					XCAFPrs_DataMapOfStyleTransient &colors,
 					TopTools_MapOfShape &Map,
 					const XCAFPrs_Style &inherit) 
@@ -270,8 +272,8 @@ void IGESCAFControl_Writer::MakeColors (const TopoDS_Shape &S,
   
   // check if shape has its own style (or inherits from ancestor)
   XCAFPrs_Style style = inherit;
-  if ( settings.IsBound(S) ) {
-    XCAFPrs_Style own = settings.Find(S);
+  if ( settings.Contains(S) ) {
+    XCAFPrs_Style own = settings.FindFromKey(S);
     if ( own.IsSetColorCurv() ) style.SetColorCurv ( own.GetColorCurv() );
     if ( own.IsSetColorSurf() ) style.SetColorSurf ( own.GetColorSurf() );
   }
@@ -526,6 +528,14 @@ Standard_Boolean IGESCAFControl_Writer::WriteNames (const TDF_LabelSequence& the
         anAsciiName->SetValue (aNameLength+1, IsAnAscii (aName.Value (aCharPos)) ? (Standard_Character )aName.Value (aCharPos) : '?');
       }
       anIGESEntity->SetLabel (anAsciiName);
+
+      // Set long IGES name using 406 form 15 entity
+      Handle(IGESBasic_Name) aLongNameEntity = new IGESBasic_Name;
+      Handle(TCollection_HExtendedString) aTmpStr = new TCollection_HExtendedString(aName);
+      aLongNameEntity->Init(1, new TCollection_HAsciiString(aTmpStr, '_'));
+
+      anIGESEntity->AddProperty(aLongNameEntity);
+      AddEntity(aLongNameEntity);
     }
   }
 

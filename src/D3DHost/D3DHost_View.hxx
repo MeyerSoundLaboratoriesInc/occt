@@ -35,7 +35,6 @@ public:
   Standard_EXPORT D3DHost_View (const Handle(Graphic3d_StructureManager)& theMgr,
                                 const Handle(D3DHost_GraphicDriver)& theDriver,
                                 const Handle(OpenGl_Caps)& theCaps,
-                                Standard_Boolean& theDeviceLostFlag,
                                 OpenGl_StateCounter* theCounter);
 
   //! Default destructor.
@@ -71,7 +70,7 @@ public:
   const Handle(D3DHost_FrameBuffer)& D3dWglBuffer() const { return myD3dWglFbo; }
 
   //! Return D3D surface.
-  IDirect3DSurface9* D3dColorSurface() const { return myD3dWglFbo->D3dColorSurface(); }
+  Standard_EXPORT IDirect3DSurface9* D3dColorSurface() const;
 
 protected:
 

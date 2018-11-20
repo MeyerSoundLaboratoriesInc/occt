@@ -25,12 +25,13 @@
 #include <BinMDocStd.hxx>
 #include <BinMFunction.hxx>
 #include <BinMNaming.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Plugin_Macro.hxx>
 #include <Standard_Failure.hxx>
 #include <Standard_GUID.hxx>
 #include <Standard_Transient.hxx>
 #include <TCollection_AsciiString.hxx>
+#include <TDocStd_Application.hxx>
 
 static Standard_GUID BinStorageDriver  ("03a56835-8269-11d5-aab2-0050044b1af1");
 static Standard_GUID BinRetrievalDriver("03a56836-8269-11d5-aab2-0050044b1af1");
@@ -61,9 +62,18 @@ const Handle(Standard_Transient)& BinDrivers::Factory(const Standard_GUID& theGU
     return model_rd;
   }
 
-  Standard_Failure::Raise ("BinDrivers : unknown GUID");
-  static Handle(Standard_Transient) aNullHandle;
-  return aNullHandle;
+  throw Standard_Failure("BinDrivers : unknown GUID");
+}
+
+//=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void BinDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("BinOcaf", "Binary OCAF Document", "cbf",
+                        new BinDrivers_DocumentRetrievalDriver, 
+                        new BinDrivers_DocumentStorageDriver);
 }
 
 //=======================================================================
@@ -72,7 +82,7 @@ const Handle(Standard_Transient)& BinDrivers::Factory(const Standard_GUID& theGU
 //=======================================================================
 
 Handle(BinMDF_ADriverTable) BinDrivers::AttributeDrivers 
-                         (const Handle(CDM_MessageDriver)& aMsgDrv)
+                         (const Handle(Message_Messenger)& aMsgDrv)
 {
   Handle(BinMDF_ADriverTable) aTable = new BinMDF_ADriverTable;
 

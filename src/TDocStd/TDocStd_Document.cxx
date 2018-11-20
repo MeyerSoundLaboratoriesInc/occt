@@ -71,19 +71,20 @@ Handle(TDocStd_Document) TDocStd_Document::Get (const TDF_Label& acces)
 //=======================================================================
 
 
-TDocStd_Document::TDocStd_Document(const TCollection_ExtendedString& aStorageFormat) : 
+TDocStd_Document::TDocStd_Document(const TCollection_ExtendedString& aStorageFormat) :
 myStorageFormat(aStorageFormat),
 myData (new TDF_Data()),
 myUndoLimit(0),
 mySaveTime(0),
-myIsNestedTransactionMode(0)
+myIsNestedTransactionMode(0),
+mySaveEmptyLabels(Standard_False)
 {
   TDF_Transaction* pTr =  new TDF_Transaction (myData,"UNDO");
   myUndoTransaction    = *pTr; delete pTr;
   TDocStd_Owner::SetDocument(myData,this);
 
 #ifdef SRN_DELTA_COMPACT
-  myFromUndo.Nullify();  
+  myFromUndo.Nullify();
   myFromRedo.Nullify();
 #endif
 }
@@ -241,7 +242,7 @@ void TDocStd_Document::NewCommand()
 {
 #ifdef OCCT_DEBUG_TRANS
   if (myUndoTransaction.IsOpen() && myData->Transaction() > 1) {
-    Standard_DomainError::Raise ("NewCommand : many open transactions");
+    throw Standard_DomainError("NewCommand : many open transactions");
   }
 #endif
 
@@ -271,7 +272,7 @@ Standard_Boolean TDocStd_Document::HasOpenCommand() const
 void TDocStd_Document::OpenCommand ()
 {
   if (!myIsNestedTransactionMode && myUndoTransaction.IsOpen()) {
-    Standard_DomainError::Raise("TDocStd_Document::OpenCommand : already open");
+    throw Standard_DomainError("TDocStd_Document::OpenCommand : already open");
   }
   OpenTransaction();
 //  if (myUndoLimit != 0) myUndoTransaction.Open();

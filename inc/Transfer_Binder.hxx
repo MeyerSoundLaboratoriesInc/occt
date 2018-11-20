@@ -22,16 +22,20 @@
 
 #include <Transfer_StatusResult.hxx>
 #include <Transfer_StatusExec.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Boolean.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_CString.hxx>
 class Interface_Check;
 class Transfer_TransferFailure;
 
+// resolve name collisions with X11 headers
+#ifdef Status
+  #undef Status
+#endif
 
 class Transfer_Binder;
-DEFINE_STANDARD_HANDLE(Transfer_Binder, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(Transfer_Binder, Standard_Transient)
 
 //! A Binder is an auxiliary object to Map the Result of the
 //! Transfer of a given Object : it records the Result of the
@@ -55,7 +59,7 @@ DEFINE_STANDARD_HANDLE(Transfer_Binder, MMgt_TShared)
 //!
 //! In addition to the Result, a Binder can bring a list of
 //! Attributes, which are additional data, each of them has a name
-class Transfer_Binder : public MMgt_TShared
+class Transfer_Binder : public Standard_Transient
 {
 
 public:
@@ -133,7 +137,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(Transfer_Binder,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(Transfer_Binder,Standard_Transient)
 
 protected:
 

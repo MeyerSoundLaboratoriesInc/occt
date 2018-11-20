@@ -13,11 +13,28 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+// prevent disabling some MSVC warning messages by VTK headers 
+#ifdef _MSC_VER
+#pragma warning(push)
+#endif
 #ifdef _WIN32
-#define _WIN32_WINNT 0x0400  // for trackmouseevent support  requires Win95 with IE 3.0 or greater.
-#include <windows.h>
 #include <vtkWin32RenderWindowInteractor.h>
 #include <vtkWin32OpenGLRenderWindow.h>
+#else
+#include <GL/glx.h>
+#include <vtkXRenderWindowInteractor.h>
+#include <vtkXOpenGLRenderWindow.h>
+#endif
+#include <vtkActor.h>
+#include <vtkActorCollection.h>
+#include <vtkCommand.h>
+#include <vtkObjectFactory.h>
+#include <vtkSmartPointer.h>
+
+#include <IVtkDraw_Interactor.hxx>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
 #endif
 
 #include <IVtkTools_ShapePicker.hxx>
@@ -25,27 +42,9 @@
 #include <IVtkTools_DisplayModeFilter.hxx>
 #include <IVtkTools_ShapeObject.hxx>
 #include <IVtkTools_ShapeDataSource.hxx>
-#include <IVtkDraw_Interactor.hxx>
 
 #include <Message.hxx>
 #include <Message_Messenger.hxx>
-
-#include <vtkActor.h>
-#include <vtkActorCollection.h>
-#include <vtkCommand.h>
-#include <vtkObjectFactory.h>
-#include <vtkSmartPointer.h>
-
-#ifndef _WIN32
-#include <X11/X.h>
-#include <X11/Shell.h>
-#include <X11/Xlib.h>
-#include <GL/glx.h>
-#include <vtkXRenderWindowInteractor.h>
-#include <vtkXOpenGLRenderWindow.h>
-#include <X11/Xutil.h>
-#include <tk.h>
-#endif
 
 //===========================================================
 // Function : ClearHighlightAndSelection
@@ -142,7 +141,7 @@ const Handle(Aspect_Window)& IVtkDraw_Interactor::GetOCCWindow() const
 //===========================================================
 Standard_Boolean IVtkDraw_Interactor::IsEnabled() const
 {
-  return Enabled;
+  return (Enabled != 0);
 }
 
 //===========================================================
@@ -225,7 +224,7 @@ void IVtkDraw_Interactor::MoveTo (Standard_Integer theX, Standard_Integer theY)
 {
   // Processing highlighting
   mySelector->Pick (theX, theY, 0.0);
-  vtkActorCollection* anActorCollection = mySelector->GetPickedActors();
+  vtkSmartPointer<vtkActorCollection> anActorCollection = mySelector->GetPickedActors();
 
   if (anActorCollection)
   {
@@ -290,7 +289,7 @@ void IVtkDraw_Interactor::MoveTo (Standard_Integer theX, Standard_Integer theY)
 void IVtkDraw_Interactor::OnSelection()
 {
   // Processing selection
-  vtkActorCollection* anActorCollection = mySelector->GetPickedActors();
+  vtkSmartPointer<vtkActorCollection> anActorCollection = mySelector->GetPickedActors();
 
   if (anActorCollection)
   {
@@ -654,34 +653,34 @@ LRESULT CALLBACK ViewerWindowProc (HWND theHWnd,
     theInteractor->Render();
     break;
   case WM_SIZE:
-    theInteractor->OnSize (theHWnd, theWParam, LOWORD(theLParam), HIWORD(theLParam));
+    theInteractor->OnSize (theHWnd, (UINT)theWParam, LOWORD(theLParam), HIWORD(theLParam));
     break;
   case WM_LBUTTONDBLCLK:
-    theInteractor->OnLButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
+    theInteractor->OnLButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
     break;
   case WM_LBUTTONDOWN:
-    theInteractor->OnLButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
+    theInteractor->OnLButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
     break;
   case WM_LBUTTONUP:
-    theInteractor->OnLButtonUp (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
+    theInteractor->OnLButtonUp (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
     break;
   case WM_MBUTTONDBLCLK:
-    theInteractor->OnMButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
+    theInteractor->OnMButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
     break;
   case WM_MBUTTONDOWN:
-    theInteractor->OnMButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
+    theInteractor->OnMButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
     break;
   case WM_MBUTTONUP:
-    theInteractor->OnMButtonUp (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
+    theInteractor->OnMButtonUp (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
     break;
   case WM_RBUTTONDBLCLK:
-    theInteractor->OnRButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
+    theInteractor->OnRButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 1);
     break;
   case WM_RBUTTONDOWN:
-    theInteractor->OnRButtonDown (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
+    theInteractor->OnRButtonDown (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y, 0);
     break;
   case WM_RBUTTONUP:
-    theInteractor->OnRButtonUp (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
+    theInteractor->OnRButtonUp (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
     break;
   case WM_MOUSELEAVE:
     {
@@ -690,7 +689,7 @@ LRESULT CALLBACK ViewerWindowProc (HWND theHWnd,
     }
     break;
   case WM_MOUSEMOVE:
-    theInteractor->OnMouseMove (theHWnd, theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
+    theInteractor->OnMouseMove (theHWnd, (UINT)theWParam, MAKEPOINTS(theLParam).x, MAKEPOINTS(theLParam).y);
     break;
   case WM_MOUSEWHEEL:
     {
@@ -700,16 +699,16 @@ LRESULT CALLBACK ViewerWindowProc (HWND theHWnd,
       ::ScreenToClient(theHWnd, &pt);
       if( GET_WHEEL_DELTA_WPARAM(theWParam) > 0)
       {
-        theInteractor->OnMouseWheelForward (theHWnd, theWParam, pt.x, pt.y);
+        theInteractor->OnMouseWheelForward (theHWnd, (UINT)theWParam, pt.x, pt.y);
       }
       else
       {
-        theInteractor->OnMouseWheelBackward (theHWnd, theWParam, pt.x, pt.y);
+        theInteractor->OnMouseWheelBackward (theHWnd, (UINT)theWParam, pt.x, pt.y);
       }
     }
     break;
   case WM_TIMER:
-    theInteractor->OnTimer (theHWnd, theWParam);
+    theInteractor->OnTimer (theHWnd, (UINT)theWParam);
     break;
   }
   return DefWindowProc(theHWnd, theMsg, theWParam, theLParam);

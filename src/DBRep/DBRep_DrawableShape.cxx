@@ -104,18 +104,16 @@ DBRep_DrawableShape::DBRep_DrawableShape
   myRgN(Standard_False),
   myHid(Standard_False)
 {
-  Set(aShape);
+  myShape = aShape;
 }
 
 //=======================================================================
-//function : Set
+//function : updateDisplayData
 //purpose  : 
 //=======================================================================
 
-void  DBRep_DrawableShape::Set(const TopoDS_Shape& aShape)
+void DBRep_DrawableShape::updateDisplayData () const
 {
-  myShape = aShape;
-  
   myFaces.Clear();
   myEdges.Clear();
   
@@ -154,7 +152,7 @@ void  DBRep_DrawableShape::Set(const TopoDS_Shape& aShape)
   //==============================================================
   
   TopTools_IndexedDataMapOfShapeListOfShape edgemap;
-  TopExp::MapShapesAndAncestors(aShape,TopAbs_EDGE,TopAbs_FACE,edgemap);
+  TopExp::MapShapesAndAncestors(myShape,TopAbs_EDGE,TopAbs_FACE,edgemap);
   Standard_Integer iedge;
   
   for (iedge = 1; iedge <= edgemap.Extent(); iedge++) {
@@ -357,6 +355,9 @@ void  DBRep_DrawableShape::DrawOn(Draw_Display& dis) const
     dis.DrawString(gp_Pnt(0,0,0),"Null Shape");
     return;
   }
+
+  if (myFaces.IsEmpty() || myEdges.IsEmpty())
+    updateDisplayData();
 
   // hidden lines
   if (myHLR) {
@@ -610,7 +611,7 @@ void  DBRep_DrawableShape::DrawOn(Draw_Display& dis) const
     if (aSurf.IsNull() || mytriangulations) {
       Tr = BRep_Tool::Triangulation(F->Face(), loc);
       if (!Tr.IsNull()) {
-	Display(Tr, loc.Transformation(), dis);
+	display(Tr, loc.Transformation(), dis);
       }
     }
     itf.Next();
@@ -1018,64 +1019,21 @@ void  DBRep_DrawableShape::Dump(Standard_OStream& S)const
 
 void  DBRep_DrawableShape::Whatis(Draw_Interpretor& s)const 
 {
-  if (!myShape.IsNull()) {
-      s << "shape ";
-      switch (myShape.ShapeType()) {
-      case TopAbs_COMPOUND :
-	s << "COMPOUND";
-	break;
-      case TopAbs_COMPSOLID :
-	s << "COMPSOLID";
-	break;
-      case TopAbs_SOLID :
-	s << "SOLID";
-	break;
-      case TopAbs_SHELL :
-	s << "SHELL";
-	break;
-      case TopAbs_FACE :
-	s << "FACE";
-	break;
-      case TopAbs_WIRE :
-	s << "WIRE";
-	break;
-      case TopAbs_EDGE :
-	s << "EDGE";
-	break;
-      case TopAbs_VERTEX :
-	s << "VERTEX";
-	break;
-      case TopAbs_SHAPE :
-	s << "SHAPE";
-	break;
-      }
+  if (myShape.IsNull())
+  {
+    return;
+  }
 
-      s << " ";
+  s << "shape " << TopAbs::ShapeTypeToString       (myShape.ShapeType())
+    << " "      << TopAbs::ShapeOrientationToString(myShape.Orientation());
 
-      switch (myShape.Orientation()) {
-      case TopAbs_FORWARD :
-	s << "FORWARD";
-	break;
-      case TopAbs_REVERSED :
-	s << "REVERSED";
-	break;
-      case TopAbs_INTERNAL :
-	s << "INTERNAL";
-	break;
-      case TopAbs_EXTERNAL :
-	s << "EXTERNAL";
-	break;
-      }
-
-      if (myShape.Free())       s <<" Free";
-      if (myShape.Modified())   s <<" Modified";
-      if (myShape.Orientable()) s <<" Orientable";
-      if (myShape.Closed())     s <<" Closed";
-      if (myShape.Infinite())   s <<" Infinite";
-      if (myShape.Convex())     s <<" Convex";
-    }
+  if (myShape.Free())       s <<" Free";
+  if (myShape.Modified())   s <<" Modified";
+  if (myShape.Orientable()) s <<" Orientable";
+  if (myShape.Closed())     s <<" Closed";
+  if (myShape.Infinite())   s <<" Infinite";
+  if (myShape.Convex())     s <<" Convex";
 }
-
 
 //=======================================================================
 //function : LastPick
@@ -1093,11 +1051,11 @@ void  DBRep_DrawableShape::LastPick(TopoDS_Shape& s,
 
 
 //=======================================================================
-//function : Display
+//function : display
 //purpose  : 
 //=======================================================================
 
-void  DBRep_DrawableShape::Display(const Handle(Poly_Triangulation)& T,
+void  DBRep_DrawableShape::display(const Handle(Poly_Triangulation)& T,
 				   const gp_Trsf&                    tr,
 				   Draw_Display&                     dis) const
 {
@@ -1116,14 +1074,10 @@ void  DBRep_DrawableShape::Display(const Handle(Poly_Triangulation)& T,
   }
 
   // allocate the arrays
-  TColStd_Array1OfInteger Free(1,2*nFree);
-  
-  // array is replaced on map because it is impossible
-  // to calculate number of internal edges in advance
-  // due to "internal edges"
-  TColStd_DataMapOfIntegerInteger Internal;
-  
-  Standard_Integer fr = 1, in = 1;
+  TColStd_Array1OfInteger Free (1, Max (1, 2 * nFree));
+  NCollection_Vector< NCollection_Vec2<Standard_Integer> > anInternal;
+
+  Standard_Integer fr = 1;
   const Poly_Array1OfTriangle& triangles = T->Triangles();
   Standard_Integer n[3];
   for (i = 1; i <= nbTriangles; i++) {
@@ -1138,9 +1092,7 @@ void  DBRep_DrawableShape::Display(const Handle(Poly_Triangulation)& T,
       }
       // internal edge if this triangle has a lower index than the adjacent
       else if (i < t[j]) {
-	Internal.Bind(in, n[j]);
-	Internal.Bind(in+1, n[k]);
-	in += 2;
+        anInternal.Append (NCollection_Vec2<Standard_Integer> (n[j], n[k]));
       }
     }
   }
@@ -1161,15 +1113,169 @@ void  DBRep_DrawableShape::Display(const Handle(Poly_Triangulation)& T,
   // internal edges
 
   dis.SetColor(Draw_bleu);
-  TColStd_DataMapIteratorOfDataMapOfIntegerInteger aIt(Internal);
-  for (; aIt.More(); aIt.Next()) {
-    Standard_Integer n1 = aIt.Value();
-    //alvays pair is put
-    aIt.Next();
-    Standard_Integer n2 = aIt.Value();
-    dis.Draw(Nodes(n1).Transformed(tr),
-	     Nodes(n2).Transformed(tr));
-
+  for (NCollection_Vector< NCollection_Vec2<Standard_Integer> >::Iterator anInterIter (anInternal); anInterIter.More(); anInterIter.Next())
+  {
+    const Standard_Integer n1 = anInterIter.Value()[0];
+    const Standard_Integer n2 = anInterIter.Value()[1];
+    dis.Draw (Nodes(n1).Transformed(tr), Nodes(n2).Transformed(tr));
   }
 }
 
+//=======================================================================
+//function : addMeshNormals
+//purpose  :
+//=======================================================================
+Standard_Boolean DBRep_DrawableShape::addMeshNormals (NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >& theNormals,
+                                                      const TopoDS_Face& theFace,
+                                                      const Standard_Real theLength)
+{
+  TopLoc_Location aLoc;
+  const Handle(Poly_Triangulation)& aTriangulation = BRep_Tool::Triangulation (theFace, aLoc);
+  const Standard_Boolean hasNormals = aTriangulation->HasNormals();
+  if (aTriangulation.IsNull()
+  || (!hasNormals && !aTriangulation->HasUVNodes()))
+  {
+    return Standard_False;
+  }
+
+  const TColgp_Array1OfPnt& aNodes = aTriangulation->Nodes();
+  BRepAdaptor_Surface aSurface (theFace);
+  for (Standard_Integer aNodeIter = aNodes.Lower(); aNodeIter <= aNodes.Upper(); ++aNodeIter)
+  {
+    gp_Pnt aP1 = aNodes (aNodeIter);
+    if (!aLoc.IsIdentity())
+    {
+      aP1.Transform (aLoc.Transformation());
+    }
+
+    gp_Vec aNormal;
+    if (hasNormals)
+    {
+      aNormal = aTriangulation->Normal (aNodeIter);
+    }
+    else
+    {
+      const gp_Pnt2d& aUVNode = aTriangulation->UVNode (aNodeIter);
+      gp_Pnt aDummyPnt;
+      gp_Vec aV1, aV2;
+      aSurface.D1 (aUVNode.X(), aUVNode.Y(), aDummyPnt, aV1, aV2);
+      aNormal = aV1.Crossed (aV2);
+    }
+
+    const Standard_Real aNormalLen = aNormal.Magnitude();
+    if (aNormalLen > 1.e-10)
+    {
+      aNormal.Multiply (theLength / aNormalLen);
+    }
+    else
+    {
+      aNormal.SetCoord (aNormalLen / 2.0, 0.0, 0.0);
+      std::cout << "Null normal at node X = " << aP1.X() << ", Y = " << aP1.Y() << ", Z = " << aP1.Z() << "\n";
+    }
+
+    const gp_Pnt aP2 = aP1.Translated (aNormal);
+    theNormals.Append (std::pair<gp_Pnt, gp_Pnt> (aP1, aP2));
+  }
+  return Standard_True;
+}
+
+//=======================================================================
+//function : addMeshNormals
+//purpose  :
+//=======================================================================
+void DBRep_DrawableShape::addMeshNormals (NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > > & theNormals,
+                                          const TopoDS_Shape& theShape,
+                                          const Standard_Real theLength)
+{
+  TopLoc_Location aLoc;
+  for (TopExp_Explorer aFaceIt(theShape, TopAbs_FACE); aFaceIt.More(); aFaceIt.Next())
+  {
+    const TopoDS_Face& aFace = TopoDS::Face(aFaceIt.Current());
+    NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >* aFaceNormals = theNormals.ChangeSeek(aFace);
+    if (aFaceNormals == NULL)
+    {
+      aFaceNormals = theNormals.Bound(aFace, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >());
+    }
+
+    addMeshNormals (*aFaceNormals, aFace, theLength);
+  }
+}
+
+//=======================================================================
+//function : addSurfaceNormals
+//purpose  :
+//=======================================================================
+Standard_Boolean DBRep_DrawableShape::addSurfaceNormals (NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >& theNormals,
+                                                         const TopoDS_Face&     theFace,
+                                                         const Standard_Real    theLength,
+                                                         const Standard_Integer theNbAlongU,
+                                                         const Standard_Integer theNbAlongV)
+{
+  {
+    TopLoc_Location aLoc;
+    const Handle(Geom_Surface)& aSurface = BRep_Tool::Surface (theFace, aLoc);
+    if (aSurface.IsNull())
+    {
+      return Standard_False;
+    }
+  }
+
+  Standard_Real aUmin = 0.0, aVmin = 0.0, aUmax = 0.0, aVmax = 0.0;
+  BRepTools::UVBounds (theFace, aUmin, aUmax, aVmin, aVmax);
+  const Standard_Boolean isUseMidU = (theNbAlongU == 1);
+  const Standard_Boolean isUseMidV = (theNbAlongV == 1);
+  const Standard_Real aDU = (aUmax - aUmin) / (isUseMidU ? 2 : (theNbAlongU - 1));
+  const Standard_Real aDV = (aVmax - aVmin) / (isUseMidV ? 2 : (theNbAlongV - 1));
+
+  BRepAdaptor_Surface aSurface (theFace);
+  for (Standard_Integer aUIter = 0; aUIter < theNbAlongU; ++aUIter)
+  {
+    const Standard_Real aU = aUmin + (isUseMidU ? 1 : aUIter) * aDU;
+    for (Standard_Integer aVIter = 0; aVIter < theNbAlongV; ++aVIter)
+    {
+      const Standard_Real aV = aVmin + (isUseMidV ? 1 : aVIter) * aDV;
+
+      gp_Pnt aP1;
+      gp_Vec aV1, aV2;
+      aSurface.D1 (aU, aV, aP1, aV1, aV2);
+
+      gp_Vec aVec = aV1.Crossed (aV2);
+      Standard_Real aNormalLen = aVec.Magnitude();
+      if (aNormalLen > 1.e-10)
+      {
+        aVec.Multiply (theLength / aNormalLen);
+      }
+      else
+      {
+        aVec.SetCoord (aNormalLen / 2.0, 0.0, 0.0);
+        std::cout << "Null normal at U = " << aU << ", V = " << aV << "\n";
+      }
+
+      const gp_Pnt aP2 = aP1.Translated(aVec);
+      theNormals.Append (std::pair<gp_Pnt, gp_Pnt> (aP1, aP2));
+    }
+  }
+  return Standard_True;
+}
+
+//=======================================================================
+//function : addSurfaceNormals
+//purpose  :
+//=======================================================================
+void DBRep_DrawableShape::addSurfaceNormals (NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > >& theNormals,
+                                             const TopoDS_Shape&    theShape,
+                                             const Standard_Real    theLength,
+                                             const Standard_Integer theNbAlongU,
+                                             const Standard_Integer theNbAlongV)
+{
+  for (TopExp_Explorer aFaceIt (theShape, TopAbs_FACE); aFaceIt.More(); aFaceIt.Next())
+  {
+    const TopoDS_Face& aFace = TopoDS::Face (aFaceIt.Current());
+    NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >* aFaceNormals = theNormals.ChangeSeek (aFace);
+    if (aFaceNormals == NULL)
+    {
+      aFaceNormals = theNormals.Bound (aFace, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >());
+    }
+    addSurfaceNormals (*aFaceNormals, aFace, theLength, theNbAlongU, theNbAlongV);
+  }
+}

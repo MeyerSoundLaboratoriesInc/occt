@@ -473,8 +473,11 @@ void MeshVS_NodalColorPrsBuilder::Build ( const Handle(Prs3d_Presentation)& Prs,
   Handle(Graphic3d_AspectLine3d) anLAsp =
     new Graphic3d_AspectLine3d( anEdgeColor, anEdgeType, anEdgeWidth );
 
-  Prs3d_Root::NewGroup ( Prs );
-  Handle(Graphic3d_Group) aGroup1 = Prs3d_Root::CurrentGroup ( Prs );
+  Handle(Graphic3d_Group) aGroup1 = Prs3d_Root::NewGroup (Prs);
+
+  Standard_Boolean toSupressBackFaces = Standard_False;
+  aDrawer->GetBoolean (MeshVS_DA_SupressBackFaces, toSupressBackFaces);
+  aGroup1->SetClosed (toSupressBackFaces == Standard_True);
 
   aGroup1->SetPrimitivesAspect( anAsp );
   aGroup1->AddPrimitiveArray( aFaceTriangles /*aCPolyArr*/ );
@@ -485,12 +488,11 @@ void MeshVS_NodalColorPrsBuilder::Build ( const Handle(Prs3d_Presentation)& Prs,
     Prs3d_Root::NewGroup ( Prs );
     Handle(Graphic3d_Group) aGroup2 = Prs3d_Root::CurrentGroup ( Prs );
 
-    anAsp->SetEdgeOff();
-    anAsp->SetTextureMapOff();
-    aGroup2->SetPrimitivesAspect( anAsp );
+    Handle(Graphic3d_AspectFillArea3d) anAspCopy = new Graphic3d_AspectFillArea3d (*anAsp);
+    anAspCopy->SetTextureMapOff();
+    aGroup2->SetPrimitivesAspect( anAspCopy );
     aGroup2->SetPrimitivesAspect( anLAsp );
     aGroup2->AddPrimitiveArray( anEdgeSegments );
-    anAsp->SetEdgeOn();
   }
 }
 
@@ -792,7 +794,7 @@ Handle(Graphic3d_Texture2D) MeshVS_NodalColorPrsBuilder::CreateTexture() const
 
   // create and fill image with colors
   Handle(Image_PixMap) anImage = new Image_PixMap();
-  if (!anImage->InitTrash (Image_PixMap::ImgRGBA, Standard_Size(getNearestPow2 (aColorsNb)), 2))
+  if (!anImage->InitTrash (Image_Format_RGBA, Standard_Size(getNearestPow2 (aColorsNb)), 2))
   {
     return NULL;
   }

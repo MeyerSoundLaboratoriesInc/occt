@@ -13,15 +13,7 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// Modified     23/02/98 : FMN ; Remplacement PI par Standard_PI
-//              02.15.100 : JR : Clutter
-//-Version
-//-Design       
-//-Warning     
-//-References
-//-Language     C++ 2.1
-//-Declarations
-// for the class
+#include <V3d.hxx>
 
 #include <Aspect_Grid.hxx>
 #include <Aspect_Window.hxx>
@@ -30,98 +22,19 @@
 #include <Graphic3d_AspectText3d.hxx>
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_Structure.hxx>
-#include <Graphic3d_Vector.hxx>
 #include <Quantity_NameOfColor.hxx>
-#include <V3d.hxx>
 #include <V3d_View.hxx>
 #include <V3d_Viewer.hxx>
 
-Graphic3d_Vector V3d::GetProjAxis(const V3d_TypeOfOrientation Orientation) {
-Standard_Real Xpn=0,Ypn=0,Zpn=0 ;
-Graphic3d_Vector Vec ;
-
-        switch (Orientation) {
-            case V3d_Xpos :
-                Xpn = 1. ; Ypn = 0. ; Zpn = 0. ;
-                break ;
-            case V3d_Ypos :
-                Xpn = 0. ; Ypn = 1. ; Zpn = 0. ;
-                break ;
-            case V3d_Zpos :
-                Xpn = 0. ; Ypn = 0. ; Zpn = 1. ;
-                break ;
-            case V3d_Xneg :
-                Xpn = -1. ; Ypn = 0. ; Zpn = 0. ;
-                break ;
-            case V3d_Yneg :
-                Xpn = 0. ; Ypn = -1. ; Zpn = 0. ;
-                break ;
-            case V3d_Zneg :
-                Xpn = 0. ; Ypn = 0. ; Zpn = -1. ;
-                break ;
-            case V3d_XposYposZpos :
-                Xpn = 1. ; Ypn = 1. ; Zpn = 1. ;
-                break ;
-            case V3d_XposYposZneg :
-                Xpn = 1. ; Ypn = 1. ; Zpn = -1. ;
-                break ;
-            case V3d_XposYnegZpos :
-                Xpn = 1. ; Ypn = -1. ; Zpn = 1. ;
-                break ;
-            case V3d_XposYnegZneg :
-                Xpn = 1. ; Ypn = -1. ; Zpn = -1. ;
-                break ;
-            case V3d_XnegYposZpos :
-                Xpn = -1. ; Ypn = 1. ; Zpn = 1. ;
-                break ;
-            case V3d_XnegYposZneg :
-                Xpn = -1. ; Ypn = 1. ; Zpn = -1. ;
-                break ;
-            case V3d_XnegYnegZpos :
-                Xpn = -1. ; Ypn = -1. ; Zpn = 1. ;
-                break ;
-            case V3d_XnegYnegZneg :
-                Xpn = -1. ; Ypn = -1. ; Zpn = -1. ;
-                break ;
-            case V3d_XposYpos :
-                Xpn = 1. ; Ypn = 1. ; Zpn = 0. ;
-                break ;
-            case V3d_XposYneg :
-                Xpn = 1. ; Ypn = -1. ; Zpn = 0. ;
-                break ;
-            case V3d_XnegYpos :
-                Xpn = -1. ; Ypn = 1. ; Zpn = 0. ;
-                break ;
-            case V3d_XnegYneg :
-                Xpn = -1. ; Ypn = -1. ; Zpn = 0. ;
-                break ;
-            case V3d_XposZpos :
-                Xpn = 1. ; Ypn = 0. ; Zpn = 1. ;
-                break ;
-            case V3d_XposZneg :
-                Xpn = 1. ; Ypn = 0. ; Zpn = -1. ;
-                break ;
-            case V3d_XnegZpos :
-                Xpn = -1. ; Ypn = 0. ; Zpn = 1. ;
-                break ;
-            case V3d_XnegZneg :
-                Xpn = -1. ; Ypn = 0. ; Zpn = -1. ;
-                break ;
-            case V3d_YposZpos :
-                Xpn = 0. ; Ypn = 1. ; Zpn = 1. ;
-                break ;
-            case V3d_YposZneg :
-                Xpn = 0. ; Ypn = 1. ; Zpn = -1. ;
-                break ;
-            case V3d_YnegZpos :
-                Xpn = 0. ; Ypn = -1. ; Zpn = 1. ;
-                break ;
-            case V3d_YnegZneg :
-                Xpn = 0. ; Ypn = -1. ; Zpn = -1. ;
-                break ;
-        }
-        Vec.SetCoord(Xpn,Ypn,Zpn) ; Vec.Normalize() ;
-        return Vec ;
+namespace
+{
+  static Standard_CString V3d_Table_PrintTypeOfOrientation[26] =
+  {
+    "XPOS", "YPOS", "ZPOS", "XNEG", "YNEG", "ZNEG", "XPOSYPOS", "XPOSZPOS", "XPOSZPOS", "XNEGYNEG",
+    "XNEGYPOS", "XNEGZNEG", "XNEGZPOS", "YNEGZNEG", "YNEGZPOS", "XPOSYNEG", "XPOSZNEG", "YPOSZNEG",
+    "XPOSYPOSZPOS", "XPOSYNEGZPOS", "XPOSYPOSZNEG", "XNEGYPOSZPOS", "XPOSYNEGZNEG", "XNEGYPOSZNEG",
+    "XNEGYNEGZPOS", "XNEGYNEGZNEG"
+  };
 }
 
 void V3d::ArrowOfRadius(const Handle(Graphic3d_Group)& garrow,const Standard_Real X0,const Standard_Real Y0,const Standard_Real Z0,const Standard_Real Dx,const Standard_Real Dy,const Standard_Real Dz,const Standard_Real Alpha,const Standard_Real Lng)
@@ -232,109 +145,33 @@ void V3d::SwitchViewsinWindow(const Handle(V3d_View)& aPreviousView,
   aNextView->Viewer()->SetViewOn(aNextView);
     
 }
-void V3d::DrawSphere(const Handle(V3d_Viewer)& aViewer,const Quantity_Length ray)
+
+//=======================================================================
+//function : TypeOfOrientationToString
+//purpose  :
+//=======================================================================
+Standard_CString V3d::TypeOfOrientationToString (V3d_TypeOfOrientation theType)
 {
-  const Standard_Boolean inf = ray < 0;
-  const Standard_Real aRadius = Standard_ShortReal(Abs(ray));
-  Handle(Graphic3d_Structure) Struct = new Graphic3d_Structure(aViewer->StructureManager());
-  Handle(Graphic3d_Group)     Group  = Struct->NewGroup();
-
-  Handle(Graphic3d_AspectLine3d) LineAttrib = new Graphic3d_AspectLine3d() ;
-  LineAttrib->SetColor(Quantity_Color(Quantity_NOC_YELLOW));
-  Struct->SetPrimitivesAspect(LineAttrib) ;
-
-  const Standard_Integer NFACES = 30;
-  Handle(Graphic3d_ArrayOfPolylines) aPrims = new Graphic3d_ArrayOfPolylines(NFACES*(NFACES+1),NFACES);
-
-  const Standard_Real Dbeta = 2. * M_PI / NFACES;
-  const Standard_Real Dalpha = 2. * M_PI / NFACES;
-  Standard_ShortReal X,Y,Z,X0 = 0.,Y0 = 0.,Z0 = 0.;
-  Standard_Real R, Alpha, Beta = 0.;
-  Standard_Integer i,j ;
-  for( j=0; j<NFACES/2 ; j++, Beta += Dbeta ) {
-    aPrims->AddBound(NFACES+1);
-    R = aRadius*sin(Beta);
-    Z = Standard_ShortReal(aRadius*cos(Beta));
-    for( i=0, Alpha = 0.; i<NFACES; i++, Alpha += Dalpha ) {
-      X = Standard_ShortReal(R*cos(Alpha));
-      Y = Standard_ShortReal(R*sin(Alpha));
-      aPrims->AddVertex(X,Y,Z);
-      if (i==0) { X0=X, Y0=Y, Z0=Z; }
-    }
-    aPrims->AddVertex(X0,Y0,Z0);
-  }
-  for( j=0; j<NFACES/2 ; j++, Beta += Dbeta ) {
-    aPrims->AddBound(NFACES+1);
-    R = aRadius*sin(Beta);
-    Y = Standard_ShortReal(aRadius*cos(Beta));
-    Beta += Dbeta ;
-    for( i=0, Alpha = 0.; i<NFACES; i++, Alpha += Dalpha ) {
-      X = Standard_ShortReal(R*cos(Alpha));
-      Z = Standard_ShortReal(R*sin(Alpha));
-      aPrims->AddVertex(X,Y,Z);
-      if (i==0) { X0=X, Y0=Y, Z0=Z; }
-    }
-    aPrims->AddVertex(X0,Y0,Z0);
-  }
-  Group->AddPrimitiveArray(aPrims);
-  if(inf) Struct->SetInfiniteState(Standard_True);
-  Struct->Display();
-  aViewer->Update();
+  return V3d_Table_PrintTypeOfOrientation[theType];
 }
 
-void V3d::SetPlane(const Handle(V3d_Viewer)& aViewer, 
-                   const Standard_Real x1,
-                   const Standard_Real y1,
-                   const Standard_Real z1,
-                   const Standard_Real x2,
-                   const Standard_Real y2,
-                   const Standard_Real z2) {
-
-  gp_Ax3 a(gp_Pnt(0.,0.,0),gp_Dir(x1,y1,z1),gp_Dir(x2,y2,z2));
-  aViewer->SetPrivilegedPlane(a);
-
-}
-void V3d::PickGrid(const Handle(V3d_Viewer)& aViewer,
-//                                const Quantity_Length ray) {
-                                const Quantity_Length ) {
-Standard_Real x1, y1, z1;
-Standard_Real x2, y2, z2;
-        cout << "Direction ? " << flush;
-        cin >> x1; cin >> y1; cin >> z1;
-        cout << "XDirection ? " << flush;
-        cin >> x2; cin >> y2; cin >> z2;
-Standard_Integer u, v;
-        cout << "u, v ? " << flush;
-        cin >> u; cin >> v;
-        V3d::SetPlane (aViewer, x1, y1, z1, x2, y2, z2);
-
-        // To restart the calculation on the new plane
-        if (aViewer->Grid ()->IsActive ()) {
-                Standard_Real xo, yo;
-                Quantity_PlaneAngle angle;
-                switch (aViewer->GridType ()) {
-                        case Aspect_GT_Rectangular :
-                                Standard_Real xstep, ystep;
-                                aViewer->RectangularGridValues
-                                        (xo, yo, xstep, ystep, angle);
-                                aViewer->SetRectangularGridValues
-                                        (xo, yo, xstep, ystep, angle);
-                        break;
-                        case Aspect_GT_Circular :
-                                Standard_Real radiusstep;
-                                Standard_Integer division;
-                                aViewer->CircularGridValues
-                                        (xo, yo, radiusstep, division, angle);
-                                aViewer->SetCircularGridValues
-                                        (xo, yo, radiusstep, division, angle);
-                        break;
-                }
-        }
-
-        for (aViewer->InitActiveViews ();
-                aViewer->MoreActiveViews ();
-                   aViewer->NextActiveViews()) {
-Standard_Real X, Y, Z;
-                aViewer->ActiveView ()->Convert (u, v, X, Y, Z);
-        }
+//=======================================================================
+//function : TypeOfOrientationFromString
+//purpose  :
+//=======================================================================
+Standard_Boolean V3d::TypeOfOrientationFromString (Standard_CString theTypeString,
+                                                   V3d_TypeOfOrientation& theType)
+{
+  TCollection_AsciiString aName (theTypeString);
+  aName.UpperCase();
+  for (Standard_Integer aTypeIter = 0; aTypeIter <= V3d_XnegYnegZneg; ++aTypeIter)
+  {
+    Standard_CString aTypeName = V3d_Table_PrintTypeOfOrientation[aTypeIter];
+    if (aName == aTypeName)
+    {
+      theType = V3d_TypeOfOrientation (aTypeIter);
+      return Standard_True;
+    }
+  }
+  return Standard_False;
 }

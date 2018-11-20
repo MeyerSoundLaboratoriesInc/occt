@@ -8,10 +8,6 @@
 			<Depends filename="TKCDF.cbp" />
 			<Depends filename="TKernel.cbp" />
 		</Project>
-		<Project filename="FWOSPlugin.cbp" >
-			<Depends filename="TKernel.cbp" />
-			<Depends filename="TKCDF.cbp" />
-		</Project>
 		<Project filename="TKCAF.cbp" >
 			<Depends filename="TKernel.cbp" />
 			<Depends filename="TKGeomBase.cbp" />

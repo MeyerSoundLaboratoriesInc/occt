@@ -320,17 +320,15 @@ Standard_Boolean
 					 const Standard_Boolean RecOnS1, 
 					 const Standard_Boolean RecOnS2, 
 					 const math_Vector& Soldep, 
-					 Standard_Boolean& Intf, 
-					 Standard_Boolean& Intl)
+					 Standard_Integer& Intf, 
+					 Standard_Integer& Intl)
 {
   Handle(ChFiDS_SurfData) Data = SeqData(1);
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   TopAbs_Orientation Or = S1->ChangeSurface().Face().Orientation();
-  if(!fsp->IsConstant()) Standard_ConstructionError::Raise
-    ("PerformSurf : no variable radiuses");
+  if(!fsp->IsConstant()) throw Standard_ConstructionError("PerformSurf : no variable radiuses");
   // Standard_Boolean maybesingular; //pour scinder les Surfdata singulieres 
   
   BRepBlend_ConstRad Func(S1,S2,Guide);
@@ -370,16 +368,17 @@ Standard_Boolean
 			  Standard_False, Data->ChangeVertexLastOnS2(), tolesp);
   }
   done = CompleteData(Data,Func,lin,S1,S2,Or,0,0,0,0);
-  if(!done)  Standard_Failure::Raise("PerformSurf : Failed approximation!");
+  if(!done)  throw Standard_Failure("PerformSurf : Failed approximation!");
 //  maybesingular = (Func.GetMinimalDistance()<=100*tolapp3d);
-  Standard_Boolean ok = 0;
+  Standard_Boolean ok = Standard_False;
   if(!Forward){
     Intf = 0;
     const ChFiDS_CommonPoint& cpf1 = Data->VertexFirstOnS1();
     if(cpf1.IsOnArc()){
       TopoDS_Face F1 = S1->ChangeSurface().Face();
       TopoDS_Face bid;
-      ok = Intf = !SearchFace(Spine,cpf1,F1,bid);
+      Intf = !SearchFace(Spine,cpf1,F1,bid);
+      ok = Intf != 0;
     }
     const ChFiDS_CommonPoint& cpf2 = Data->VertexFirstOnS2();
     if(cpf2.IsOnArc() && !ok){
@@ -389,12 +388,13 @@ Standard_Boolean
     }
   }
   Intl = 0;
-  ok = 0;
+  ok = Standard_False;
   const ChFiDS_CommonPoint& cpl1 = Data->VertexLastOnS1();
   if(cpl1.IsOnArc()){
     TopoDS_Face F1 = S1->ChangeSurface().Face();
     TopoDS_Face bid;
-    ok = Intl = !SearchFace(Spine,cpl1,F1,bid);
+    Intl = !SearchFace(Spine,cpl1,F1,bid);
+    ok = Intl != 0;
   }
   const ChFiDS_CommonPoint& cpl2 = Data->VertexLastOnS2();
   if(cpl2.IsOnArc() && !ok){
@@ -410,19 +410,19 @@ Standard_Boolean
   return Standard_True;
 }
 
-void FilletSurf_InternalBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&, const Handle(ChFiDS_HElSpine)&, const Handle(ChFiDS_Spine)&, const int, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const Handle(BRepAdaptor_HCurve2d)&, const Handle(BRepAdaptor_HSurface)&, const Handle(BRepAdaptor_HCurve2d)&, unsigned int&, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const TopAbs_Orientation, const double, const double, const double, double&, double&, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const math_Vector&)
+void FilletSurf_InternalBuilder::PerformSurf (ChFiDS_SequenceOfSurfData& , const Handle(ChFiDS_HElSpine)& , const Handle(ChFiDS_Spine)& , const Standard_Integer , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const Handle(BRepAdaptor_HCurve2d)& , const Handle(BRepAdaptor_HSurface)& , const Handle(BRepAdaptor_HCurve2d)& , Standard_Boolean& , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const TopAbs_Orientation , const Standard_Real , const Standard_Real , const Standard_Real , Standard_Real& , Standard_Real& , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const math_Vector& )
 {
- Standard_DomainError::Raise("BlendFunc_CSConstRad::Section : Not implemented");
+ throw Standard_DomainError("BlendFunc_CSConstRad::Section : Not implemented");
 }
 
-void FilletSurf_InternalBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&, const Handle(ChFiDS_HElSpine)&, const Handle(ChFiDS_Spine)&, const int, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const Handle(BRepAdaptor_HCurve2d)&, const Handle(BRepAdaptor_HSurface)&, const Handle(BRepAdaptor_HCurve2d)&, unsigned int&, const TopAbs_Orientation, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const Handle(BRepAdaptor_HCurve2d)&, const Handle(BRepAdaptor_HSurface)&, const Handle(BRepAdaptor_HCurve2d)&, unsigned int&, const TopAbs_Orientation, const double, const double, const double, double&, double&, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const math_Vector&)
+void FilletSurf_InternalBuilder::PerformSurf (ChFiDS_SequenceOfSurfData& , const Handle(ChFiDS_HElSpine)& , const Handle(ChFiDS_Spine)& , const Standard_Integer , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const TopAbs_Orientation , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const Handle(BRepAdaptor_HCurve2d)& , const Handle(BRepAdaptor_HSurface)& , const Handle(BRepAdaptor_HCurve2d)& , Standard_Boolean& , const Standard_Real , const Standard_Real , const Standard_Real , Standard_Real& , Standard_Real& , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const math_Vector& )
 {
- Standard_DomainError::Raise("BlendFunc_CSConstRad::Section : Not implemented");
+ throw Standard_DomainError("BlendFunc_CSConstRad::Section : Not implemented");
 }
 
-void FilletSurf_InternalBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&, const Handle(ChFiDS_HElSpine)&, const Handle(ChFiDS_Spine)&, const int, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const TopAbs_Orientation, const Handle(BRepAdaptor_HSurface)&, const Handle(Adaptor3d_TopolTool)&, const Handle(BRepAdaptor_HCurve2d)&, const Handle(BRepAdaptor_HSurface)&, const Handle(BRepAdaptor_HCurve2d)&, unsigned int&, const double, const double, const double, double&, double&, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const unsigned int, const math_Vector&)
+void FilletSurf_InternalBuilder::PerformSurf (ChFiDS_SequenceOfSurfData& , const Handle(ChFiDS_HElSpine)& , const Handle(ChFiDS_Spine)& , const Standard_Integer , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const Handle(BRepAdaptor_HCurve2d)& , const Handle(BRepAdaptor_HSurface)& , const Handle(BRepAdaptor_HCurve2d)& , Standard_Boolean& , const TopAbs_Orientation , const Handle(BRepAdaptor_HSurface)& , const Handle(Adaptor3d_TopolTool)& , const Handle(BRepAdaptor_HCurve2d)& , const Handle(BRepAdaptor_HSurface)& , const Handle(BRepAdaptor_HCurve2d)& , Standard_Boolean& , const TopAbs_Orientation , const Standard_Real , const Standard_Real , const Standard_Real , Standard_Real& , Standard_Real& , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const Standard_Boolean , const math_Vector& )
 {
- Standard_DomainError::Raise("BlendFunc_CSConstRad::Section : Not implemented");
+ throw Standard_DomainError("BlendFunc_CSConstRad::Section : Not implemented");
 }
 
 Standard_Boolean  FilletSurf_InternalBuilder::Done() const

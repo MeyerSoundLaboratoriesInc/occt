@@ -13,8 +13,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-#if defined(_MSC_VER)
-  // supress "std::Equal1" warning suggesting using msvc "Checked Iterators"
+#if defined(_MSC_VER) && ! defined(_SCL_SECURE_NO_WARNINGS)
+  // suppress "std::Equal1" warning suggesting using msvc "Checked Iterators"
   #define _SCL_SECURE_NO_WARNINGS
 #endif
 
@@ -32,6 +32,7 @@
 #include <Standard_Assert.hxx>
 #include <OSD_Timer.hxx>
 #include <OSD_Parallel.hxx>
+
 #include <algorithm>
 #include <list>
 #include <set>
@@ -45,7 +46,7 @@ namespace {
   // Auxiliary class to use in std::random_shuffle()
   struct RandomGenerator {
     RandomGenerator () { srand(1); }
-    int operator () (int upper) const { return rand() % upper; }
+    ptrdiff_t operator () (ptrdiff_t upper) const { return rand() % upper; }
   };
 }
 
@@ -821,6 +822,30 @@ static Standard_Integer QANVectorStlIterator (Draw_Interpretor&, Standard_Intege
   aResult = TestParallel<NCollection_Vector<double>, std::vector<double> >();
   std::cout << "NCollection_Vector<double> Parallel:            " <<
     (aResult ? "SUCCESS" : "FAIL") << std::endl;
+
+  {
+    // Test case for a corner case described in a bug #0027941
+    // when vector length matches the increment.
+    // In this case NCollection_Vector::Iterator::Offset() produced mathematically equal
+    // but not the same iterator as returned by NCollection_Vector::end()
+    // so that their comparison was not equal.
+    // As result, std::stable_sort() crashed due to out-of-range access.
+    const int THE_INCREMENT = 256;
+    NCollection_Vector<int> aVector (THE_INCREMENT);
+    for (int anIter = 0; anIter < THE_INCREMENT; ++anIter)
+    {
+      aVector.Append (THE_INCREMENT - anIter);
+    }
+
+    NCollection_Vector<int>::iterator aBegin = aVector.begin();
+    NCollection_Vector<int>::iterator anEnd  = aVector.end();
+    NCollection_Vector<int>::iterator aShift = aBegin + THE_INCREMENT;
+    aResult = (aShift == anEnd);
+    std::cout << "NCollection_Vector<int> Offset:                 " <<
+      (aResult ? "SUCCESS" : "FAIL") << std::endl;
+
+    std::stable_sort (aVector.begin(), aVector.end());
+  }
 
   return 0;
 }

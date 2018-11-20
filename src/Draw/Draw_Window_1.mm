@@ -18,6 +18,25 @@
 #include <Draw_Window.hxx>
 #include <Cocoa_LocalPool.hxx>
 
+#if !defined(MAC_OS_X_VERSION_10_12) || (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_12)
+  // replacements for macOS versions before 10.12
+  #define NSEventTypeLeftMouseDown    NSLeftMouseDown
+  #define NSEventTypeRightMouseDown   NSRightMouseDown
+  #define NSEventTypeLeftMouseDragged NSLeftMouseDragged
+  #define NSEventTypeMouseMoved       NSMouseMoved
+
+  #define NSEventMaskLeftMouseDragged NSLeftMouseDraggedMask
+  #define NSEventMaskMouseMoved       NSMouseMovedMask
+  #define NSEventMaskLeftMouseDown    NSLeftMouseDownMask
+  #define NSEventMaskRightMouseDown   NSRightMouseDownMask
+
+  #define NSWindowStyleMaskResizable  NSResizableWindowMask
+  #define NSWindowStyleMaskClosable   NSClosableWindowMask
+  #define NSWindowStyleMaskTitled     NSTitledWindowMask
+
+  #define NSCompositingOperationSourceOver NSCompositeSourceOver
+#endif
+
 @interface Draw_CocoaView : NSView
 {
   NSImage* myImage;
@@ -53,7 +72,7 @@
 
   [myImage drawInRect: aBounds
              fromRect: NSZeroRect
-            operation: NSCompositeSourceOver
+            operation: NSCompositingOperationSourceOver
              fraction: 1
        respectFlipped: YES
                 hints: nil];
@@ -199,7 +218,7 @@ void Draw_Window::Init (const Standard_Integer& theXLeft, const Standard_Integer
   if (myWindow == NULL)
   {
     NSRect     aRectNs   = NSMakeRect (theXLeft, anYTop, theWidth, theHeight);
-    NSUInteger aWinStyle = NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask;
+    NSUInteger aWinStyle = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable;
 
     myWindow = [[NSWindow alloc] initWithContentRect: aRectNs
                                            styleMask: aWinStyle
@@ -301,9 +320,9 @@ Standard_Integer Draw_Window::WidthWin() const
 //function : SetTitle
 //purpose  :
 //=======================================================================
-void Draw_Window::SetTitle (Standard_CString theTitle)
+void Draw_Window::SetTitle (const TCollection_AsciiString& theTitle)
 {
-  NSString* aTitleNs = [[NSString alloc] initWithUTF8String: theTitle];
+  NSString* aTitleNs = [[NSString alloc] initWithUTF8String: theTitle.ToCString()];
   [myWindow setTitle: aTitleNs];
   [aTitleNs release];
 }
@@ -312,10 +331,10 @@ void Draw_Window::SetTitle (Standard_CString theTitle)
 //function : GetTitle
 //purpose  :
 //=======================================================================
-Standard_CString Draw_Window::GetTitle()
+TCollection_AsciiString Draw_Window::GetTitle() const
 {
   Standard_CString aTitle = [[myWindow title] UTF8String];
-  return aTitle;
+  return TCollection_AsciiString (aTitle);
 }
 
 //=======================================================================
@@ -325,6 +344,21 @@ Standard_CString Draw_Window::GetTitle()
 Standard_Boolean Draw_Window::DefineColor (const Standard_Integer&, Standard_CString)
 {
   return Standard_True; // unused
+}
+
+//=======================================================================
+//function : IsMapped
+//purpose  :
+//=======================================================================
+bool Draw_Window::IsMapped() const
+{
+  if (Draw_VirtualWindows
+   || myWindow == NULL)
+  {
+    return false;
+  }
+
+  return [myWindow isVisible];
 }
 
 //=======================================================================
@@ -565,11 +599,11 @@ void GetNextEvent (Standard_Boolean  theWait,
 {
   Cocoa_LocalPool aLocalPool;
 
-  unsigned int anEventMatchMask = NSLeftMouseDownMask | NSRightMouseDownMask;
+  unsigned int anEventMatchMask = NSEventMaskLeftMouseDown | NSEventMaskRightMouseDown;
 
   if (!theWait)
   {
-    anEventMatchMask = anEventMatchMask | NSMouseMovedMask | NSLeftMouseDraggedMask;
+    anEventMatchMask = anEventMatchMask | NSEventMaskMouseMoved | NSEventMaskLeftMouseDragged;
     Draw_IsInZoomingMode = Standard_True;
   }
 
@@ -589,15 +623,15 @@ void GetNextEvent (Standard_Boolean  theWait,
 
   NSEventType anEventType = [anEvent type];
 
-  if (anEventType == NSLeftMouseDown)
+  if (anEventType == NSEventTypeLeftMouseDown)
   {
     theButton = 1;
   }
-  else if (anEventType == NSRightMouseDown)
+  else if (anEventType == NSEventTypeRightMouseDown)
   {
     theButton = 3;
   }
-  else if ((anEventType == NSMouseMoved || anEventType == NSLeftMouseDragged) && !theWait)
+  else if ((anEventType == NSEventTypeMouseMoved || anEventType == NSEventTypeLeftMouseDragged) && !theWait)
   {
     theButton = 0;
   }

@@ -17,6 +17,7 @@
 
 #include <Bnd_Box.hxx>
 #include <BRep_Tool.hxx>
+#include <BRep_Builder.hxx>
 #include <BRepAlgo.hxx>
 #include <BRepAlgoAPI_BooleanOperation.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
@@ -50,17 +51,12 @@
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Shape.hxx>
 #include <TopoDS_Solid.hxx>
-#include <TopOpeBRepBuild_HBuilder.hxx>
 #include <TopTools_DataMapIteratorOfDataMapOfShapeListOfShape.hxx>
 #include <TopTools_DataMapIteratorOfDataMapOfShapeShape.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
 
-//modified by NIZNHY-PKV Thu Mar 21 17:30:25 2002 f
-//#include <BRepAlgo_Cut.hxx>
-//#include <BRepAlgo_Fuse.hxx>
-//modified by NIZNHY-PKV Thu Mar 21 17:30:29 2002 t
 #ifdef OCCT_DEBUG
 extern Standard_Boolean BRepFeat_GettraceFEAT();
 #endif
@@ -320,10 +316,7 @@ static void Descendants(const TopoDS_Shape&,
     TopTools_DataMapOfShapeListOfShape locmap;
     TopExp_Explorer expp(Comp, TopAbs_SOLID);
     if(expp.More() && !Comp.IsNull() && !myGShape.IsNull())  {
-      //modified by NIZNHY-PKV Thu Mar 21 17:15:36 2002 f
-      //BRepAlgo_Cut trP(myGShape,Comp);
       BRepAlgoAPI_Cut trP(myGShape, Comp);
-      //modified by NIZNHY-PKV Thu Mar 21 17:15:58 2002 t
       exp.Init(trP.Shape(), TopAbs_SOLID);
       if (exp.Current().IsNull()) {
         theOpe = 2;
@@ -395,10 +388,7 @@ static void Descendants(const TopoDS_Shape&,
             }
           }// if(!mySUntil.IsNull())
           //
-          //modified by NIZNHY-PKV Thu Mar 21 17:21:49 2002 f
-          //UpdateDescendants(trP.Builder(),theGShape,Standard_True); // skip faces
           UpdateDescendants(trP,theGShape,Standard_True); // skip faces
-          //modified by NIZNHY-PKV Thu Mar 21 17:22:32 2002 t
 
           theGlue.Init(mySbase,theGShape);
           for (itm.Initialize(myGluedF);itm.More();itm.Next()) {
@@ -605,10 +595,7 @@ static void Descendants(const TopoDS_Shape&,
 
     TopExp_Explorer expp(Comp, TopAbs_SOLID);
     if(expp.More() && !Comp.IsNull() && !myGShape.IsNull())  {
-      //modified by NIZNHY-PKV Thu Mar 21 17:24:52 2002 f
-      //BRepAlgo_Cut trP(myGShape,Comp);
       BRepAlgoAPI_Cut trP(myGShape, Comp);
-      //modified by NIZNHY-PKV Thu Mar 21 17:24:56 2002 t
       // the result is necessarily a compound.
       exp.Init(trP.Shape(),TopAbs_SOLID);
       if (!exp.More()) {
@@ -659,10 +646,7 @@ static void Descendants(const TopoDS_Shape&,
           }
         }
       }
-      //modified by NIZNHY-PKV Thu Mar 21 17:27:23 2002 f
-      //UpdateDescendants(trP.Builder(),theGShape,Standard_True); 
       UpdateDescendants(trP,theGShape,Standard_True); 
-      //modified by NIZNHY-PKV Thu Mar 21 17:27:31 2002 t
     }//if(expp.More() && !Comp.IsNull() && !myGShape.IsNull())  {
     //
 
@@ -1007,14 +991,12 @@ static void Descendants(const TopoDS_Shape&,
     if (!myJustFeat) {
       // removal of edges of section that have no common vertices
       // with PartsOfTool preserved
-      //modified by NIZHNY-EMV Thu May 10 15:56:24 2012
       if (bFlag) { 
         theBuilder.PerformResult();
         myShape = theBuilder.Shape();
       } else {
         myShape = theBuilder.Shape();
       }
-      //modified by NIZHNY-EMV Thu May 10 15:56:26 2012
       Done();
     }
     else {
@@ -1292,91 +1274,6 @@ static void Descendants(const TopoDS_Shape& S,
 //function : UpdateDescendants
 //purpose  : 
 //=======================================================================
-  void BRepFeat_Form::UpdateDescendants(const Handle(TopOpeBRepBuild_HBuilder)& B,
-                                        const TopoDS_Shape& S,
-                                        const Standard_Boolean SkipFace)
-{
-  TopTools_DataMapIteratorOfDataMapOfShapeListOfShape itdm;
-  TopTools_ListIteratorOfListOfShape it,it2;
-  TopTools_MapIteratorOfMapOfShape itm;
-  TopExp_Explorer exp;
-
-  for (itdm.Initialize(myMap);itdm.More();itdm.Next()) {
-    const TopoDS_Shape& orig = itdm.Key();
-    if (SkipFace && orig.ShapeType() == TopAbs_FACE) {
-      continue;
-    }
-    TopTools_MapOfShape newdsc;
-
-    if (itdm.Value().IsEmpty()) {myMap.ChangeFind(orig).Append(orig);}
-
-    for (it.Initialize(itdm.Value());it.More();it.Next()) {
-      const TopoDS_Shape& sh = it.Value();
-      if(sh.ShapeType() != TopAbs_FACE) continue;
-      const TopoDS_Face& fdsc = TopoDS::Face(it.Value()); 
-      for (exp.Init(S,TopAbs_FACE);exp.More();exp.Next()) {
-        if (exp.Current().IsSame(fdsc)) { // preserved
-          newdsc.Add(fdsc);
-          break;
-        }
-      }
-      if (!exp.More()) {
-        if (B->IsSplit(fdsc, TopAbs_OUT)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_OUT));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsSplit(fdsc, TopAbs_IN)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_IN));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsSplit(fdsc, TopAbs_ON)) {
-          for (it2.Initialize(B->Splits(fdsc,TopAbs_ON));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_OUT)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_OUT));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_IN)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_IN));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-        if (B->IsMerged(fdsc, TopAbs_ON)) {
-          for (it2.Initialize(B->Merged(fdsc,TopAbs_ON));
-               it2.More();it2.Next()) {
-            newdsc.Add(it2.Value());
-          }
-        }
-      }
-    }
-    myMap.ChangeFind(orig).Clear();
-    for (itm.Initialize(newdsc); itm.More(); itm.Next()) {
-       // check the appartenance to the shape...
-      for (exp.Init(S,TopAbs_FACE);exp.More();exp.Next()) {
-        if (exp.Current().IsSame(itm.Key())) {
-//          const TopoDS_Shape& sh = itm.Key();
-          myMap.ChangeFind(orig).Append(itm.Key());
-          break;
-        }
-      }
-    }
-  }
-}
-//modified by NIZNHY-PKV Thu Mar 21 18:43:18 2002 f
-//=======================================================================
-//function : UpdateDescendants
-//purpose  : 
-//=======================================================================
   void BRepFeat_Form::UpdateDescendants(const BRepAlgoAPI_BooleanOperation& aBOP,
                                         const TopoDS_Shape& S,
                                         const Standard_Boolean SkipFace)
@@ -1429,4 +1326,3 @@ static void Descendants(const TopoDS_Shape& S,
     }
   }
 }
-//modified by NIZNHY-PKV Thu Mar 21 18:43:36 2002 t

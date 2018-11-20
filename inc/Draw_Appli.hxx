@@ -14,15 +14,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-// JR 21 Oct 1999 : Change for Draw_Init_Appli which is in main and is
-//                  called from Draw ===> undefined symbol on UNIX
-//                                   ===> duplication of code on NT :
-//                  One argument added to DrawAppli : Draw_Init_Appli ===>
-//                  Draw_Appli of Draw/TKDraw may call Draw_Init_Appli
-
 #ifndef Draw_Appli_HeaderFile
 #define Draw_Appli_HeaderFile
-
 
 #include <Draw_Viewer.hxx>
 #include <Draw.hxx>
@@ -31,28 +24,13 @@ typedef void (*FDraw_InitAppli)(Draw_Interpretor&);
 
 #ifdef _WIN32
 #include <windows.h>
-//extern void Draw_Appli(HINSTANCE,HINSTANCE,LPSTR,int);
-Standard_EXPORT void Draw_Appli(HINSTANCE,HINSTANCE,LPSTR,int,
-                       const FDraw_InitAppli Draw_InitAppli);
+Standard_EXPORT void Draw_Appli(HINSTANCE,HINSTANCE,int,
+                                int argc, wchar_t** argv,
+                                const FDraw_InitAppli Draw_InitAppli);
 #else
-extern void Draw_Appli(Standard_Integer argc, char** argv,
+extern void Draw_Appli(int argc, char** argv,
                        const FDraw_InitAppli Draw_InitAppli);
 #endif
-
-
-
-#if defined(_WIN32) && !defined(HAVE_NO_DLL)
-#ifndef __Draw_API
-# ifdef __Draw_DLL
-#  define __Draw_API __declspec ( dllexport )
-# else
-#  define __Draw_API __declspec ( dllimport )
-# endif
-#endif
-#else
-#  define __Draw_API  
-#endif
-
 
 #ifndef _WIN32
 extern Draw_Viewer dout;
@@ -63,7 +41,6 @@ class Draw_SaveAndRestore {
 
   public :
 
-//    __Draw_API Draw_SaveAndRestore 
     Standard_EXPORT Draw_SaveAndRestore 
       (const char* name,
        Standard_Boolean (*test)(const Handle(Draw_Drawable3D)&),

@@ -52,13 +52,6 @@ gce_MakeParab2d::gce_MakeParab2d(const gp_Ax2d&  D            ,
   TheError = gce_Done;
 }
 
-gce_MakeParab2d::gce_MakeParab2d(const gp_Ax22d&  D ,
-				 const gp_Pnt2d& F  )
-{
-  TheParab2d = gp_Parab2d(D,F);
-  TheError = gce_Done;
-}
-
 //=========================================================================
 //   Creation d une Parabole 2d de gp de centre <Center> et de sommet     +
 //   <S1> .                                                               +
@@ -80,7 +73,8 @@ gce_MakeParab2d::gce_MakeParab2d(const gp_Pnt2d&        S      ,
 
 const gp_Parab2d& gce_MakeParab2d::Value () const
 {
-  StdFail_NotDone_Raise_if(TheError != gce_Done,"");
+  StdFail_NotDone_Raise_if (TheError != gce_Done,
+                            "gce_MakeParab2d::Value() - no result");
   return TheParab2d;
 }
 

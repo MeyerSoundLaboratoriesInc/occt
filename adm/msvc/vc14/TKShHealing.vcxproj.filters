@@ -2,37 +2,37 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{775225BB-13A6-0391-0204-97B0CDD8A118}</UniqueIdentifier>
+      <UniqueIdentifier>{5F089722-0ED2-0466-006B-387AB2FF488A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeBuild">
-      <UniqueIdentifier>{385AB00C-1692-0B15-0C9A-C846E0A51E10}</UniqueIdentifier>
+      <UniqueIdentifier>{F36E7C9D-18F7-0945-021A-53F52C0547FB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeExtend">
-      <UniqueIdentifier>{58D65055-0767-0694-16F3-D99A5D258678}</UniqueIdentifier>
+      <UniqueIdentifier>{B8C13019-18C6-07E3-07C7-C0F43CE2AF53}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeConstruct">
-      <UniqueIdentifier>{9F6BDA96-11CB-0EA8-00B5-11AB720ED2A2}</UniqueIdentifier>
+      <UniqueIdentifier>{64AA817F-07E2-0C8B-1649-671FA44E5DBB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeCustom">
-      <UniqueIdentifier>{26AD9CE5-150C-18ED-0AF4-158114CD5152}</UniqueIdentifier>
+      <UniqueIdentifier>{EBCD480F-1480-18B0-1046-C25734EB51C8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeAnalysis">
-      <UniqueIdentifier>{96003E1E-0057-10AF-03BE-FBCBF20A9473}</UniqueIdentifier>
+      <UniqueIdentifier>{463C9C83-097C-0304-0B13-C2839F4F44D4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeFix">
-      <UniqueIdentifier>{984275F3-0196-0C16-0349-781CE6B15134}</UniqueIdentifier>
+      <UniqueIdentifier>{2FF88486-107C-136B-10ED-1223BEE8A693}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeUpgrade">
-      <UniqueIdentifier>{4A585C8E-00BA-0CF4-043D-710B75A7591F}</UniqueIdentifier>
+      <UniqueIdentifier>{1011E080-0301-1134-03CE-02661C7DC494}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeAlgo">
-      <UniqueIdentifier>{CC13FF33-01F4-0B5C-022C-F27CCADEBD8B}</UniqueIdentifier>
+      <UniqueIdentifier>{F4F4308C-193E-0938-12E4-56D74C50DE8D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeProcess">
-      <UniqueIdentifier>{6DF5BCF2-18F5-05EF-0BF2-D7B35E40E5E1}</UniqueIdentifier>
+      <UniqueIdentifier>{43175A3B-10FE-1372-0FAE-1C972D092E4A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ShapeProcessAPI">
-      <UniqueIdentifier>{B44387CB-05E0-0D5F-1556-D6103FC49886}</UniqueIdentifier>
+      <UniqueIdentifier>{BE156CA7-1543-0C6C-0107-0FD02E2CA9B0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -70,12 +70,6 @@
       <Filter>Source files\ShapeExtend</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapeConstruct\ShapeConstruct.cxx">
-      <Filter>Source files\ShapeConstruct</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ShapeConstruct\ShapeConstruct_CompBezierCurves2dToBSplineCurve2d.cxx">
-      <Filter>Source files\ShapeConstruct</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ShapeConstruct\ShapeConstruct_CompBezierCurvesToBSplineCurve.cxx">
       <Filter>Source files\ShapeConstruct</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapeConstruct\ShapeConstruct_Curve.cxx">
@@ -360,12 +354,6 @@
     <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_Context.cxx">
       <Filter>Source files\ShapeProcess</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_DictionaryOfOperator_0.cxx">
-      <Filter>Source files\ShapeProcess</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_IteratorOfDictionaryOfOperator_0.cxx">
-      <Filter>Source files\ShapeProcess</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_OperLibrary.cxx">
       <Filter>Source files\ShapeProcess</Filter>
     </ClCompile>
@@ -373,9 +361,6 @@
       <Filter>Source files\ShapeProcess</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_ShapeContext.cxx">
-      <Filter>Source files\ShapeProcess</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_StackItemOfDictionaryOfOperator_0.cxx">
       <Filter>Source files\ShapeProcess</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ShapeProcess\ShapeProcess_UOperator.cxx">

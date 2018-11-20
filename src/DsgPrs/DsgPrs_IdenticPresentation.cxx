@@ -50,13 +50,9 @@ void DsgPrs_IdenticPresentation::Add( const Handle(Prs3d_Presentation)& aPresent
   aPrims->AddVertex(aPntOffset);
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims);
 
-  // On ajoute un rond au point d'attache
   Prs3d_Root::NewGroup(aPresentation);
   Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect(LA->LineAspect()->Aspect());
-  Quantity_Color aColor;
-  Aspect_TypeOfLine aType;
-  Standard_Real aWidth;
-  LA->LineAspect()->Aspect()->Values (aColor, aType, aWidth);
+  Quantity_Color aColor = LA->LineAspect()->Aspect()->Color();
   Handle(Graphic3d_AspectMarker3d) aMarkerAsp = new Graphic3d_AspectMarker3d (Aspect_TOM_O, aColor, 1.0);
   Prs3d_Root::CurrentGroup(aPresentation)->SetPrimitivesAspect (aMarkerAsp);
   Handle(Graphic3d_ArrayOfPoints) anArrayOfPoints = new Graphic3d_ArrayOfPoints (1);
@@ -64,7 +60,7 @@ void DsgPrs_IdenticPresentation::Add( const Handle(Prs3d_Presentation)& aPresent
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray (anArrayOfPoints);
 
   // texte 
-  Prs3d_Text::Draw(aPresentation,LA->TextAspect(),aText,aPntOffset);
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (aPresentation), LA->TextAspect(), aText, aPntOffset);
 }
 
 
@@ -100,7 +96,7 @@ void DsgPrs_IdenticPresentation::Add( const Handle(Prs3d_Presentation)& aPresent
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims);
 
   // texte 
-  Prs3d_Text::Draw(aPresentation,LA->TextAspect(),aText,aPntOffset);
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (aPresentation), LA->TextAspect(), aText, aPntOffset);
 }
 
 
@@ -148,7 +144,7 @@ void DsgPrs_IdenticPresentation::Add(const Handle(Prs3d_Presentation)& aPresenta
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims);
 
   // texte 
-  Prs3d_Text::Draw(aPresentation,LA->TextAspect(),aText,aPntOffset);
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (aPresentation), LA->TextAspect(), aText, aPntOffset);
 }
 
 // jfa 16/10/2000
@@ -197,7 +193,7 @@ void DsgPrs_IdenticPresentation::Add(const Handle(Prs3d_Presentation)& aPresenta
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims);
 
   // texte 
-  Prs3d_Text::Draw(aPresentation,LA->TextAspect(),aText,aPntOffset);
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (aPresentation), LA->TextAspect(), aText, aPntOffset);
 }
 // jfa 16/10/2000 end
 
@@ -242,6 +238,6 @@ void DsgPrs_IdenticPresentation::Add(const Handle(Prs3d_Presentation)& aPresenta
   Prs3d_Root::CurrentGroup(aPresentation)->AddPrimitiveArray(aPrims);
 
   // texte 
-  Prs3d_Text::Draw(aPresentation,LA->TextAspect(),aText,aPntOffset);
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (aPresentation), LA->TextAspect(), aText, aPntOffset);
 }
 // jfa 10/10/2000 end

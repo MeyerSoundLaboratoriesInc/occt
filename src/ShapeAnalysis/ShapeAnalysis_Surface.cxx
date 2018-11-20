@@ -58,7 +58,7 @@
 #include <Standard_NoSuchObject.hxx>
 #include <Standard_Type.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(ShapeAnalysis_Surface,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(ShapeAnalysis_Surface,Standard_Transient)
 
 //S4135
 //S4135
@@ -376,8 +376,8 @@ Standard_Boolean ShapeAnalysis_Surface::ProjectDegenerated(const gp_Pnt& P3d,
 //=======================================================================
 
 Standard_Boolean ShapeAnalysis_Surface::ProjectDegenerated(const Standard_Integer nbrPnt,
-							   const TColgp_Array1OfPnt& points,
-							   TColgp_Array1OfPnt2d& pnt2d,
+							   const TColgp_SequenceOfPnt& points,
+							   TColgp_SequenceOfPnt2d& pnt2d,
 							   const Standard_Real preci,
 							   const Standard_Boolean direct)
 {
@@ -474,12 +474,14 @@ static Handle(Geom_Curve) ComputeIso
     if (utype) iso = surf->UIso (par);
     else       iso = surf->VIso (par);
   }
-  catch(Standard_Failure) {
-    iso.Nullify();
-#ifdef OCCT_DEBUG //:s5
+  catch(Standard_Failure const& anException) {
+#ifdef OCCT_DEBUG
+//:s5
     cout << "\nWarning: ShapeAnalysis_Surface, ComputeIso(): Exception in UVIso(): "; 
-    Standard_Failure::Caught()->Print(cout); cout << endl;
+    anException.Print(cout); cout << endl;
 #endif
+    (void)anException;
+    iso.Nullify();
   }
   return iso;
 }
@@ -783,7 +785,7 @@ Standard_Boolean ShapeAnalysis_Surface::IsVClosed(const Standard_Real preci)
 //function : SurfaceNewton
 //purpose  : Newton algo (S4030)
 //=======================================================================
-Standard_Boolean ShapeAnalysis_Surface::SurfaceNewton(const gp_Pnt2d &p2dPrev,
+Standard_Integer ShapeAnalysis_Surface::SurfaceNewton(const gp_Pnt2d &p2dPrev,
                                                       const gp_Pnt& P3D,
                                                       const Standard_Real preci,
                                                       gp_Pnt2d &sol)
@@ -810,7 +812,7 @@ Standard_Boolean ShapeAnalysis_Surface::SurfaceNewton(const gp_Pnt2d &p2dPrev,
     Standard_Real ru2 = ru * ru, rv2 = rv * rv;
     gp_Vec n = ru ^ rv;
     Standard_Real nrm2 = n.SquareMagnitude();
-    if ( nrm2 < 1e-10 ) break; // n == 0, use standard
+    if ( nrm2 < 1e-10 || Precision::IsPositiveInfinite(nrm2)) break; // n == 0, use standard
 
     // descriminant
     gp_Vec rs = P3D.XYZ() - Value ( U, V ).XYZ();
@@ -852,7 +854,7 @@ Standard_Boolean ShapeAnalysis_Surface::SurfaceNewton(const gp_Pnt2d &p2dPrev,
 //	cout << "Newton: solution found in " << i+1 << " iterations" << endl;
     sol.SetCoord( U, V );
     
-    return ( nrm2 < 0.01 * ru2 * rv2 ? 2 : Standard_True ); //:q6
+    return ( nrm2 < 0.01 * ru2 * rv2 ? 2 : 1 ); //:q6
   }
 //      cout << "Newton: failed after " << i+1 << " iterations (fail " << fail << " )" << endl;
   return Standard_False;
@@ -911,8 +913,8 @@ gp_Pnt2d ShapeAnalysis_Surface::NextValueOfUV(const gp_Pnt2d &p2dPrev,
       }
 
       gp_Pnt2d sol;
-      Standard_Boolean res = SurfaceNewton(p2dPrev,P3D,preci,sol);
-      if ( res )
+      Standard_Integer res = SurfaceNewton(p2dPrev,P3D,preci,sol);
+      if (res != 0)
       {
         Standard_Real gap = P3D.Distance ( Value(sol) );
         if ( res == 2 || //:q6 abv 19 Mar 99: protect against strange attractors
@@ -1002,7 +1004,8 @@ gp_Pnt2d ShapeAnalysis_Surface::ValueOfUV(const gp_Pnt& P3D,const Standard_Real 
 	//conic case
 	gp_Pnt2d prev(S,T);
 	gp_Pnt2d solution;
-	if (SurfaceNewton(prev,P3D,preci,solution)) {
+	if (SurfaceNewton(prev,P3D,preci,solution) != 0)
+  {
 #ifdef OCCT_DEBUG
 	  cout <<"Newton found point on conic extrusion"<<endl;
 #endif
@@ -1073,7 +1076,8 @@ gp_Pnt2d ShapeAnalysis_Surface::ValueOfUV(const gp_Pnt& P3D,const Standard_Real 
 	Standard_Boolean possLockal = Standard_False; //:study S4030 (optimizing)
 	if (disSurf > preci) {
 	  gp_Pnt2d pp(UU,VV);
-	  if ( SurfaceNewton(pp,P3D,preci,pp))  { //:q2 abv 16 Mar 99: PRO7226 #412920
+	  if (SurfaceNewton (pp, P3D, preci, pp) != 0)
+    { //:q2 abv 16 Mar 99: PRO7226 #412920
 	    Standard_Real dist = P3D.Distance ( Value(pp) );
 	    if ( dist < disSurf ) {
 	      disSurf = dist;
@@ -1153,22 +1157,24 @@ gp_Pnt2d ShapeAnalysis_Surface::ValueOfUV(const gp_Pnt& P3D,const Standard_Real 
 
   }  // end Try ValueOfUV (CKY 30-DEC-1997)
 
-  catch(Standard_Failure) {
+  catch(Standard_Failure const& anException) {
+#ifdef OCCT_DEBUG
 //   Pas de raison mais qui sait. Mieux vaut retourner un truc faux que stopper
 //   L ideal serait d avoir un status ... mais qui va l interroger ?
 //   Avec ce status, on saurait que ce point est a sauter et voila tout
 //   En attendant, on met une valeur "pas idiote" mais surement fausse ...
-    //szv#4:S4163:12Mar99 optimized
+//szv#4:S4163:12Mar99 optimized
+//:s5
+    cout << "\nWarning: ShapeAnalysis_Surface::ValueOfUV(): Exception: "; 
+    anException.Print(cout); cout << endl;
+#endif
+    (void)anException;
     S = (Precision::IsInfinite(uf))? 0 : (uf+ul) / 2.;
     T = (Precision::IsInfinite(vf))? 0 : (vf+vl) / 2.;
-#ifdef OCCT_DEBUG //:s5
-    cout << "\nWarning: ShapeAnalysis_Surface::ValueOfUV(): Exception: "; 
-    Standard_Failure::Caught()->Print(cout); cout << endl;
-#endif
   }
   } //:c9
   //szv#4:S4163:12Mar99 waste raise
-  //if (!computed) Standard_NoSuchObject::Raise("PCurveLib_ProjectPointOnSurf::ValueOfUV untreated surface type");
+  //if (!computed) throw Standard_NoSuchObject("PCurveLib_ProjectPointOnSurf::ValueOfUV untreated surface type");
   if (computed) { if (myGap <= 0) myGap = P3D.Distance (SurfAdapt.Value (S,T)); }
   else { myGap = -1.; S = 0.; T = 0.; }
   return gp_Pnt2d( S, T);
@@ -1357,12 +1363,14 @@ Standard_Real ShapeAnalysis_Surface::UVFromIso(const gp_Pnt& P3d,const Standard_
     U = UU;  V = VV;
 
   }  // fin try RAJOUT
-  catch(Standard_Failure) {
-    theMin = RealLast();    // theMin de depart
-#ifdef OCCT_DEBUG //:s5
+  catch(Standard_Failure const& anException) {
+#ifdef OCCT_DEBUG
+//:s5
     cout << "\nWarning: ShapeAnalysis_Curve::UVFromIso(): Exception: "; 
-    Standard_Failure::Caught()->Print(cout); cout << endl;
+    anException.Print(cout); cout << endl;
 #endif
+    (void)anException;
+    theMin = RealLast();    // theMin de depart
   }
   return theMin;
 }

@@ -24,12 +24,17 @@
 #include <OpenGl_ArbDbg.hxx>
 #include <OpenGl_ArbFBO.hxx>
 #include <OpenGl_ExtGS.hxx>
+#include <OpenGl_ArbSamplerObject.hxx>
 #include <OpenGl_ArbTexBindless.hxx>
 #include <OpenGl_GlCore44.hxx>
 #include <OpenGl_FrameBuffer.hxx>
+#include <OpenGl_FrameStats.hxx>
 #include <OpenGl_Sampler.hxx>
 #include <OpenGl_ShaderManager.hxx>
+#include <OpenGl_Workspace.hxx>
+#include <OpenGl_AspectFace.hxx>
 #include <Graphic3d_TransformUtils.hxx>
+#include <Graphic3d_RenderingParams.hxx>
 
 #include <Message_Messenger.hxx>
 
@@ -52,6 +57,7 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Context,Standard_Transient)
     //
   #else
     #include <OpenGL/OpenGL.h>
+    #include <CoreGraphics/CoreGraphics.h>
   #endif
 #else
   #include <GL/glx.h> // glXGetProcAddress()
@@ -68,6 +74,24 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Context,Standard_Transient)
 namespace
 {
   static const Handle(OpenGl_Resource) NULL_GL_RESOURCE;
+  static const OpenGl_Mat4 THE_IDENTITY_MATRIX;
+
+  //! Add key-value pair to the dictionary.
+  static void addInfo (TColStd_IndexedDataMapOfStringString& theDict,
+                       const TCollection_AsciiString& theKey,
+                       const TCollection_AsciiString& theValue)
+  {
+    theDict.ChangeFromIndex (theDict.Add (theKey, theValue)) = theValue;
+  }
+
+  //! Add key-value pair to the dictionary.
+  static void addInfo (TColStd_IndexedDataMapOfStringString& theDict,
+                       const TCollection_AsciiString& theKey,
+                       const char* theValue)
+  {
+    TCollection_AsciiString aValue (theValue != NULL ? theValue : "");
+    theDict.ChangeFromIndex (theDict.Add (theKey, aValue)) = aValue;
+  }
 }
 
 // =======================================================================
@@ -103,9 +127,15 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   hasUintIndex(Standard_True),
   hasTexRGBA8(Standard_True),
 #endif
+  hasDrawBuffers     (OpenGl_FeatureNotAvailable),
+  hasFloatBuffer     (OpenGl_FeatureNotAvailable),
+  hasHalfFloatBuffer (OpenGl_FeatureNotAvailable),
+  hasSampleVariables (OpenGl_FeatureNotAvailable),
+  arbDrawBuffers (Standard_False),
   arbNPTW  (Standard_False),
   arbTexRG (Standard_False),
   arbTexFloat (Standard_False),
+  arbSamplerObject (NULL),
   arbTexBindless (NULL),
   arbTBO (NULL),
   arbTboRGB32 (Standard_False),
@@ -113,12 +143,17 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   arbDbg (NULL),
   arbFBO (NULL),
   arbFBOBlit (NULL),
+  arbSampleShading (Standard_False),
+  extFragDepth (Standard_False),
+  extDrawBuffers (Standard_False),
   extGS  (NULL),
   extBgra(Standard_False),
   extAnis(Standard_False),
   extPDS (Standard_False),
   atiMem (Standard_False),
   nvxMem (Standard_False),
+  oesSampleVariables (Standard_False),
+  oesStdDerivatives (Standard_False),
   mySharedResources (new OpenGl_ResourcesMap()),
   myDelayed         (new OpenGl_DelayReleaseMap()),
   myUnusedResources (new OpenGl_ResourcesStack()),
@@ -128,24 +163,55 @@ OpenGl_Context::OpenGl_Context (const Handle(OpenGl_Caps)& theCaps)
   myAnisoMax   (1),
   myTexClamp   (GL_CLAMP_TO_EDGE),
   myMaxTexDim  (1024),
+  myMaxTexCombined (1),
   myMaxClipPlanes (6),
   myMaxMsaaSamples(0),
+  myMaxDrawBuffers (1),
+  myMaxColorAttachments (1),
   myGlVerMajor (0),
   myGlVerMinor (0),
   myIsInitialized (Standard_False),
   myIsStereoBuffers (Standard_False),
   myIsGlNormalizeEnabled (Standard_False),
+  myHasRayTracing (Standard_False),
+  myHasRayTracingTextures (Standard_False),
+  myHasRayTracingAdaptiveSampling (Standard_False),
+  myFrameStats (new OpenGl_FrameStats()),
 #if !defined(GL_ES_VERSION_2_0)
+  myPointSpriteOrig (GL_UPPER_LEFT),
   myRenderMode (GL_RENDER),
+  myPolygonMode (GL_FILL),
 #else
+  myPointSpriteOrig (0),
   myRenderMode (0),
+  myPolygonMode (0),
 #endif
+  myToCullBackFaces (false),
   myReadBuffer (0),
-  myDrawBuffer (0),
+  myDrawBuffers (1),
   myDefaultVao (0),
+  myColorMask (true),
+  myAlphaToCoverage (false),
   myIsGlDebugCtx (Standard_False),
-  myResolutionRatio (1.0f)
+  myResolution (Graphic3d_RenderingParams::THE_DEFAULT_RESOLUTION),
+  myResolutionRatio (1.0f),
+  myLineWidthScale (1.0f),
+  myRenderScale (1.0f),
+  myRenderScaleInv (1.0f)
 {
+  myViewport[0] = 0;
+  myViewport[1] = 0;
+  myViewport[2] = 0;
+  myViewport[3] = 0;
+  myViewportVirt[0] = 0;
+  myViewportVirt[1] = 0;
+  myViewportVirt[2] = 0;
+  myViewportVirt[3] = 0;
+
+  myPolygonOffset.Mode   = Aspect_POM_Off;
+  myPolygonOffset.Factor = 0.0f;
+  myPolygonOffset.Units  = 0.0f;
+
   // system-dependent fields
 #if defined(HAVE_EGL)
   myDisplay  = (Aspect_Display          )EGL_NO_DISPLAY;
@@ -233,27 +299,21 @@ OpenGl_Context::~OpenGl_Context()
   mySharedResources.Nullify();
   myDelayed.Nullify();
 
-  // release sampler object
-  if (!myTexSampler.IsNull())
-  {
-    myTexSampler->Release (this);
-  }
-
-#if !defined(GL_ES_VERSION_2_0)
   if (arbDbg != NULL
    && myIsGlDebugCtx
    && IsValid())
   {
     // reset callback
+  #if !defined(GL_ES_VERSION_2_0)
     void* aPtr = NULL;
     glGetPointerv (GL_DEBUG_CALLBACK_USER_PARAM, &aPtr);
     if (aPtr == this)
+  #endif
     {
-      arbDbg->glDebugMessageCallbackARB (NULL, NULL);
+      arbDbg->glDebugMessageCallback (NULL, NULL);
     }
     myIsGlDebugCtx = Standard_False;
   }
-#endif
 }
 
 // =======================================================================
@@ -277,6 +337,33 @@ void OpenGl_Context::forcedRelease()
   {
     myUnusedResources->First()->Release (this);
     myUnusedResources->RemoveFirst();
+  }
+}
+
+// =======================================================================
+// function : ResizeViewport
+// purpose  :
+// =======================================================================
+void OpenGl_Context::ResizeViewport (const Standard_Integer* theRect)
+{
+  core11fwd->glViewport (theRect[0], theRect[1], theRect[2], theRect[3]);
+  myViewport[0] = theRect[0];
+  myViewport[1] = theRect[1];
+  myViewport[2] = theRect[2];
+  myViewport[3] = theRect[3];
+  if (HasRenderScale())
+  {
+    myViewportVirt[0] = Standard_Integer(theRect[0] * myRenderScaleInv);
+    myViewportVirt[1] = Standard_Integer(theRect[1] * myRenderScaleInv);
+    myViewportVirt[2] = Standard_Integer(theRect[2] * myRenderScaleInv);
+    myViewportVirt[3] = Standard_Integer(theRect[3] * myRenderScaleInv);
+  }
+  else
+  {
+    myViewportVirt[0] = theRect[0];
+    myViewportVirt[1] = theRect[1];
+    myViewportVirt[2] = theRect[2];
+    myViewportVirt[3] = theRect[3];
   }
 }
 
@@ -323,16 +410,76 @@ void OpenGl_Context::SetReadBuffer (const Standard_Integer theReadBuffer)
 void OpenGl_Context::SetDrawBuffer (const Standard_Integer theDrawBuffer)
 {
 #if !defined(GL_ES_VERSION_2_0)
-  myDrawBuffer = !myIsStereoBuffers ? stereoToMonoBuffer (theDrawBuffer) : theDrawBuffer;
-  if (myDrawBuffer < GL_COLOR_ATTACHMENT0
+  const Standard_Integer aDrawBuffer = !myIsStereoBuffers ? stereoToMonoBuffer (theDrawBuffer) : theDrawBuffer;
+  if (aDrawBuffer < GL_COLOR_ATTACHMENT0
    && arbFBO != NULL)
   {
     arbFBO->glBindFramebuffer (GL_FRAMEBUFFER, OpenGl_FrameBuffer::NO_FRAMEBUFFER);
   }
-  ::glDrawBuffer (myDrawBuffer);
+  ::glDrawBuffer (aDrawBuffer);
+
+  myDrawBuffers.Clear();
+
+  if (aDrawBuffer != GL_NONE)
+  {
+    myDrawBuffers.SetValue (0, aDrawBuffer);
+  }
 #else
   (void )theDrawBuffer;
 #endif
+}
+
+// =======================================================================
+// function : SetDrawBuffers
+// purpose  :
+// =======================================================================
+void OpenGl_Context::SetDrawBuffers (const Standard_Integer theNb, const Standard_Integer* theDrawBuffers)
+{
+  Standard_ASSERT_RETURN (hasDrawBuffers, "Multiple draw buffers feature is not supported by the context", Standard_ASSERT_DO_NOTHING());
+
+  myDrawBuffers.Clear();
+
+  Standard_Boolean useDefaultFbo = Standard_False;
+  for (Standard_Integer anI = 0; anI < theNb; ++anI)
+  {
+    if (theDrawBuffers[anI] < GL_COLOR_ATTACHMENT0 && theDrawBuffers[anI] != GL_NONE)
+    {
+      useDefaultFbo = Standard_True;
+    }
+    else if (theDrawBuffers[anI] != GL_NONE)
+    {
+      myDrawBuffers.SetValue (anI, theDrawBuffers[anI]);
+    }
+  }
+  if (arbFBO != NULL && useDefaultFbo)
+  {
+    arbFBO->glBindFramebuffer (GL_FRAMEBUFFER, OpenGl_FrameBuffer::NO_FRAMEBUFFER);
+  }
+
+  myFuncs->glDrawBuffers (theNb, (const GLenum*)theDrawBuffers);
+}
+
+// =======================================================================
+// function : SetCullBackFaces
+// purpose  :
+// =======================================================================
+void OpenGl_Context::SetCullBackFaces (bool theToEnable)
+{
+  if (myToCullBackFaces == theToEnable)
+  {
+    return;
+  }
+
+  myToCullBackFaces = theToEnable;
+  if (theToEnable)
+  {
+    //glCullFace (GL_BACK); GL_BACK by default
+    core11fwd->glEnable (GL_CULL_FACE);
+  }
+  else
+  {
+    core11fwd->glDisable (GL_CULL_FACE);
+  }
 }
 
 // =======================================================================
@@ -348,9 +495,37 @@ void OpenGl_Context::FetchState()
     ::glGetIntegerv (GL_RENDER_MODE, &myRenderMode);
   }
 
-  // cache buffers state
+  // cache read buffers state
   ::glGetIntegerv (GL_READ_BUFFER, &myReadBuffer);
-  ::glGetIntegerv (GL_DRAW_BUFFER, &myDrawBuffer);
+
+  // cache draw buffers state
+  myDrawBuffers.Clear();
+
+  if (myMaxDrawBuffers == 1)
+  {
+    Standard_Integer aDrawBuffer;
+
+    ::glGetIntegerv (GL_DRAW_BUFFER, &aDrawBuffer);
+
+    if (aDrawBuffer != GL_NONE)
+    {
+      myDrawBuffers.SetValue (0, aDrawBuffer);
+    }
+  }
+  else
+  {
+    Standard_Integer aDrawBuffer;
+
+    for (Standard_Integer anI = 0; anI < myMaxDrawBuffers; ++anI)
+    {
+      ::glGetIntegerv (GL_DRAW_BUFFER0 + anI, &aDrawBuffer);
+
+      if (aDrawBuffer != GL_NONE)
+      {
+        myDrawBuffers.SetValue (anI, aDrawBuffer);
+      }
+    }
+  }
 #endif
 }
 
@@ -741,17 +916,18 @@ Standard_Boolean OpenGl_Context::Init (const Aspect_Drawable         theWindow,
 // function : ResetErrors
 // purpose  :
 // =======================================================================
-void OpenGl_Context::ResetErrors (const bool theToPrintErrors)
+bool OpenGl_Context::ResetErrors (const bool theToPrintErrors)
 {
   int aPrevErr = 0;
   int anErr    = ::glGetError();
+  const bool hasError = anErr != GL_NO_ERROR;
   if (!theToPrintErrors)
   {
     for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = ::glGetError())
     {
       //
     }
-    return;
+    return hasError;
   }
 
   for (; anErr != GL_NO_ERROR && aPrevErr != anErr; aPrevErr = anErr, anErr = ::glGetError())
@@ -778,6 +954,7 @@ void OpenGl_Context::ResetErrors (const bool theToPrintErrors)
     const TCollection_ExtendedString aMsg = TCollection_ExtendedString ("Unhandled GL error: ") + anErrId;
     PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_OTHER, 0, GL_DEBUG_SEVERITY_LOW, aMsg);
   }
+  return hasError;
 }
 
 // =======================================================================
@@ -905,7 +1082,6 @@ static Standard_CString THE_DBGMSG_SEV_HIGH   = "High";   // GL_DEBUG_SEVERITY_H
 static Standard_CString THE_DBGMSG_SEV_MEDIUM = "Medium"; // GL_DEBUG_SEVERITY_MEDIUM
 static Standard_CString THE_DBGMSG_SEV_LOW    = "Low";    // GL_DEBUG_SEVERITY_LOW
 
-#if !defined(GL_ES_VERSION_2_0)
 //! Callback for GL_ARB_debug_output extension
 static void APIENTRY debugCallbackWrap(unsigned int theSource,
                                        unsigned int theType,
@@ -918,7 +1094,6 @@ static void APIENTRY debugCallbackWrap(unsigned int theSource,
   OpenGl_Context* aCtx = (OpenGl_Context* )theUserParam;
   aCtx->PushMessage (theSource, theType, theId, theSeverity, theMessage);
 }
-#endif
 
 // =======================================================================
 // function : PushMessage
@@ -1025,8 +1200,24 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   myGlVerMajor = 0;
   myGlVerMinor = 0;
   myMaxMsaaSamples = 0;
+  myMaxDrawBuffers = 1;
+  myMaxColorAttachments = 1;
   ReadGlVersion (myGlVerMajor, myGlVerMinor);
   myVendor = (const char* )::glGetString (GL_VENDOR);
+  if (!caps->ffpEnable
+   && !IsGlGreaterEqual (2, 0))
+  {
+    caps->ffpEnable = true;
+    TCollection_ExtendedString aMsg =
+      TCollection_ExtendedString("OpenGL driver is too old! Context info:\n")
+                               + "    Vendor:   " + (const char* )::glGetString (GL_VENDOR)   + "\n"
+                               + "    Renderer: " + (const char* )::glGetString (GL_RENDERER) + "\n"
+                               + "    Version:  " + (const char* )::glGetString (GL_VERSION)  + "\n"
+                               + "  Fallback using deprecated fixed-function pipeline.\n"
+                               + "  Visualization might work incorrectly.\n"
+                                 "  Consider upgrading the graphics driver.";
+    PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_HIGH, aMsg);
+  }
 
 #if defined(GL_ES_VERSION_2_0)
   (void )theIsCoreProfile;
@@ -1091,6 +1282,9 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   extGS      = NULL;
   myDefaultVao = 0;
 
+  //! Make record shorter to retrieve function pointer using variable with same name
+  #define FindProcShort(theFunc) FindProc(#theFunc, myFuncs->theFunc)
+
 #if defined(GL_ES_VERSION_2_0)
 
   hasTexRGBA8 = IsGlGreaterEqual (3, 0)
@@ -1105,7 +1299,8 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
              || CheckExtension ("GL_EXT_texture_rg");
   extBgra     = CheckExtension ("GL_EXT_texture_format_BGRA8888");
   extAnis = CheckExtension ("GL_EXT_texture_filter_anisotropic");
-  extPDS  = CheckExtension ("GL_OES_packed_depth_stencil");
+  extPDS  = IsGlGreaterEqual (3, 0)
+         || CheckExtension ("GL_OES_packed_depth_stencil");
 
   core11fwd = (OpenGl_GlCore11Fwd* )(&(*myFuncs));
   if (IsGlGreaterEqual (2, 0))
@@ -1117,10 +1312,30 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     arbFBO    = (OpenGl_ArbFBO*      )(&(*myFuncs));
   }
   if (IsGlGreaterEqual (3, 0)
-   && FindProc ("glBlitFramebuffer", myFuncs->glBlitFramebuffer))
+   && FindProcShort (glBlitFramebuffer))
   {
     arbFBOBlit = (OpenGl_ArbFBOBlit* )(&(*myFuncs));
   }
+  if (IsGlGreaterEqual (3, 0)
+   && FindProcShort (glGenSamplers)
+   && FindProcShort (glDeleteSamplers)
+   && FindProcShort (glIsSampler)
+   && FindProcShort (glBindSampler)
+   && FindProcShort (glSamplerParameteri)
+   && FindProcShort (glSamplerParameteriv)
+   && FindProcShort (glSamplerParameterf)
+   && FindProcShort (glSamplerParameterfv)
+   && FindProcShort (glGetSamplerParameteriv)
+   && FindProcShort (glGetSamplerParameterfv))
+   //&& FindProcShort (glSamplerParameterIiv) // only on Desktop or with extensions GL_OES_texture_border_clamp/GL_EXT_texture_border_clamp
+   //&& FindProcShort (glSamplerParameterIuiv)
+   //&& FindProcShort (glGetSamplerParameterIiv)
+   //&& FindProcShort (glGetSamplerParameterIuiv))
+  {
+    arbSamplerObject = (OpenGl_ArbSamplerObject* )(&(*myFuncs));
+  }
+  extFragDepth = !IsGlGreaterEqual(3, 0)
+               && CheckExtension ("GL_EXT_frag_depth");
   if (IsGlGreaterEqual (3, 1)
    && FindProc ("glTexStorage2DMultisample", myFuncs->glTexStorage2DMultisample))
   {
@@ -1150,19 +1365,88 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   {
     arbTBO = reinterpret_cast<OpenGl_ArbTBO*> (myFuncs.get());
   }
+
+  // initialize debug context extension
+  if (CheckExtension ("GL_KHR_debug"))
+  {
+    // this functionality become a part of OpenGL ES 3.2
+    arbDbg = NULL;
+    // According to GL_KHR_debug spec, all functions should have KHR suffix.
+    // However, some implementations can export these functions without suffix.
+    if (FindProc ("glDebugMessageControlKHR",  myFuncs->glDebugMessageControl)
+     && FindProc ("glDebugMessageInsertKHR",   myFuncs->glDebugMessageInsert)
+     && FindProc ("glDebugMessageCallbackKHR", myFuncs->glDebugMessageCallback)
+     && FindProc ("glGetDebugMessageLogKHR",   myFuncs->glGetDebugMessageLog))
+    {
+      arbDbg = (OpenGl_ArbDbg* )(&(*myFuncs));
+    }
+
+    if (arbDbg != NULL
+     && caps->contextDebug)
+    {
+      // setup default callback
+      myIsGlDebugCtx = Standard_True;
+      arbDbg->glDebugMessageCallback (debugCallbackWrap, this);
+      ::glEnable (GL_DEBUG_OUTPUT);
+      if (caps->contextSyncDebug)
+      {
+        // note that some broken implementations (e.g. simulators) might generate error message on this call
+        ::glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      }
+    }
+  }
+
+  extDrawBuffers = CheckExtension ("GL_EXT_draw_buffers") && FindProc ("glDrawBuffersEXT", myFuncs->glDrawBuffers);
+  arbDrawBuffers = CheckExtension ("GL_ARB_draw_buffers") && FindProc ("glDrawBuffersARB", myFuncs->glDrawBuffers);
+
+  if (IsGlGreaterEqual (3, 0) && FindProc ("glDrawBuffers", myFuncs->glDrawBuffers))
+  {
+    hasDrawBuffers = OpenGl_FeatureInCore;
+  }
+  else if (extDrawBuffers || arbDrawBuffers)
+  {
+    hasDrawBuffers = OpenGl_FeatureInExtensions;
+  }
+
+  hasFloatBuffer     = IsGlGreaterEqual (3, 2) ? OpenGl_FeatureInCore :
+                       CheckExtension ("GL_EXT_color_buffer_float") ? OpenGl_FeatureInExtensions 
+                                                                    : OpenGl_FeatureNotAvailable;
+  hasHalfFloatBuffer = IsGlGreaterEqual (3, 2) ? OpenGl_FeatureInCore :
+                       CheckExtension ("GL_EXT_color_buffer_half_float") ? OpenGl_FeatureInExtensions 
+                                                                         : OpenGl_FeatureNotAvailable;
+
+  oesSampleVariables = CheckExtension ("GL_OES_sample_variables");
+  oesStdDerivatives  = CheckExtension ("GL_OES_standard_derivatives");
+  hasSampleVariables = IsGlGreaterEqual (3, 2) ? OpenGl_FeatureInCore :
+                       oesSampleVariables ? OpenGl_FeatureInExtensions
+                                          : OpenGl_FeatureNotAvailable;
 #else
 
   myTexClamp = IsGlGreaterEqual (1, 2) ? GL_CLAMP_TO_EDGE : GL_CLAMP;
 
   hasTexRGBA8 = Standard_True;
-  arbNPTW     = CheckExtension ("GL_ARB_texture_non_power_of_two");
-  arbTexFloat = IsGlGreaterEqual (3, 0)
-             || CheckExtension ("GL_ARB_texture_float");
-  extBgra     = CheckExtension ("GL_EXT_bgra");
-  extAnis     = CheckExtension ("GL_EXT_texture_filter_anisotropic");
-  extPDS      = CheckExtension ("GL_EXT_packed_depth_stencil");
-  atiMem      = CheckExtension ("GL_ATI_meminfo");
-  nvxMem      = CheckExtension ("GL_NVX_gpu_memory_info");
+  arbDrawBuffers   = CheckExtension ("GL_ARB_draw_buffers");
+  arbNPTW          = CheckExtension ("GL_ARB_texture_non_power_of_two");
+  arbTexFloat      = IsGlGreaterEqual (3, 0)
+                  || CheckExtension ("GL_ARB_texture_float");
+  arbSampleShading = CheckExtension ("GL_ARB_sample_shading");
+  extBgra          = CheckExtension ("GL_EXT_bgra");
+  extAnis          = CheckExtension ("GL_EXT_texture_filter_anisotropic");
+  extPDS           = CheckExtension ("GL_EXT_packed_depth_stencil");
+  atiMem           = CheckExtension ("GL_ATI_meminfo");
+  nvxMem           = CheckExtension ("GL_NVX_gpu_memory_info");
+
+  hasDrawBuffers = IsGlGreaterEqual (2, 0) ? OpenGl_FeatureInCore :
+                   arbDrawBuffers ? OpenGl_FeatureInExtensions 
+                                  : OpenGl_FeatureNotAvailable;
+
+  hasFloatBuffer = hasHalfFloatBuffer =  IsGlGreaterEqual (3, 0) ? OpenGl_FeatureInCore :
+                                         CheckExtension ("GL_ARB_color_buffer_float") ? OpenGl_FeatureInExtensions
+                                                                                      : OpenGl_FeatureNotAvailable;
+
+  hasSampleVariables = IsGlGreaterEqual (4, 0) ? OpenGl_FeatureInCore :
+                        arbSampleShading ? OpenGl_FeatureInExtensions
+                                         : OpenGl_FeatureNotAvailable;
 
   GLint aStereo = GL_FALSE;
   glGetIntegerv (GL_STEREO, &aStereo);
@@ -1172,7 +1456,17 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   glGetIntegerv (GL_MAX_CLIP_PLANES,  &myMaxClipPlanes);
 #endif
 
+  if (hasDrawBuffers)
+  {
+    glGetIntegerv (GL_MAX_DRAW_BUFFERS,      &myMaxDrawBuffers);
+    glGetIntegerv (GL_MAX_COLOR_ATTACHMENTS, &myMaxColorAttachments);
+  }
+
   glGetIntegerv (GL_MAX_TEXTURE_SIZE, &myMaxTexDim);
+  if (IsGlGreaterEqual (1, 5))
+  {
+    glGetIntegerv (GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &myMaxTexCombined);
+  }
 
   if (extAnis)
   {
@@ -1198,9 +1492,6 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   bool has42 = false;
   bool has43 = false;
   bool has44 = false;
-
-  //! Make record shorter to retrieve function pointer using variable with same name
-  #define FindProcShort(theFunc) FindProc(#theFunc, myFuncs->theFunc)
 
   // retrieve platform-dependent extensions
 #if defined(HAVE_EGL)
@@ -1232,6 +1523,12 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
       FindProcShort (wglDXLockObjectsNV);
       FindProcShort (wglDXUnlockObjectsNV);
     }
+    if (CheckExtension (aWglExts, "WGL_AMD_gpu_association"))
+    {
+      FindProcShort (wglGetGPUIDsAMD);
+      FindProcShort (wglGetGPUInfoAMD);
+      FindProcShort (wglGetContextGPUIDAMD);
+    }
   }
 #elif defined(__APPLE__)
     //
@@ -1245,32 +1542,15 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
     {
       FindProcShort (glXSwapIntervalSGI);
     }
+    if (CheckExtension (aGlxExts, "GLX_MESA_query_renderer"))
+    {
+      FindProcShort (glXQueryRendererIntegerMESA);
+      FindProcShort (glXQueryCurrentRendererIntegerMESA);
+      FindProcShort (glXQueryRendererStringMESA);
+      FindProcShort (glXQueryCurrentRendererStringMESA);
+    }
     //extSwapTear = CheckExtension (aGlxExts, "GLX_EXT_swap_control_tear");
 #endif
-
-  // initialize debug context extension
-  if (CheckExtension ("GL_ARB_debug_output"))
-  {
-    arbDbg = NULL;
-    if (FindProcShort (glDebugMessageControlARB)
-     && FindProcShort (glDebugMessageInsertARB)
-     && FindProcShort (glDebugMessageCallbackARB)
-     && FindProcShort (glGetDebugMessageLogARB))
-    {
-      arbDbg = (OpenGl_ArbDbg* )(&(*myFuncs));
-    }
-    if (arbDbg != NULL
-     && caps->contextDebug)
-    {
-      // setup default callback
-      myIsGlDebugCtx = Standard_True;
-      arbDbg->glDebugMessageCallbackARB (debugCallbackWrap, this);
-      if (caps->contextSyncDebug)
-      {
-        ::glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
-      }
-    }
-  }
 
   // load OpenGL 1.2 new functions
   has12 = IsGlGreaterEqual (1, 2)
@@ -1661,6 +1941,10 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
        && FindProcShort (glGetSamplerParameterIiv)
        && FindProcShort (glGetSamplerParameterfv)
        && FindProcShort (glGetSamplerParameterIuiv);
+  if (hasSamplerObjects)
+  {
+    arbSamplerObject = (OpenGl_ArbSamplerObject* )(&(*myFuncs));
+  }
 
   // load GL_ARB_timer_query (added to OpenGL 3.3 core)
   const bool hasTimerQuery = (IsGlGreaterEqual (3, 3) || CheckExtension ("GL_ARB_timer_query"))
@@ -2007,6 +2291,39 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
        && FindProcShort (glBindImageTextures)
        && FindProcShort (glBindVertexBuffers);
 
+  // initialize debug context extension
+  if (CheckExtension ("GL_ARB_debug_output"))
+  {
+    arbDbg = NULL;
+    if (has43)
+    {
+      arbDbg = (OpenGl_ArbDbg* )(&(*myFuncs));
+    }
+    else if (FindProc ("glDebugMessageControlARB",  myFuncs->glDebugMessageControl)
+          && FindProc ("glDebugMessageInsertARB",   myFuncs->glDebugMessageInsert)
+          && FindProc ("glDebugMessageCallbackARB", myFuncs->glDebugMessageCallback)
+          && FindProc ("glGetDebugMessageLogARB",   myFuncs->glGetDebugMessageLog))
+    {
+      arbDbg = (OpenGl_ArbDbg* )(&(*myFuncs));
+    }
+
+    if (arbDbg != NULL
+     && caps->contextDebug)
+    {
+      // setup default callback
+      myIsGlDebugCtx = Standard_True;
+      arbDbg->glDebugMessageCallback (debugCallbackWrap, this);
+      if (has43)
+      {
+        ::glEnable (GL_DEBUG_OUTPUT);
+      }
+      if (caps->contextSyncDebug)
+      {
+        ::glEnable (GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      }
+    }
+  }
+
   // initialize TBO extension (ARB)
   if (!has31
    && CheckExtension ("GL_ARB_texture_buffer_object")
@@ -2173,6 +2490,20 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   arbTBO = (OpenGl_ArbTBO* )(&(*myFuncs));
   arbIns = (OpenGl_ArbIns* )(&(*myFuncs));
 
+  // check whether ray tracing mode is supported
+  myHasRayTracing = has31
+                 && arbTboRGB32
+                 && arbFBOBlit  != NULL;
+
+  // check whether textures in ray tracing mode are supported
+  myHasRayTracingTextures = myHasRayTracing
+                         && arbTexBindless != NULL;
+
+  // check whether adaptive screen sampling in ray tracing mode is supported
+  myHasRayTracingAdaptiveSampling = myHasRayTracing
+                                 && has44
+                                 && CheckExtension ("GL_NV_shader_atomic_float");
+
   if (!has32)
   {
     checkWrongVersion (3, 2);
@@ -2203,10 +2534,6 @@ void OpenGl_Context::init (const Standard_Boolean theIsCoreProfile)
   {
     core33back = (OpenGl_GlCore33Back* )(&(*myFuncs));
   }
-
-  // initialize sampler object
-  myTexSampler = new OpenGl_Sampler();
-  myTexSampler->Init (*this);
 
   if (!has40)
   {
@@ -2306,7 +2633,71 @@ Standard_Size OpenGl_Context::AvailableMemory() const
 // =======================================================================
 TCollection_AsciiString OpenGl_Context::MemoryInfo() const
 {
-  TCollection_AsciiString anInfo;
+  TColStd_IndexedDataMapOfStringString aDict;
+  MemoryInfo (aDict);
+
+  TCollection_AsciiString aText;
+  for (TColStd_IndexedDataMapOfStringString::Iterator anIter (aDict); anIter.More(); anIter.Next())
+  {
+    if (!aText.IsEmpty())
+    {
+      aText += "\n";
+    }
+    aText += TCollection_AsciiString("  ") + anIter.Key() + ": " + anIter.Value();
+  }
+  return aText;
+}
+
+// =======================================================================
+// function : MemoryInfo
+// purpose  :
+// =======================================================================
+void OpenGl_Context::MemoryInfo (TColStd_IndexedDataMapOfStringString& theDict) const
+{
+#if defined(GL_ES_VERSION_2_0)
+  (void )theDict;
+#elif defined(__APPLE__) && !defined(MACOSX_USE_GLX)
+  GLint aGlRendId = 0;
+  CGLGetParameter (CGLGetCurrentContext(), kCGLCPCurrentRendererID, &aGlRendId);
+
+  CGLRendererInfoObj  aRendObj = NULL;
+  CGOpenGLDisplayMask aDispMask = CGDisplayIDToOpenGLDisplayMask (kCGDirectMainDisplay);
+  GLint aRendNb = 0;
+  CGLQueryRendererInfo (aDispMask, &aRendObj, &aRendNb);
+  for (GLint aRendIter = 0; aRendIter < aRendNb; ++aRendIter)
+  {
+    GLint aRendId = 0;
+    if (CGLDescribeRenderer (aRendObj, aRendIter, kCGLRPRendererID, &aRendId) != kCGLNoError
+     || aRendId != aGlRendId)
+    {
+      continue;
+    }
+
+    //kCGLRPVideoMemoryMegabytes   = 131;
+    //kCGLRPTextureMemoryMegabytes = 132;
+    GLint aVMem = 0;
+  #if MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+    if (CGLDescribeRenderer(aRendObj, aRendIter, kCGLRPVideoMemoryMegabytes, &aVMem) == kCGLNoError)
+    {
+      addInfo (theDict, "GPU memory",         TCollection_AsciiString() + aVMem + " MiB");
+    }
+    if (CGLDescribeRenderer(aRendObj, aRendIter, kCGLRPTextureMemoryMegabytes, &aVMem) == kCGLNoError)
+    {
+      addInfo (theDict, "GPU Texture memory", TCollection_AsciiString() + aVMem + " MiB");
+    }
+  #else
+    if (CGLDescribeRenderer(aRendObj, aRendIter, kCGLRPVideoMemory, &aVMem) == kCGLNoError)
+    {
+      addInfo (theDict, "GPU memory",         TCollection_AsciiString() + (aVMem / (1024 * 1024)) + " MiB");
+    }
+    if (CGLDescribeRenderer(aRendObj, aRendIter, kCGLRPTextureMemory, &aVMem) == kCGLNoError)
+    {
+      addInfo (theDict, "GPU Texture memory", TCollection_AsciiString() + (aVMem / (1024 * 1024)) + " MiB");
+    }
+  #endif
+  }
+#endif
+
 #if !defined(GL_ES_VERSION_2_0)
   if (atiMem)
   {
@@ -2315,14 +2706,17 @@ TCollection_AsciiString OpenGl_Context::MemoryInfo() const
     glGetIntegerv (GL_VBO_FREE_MEMORY_ATI, aValues);
 
     // total memory free in the pool
-    anInfo += TCollection_AsciiString ("  GPU free memory:    ") + (aValues[0] / 1024) + " MiB\n";
+    addInfo (theDict, "GPU free memory",    TCollection_AsciiString() + (aValues[0] / 1024) + " MiB");
 
-    // largest available free block in the pool
-    anInfo += TCollection_AsciiString ("  Largest free block: ") + (aValues[1] / 1024) + " MiB\n";
+    if (aValues[1] != aValues[0])
+    {
+      // largest available free block in the pool
+      addInfo (theDict, "Largest free block", TCollection_AsciiString() + (aValues[1] / 1024) + " MiB");
+    }
     if (aValues[2] != aValues[0])
     {
       // total auxiliary memory free
-      anInfo += TCollection_AsciiString ("  Free memory:        ") + (aValues[2] / 1024) + " MiB\n";
+      addInfo (theDict, "Free auxiliary memory", TCollection_AsciiString() + (aValues[2] / 1024) + " MiB");
     }
   }
   else if (nvxMem)
@@ -2330,25 +2724,159 @@ TCollection_AsciiString OpenGl_Context::MemoryInfo() const
     //current available dedicated video memory (in KiB), currently unused GPU memory
     GLint aValue = 0;
     glGetIntegerv (GL_GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX, &aValue);
-    anInfo += TCollection_AsciiString ("  GPU free memory:    ") + (aValue / 1024) + " MiB\n";
+    addInfo (theDict, "GPU free memory", TCollection_AsciiString() + (aValue / 1024) + " MiB");
 
     // dedicated video memory, total size (in KiB) of the GPU memory
     GLint aDedicated = 0;
     glGetIntegerv (GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &aDedicated);
-    anInfo += TCollection_AsciiString ("  GPU memory:         ") + (aDedicated / 1024) + " MiB\n";
+    addInfo (theDict, "GPU memory", TCollection_AsciiString() + (aDedicated / 1024) + " MiB");
 
     // total available memory, total size (in KiB) of the memory available for allocations
     glGetIntegerv (GL_GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX, &aValue);
     if (aValue != aDedicated)
     {
       // different only for special configurations
-      anInfo += TCollection_AsciiString ("  Total memory:       ") + (aValue / 1024) + " MiB\n";
+      addInfo (theDict, "Total memory", TCollection_AsciiString() + (aValue / 1024) + " MiB");
+    }
+  }
+#if defined(_WIN32)
+  else if (myFuncs->wglGetGPUInfoAMD != NULL
+        && myFuncs->wglGetContextGPUIDAMD != NULL)
+  {
+    GLuint aTotalMemMiB = 0;
+    UINT anAmdId = myFuncs->wglGetContextGPUIDAMD ((HGLRC )myGContext);
+    if (anAmdId != 0)
+    {
+      if (myFuncs->wglGetGPUInfoAMD (anAmdId, WGL_GPU_RAM_AMD, GL_UNSIGNED_INT, sizeof(aTotalMemMiB), &aTotalMemMiB) > 0)
+      {
+        addInfo (theDict, "GPU memory", TCollection_AsciiString() + (int )aTotalMemMiB + " MiB");
+      }
     }
   }
 #endif
-  return anInfo;
+#endif
+
+#if !defined(GL_ES_VERSION_2_0) && !defined(__APPLE__) && !defined(_WIN32)
+  // GLX_RENDERER_VENDOR_ID_MESA
+  if (myFuncs->glXQueryCurrentRendererIntegerMESA != NULL)
+  {
+    unsigned int aVMemMiB = 0;
+    if (myFuncs->glXQueryCurrentRendererIntegerMESA (GLX_RENDERER_VIDEO_MEMORY_MESA, &aVMemMiB) != False)
+    {
+      addInfo (theDict, "GPU memory", TCollection_AsciiString() + int(aVMemMiB) + " MiB");
+    }
+  }
+#endif
 }
 
+// =======================================================================
+// function : DiagnosticInfo
+// purpose  :
+// =======================================================================
+void OpenGl_Context::DiagnosticInformation (TColStd_IndexedDataMapOfStringString& theDict,
+                                            Graphic3d_DiagnosticInfo theFlags) const
+{
+  if ((theFlags & Graphic3d_DiagnosticInfo_NativePlatform) != 0)
+  {
+  #if defined(HAVE_EGL)
+    addInfo (theDict, "EGLVersion",    ::eglQueryString ((EGLDisplay )myDisplay, EGL_VERSION));
+    addInfo (theDict, "EGLVendor",     ::eglQueryString ((EGLDisplay )myDisplay, EGL_VENDOR));
+    addInfo (theDict, "EGLClientAPIs", ::eglQueryString ((EGLDisplay )myDisplay, EGL_CLIENT_APIS));
+    if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0)
+    {
+      addInfo (theDict, "EGLExtensions", ::eglQueryString ((EGLDisplay )myDisplay, EGL_EXTENSIONS));
+    }
+  #elif defined(_WIN32)
+    if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0
+     && myFuncs->wglGetExtensionsStringARB != NULL)
+    {
+      const char* aWglExts = myFuncs->wglGetExtensionsStringARB ((HDC )myWindowDC);
+      addInfo (theDict, "WGLExtensions", aWglExts);
+    }
+  #elif defined(__APPLE__)
+    //
+  #else
+    Display* aDisplay = (Display*)myDisplay;
+    const int aScreen = DefaultScreen(aDisplay);
+    addInfo (theDict, "GLXDirectRendering", ::glXIsDirect (aDisplay, (GLXContext )myGContext) ? "Yes" : "No");
+    addInfo (theDict, "GLXVendor",  ::glXQueryServerString (aDisplay, aScreen, GLX_VENDOR));
+    addInfo (theDict, "GLXVersion", ::glXQueryServerString (aDisplay, aScreen, GLX_VERSION));
+    if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0)
+    {
+      const char* aGlxExts = ::glXQueryExtensionsString (aDisplay, aScreen);
+      addInfo(theDict, "GLXExtensions", aGlxExts);
+    }
+
+    addInfo (theDict, "GLXClientVendor",  ::glXGetClientString (aDisplay, GLX_VENDOR));
+    addInfo (theDict, "GLXClientVersion", ::glXGetClientString (aDisplay, GLX_VERSION));
+    if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0)
+    {
+      addInfo (theDict, "GLXClientExtensions", ::glXGetClientString (aDisplay, GLX_EXTENSIONS));
+    }
+  #endif
+  }
+
+  if ((theFlags & Graphic3d_DiagnosticInfo_Device) != 0)
+  {
+    addInfo (theDict, "GLvendor",    (const char*)::glGetString (GL_VENDOR));
+    addInfo (theDict, "GLdevice",    (const char*)::glGetString (GL_RENDERER));
+    addInfo (theDict, "GLversion",   (const char*)::glGetString (GL_VERSION));
+    if (IsGlGreaterEqual (2, 0))
+    {
+      addInfo (theDict, "GLSLversion", (const char*)::glGetString (GL_SHADING_LANGUAGE_VERSION));
+    }
+    if (myIsGlDebugCtx)
+    {
+      addInfo (theDict, "GLdebug", "ON");
+    }
+  }
+
+  if ((theFlags & Graphic3d_DiagnosticInfo_Limits) != 0)
+  {
+    addInfo (theDict, "Max texture size", TCollection_AsciiString(myMaxTexDim));
+    addInfo (theDict, "Max combined texture units", TCollection_AsciiString(myMaxTexCombined));
+    addInfo (theDict, "Max MSAA samples", TCollection_AsciiString(myMaxMsaaSamples));
+  }
+
+  if ((theFlags & Graphic3d_DiagnosticInfo_FrameBuffer) != 0)
+  {
+    GLint aViewport[4] = {};
+    ::glGetIntegerv (GL_VIEWPORT, aViewport);
+    addInfo (theDict, "Viewport", TCollection_AsciiString() + aViewport[2] + "x" + aViewport[3]);
+  }
+
+  if ((theFlags & Graphic3d_DiagnosticInfo_Memory) != 0)
+  {
+    MemoryInfo (theDict);
+  }
+
+  if ((theFlags & Graphic3d_DiagnosticInfo_Extensions) != 0)
+  {
+  #if !defined(GL_ES_VERSION_2_0)
+    if (IsGlGreaterEqual (3, 0)
+     && myFuncs->glGetStringi != NULL)
+    {
+      TCollection_AsciiString anExtList;
+      GLint anExtNb = 0;
+      ::glGetIntegerv (GL_NUM_EXTENSIONS, &anExtNb);
+      for (GLint anIter = 0; anIter < anExtNb; ++anIter)
+      {
+        const char* anExtension = (const char*)myFuncs->glGetStringi (GL_EXTENSIONS, (GLuint)anIter);
+        if (!anExtList.IsEmpty())
+        {
+          anExtList += " ";
+        }
+        anExtList += anExtension;
+      }
+      addInfo(theDict, "GLextensions", anExtList);
+    }
+    else
+  #endif
+    {
+      addInfo (theDict, "GLextensions", (const char*)::glGetString (GL_EXTENSIONS));
+    }
+  }
+}
 
 // =======================================================================
 // function : GetResource
@@ -2384,7 +2912,7 @@ void OpenGl_Context::ReleaseResource (const TCollection_AsciiString& theKey,
   {
     return;
   }
-  auto& aRes = mySharedResources->Find (theKey);
+  const Handle(OpenGl_Resource)& aRes = mySharedResources->Find (theKey);
   if (aRes->GetRefCount() > 1)
   {
     return;
@@ -2432,7 +2960,7 @@ void OpenGl_Context::ReleaseDelayed()
       continue;
     }
 
-    auto& aRes = mySharedResources->ChangeFind (aKey);
+    const Handle(OpenGl_Resource)& aRes = mySharedResources->ChangeFind (aKey);
     if (aRes->GetRefCount() > 1)
     {
       // should be only 1 instance in mySharedResources
@@ -2454,6 +2982,111 @@ void OpenGl_Context::ReleaseDelayed()
 }
 
 // =======================================================================
+// function : BindTextures
+// purpose  :
+// =======================================================================
+Handle(OpenGl_TextureSet) OpenGl_Context::BindTextures (const Handle(OpenGl_TextureSet)& theTextures)
+{
+  if (myActiveTextures == theTextures)
+  {
+    return myActiveTextures;
+  }
+
+  Handle(OpenGl_Context) aThisCtx (this);
+  OpenGl_TextureSet::Iterator aTextureIterOld (myActiveTextures), aTextureIterNew (theTextures);
+  for (;;)
+  {
+    if (!aTextureIterNew.More())
+    {
+      for (; aTextureIterOld.More(); aTextureIterOld.Next())
+      {
+        if (const Handle(OpenGl_Texture)& aTextureOld = aTextureIterOld.Value())
+        {
+        #if !defined(GL_ES_VERSION_2_0)
+          if (core11 != NULL)
+          {
+            OpenGl_Sampler::resetGlobalTextureParams (aThisCtx, *aTextureOld, aTextureOld->Sampler()->Parameters());
+          }
+        #endif
+          aTextureOld->Unbind (aThisCtx);
+        }
+      }
+      break;
+    }
+
+    const Handle(OpenGl_Texture)& aTextureNew = aTextureIterNew.Value();
+    if (aTextureIterOld.More())
+    {
+      const Handle(OpenGl_Texture)& aTextureOld = aTextureIterOld.Value();
+      if (aTextureNew == aTextureOld)
+      {
+        aTextureIterNew.Next();
+        aTextureIterOld.Next();
+        continue;
+      }
+      else if (aTextureNew.IsNull()
+           || !aTextureNew->IsValid())
+      {
+        if (!aTextureOld.IsNull())
+        {
+        #if !defined(GL_ES_VERSION_2_0)
+          if (core11 != NULL)
+          {
+            OpenGl_Sampler::resetGlobalTextureParams (aThisCtx, *aTextureOld, aTextureOld->Sampler()->Parameters());
+          }
+        #endif
+          aTextureOld->Unbind (aThisCtx);
+        }
+
+        aTextureIterNew.Next();
+        aTextureIterOld.Next();
+        continue;
+      }
+
+      aTextureIterOld.Next();
+    }
+    if (aTextureNew.IsNull())
+    {
+      aTextureIterNew.Next();
+      continue;
+    }
+
+    const Graphic3d_TextureUnit aTexUnit = aTextureNew->Sampler()->Parameters()->TextureUnit();
+    if (aTexUnit >= myMaxTexCombined)
+    {
+      PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                   TCollection_AsciiString("Texture unit ") + aTexUnit + " for " + aTextureNew->ResourceId() + " exceeds hardware limit " + myMaxTexCombined);
+      aTextureIterNew.Next();
+      continue;
+    }
+
+    aTextureNew->Bind (aThisCtx);
+    if (aTextureNew->Sampler()->ToUpdateParameters())
+    {
+      if (aTextureNew->Sampler()->IsImmutable())
+      {
+        aTextureNew->Sampler()->Init (aThisCtx, *aTextureNew);
+      }
+      else
+      {
+        OpenGl_Sampler::applySamplerParams (aThisCtx, aTextureNew->Sampler()->Parameters(), aTextureNew->Sampler().get(), aTextureNew->GetTarget(), aTextureNew->HasMipmaps());
+      }
+    }
+  #if !defined(GL_ES_VERSION_2_0)
+    if (core11 != NULL)
+    {
+      OpenGl_Sampler::applyGlobalTextureParams (aThisCtx, *aTextureNew, aTextureNew->Sampler()->Parameters());
+    }
+  #endif
+    aTextureIterNew.Next();
+  }
+
+  Handle(OpenGl_TextureSet) anOldTextures = myActiveTextures;
+  myActiveTextures = theTextures;
+  return anOldTextures;
+}
+
+// =======================================================================
 // function : BindProgram
 // purpose  :
 // =======================================================================
@@ -2462,6 +3095,10 @@ Standard_Boolean OpenGl_Context::BindProgram (const Handle(OpenGl_ShaderProgram)
   if (core20fwd == NULL)
   {
     return Standard_False;
+  }
+  else if (myActiveProgram == theProgram)
+  {
+    return Standard_True;
   }
 
   if (theProgram.IsNull()
@@ -2509,6 +3146,118 @@ Handle(OpenGl_FrameBuffer) OpenGl_Context::SetDefaultFrameBuffer (const Handle(O
 }
 
 // =======================================================================
+// function : SetShadingMaterial
+// purpose  :
+// =======================================================================
+void OpenGl_Context::SetShadingMaterial (const OpenGl_AspectFace* theAspect,
+                                         const Handle(Graphic3d_PresentationAttributes)& theHighlight)
+{
+  const Handle(Graphic3d_AspectFillArea3d)& anAspect = (!theHighlight.IsNull() && !theHighlight->BasicFillAreaAspect().IsNull())
+                                                      ?  theHighlight->BasicFillAreaAspect()
+                                                      :  theAspect->Aspect();
+
+  const bool toDistinguish = anAspect->Distinguish();
+  const bool toMapTexture  = anAspect->ToMapTexture();
+  const Graphic3d_MaterialAspect& aMatFrontSrc = anAspect->FrontMaterial();
+  const Graphic3d_MaterialAspect& aMatBackSrc  = toDistinguish
+                                               ? anAspect->BackMaterial()
+                                               : aMatFrontSrc;
+  const Quantity_Color& aFrontIntColor = anAspect->InteriorColor();
+  const Quantity_Color& aBackIntColor  = toDistinguish
+                                       ? anAspect->BackInteriorColor()
+                                       : aFrontIntColor;
+
+  myMatFront.Init (aMatFrontSrc, aFrontIntColor);
+  if (toDistinguish)
+  {
+    myMatBack.Init (aMatBackSrc, aBackIntColor);
+  }
+  else
+  {
+    myMatBack = myMatFront;
+  }
+
+  if (!theHighlight.IsNull()
+    && theHighlight->BasicFillAreaAspect().IsNull())
+  {
+    myMatFront.SetColor (theHighlight->ColorRGBA());
+    myMatBack .SetColor (theHighlight->ColorRGBA());
+  }
+
+  Standard_ShortReal anAlphaFront = 1.0f;
+  Standard_ShortReal anAlphaBack  = 1.0f;
+  if (CheckIsTransparent (theAspect, theHighlight, anAlphaFront, anAlphaBack))
+  {
+    myMatFront.Diffuse.a() = anAlphaFront;
+    myMatBack .Diffuse.a() = anAlphaBack;
+  }
+
+  // do not update material properties in case of zero reflection mode,
+  // because GL lighting will be disabled by OpenGl_PrimitiveArray::DrawArray() anyway.
+  const OpenGl_MaterialState& aMatState = myShaderManager->MaterialState();
+  const float anAlphaCutoff = anAspect->AlphaMode() == Graphic3d_AlphaMode_Mask
+                            ? anAspect->AlphaCutoff()
+                            : ShortRealLast();
+  if (theAspect->ShadingModel() == Graphic3d_TOSM_UNLIT)
+  {
+    if (anAlphaCutoff == aMatState.AlphaCutoff())
+    {
+      return;
+    }
+  }
+  else if (myMatFront    == aMatState.FrontMaterial()
+        && myMatBack     == aMatState.BackMaterial()
+        && toDistinguish == aMatState.ToDistinguish()
+        && toMapTexture  == aMatState.ToMapTexture()
+        && anAlphaCutoff == aMatState.AlphaCutoff())
+  {
+    return;
+  }
+
+  myShaderManager->UpdateMaterialStateTo (myMatFront, myMatBack, anAlphaCutoff, toDistinguish, toMapTexture);
+}
+
+// =======================================================================
+// function : CheckIsTransparent
+// purpose  :
+// =======================================================================
+Standard_Boolean OpenGl_Context::CheckIsTransparent (const OpenGl_AspectFace* theAspect,
+                                                     const Handle(Graphic3d_PresentationAttributes)& theHighlight,
+                                                     Standard_ShortReal& theAlphaFront,
+                                                     Standard_ShortReal& theAlphaBack)
+{
+  const Handle(Graphic3d_AspectFillArea3d)& anAspect = (!theHighlight.IsNull() && !theHighlight->BasicFillAreaAspect().IsNull())
+                                                      ?  theHighlight->BasicFillAreaAspect()
+                                                      :  theAspect->Aspect();
+
+  const bool toDistinguish = anAspect->Distinguish();
+  const Graphic3d_MaterialAspect& aMatFrontSrc = anAspect->FrontMaterial();
+  const Graphic3d_MaterialAspect& aMatBackSrc  = toDistinguish
+                                               ? anAspect->BackMaterial()
+                                               : aMatFrontSrc;
+
+  // handling transparency
+  if (!theHighlight.IsNull()
+    && theHighlight->BasicFillAreaAspect().IsNull())
+  {
+    theAlphaFront = theHighlight->ColorRGBA().Alpha();
+    theAlphaBack  = theHighlight->ColorRGBA().Alpha();
+  }
+  else
+  {
+    theAlphaFront = aMatFrontSrc.Alpha();
+    theAlphaBack  = aMatBackSrc .Alpha();
+  }
+
+  if (anAspect->AlphaMode() == Graphic3d_AlphaMode_BlendAuto)
+  {
+    return theAlphaFront < 1.0f
+        || theAlphaBack  < 1.0f;
+  }
+  return anAspect->AlphaMode() == Graphic3d_AlphaMode_Blend;
+}
+
+// =======================================================================
 // function : SetColor4fv
 // purpose  :
 // =======================================================================
@@ -2551,6 +3300,7 @@ void OpenGl_Context::SetTypeOfLine (const Aspect_TypeOfLine  theType,
       aPattern = 0xFF18;
       break;
     }
+    case Aspect_TOL_EMPTY:
     case Aspect_TOL_SOLID:
     {
       aPattern = 0xFFFF;
@@ -2571,7 +3321,7 @@ void OpenGl_Context::SetTypeOfLine (const Aspect_TypeOfLine  theType,
   }
 
 #if !defined(GL_ES_VERSION_2_0)
-  if (theType != Aspect_TOL_SOLID)
+  if (aPattern != 0xFFFF)
   {
   #ifdef HAVE_GL2PS
     if (IsFeedback())
@@ -2614,7 +3364,7 @@ void OpenGl_Context::SetLineWidth (const Standard_ShortReal theWidth)
   if (core11 != NULL)
   {
     // glLineWidth() is still defined within Core Profile, but has no effect with values != 1.0f
-    core11fwd->glLineWidth (theWidth * myResolutionRatio);
+    core11fwd->glLineWidth (theWidth * myLineWidthScale);
   }
 #ifdef HAVE_GL2PS
   if (IsFeedback())
@@ -2644,7 +3394,8 @@ void OpenGl_Context::SetTextureMatrix (const Handle(Graphic3d_TextureParams)& th
 
     // pack transformation parameters
     OpenGl_Vec4 aTrsf[2];
-    aTrsf[0].xy() = theParams->Translation();
+    aTrsf[0].x()  = -theParams->Translation().x();
+    aTrsf[0].y()  = -theParams->Translation().y();
     aTrsf[0].zw() = theParams->Scale();
     aTrsf[1].x()  = std::sin (-theParams->Rotation() * static_cast<float> (M_PI / 180.0));
     aTrsf[1].y()  = std::cos (-theParams->Rotation() * static_cast<float> (M_PI / 180.0));
@@ -2697,6 +3448,27 @@ void OpenGl_Context::SetPointSize (const Standard_ShortReal theSize)
 }
 
 // =======================================================================
+// function : SetPointSpriteOrigin
+// purpose  :
+// =======================================================================
+void OpenGl_Context::SetPointSpriteOrigin()
+{
+#if !defined(GL_ES_VERSION_2_0)
+  if (core15fwd == NULL)
+  {
+    return;
+  }
+
+  const int aNewState = !myActiveProgram.IsNull() ? GL_UPPER_LEFT : GL_LOWER_LEFT;
+  if (myPointSpriteOrig != aNewState)
+  {
+    myPointSpriteOrig = aNewState;
+    core15fwd->glPointParameteri (GL_POINT_SPRITE_COORD_ORIGIN, aNewState);
+  }
+#endif
+}
+
+// =======================================================================
 // function : SetGlNormalizeEnabled
 // purpose  :
 // =======================================================================
@@ -2729,20 +3501,138 @@ Standard_Boolean OpenGl_Context::SetGlNormalizeEnabled (Standard_Boolean isEnabl
 }
 
 // =======================================================================
+// function : SetPolygonMode
+// purpose  :
+// =======================================================================
+Standard_Integer OpenGl_Context::SetPolygonMode (const Standard_Integer theMode)
+{
+  if (myPolygonMode == theMode)
+  {
+    return myPolygonMode;
+  }
+
+  const Standard_Integer anOldPolygonMode = myPolygonMode;
+
+  myPolygonMode = theMode;
+
+#if !defined(GL_ES_VERSION_2_0)
+  ::glPolygonMode (GL_FRONT_AND_BACK, (GLenum)theMode);
+#endif
+
+  return anOldPolygonMode;
+}
+
+// =======================================================================
+// function : SetPolygonHatchEnabled
+// purpose  :
+// =======================================================================
+bool OpenGl_Context::SetPolygonHatchEnabled (const bool theIsEnabled)
+{
+  if (myHatchStyles.IsNull())
+  {
+    return false;
+  }
+  else if (myHatchStyles->IsEnabled() == theIsEnabled)
+  {
+    return theIsEnabled;
+  }
+
+  return myHatchStyles->SetEnabled (this, theIsEnabled);
+}
+
+// =======================================================================
+// function : SetPolygonHatchStyle
+// purpose  :
+// =======================================================================
+Standard_Integer OpenGl_Context::SetPolygonHatchStyle (const Handle(Graphic3d_HatchStyle)& theStyle)
+{
+  if (theStyle.IsNull())
+  {
+    return 0;
+  }
+
+  if (myHatchStyles.IsNull())
+  {
+    if (!GetResource ("OpenGl_LineAttributes", myHatchStyles))
+    {
+      // share and register for release once the resource is no longer used
+      myHatchStyles = new OpenGl_LineAttributes();
+      ShareResource ("OpenGl_LineAttributes", myHatchStyles);
+    }
+  }
+  if (myHatchStyles->TypeOfHatch() == theStyle->HatchType())
+  {
+    return theStyle->HatchType();
+  }
+
+  return myHatchStyles->SetTypeOfHatch (this, theStyle);
+}
+
+// =======================================================================
+// function : SetPolygonOffset
+// purpose  :
+// =======================================================================
+void OpenGl_Context::SetPolygonOffset (const Graphic3d_PolygonOffset& theOffset)
+{
+  const bool toFillOld = (myPolygonOffset.Mode & Aspect_POM_Fill) == Aspect_POM_Fill;
+  const bool toFillNew = (theOffset.Mode       & Aspect_POM_Fill) == Aspect_POM_Fill;
+  if (toFillNew != toFillOld)
+  {
+    if (toFillNew)
+    {
+      glEnable (GL_POLYGON_OFFSET_FILL);
+    }
+    else
+    {
+      glDisable (GL_POLYGON_OFFSET_FILL);
+    }
+  }
+
+#if !defined(GL_ES_VERSION_2_0)
+  const bool toLineOld = (myPolygonOffset.Mode & Aspect_POM_Line) == Aspect_POM_Line;
+  const bool toLineNew = (theOffset.Mode       & Aspect_POM_Line) == Aspect_POM_Line;
+  if (toLineNew != toLineOld)
+  {
+    if (toLineNew)
+    {
+      glEnable (GL_POLYGON_OFFSET_LINE);
+    }
+    else
+    {
+      glDisable (GL_POLYGON_OFFSET_LINE);
+    }
+  }
+
+  const bool toPointOld = (myPolygonOffset.Mode & Aspect_POM_Point) == Aspect_POM_Point;
+  const bool toPointNew = (theOffset.Mode       & Aspect_POM_Point) == Aspect_POM_Point;
+  if (toPointNew != toPointOld)
+  {
+    if (toPointNew)
+    {
+      glEnable (GL_POLYGON_OFFSET_POINT);
+    }
+    else
+    {
+      glDisable (GL_POLYGON_OFFSET_POINT);
+    }
+  }
+#endif
+
+  if (myPolygonOffset.Factor != theOffset.Factor
+   || myPolygonOffset.Units  != theOffset.Units)
+  {
+    glPolygonOffset (theOffset.Factor, theOffset.Units);
+  }
+  myPolygonOffset = theOffset;
+}
+
+// =======================================================================
 // function : ApplyModelWorldMatrix
 // purpose  :
 // =======================================================================
 void OpenGl_Context::ApplyModelWorldMatrix()
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core11 != NULL)
-  {
-    core11->glMatrixMode (GL_MODELVIEW);
-    core11->glLoadMatrixf (ModelWorldState.Current());
-  }
-#endif
-
-  if (!myShaderManager->IsEmpty())
+  if (myShaderManager->ModelWorldState().ModelWorldMatrix() != ModelWorldState.Current())
   {
     myShaderManager->UpdateModelWorldStateTo (ModelWorldState.Current());
   }
@@ -2754,15 +3644,11 @@ void OpenGl_Context::ApplyModelWorldMatrix()
 // =======================================================================
 void OpenGl_Context::ApplyWorldViewMatrix()
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core11 != NULL)
+  if (myShaderManager->ModelWorldState().ModelWorldMatrix() != THE_IDENTITY_MATRIX)
   {
-    core11->glMatrixMode (GL_MODELVIEW);
-    core11->glLoadMatrixf (WorldViewState.Current());
+    myShaderManager->UpdateModelWorldStateTo (THE_IDENTITY_MATRIX);
   }
-#endif
-
-  if (!myShaderManager->IsEmpty())
+  if (myShaderManager->WorldViewState().WorldViewMatrix() != WorldViewState.Current())
   {
     myShaderManager->UpdateWorldViewStateTo (WorldViewState.Current());
   }
@@ -2774,19 +3660,13 @@ void OpenGl_Context::ApplyWorldViewMatrix()
 // =======================================================================
 void OpenGl_Context::ApplyModelViewMatrix()
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core11 != NULL)
-  {
-    OpenGl_Mat4 aModelView = WorldViewState.Current() * ModelWorldState.Current();
-    core11->glMatrixMode (GL_MODELVIEW);
-    core11->glLoadMatrixf (aModelView.GetData());
-  }
-#endif
-
-  if (!myShaderManager->IsEmpty())
+  if (myShaderManager->ModelWorldState().ModelWorldMatrix() != ModelWorldState.Current())
   {
     myShaderManager->UpdateModelWorldStateTo (ModelWorldState.Current());
-    myShaderManager->UpdateWorldViewStateTo (WorldViewState.Current());
+  }
+  if (myShaderManager->WorldViewState().WorldViewMatrix() != WorldViewState.Current())
+  {
+    myShaderManager->UpdateWorldViewStateTo  (WorldViewState.Current());
   }
 }
 
@@ -2796,20 +3676,11 @@ void OpenGl_Context::ApplyModelViewMatrix()
 // =======================================================================
 void OpenGl_Context::ApplyProjectionMatrix()
 {
-#if !defined(GL_ES_VERSION_2_0)
-  if (core11 != NULL)
-  {
-    core11->glMatrixMode (GL_PROJECTION);
-    core11->glLoadMatrixf (ProjectionState.Current().GetData());
-  }
-#endif
-
-  if (!myShaderManager->IsEmpty())
+  if (myShaderManager->ProjectionState().ProjectionMatrix() != ProjectionState.Current())
   {
     myShaderManager->UpdateProjectionStateTo (ProjectionState.Current());
   }
 }
-
 
 // =======================================================================
 // function : EnableFeatures
@@ -2826,27 +3697,25 @@ void OpenGl_Context::EnableFeatures() const
 // =======================================================================
 void OpenGl_Context::DisableFeatures() const
 {
-#if !defined(GL_ES_VERSION_2_0)
-  glPixelTransferi (GL_MAP_COLOR, GL_FALSE);
-#endif
-
-  /*
-  * Disable stuff that's likely to slow down glDrawPixels.
-  * (Omit as much of this as possible, when you know in advance
-  * that the OpenGL state will already be set correctly.)
-  */
+  // Disable stuff that's likely to slow down glDrawPixels.
   glDisable(GL_DITHER);
   glDisable(GL_BLEND);
   glDisable(GL_DEPTH_TEST);
-  glDisable(GL_TEXTURE_2D);
   glDisable(GL_STENCIL_TEST);
 
 #if !defined(GL_ES_VERSION_2_0)
+  if (core11 == NULL)
+  {
+    return;
+  }
+
+  glDisable(GL_TEXTURE_1D);
+  glDisable(GL_TEXTURE_2D);
+
   glDisable(GL_LIGHTING);
   glDisable(GL_ALPHA_TEST);
   glDisable(GL_FOG);
   glDisable(GL_LOGIC_OP);
-  glDisable(GL_TEXTURE_1D);
 
   glPixelTransferi(GL_MAP_COLOR, GL_FALSE);
   glPixelTransferi(GL_RED_SCALE, 1);
@@ -2858,16 +3727,8 @@ void OpenGl_Context::DisableFeatures() const
   glPixelTransferi(GL_ALPHA_SCALE, 1);
   glPixelTransferi(GL_ALPHA_BIAS, 0);
 
-  /*
-  * Disable extensions that could slow down glDrawPixels.
-  * (Actually, you should check for the presence of the proper
-  * extension before making these calls.  I've omitted that
-  * code for simplicity.)
-  */
-
   if ((myGlVerMajor >= 1) && (myGlVerMinor >= 2))
   {
-#ifdef GL_EXT_convolution
     if (CheckExtension ("GL_CONVOLUTION_1D_EXT"))
       glDisable(GL_CONVOLUTION_1D_EXT);
 
@@ -2876,20 +3737,58 @@ void OpenGl_Context::DisableFeatures() const
 
     if (CheckExtension ("GL_SEPARABLE_2D_EXT"))
       glDisable(GL_SEPARABLE_2D_EXT);
-#endif
 
-#ifdef GL_EXT_histogram
     if (CheckExtension ("GL_SEPARABLE_2D_EXT"))
       glDisable(GL_HISTOGRAM_EXT);
 
     if (CheckExtension ("GL_MINMAX_EXT"))
       glDisable(GL_MINMAX_EXT);
-#endif
 
-#ifdef GL_EXT_texture3D
     if (CheckExtension ("GL_TEXTURE_3D_EXT"))
       glDisable(GL_TEXTURE_3D_EXT);
-#endif
   }
 #endif
+}
+
+// =======================================================================
+// function : SetColorMask
+// purpose  :
+// =======================================================================
+bool OpenGl_Context::SetColorMask (bool theToWriteColor)
+{
+  const GLboolean toWrite = theToWriteColor ? GL_TRUE : GL_FALSE;
+  glColorMask (toWrite, toWrite, toWrite, toWrite);
+
+  const bool anOldValue = myColorMask;
+  myColorMask = theToWriteColor;
+  return anOldValue;
+}
+
+// =======================================================================
+// function : SetSampleAlphaToCoverage
+// purpose  :
+// =======================================================================
+bool OpenGl_Context::SetSampleAlphaToCoverage (bool theToEnable)
+{
+  if (myAlphaToCoverage == theToEnable)
+  {
+    return myAlphaToCoverage;
+  }
+
+  if (core15fwd != NULL)
+  {
+    if (theToEnable)
+    {
+      //core15fwd->core15fwd->glSampleCoverage (1.0f, GL_FALSE);
+      core15fwd->glEnable (GL_SAMPLE_ALPHA_TO_COVERAGE);
+    }
+    else
+    {
+      core15fwd->glDisable (GL_SAMPLE_ALPHA_TO_COVERAGE);
+    }
+  }
+
+  const bool anOldValue = myAlphaToCoverage;
+  myAlphaToCoverage = theToEnable;
+  return anOldValue;
 }

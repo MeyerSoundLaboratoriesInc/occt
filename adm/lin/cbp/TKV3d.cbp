@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -80,39 +82,25 @@
 		<Unit filename="../../../src/V3d/V3d_AmbientLight.cxx" />
 		<Unit filename="../../../src/V3d/V3d_CircularGrid.cxx" />
 		<Unit filename="../../../src/V3d/V3d_DirectionalLight.cxx" />
-		<Unit filename="../../../src/V3d/V3d_Light.cxx" />
 		<Unit filename="../../../src/V3d/V3d_Plane.cxx" />
 		<Unit filename="../../../src/V3d/V3d_PositionLight.cxx" />
 		<Unit filename="../../../src/V3d/V3d_PositionalLight.cxx" />
 		<Unit filename="../../../src/V3d/V3d_RectangularGrid.cxx" />
 		<Unit filename="../../../src/V3d/V3d_SpotLight.cxx" />
+		<Unit filename="../../../src/V3d/V3d_Trihedron.cxx" />
 		<Unit filename="../../../src/V3d/V3d_View.cxx" />
-		<Unit filename="../../../src/V3d/V3d_View_1.cxx" />
 		<Unit filename="../../../src/V3d/V3d_View_2.cxx" />
 		<Unit filename="../../../src/V3d/V3d_View_3.cxx" />
 		<Unit filename="../../../src/V3d/V3d_View_4.cxx" />
-		<Unit filename="../../../src/V3d/V3d_View_5.cxx" />
-		<Unit filename="../../../src/V3d/V3d_View_Print.cxx" />
 		<Unit filename="../../../src/V3d/V3d_Viewer.cxx" />
-		<Unit filename="../../../src/V3d/V3d_Viewer_1.cxx" />
-		<Unit filename="../../../src/V3d/V3d_Viewer_2.cxx" />
-		<Unit filename="../../../src/V3d/V3d_Viewer_3.cxx" />
 		<Unit filename="../../../src/V3d/V3d_Viewer_4.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfPoints.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfPolygons.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfPolylines.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfPrimitives.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfQuadrangleStrips.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfQuadrangles.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfSegments.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfTriangleFans.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfTriangleStrips.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_ArrayOfTriangles.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_AspectFillArea3d.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_AspectLine3d.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_AspectMarker3d.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_AspectText3d.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_BSDF.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_CLight.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_CStructure.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_CView.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_Camera.cxx" />
@@ -120,8 +108,11 @@
 		<Unit filename="../../../src/Graphic3d/Graphic3d_DataStructureManager.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_GraphicDriver.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_Group.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_HatchStyle.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_LightSet.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_MarkerImage.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_MaterialAspect.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_PresentationAttributes.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_ShaderAttribute.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_ShaderObject.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_ShaderProgram.cxx" />
@@ -138,10 +129,10 @@
 		<Unit filename="../../../src/Graphic3d/Graphic3d_TextureMap.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_TextureParams.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_TextureRoot.cxx" />
-		<Unit filename="../../../src/Graphic3d/Graphic3d_Vector.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_TextureSet.cxx" />
+		<Unit filename="../../../src/Graphic3d/Graphic3d_TransformPers.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_Vertex.cxx" />
 		<Unit filename="../../../src/Graphic3d/Graphic3d_ViewAffinity.cxx" />
-		<Unit filename="../../../src/Select3D/Select3D_BVHPrimitiveContent.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_InteriorSensitivePointSet.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveBox.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveCircle.cxx" />
@@ -151,6 +142,7 @@
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveGroup.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitivePoint.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitivePoly.cxx" />
+		<Unit filename="../../../src/Select3D/Select3D_SensitivePrimitiveArray.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveSegment.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveSet.cxx" />
 		<Unit filename="../../../src/Select3D/Select3D_SensitiveTriangle.cxx" />
@@ -162,21 +154,22 @@
 		<Unit filename="../../../src/Prs3d/Prs3d_BasicAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_DatumAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_DimensionAspect.cxx" />
-		<Unit filename="../../../src/Prs3d/Prs3d_DimensionUnits.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_Drawer.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_IsoAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_LineAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_PlaneAspect.cxx" />
-		<Unit filename="../../../src/Prs3d/Prs3d_PlaneSet.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_PointAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_Presentation.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_PresentationShadow.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_Projector.cxx" />
-		<Unit filename="../../../src/Prs3d/Prs3d_Root.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_ShadingAspect.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_ShapeTool.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_Text.cxx" />
 		<Unit filename="../../../src/Prs3d/Prs3d_TextAspect.cxx" />
+		<Unit filename="../../../src/Prs3d/Prs3d_ToolCylinder.cxx" />
+		<Unit filename="../../../src/Prs3d/Prs3d_ToolDisk.cxx" />
+		<Unit filename="../../../src/Prs3d/Prs3d_ToolQuadric.cxx" />
+		<Unit filename="../../../src/Prs3d/Prs3d_ToolSphere.cxx" />
 		<Unit filename="../../../src/StdPrs/StdPrs_BndBox.cxx" />
 		<Unit filename="../../../src/StdPrs/StdPrs_Curve.cxx" />
 		<Unit filename="../../../src/StdPrs/StdPrs_DeflectionCurve.cxx" />
@@ -208,13 +201,12 @@
 		<Unit filename="../../../src/SelectMgr/SelectMgr_RectangularFrustum.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SelectableObject.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SelectableObjectSet.cxx" />
-		<Unit filename="../../../src/SelectMgr/SelectMgr_SelectableObjectTrsfPersSet.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SelectingVolumeManager.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_Selection.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SelectionManager.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SensitiveEntity.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_SensitiveEntitySet.cxx" />
-		<Unit filename="../../../src/SelectMgr/SelectMgr_SortCriterion.cxx" />
+		<Unit filename="../../../src/SelectMgr/SelectMgr_ToleranceMap.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_TriangularFrustum.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_TriangularFrustumSet.cxx" />
 		<Unit filename="../../../src/SelectMgr/SelectMgr_ViewerSelector.cxx" />
@@ -225,6 +217,10 @@
 		<Unit filename="../../../src/PrsMgr/PrsMgr_Prs.cxx" />
 		<Unit filename="../../../src/AIS/AIS.cxx" />
 		<Unit filename="../../../src/AIS/AIS_AngleDimension.cxx" />
+		<Unit filename="../../../src/AIS/AIS_Animation.cxx" />
+		<Unit filename="../../../src/AIS/AIS_AnimationCamera.cxx" />
+		<Unit filename="../../../src/AIS/AIS_AnimationObject.cxx" />
+		<Unit filename="../../../src/AIS/AIS_AnimationTimer.cxx" />
 		<Unit filename="../../../src/AIS/AIS_AttributeFilter.cxx" />
 		<Unit filename="../../../src/AIS/AIS_Axis.cxx" />
 		<Unit filename="../../../src/AIS/AIS_BadEdgeFilter.cxx" />
@@ -257,6 +253,8 @@
 		<Unit filename="../../../src/AIS/AIS_LocalContext.cxx" />
 		<Unit filename="../../../src/AIS/AIS_LocalContext_1.cxx" />
 		<Unit filename="../../../src/AIS/AIS_LocalStatus.cxx" />
+		<Unit filename="../../../src/AIS/AIS_Manipulator.cxx" />
+		<Unit filename="../../../src/AIS/AIS_ManipulatorOwner.cxx" />
 		<Unit filename="../../../src/AIS/AIS_MaxRadiusDimension.cxx" />
 		<Unit filename="../../../src/AIS/AIS_MidPointRelation.cxx" />
 		<Unit filename="../../../src/AIS/AIS_MinRadiusDimension.cxx" />
@@ -280,6 +278,7 @@
 		<Unit filename="../../../src/AIS/AIS_TexturedShape.cxx" />
 		<Unit filename="../../../src/AIS/AIS_Triangulation.cxx" />
 		<Unit filename="../../../src/AIS/AIS_Trihedron.cxx" />
+		<Unit filename="../../../src/AIS/AIS_TrihedronOwner.cxx" />
 		<Unit filename="../../../src/AIS/AIS_TypeFilter.cxx" />
 		<Unit filename="../../../src/DsgPrs/DsgPrs.cxx" />
 		<Unit filename="../../../src/DsgPrs/DsgPrs_AnglePresentation.cxx" />

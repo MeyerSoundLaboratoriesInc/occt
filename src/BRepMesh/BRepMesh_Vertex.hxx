@@ -15,11 +15,9 @@
 #ifndef _BRepMesh_Vertex_HeaderFile
 #define _BRepMesh_Vertex_HeaderFile
 
-#include <Standard.hxx>
-#include <Standard_DefineAlloc.hxx>
-#include <Standard_Macro.hxx>
-#include <gp_XY.hxx>
 #include <BRepMesh_DegreeOfFreedom.hxx>
+#include <gp_XY.hxx>
+#include <Precision.hxx>
 
 //! Light weighted structure representing vertex 
 //! of the mesh in parametric space. Vertex could be 
@@ -31,7 +29,7 @@ public:
   DEFINE_STANDARD_ALLOC
   
   //! Default constructor
-  Standard_EXPORT BRepMesh_Vertex()
+  BRepMesh_Vertex()
     : myLocation3d(0),
       myMovability(BRepMesh_Free)
   {
@@ -41,9 +39,9 @@ public:
   //! @param theUV position of vertex in parametric space.
   //! @param theLocation3d index of 3d point to be associated with vertex.
   //! @param theMovability movability of the vertex.
-  Standard_EXPORT BRepMesh_Vertex(const gp_XY&                   theUV,
-                                  const Standard_Integer         theLocation3d,
-                                  const BRepMesh_DegreeOfFreedom theMovability)
+  BRepMesh_Vertex(const gp_XY&                   theUV,
+                  const Standard_Integer         theLocation3d,
+                  const BRepMesh_DegreeOfFreedom theMovability)
   {
     Initialize(theUV, theLocation3d, theMovability);
   }
@@ -52,9 +50,9 @@ public:
   //! @param theU U position of vertex in parametric space.
   //! @param theV V position of vertex in parametric space.
   //! @param theMovability movability of the vertex.
-  Standard_EXPORT BRepMesh_Vertex(const Standard_Real            theU,
-                                  const Standard_Real            theV,
-                                  const BRepMesh_DegreeOfFreedom theMovability)
+  BRepMesh_Vertex(const Standard_Real            theU,
+                  const Standard_Real            theV,
+                  const BRepMesh_DegreeOfFreedom theMovability)
     : myUV(theU, theV),
       myLocation3d(0),
       myMovability(theMovability)
@@ -106,7 +104,7 @@ public:
   //! Returns hash code for this vertex.
   //! @param theUpper upper index in the container.
   //! @return hash code.
-  Standard_EXPORT Standard_Integer HashCode(const Standard_Integer Upper) const
+  Standard_Integer HashCode(const Standard_Integer Upper) const
   {
     return ::HashCode(Floor(1e5 * myUV.X()) * Floor(1e5 * myUV.Y()), Upper);
   }
@@ -114,7 +112,7 @@ public:
   //! Checks for equality with another vertex.
   //! @param theOther vertex to be checked against this one.
   //! @return TRUE if equal, FALSE if not.
-  Standard_EXPORT Standard_Boolean IsEqual(const BRepMesh_Vertex& theOther) const
+  Standard_Boolean IsEqual(const BRepMesh_Vertex& theOther) const
   {
     if (myMovability          == BRepMesh_Deleted || 
         theOther.myMovability == BRepMesh_Deleted)
@@ -126,7 +124,7 @@ public:
   }
 
   //! Alias for IsEqual.
-  Standard_EXPORT Standard_Boolean operator ==(const BRepMesh_Vertex& Other) const
+  Standard_Boolean operator ==(const BRepMesh_Vertex& Other) const
   {
     return IsEqual(Other);
   }

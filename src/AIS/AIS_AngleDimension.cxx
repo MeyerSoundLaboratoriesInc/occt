@@ -61,6 +61,17 @@ namespace
   static const Standard_Real              THE_EMPTY_LABEL_WIDTH = 0.0;
   static const Standard_ExtCharacter      THE_DEGREE_SYMBOL (0x00B0);
   static const Standard_Real              THE_3D_TEXT_MARGIN = 0.1;
+
+  //! Returns true if the given points lie on a same line.
+  static Standard_Boolean isSameLine (const gp_Pnt& theFirstPoint,
+                                      const gp_Pnt& theCenterPoint,
+                                      const gp_Pnt& theSecondPoint)
+  {
+    gp_Vec aVec1 (theFirstPoint, theCenterPoint);
+    gp_Vec aVec2 (theCenterPoint, theSecondPoint);
+
+    return aVec1.IsParallel (aVec2, Precision::Angular());
+  }
 }
 
 //=======================================================================
@@ -177,7 +188,8 @@ void AIS_AngleDimension::SetMeasuredGeometry (const gp_Pnt& theFirstPoint,
   myGeometryType  = GeometryType_Points;
   myIsGeometryValid       = IsValidPoints (myFirstPoint, myCenterPoint, mySecondPoint);
 
-  if (myIsGeometryValid && !myIsPlaneCustom)
+  Standard_Boolean anIsSameLine = isSameLine (myFirstPoint, myCenterPoint, mySecondPoint);
+  if (myIsGeometryValid && !myIsPlaneCustom && !anIsSameLine)
   {
     ComputePlane();
   }
@@ -202,7 +214,8 @@ void AIS_AngleDimension::SetMeasuredGeometry (const TopoDS_Vertex& theFirstVerte
   myGeometryType    = GeometryType_Points;
   myIsGeometryValid = IsValidPoints (myFirstPoint, myCenterPoint, mySecondPoint);
 
-  if (myIsGeometryValid && !myIsPlaneCustom)
+  Standard_Boolean anIsSameLine = isSameLine (myFirstPoint, myCenterPoint, mySecondPoint);
+  if (myIsGeometryValid && !myIsPlaneCustom && !anIsSameLine)
   {
     ComputePlane();
   }
@@ -279,6 +292,8 @@ void AIS_AngleDimension::SetMeasuredGeometry (const TopoDS_Face& theFirstFace,
 //=======================================================================
 void AIS_AngleDimension::Init()
 {
+  SetType (AIS_TOA_Interior);
+  SetArrowsVisibility (AIS_TOAV_Both);
   SetSpecialSymbol (THE_DEGREE_SYMBOL);
   SetDisplaySpecialSymbol (AIS_DSS_After);
   SetFlyout (15.0);
@@ -300,6 +315,14 @@ gp_Pnt AIS_AngleDimension::GetCenterOnArc (const gp_Pnt& theFirstAttach,
   }
   
   gp_Pln aPlane = aConstructPlane.Value();
+  // to have an exterior angle presentation, a plane for further constructed circle should be reversed
+  if (myType == AIS_TOA_Exterior)
+  {
+    gp_Ax1 anAxis = aPlane.Axis();
+    gp_Dir aDir = anAxis.Direction();
+    aDir.Reverse();
+    aPlane.SetAxis(gp_Ax1(anAxis.Location(), aDir));
+  }
 
   Standard_Real aRadius = theFirstAttach.Distance (theCenter);
 
@@ -348,6 +371,15 @@ void AIS_AngleDimension::DrawArc (const Handle(Prs3d_Presentation)& thePresentat
 {
   gp_Pln aPlane (myCenterPoint, GetNormalForMinAngle());
 
+  // to have an exterior angle presentation, a plane for further constructed circle should be reversed
+  if (myType == AIS_TOA_Exterior)
+  {
+    gp_Ax1 anAxis = aPlane.Axis();
+    gp_Dir aDir = anAxis.Direction();
+    aDir.Reverse();
+    aPlane.SetAxis(gp_Ax1(anAxis.Location(), aDir));
+  }
+
   // construct circle forming the arc
   gce_MakeCirc aConstructCircle (theCenter, aPlane, theRadius);
   if (!aConstructCircle.IsDone())
@@ -372,7 +404,10 @@ void AIS_AngleDimension::DrawArc (const Handle(Prs3d_Presentation)& thePresentat
   // compute number of discretization elements in old-fanshioned way
   gp_Vec aCenterToFirstVec  (theCenter, theFirstAttach);
   gp_Vec aCenterToSecondVec (theCenter, theSecondAttach);
-  const Standard_Real anAngle = aCenterToFirstVec.Angle (aCenterToSecondVec);
+  Standard_Real anAngle = aCenterToFirstVec.Angle (aCenterToSecondVec);
+  if (myType == AIS_TOA_Exterior)
+    anAngle = 2.0 * M_PI - anAngle;
+  // it sets 50 points on PI, and a part of points if angle is less
   const Standard_Integer aNbPoints = Max (4, Standard_Integer (50.0 * anAngle / M_PI));
 
   GCPnts_UniformAbscissa aMakePnts (anArcAdaptor, aNbPoints);
@@ -594,7 +629,6 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
                                   const Handle(Prs3d_Presentation)& thePresentation,
                                   const Standard_Integer theMode)
 {
-  thePresentation->Clear();
   mySelectionGeom.Clear (theMode);
 
   if (!IsValid())
@@ -607,7 +641,7 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
 
   Prs3d_Root::CurrentGroup(thePresentation)->SetPrimitivesAspect (aDimensionAspect->LineAspect()->Aspect());
 
-  Quantity_Length anArrowLength = aDimensionAspect->ArrowAspect()->Length();
+  Standard_Real anArrowLength = aDimensionAspect->ArrowAspect()->Length();
 
   // prepare label string and compute its geometrical width
   Standard_Real aLabelWidth;
@@ -706,8 +740,8 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
       if (theMode == ComputeMode_All || theMode == ComputeMode_Line)
       {
         DrawArc (thePresentation,
-                 isArrowsExternal ? aFirstAttach : aFirstArrowEnd,
-                 isArrowsExternal ? aSecondAttach : aSecondArrowEnd,
+                 (isArrowsExternal || !isArrowVisible(AIS_TOAV_First)) ? aFirstAttach : aFirstArrowEnd,
+                 (isArrowsExternal || !isArrowVisible(AIS_TOAV_Second)) ? aSecondAttach : aSecondArrowEnd,
                  myCenterPoint,
                  Abs (GetFlyout()),
                  theMode);
@@ -719,7 +753,7 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
     {
       DrawExtension (thePresentation,
                      anExtensionSize,
-                     isArrowsExternal ? aFirstArrowEnd : aFirstAttach,
+                     (isArrowsExternal && isArrowVisible(AIS_TOAV_First)) ? aFirstArrowEnd : aFirstAttach,
                      aFirstExtensionDir,
                      aLabelString,
                      aLabelWidth,
@@ -732,7 +766,7 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
     {
       DrawExtension (thePresentation,
                      anExtensionSize,
-                     isArrowsExternal ? aSecondArrowEnd : aSecondAttach,
+                     (isArrowsExternal && isArrowVisible(AIS_TOAV_Second)) ? aSecondArrowEnd : aSecondAttach,
                      aSecondExtensionDir,
                      aLabelString,
                      aLabelWidth,
@@ -748,8 +782,8 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
     Prs3d_Root::NewGroup (thePresentation);
 
     DrawArc (thePresentation,
-             isArrowsExternal ? aFirstAttach  : aFirstArrowEnd,
-             isArrowsExternal ? aSecondAttach : aSecondArrowEnd,
+             (isArrowsExternal || !isArrowVisible(AIS_TOAV_First)) ? aFirstAttach  : aFirstArrowEnd,
+             (isArrowsExternal || !isArrowVisible(AIS_TOAV_Second)) ? aSecondAttach : aSecondArrowEnd,
              myCenterPoint,
              Abs(GetFlyout ()),
              theMode);
@@ -760,15 +794,17 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
   {
     Prs3d_Root::NewGroup (thePresentation);
 
-    DrawArrow (thePresentation, aFirstArrowBegin,  gp_Dir (aFirstArrowVec));
-    DrawArrow (thePresentation, aSecondArrowBegin, gp_Dir (aSecondArrowVec));
+    if (isArrowVisible(AIS_TOAV_First))
+      DrawArrow (thePresentation, aFirstArrowBegin,  gp_Dir (aFirstArrowVec));
+    if (isArrowVisible(AIS_TOAV_Second))
+      DrawArrow (thePresentation, aSecondArrowBegin, gp_Dir (aSecondArrowVec));
   }
 
   if ((theMode == ComputeMode_All || theMode == ComputeMode_Line) && isArrowsExternal)
   {
     Prs3d_Root::NewGroup (thePresentation);
 
-    if (aHPosition != LabelPosition_Left)
+    if (aHPosition != LabelPosition_Left && isArrowVisible(AIS_TOAV_First))
     {
       DrawExtension (thePresentation,
                      aDimensionAspect->ArrowTailSize(),
@@ -780,7 +816,7 @@ void AIS_AngleDimension::Compute (const Handle(PrsMgr_PresentationManager3d)& /*
                      LabelPosition_None);
     }
 
-    if (aHPosition != LabelPosition_Right)
+    if (aHPosition != LabelPosition_Right && isArrowVisible(AIS_TOAV_Second))
     {
       DrawExtension (thePresentation,
                      aDimensionAspect->ArrowTailSize(),
@@ -1160,6 +1196,26 @@ Standard_Boolean AIS_AngleDimension::IsValidPoints (const gp_Pnt& theFirstPoint,
 }
 
 //=======================================================================
+//function : isArrowVisible
+//purpose  : compares given and internal arrows types, returns true if the the type should be shown
+//=======================================================================
+Standard_Boolean AIS_AngleDimension::isArrowVisible(const AIS_TypeOfAngleArrowVisibility& theArrowType) const
+{
+  switch (theArrowType)
+  {
+    case AIS_TOAV_Both:
+      return myArrowsVisibility == AIS_TOAV_Both;
+    case AIS_TOAV_First:
+      return myArrowsVisibility == AIS_TOAV_Both || myArrowsVisibility == AIS_TOAV_First;
+    case AIS_TOAV_Second:
+      return myArrowsVisibility == AIS_TOAV_Both || myArrowsVisibility == AIS_TOAV_Second;
+    case AIS_TOAV_None:
+      return false;
+  }
+  return false;
+}
+
+//=======================================================================
 //function : GetTextPosition
 //purpose  : 
 //=======================================================================
@@ -1244,7 +1300,7 @@ void AIS_AngleDimension::SetTextPosition (const gp_Pnt& theTextPos)
   // The text position point for angle dimension should belong to the working plane.
   if (!GetPlane().Contains (theTextPos, Precision::Confusion()))
   {
-    Standard_ProgramError::Raise ("The text position point for angle dimension doesn't belong to the working plane.");
+    throw Standard_ProgramError("The text position point for angle dimension doesn't belong to the working plane.");
   }
 
   myIsTextPositionFixed = Standard_True;
@@ -1358,7 +1414,7 @@ void AIS_AngleDimension::FitTextAlignment (const Prs3d_DimensionTextHorizontalPo
 {
   Handle(Prs3d_DimensionAspect) aDimensionAspect = myDrawer->DimensionAspect();
 
-  Quantity_Length anArrowLength = aDimensionAspect->ArrowAspect()->Length();
+  Standard_Real anArrowLength = aDimensionAspect->ArrowAspect()->Length();
 
   // Prepare label string and compute its geometrical width
   Standard_Real aLabelWidth;

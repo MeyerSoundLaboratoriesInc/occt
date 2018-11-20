@@ -20,13 +20,13 @@
 #include <Standard_Type.hxx>
 
 #include <TCollection_AsciiString.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_CString.hxx>
 #include <Standard_Type.hxx>
 #include <Standard_Boolean.hxx>
 #include <BinObjMgt_RRelocationTable.hxx>
 #include <BinObjMgt_SRelocationTable.hxx>
-class CDM_MessageDriver;
+class Message_Messenger;
 class TDF_Attribute;
 class TCollection_AsciiString;
 class BinObjMgt_Persistent;
@@ -34,10 +34,10 @@ class TCollection_ExtendedString;
 
 
 class BinMDF_ADriver;
-DEFINE_STANDARD_HANDLE(BinMDF_ADriver, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(BinMDF_ADriver, Standard_Transient)
 
 //! Attribute Storage/Retrieval Driver.
-class BinMDF_ADriver : public MMgt_TShared
+class BinMDF_ADriver : public Standard_Transient
 {
 
 public:
@@ -62,27 +62,18 @@ public:
   //! into <aTarget>, using the relocation table
   //! <aRelocTable> to keep the sharings.
   Standard_EXPORT virtual void Paste (const Handle(TDF_Attribute)& aSource, BinObjMgt_Persistent& aTarget, BinObjMgt_SRelocationTable& aRelocTable) const = 0;
-  
-  //! Send message to Application (usually when error occurres)
-  Standard_EXPORT void WriteMessage (const TCollection_ExtendedString& theMessage) const;
 
 
-
-
-  DEFINE_STANDARD_RTTIEXT(BinMDF_ADriver,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(BinMDF_ADriver,Standard_Transient)
 
 protected:
 
   
-  Standard_EXPORT BinMDF_ADriver(const Handle(CDM_MessageDriver)& theMsgDriver, const Standard_CString theName = NULL);
+  Standard_EXPORT BinMDF_ADriver(const Handle(Message_Messenger)& theMsgDriver, const Standard_CString theName = NULL);
 
   TCollection_AsciiString myTypeName;
 
-
-private:
-
-
-  Handle(CDM_MessageDriver) myMessageDriver;
+  Handle(Message_Messenger) myMessageDriver;
 
 
 };

@@ -20,7 +20,7 @@
 
 #include <Standard_Integer.hxx>
 class XmlMDF_ADriverTable;
-class CDM_MessageDriver;
+class Message_Messenger;
 class XmlMDataXtd_AxisDriver;
 class XmlMDataXtd_ShapeDriver;
 class XmlMDataXtd_PointDriver;
@@ -29,7 +29,7 @@ class XmlMDataXtd_GeometryDriver;
 class XmlMDataXtd_ConstraintDriver;
 class XmlMDataXtd_PlacementDriver;
 class XmlMDataXtd_PatternStdDriver;
-
+class XmlMDataXtd_TriangulationDriver;
 
 //! Storage and Retrieval drivers for modelling attributes.
 //! Transient attributes are defined in package TDataXtd.
@@ -41,7 +41,7 @@ public:
 
   
   //! Adds the attribute drivers to <aDriverTable>.
-  Standard_EXPORT static void AddDrivers (const Handle(XmlMDF_ADriverTable)& aDriverTable, const Handle(CDM_MessageDriver)& anMsgDrv);
+  Standard_EXPORT static void AddDrivers (const Handle(XmlMDF_ADriverTable)& aDriverTable, const Handle(Message_Messenger)& anMsgDrv);
   
   Standard_EXPORT static void SetDocumentVersion (const Standard_Integer DocVersion);
   
@@ -69,6 +69,7 @@ friend class XmlMDataXtd_GeometryDriver;
 friend class XmlMDataXtd_ConstraintDriver;
 friend class XmlMDataXtd_PlacementDriver;
 friend class XmlMDataXtd_PatternStdDriver;
+friend class XmlMDataXtd_TriangulationDriver;
 
 };
 

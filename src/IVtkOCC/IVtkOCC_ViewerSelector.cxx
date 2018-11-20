@@ -28,7 +28,17 @@ IMPLEMENT_STANDARD_RTTIEXT(IVtkOCC_ViewerSelector,SelectMgr_ViewerSelector)
 IVtkOCC_ViewerSelector::IVtkOCC_ViewerSelector()
 : SelectMgr_ViewerSelector(),
 myPixTol(2),
-myToUpdateTol(Standard_True) {}
+myToUpdateTol(Standard_True) 
+{
+}
+
+//============================================================================
+// Method:  Destructor
+// Purpose:
+//============================================================================
+IVtkOCC_ViewerSelector::~IVtkOCC_ViewerSelector()
+{
+}
 
 //============================================================================
 // Method:  Pick
@@ -178,9 +188,9 @@ void IVtkOCC_ViewerSelector::Pick (double**                  thePoly,
 //============================================================================
 void IVtkOCC_ViewerSelector::Activate (const Handle(SelectMgr_Selection)& theSelection)
 {
-  for (theSelection->Init(); theSelection->More(); theSelection->Next())
+  for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (theSelection->Entities()); aSelEntIter.More(); aSelEntIter.Next())
   {
-    theSelection->Sensitive()->SetActiveForSelection();
+    aSelEntIter.Value()->SetActiveForSelection();
   }
 
   theSelection->SetSelectionState (SelectMgr_SOS_Activated);
@@ -195,9 +205,9 @@ void IVtkOCC_ViewerSelector::Activate (const Handle(SelectMgr_Selection)& theSel
 //============================================================================
 void IVtkOCC_ViewerSelector::Deactivate (const Handle(SelectMgr_Selection)& theSelection)
 {
-  for (theSelection->Init(); theSelection->More(); theSelection->Next())
+  for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (theSelection->Entities()); aSelEntIter.More(); aSelEntIter.Next())
   {
-    theSelection->Sensitive()->ResetSelectionActiveStatus();
+    aSelEntIter.Value()->ResetSelectionActiveStatus();
   }
 
   theSelection->SetSelectionState (SelectMgr_SOS_Deactivated);

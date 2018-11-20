@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -76,49 +78,22 @@
 			<Add library="TKFeat" />
 			<Add library="TKShHealing" />
 		</Linker>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_Displayer.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableC2D.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableC3D.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableMesure.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableP2D.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableP3D.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableSHA.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableSUR.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_OtherCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_SaveRestore.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_TTOT.cxx" />
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools.cxx" />
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_Mesure.cxx" />
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_OtherCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_Trace.cxx" />
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_TraceCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_BOOP.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_BOOPCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_CORCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_DSF.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_EditBOOP.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_HDSCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_HDSDisplayer.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_KroBOOP.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_MesureCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_MiscBOOP.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_OtherCommands.cxx" />
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_VarsTopo.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_BasicCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_ChamferCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_CheckCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_CurveCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_DraftAngleCommands.cxx" />
+		<Unit filename="../../../src/BRepTest/BRepTest_DrawableHistory.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_ExtremaCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_FeatureCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_Fillet2DCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_FilletCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_FillingCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_GPropCommands.cxx" />
+		<Unit filename="../../../src/BRepTest/BRepTest_HistoryCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_MatCommands.cxx" />
+		<Unit filename="../../../src/BRepTest/BRepTest_Objects.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_OtherCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_PrimitiveCommands.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_ProjectionCommands.cxx" />
@@ -131,6 +106,8 @@
 		<Unit filename="../../../src/GeometryTest/GeometryTest_ConstraintCommands.cxx" />
 		<Unit filename="../../../src/GeometryTest/GeometryTest_ContinuityCommands.cxx" />
 		<Unit filename="../../../src/GeometryTest/GeometryTest_CurveCommands.cxx" />
+		<Unit filename="../../../src/GeometryTest/GeometryTest_CurveTanCommands.cxx" />
+		<Unit filename="../../../src/GeometryTest/GeometryTest_DrawableQualifiedCurve2d.cxx" />
 		<Unit filename="../../../src/GeometryTest/GeometryTest_FairCurveCommands.cxx" />
 		<Unit filename="../../../src/GeometryTest/GeometryTest_PolyCommands.cxx" />
 		<Unit filename="../../../src/GeometryTest/GeometryTest_SurfaceCommands.cxx" />
@@ -143,6 +120,7 @@
 		<Unit filename="../../../src/HLRTest/HLRTest_ShapeData.cxx" />
 		<Unit filename="../../../src/MeshTest/MeshTest.cxx" />
 		<Unit filename="../../../src/MeshTest/MeshTest_CheckTopology.cxx" />
+		<Unit filename="../../../src/MeshTest/MeshTest_Debug.cxx" />
 		<Unit filename="../../../src/MeshTest/MeshTest_DrawableMesh.cxx" />
 		<Unit filename="../../../src/MeshTest/MeshTest_PluginCommands.cxx" />
 		<Unit filename="../../../src/GeomliteTest/GeomliteTest.cxx" />
@@ -160,12 +138,12 @@
 		<Unit filename="../../../src/BOPTest/BOPTest_CheckCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_DebugCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_DrawableShape.cxx" />
-		<Unit filename="../../../src/BOPTest/BOPTest_HistoryCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_LowCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_ObjCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_Objects.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_OptionCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_PartitionCommands.cxx" />
+		<Unit filename="../../../src/BOPTest/BOPTest_RemoveFeaturesCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_TolerCommands.cxx" />
 		<Unit filename="../../../src/BOPTest/BOPTest_UtilityCommands.cxx" />
 		<Unit filename="../../../src/SWDRAW/SWDRAW.cxx" />

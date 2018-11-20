@@ -38,39 +38,50 @@ set SYS_VS_LIST {}
 set SYS_VC_LIST {}
 set SYS_VCVARS_LIST {}
 
-# detect installed Visual Studio instances from global environment
-if { [info exists ::env(VS150COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 201x (vc15)"
-  lappend ::SYS_VC_LIST "vc15"
-  lappend ::SYS_VCVARS_LIST "%VS150COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
+# detect installed Visual Studio 2017 instances by running vswhere.exe
+if { ! [catch {exec vswhere.exe -version "\[15.0,15.99\]" -latest -requires Microsoft.VisualStudio.Workload.NativeDesktop -property installationPath} res] } {
+  lappend ::SYS_VS_LIST "Visual Studio 2017 (15, toolset v141)"
+  lappend ::SYS_VC_LIST "vc141"
+  lappend ::SYS_VCVARS_LIST "$res\\VC\\vcvarsall.bat"
 }
+if { ! [catch {exec vswhere.exe -version "\[15.0,15.99\]" -latest -requires Microsoft.VisualStudio.Workload.Universal -property installationPath} res] } {
+  lappend ::SYS_VS_LIST "Visual Studio 2017 (15, toolset v141) UWP"
+  lappend ::SYS_VC_LIST "vc141-uwp"
+  lappend ::SYS_VCVARS_LIST "$res\\VC\\vcvarsall.bat"
+}
+
+# detect installed Visual Studio instances from global environment
 if { [info exists ::env(VS140COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2015 (vc14)"
+  lappend ::SYS_VS_LIST "Visual Studio 2015 (14, toolset v140)"
   lappend ::SYS_VC_LIST "vc14"
+  lappend ::SYS_VCVARS_LIST "%VS140COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
+
+  lappend ::SYS_VS_LIST "Visual Studio 2015 (14, toolset v140) UWP"
+  lappend ::SYS_VC_LIST "vc14-uwp"
   lappend ::SYS_VCVARS_LIST "%VS140COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
 if { [info exists ::env(VS120COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2013 (vc12)"
+  lappend ::SYS_VS_LIST "Visual Studio 2013 (12, toolset v120)"
   lappend ::SYS_VC_LIST "vc12"
   lappend ::SYS_VCVARS_LIST "%VS120COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
 if { [info exists ::env(VS110COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2012 (vc11)"
+  lappend ::SYS_VS_LIST "Visual Studio 2012 (11, toolset v110)"
   lappend ::SYS_VC_LIST "vc11"
   lappend ::SYS_VCVARS_LIST "%VS110COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
 if { [info exists ::env(VS100COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2010 (vc10)"
+  lappend ::SYS_VS_LIST "Visual Studio 2010 (10, toolset v100)"
   lappend ::SYS_VC_LIST "vc10"
   lappend ::SYS_VCVARS_LIST "%VS100COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
 if { [info exists ::env(VS90COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2008 (vc9)"
+  lappend ::SYS_VS_LIST "Visual Studio 2008 (9, toolset v90)"
   lappend ::SYS_VC_LIST "vc9"
   lappend ::SYS_VCVARS_LIST "%VS90COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
 if { [info exists ::env(VS80COMNTOOLS)] } {
-  lappend ::SYS_VS_LIST "Visual Studio 2005 (vc8)"
+  lappend ::SYS_VS_LIST "Visual Studio 2005 (8, toolset v80)"
   lappend ::SYS_VC_LIST "vc8"
   lappend ::SYS_VCVARS_LIST "%VS80COMNTOOLS%..\\..\\VC\\vcvarsall.bat"
 }
@@ -127,11 +138,21 @@ proc wokdep:gui:UpdateList {} {
   wokdep:SearchTclTk     anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
   wokdep:SearchFreeType  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
   wokdep:SearchX11       anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
+  if { "$::HAVE_GLES2" == "true" } {
+    if { "$::HAVE_GL2PS" == "true" } {
+      lappend anIncErrs "Error: gl2ps can not be used with OpenGL ES"
+    }
+    wokdep:SearchEGL     anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
+    wokdep:SearchGLES    anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
+  }
   if { "$::HAVE_FREEIMAGE" == "true" } {
     wokdep:SearchFreeImage anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
   }
+  if { "$::HAVE_FFMPEG" == "true" } {
+    wokdep:SearchFFmpeg  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
+  }
   if { "$::HAVE_GL2PS" == "true" } {
-    wokdep:SearchGL2PS   anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
+    wokdep:SearchStandardLibrary  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs "gl2ps" "gl2ps.h" "gl2ps" {"gl2ps"}
   }
   if { "$::HAVE_TBB" == "true" } {
     wokdep:SearchTBB     anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
@@ -142,6 +163,18 @@ proc wokdep:gui:UpdateList {} {
   if { "$::HAVE_VTK" == "true" } {
     wokdep:SearchVTK  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
   }
+
+  if { "$::HAVE_ZLIB" == "true" } {
+    wokdep:SearchStandardLibrary  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs "zlib" "zlib.h" "zlib" {"zlib"}
+  }
+  if { "$::HAVE_LIBLZMA" == "true" } {
+    set aCheckLib "lzma"
+    if { "$::tcl_platform(platform)" == "windows" } {
+      set aCheckLib "liblzma"
+    }
+    wokdep:SearchStandardLibrary  anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs "liblzma" "lzma.h" "$aCheckLib" {"lzma" "xz"}
+  }
+
   if { "$::CHECK_QT4" == "true" } {
     wokdep:SearchQt4     anIncErrs anLib32Errs anLib64Errs anBin32Errs anBin64Errs
   }
@@ -363,16 +396,18 @@ proc wokdep:gui:Show64Bitness { theRowIter } {
 }
 
 # Header
-ttk::label    .myFrame.myVsFrame.myVsLbl       -text "Visual Studio configuration:" -padding {5 5 80 5}
-ttk::combobox .myFrame.myVsFrame.myVsCombo     -values $SYS_VS_LIST -state readonly -textvariable VSVER -width 30
+ttk::label    .myFrame.myVsFrame.myVsLbl       -text "Visual Studio configuration:" -padding {5 5 20 5}
+ttk::combobox .myFrame.myVsFrame.myVsCombo     -values $SYS_VS_LIST -state readonly -textvariable VSVER -width 40
 ttk::combobox .myFrame.myVsFrame.myArchCombo   -values { {32} {64} } -textvariable ARCH -state readonly -width 6
-entry         .myFrame.myVcEntry     -textvariable VCVER  -width 6
+entry         .myFrame.myVcEntry     -textvariable VCVER  -width 10
 entry         .myFrame.myVcVarsEntry -textvariable VCVARS -width 70
 ttk::button   .myFrame.myVcBrowseBtn -text "Browse" -command wokdep:gui:BrowseVcVars
+ttk::label    .myFrame.myHxxChecks.myRelDebInfoLbl   -text "Release with Debug info"
+checkbutton   .myFrame.myHxxChecks.myRelDebInfoCheck -offvalue "false" -onvalue "true" -variable HAVE_RelWithDebInfo
 
 #
-checkbutton   .myFrame.myHxxChecks.myScutsCheck   -offvalue "false" -onvalue "true" -variable SHORTCUT_HEADERS
-ttk::label    .myFrame.myHxxChecks.myScutsLbl     -text "Create short-cuts to headers in inc folder instead of copying"
+ttk::combobox .myFrame.myHxxChecks.myScutsCombo   -values { {ShortCut} {Copy} {HardLink} } -textvariable SHORTCUT_HEADERS -state readonly -width 12
+ttk::label    .myFrame.myHxxChecks.myScutsLbl     -text "Strategy for filling headers folder inc:"
 
 #
 ttk::label    .myFrame.mySrchLbl       -text "3rd-parties search path:" -padding {5 5 80 5}
@@ -384,12 +419,28 @@ checkbutton   .myFrame.myChecks.myGl2psCheck    -offvalue "false" -onvalue "true
 ttk::label    .myFrame.myChecks.myGl2psLbl      -text "Use GL2PS"
 checkbutton   .myFrame.myChecks.myTbbCheck      -offvalue "false" -onvalue "true" -variable HAVE_TBB       -command wokdep:gui:UpdateList
 ttk::label    .myFrame.myChecks.myTbbLbl        -text "Use Intel TBB"
+if { "$::tcl_platform(os)" != "Darwin" } {
+  checkbutton .myFrame.myChecks.myGlesCheck     -offvalue "false" -onvalue "true" -variable HAVE_GLES2     -command wokdep:gui:UpdateList
+  ttk::label  .myFrame.myChecks.myGlesLbl       -text "Use OpenGL ES"
+}
+if { "$::tcl_platform(platform)" == "windows" } {
+  checkbutton .myFrame.myChecks.myD3dCheck      -offvalue "false" -onvalue "true" -variable HAVE_D3D       -command wokdep:gui:UpdateList
+  ttk::label  .myFrame.myChecks.myD3dLbl        -text "Use Direct3D"
+}
+checkbutton   .myFrame.myChecks.myFFmpegCheck   -offvalue "false" -onvalue "true" -variable HAVE_FFMPEG    -command wokdep:gui:UpdateList
+ttk::label    .myFrame.myChecks.myFFmpegLbl     -text "Use FFmpeg"
 #checkbutton   .myFrame.myChecks.myOpenClCheck   -offvalue "false" -onvalue "true" -variable HAVE_OPENCL    -command wokdep:gui:UpdateList
 #ttk::label    .myFrame.myChecks.myOpenClLbl     -text "Use OpenCL"
 checkbutton   .myFrame.myChecks.myMacGLXCheck   -offvalue "false" -onvalue "true" -variable MACOSX_USE_GLX
 ttk::label    .myFrame.myChecks.myMacGLXLbl     -text "Use X11 for windows drawing"
 ttk::label    .myFrame.myChecks.myVtkLbl        -text "Use VTK"
 checkbutton   .myFrame.myChecks.myVtkCheck      -offvalue "false" -onvalue "true" -variable HAVE_VTK       -command wokdep:gui:UpdateList
+
+checkbutton   .myFrame.myChecks.myZLibCheck     -offvalue "false" -onvalue "true" -variable HAVE_ZLIB      -command wokdep:gui:UpdateList
+ttk::label    .myFrame.myChecks.myZLibLbl       -text "Use zlib"
+checkbutton   .myFrame.myChecks.myLzmaCheck     -offvalue "false" -onvalue "true" -variable HAVE_LIBLZMA   -command wokdep:gui:UpdateList
+ttk::label    .myFrame.myChecks.myLzmaLbl       -text "Use liblzma"
+
 checkbutton   .myFrame.myChecks.myQt4Check      -offvalue "false" -onvalue "true" -variable CHECK_QT4      -command wokdep:gui:UpdateList
 ttk::label    .myFrame.myChecks.myQt4Lbl        -text "Search Qt4"
 checkbutton   .myFrame.myChecks.myJDKCheck      -offvalue "false" -onvalue "true" -variable CHECK_JDK      -command wokdep:gui:UpdateList
@@ -465,8 +516,12 @@ if { "$tcl_platform(platform)" == "windows" } {
 
 #
 grid .myFrame.myHxxChecks -row $aRowIter -column 0 -columnspan 10 -sticky w
-grid .myFrame.myHxxChecks.myScutsCheck   -row 0 -column 0
-grid .myFrame.myHxxChecks.myScutsLbl     -row 0 -column 1
+grid .myFrame.myHxxChecks.myScutsLbl     -row 0 -column 0
+grid .myFrame.myHxxChecks.myScutsCombo   -row 0 -column 1
+if { "$tcl_platform(platform)" == "windows" } {
+  grid .myFrame.myHxxChecks.myRelDebInfoCheck -row 0 -column 2
+  grid .myFrame.myHxxChecks.myRelDebInfoLbl   -row 0 -column 3
+}
 incr aRowIter
 #
 grid .myFrame.mySrchLbl       -row $aRowIter -column 0 -columnspan 10 -sticky w
@@ -481,17 +536,35 @@ grid .myFrame.myChecks.myFImageCheck   -row $aCheckRowIter -column 0 -sticky e
 grid .myFrame.myChecks.myFImageLbl     -row $aCheckRowIter -column 1 -sticky w
 grid .myFrame.myChecks.myTbbCheck      -row $aCheckRowIter -column 2 -sticky e
 grid .myFrame.myChecks.myTbbLbl        -row $aCheckRowIter -column 3 -sticky w
-grid .myFrame.myChecks.myQt4Check      -row $aCheckRowIter -column 4 -sticky e
-grid .myFrame.myChecks.myQt4Lbl        -row $aCheckRowIter -column 5 -sticky w
+if { "$::tcl_platform(os)" != "Darwin" } {
+  grid .myFrame.myChecks.myGlesCheck     -row $aCheckRowIter -column 4 -sticky e
+  grid .myFrame.myChecks.myGlesLbl       -row $aCheckRowIter -column 5 -sticky w
+}
 #grid .myFrame.myChecks.myOpenClCheck   -row $aCheckRowIter -column 6 -sticky e
 #grid .myFrame.myChecks.myOpenClLbl     -row $aCheckRowIter -column 7 -sticky w
+grid .myFrame.myChecks.myZLibCheck     -row $aCheckRowIter -column 6 -sticky e
+grid .myFrame.myChecks.myZLibLbl       -row $aCheckRowIter -column 7 -sticky w
+
+grid .myFrame.myChecks.myGl2psCheck    -row $aCheckRowIter -column 8 -sticky e
+grid .myFrame.myChecks.myGl2psLbl      -row $aCheckRowIter -column 9 -sticky w
+
+grid .myFrame.myChecks.myQt4Check      -row $aCheckRowIter -column 10 -sticky e
+grid .myFrame.myChecks.myQt4Lbl        -row $aCheckRowIter -column 11 -sticky w
+
 incr aCheckRowIter
-grid .myFrame.myChecks.myGl2psCheck    -row $aCheckRowIter -column 0 -sticky e
-grid .myFrame.myChecks.myGl2psLbl      -row $aCheckRowIter -column 1 -sticky w
+grid .myFrame.myChecks.myFFmpegCheck   -row $aCheckRowIter -column 0 -sticky e
+grid .myFrame.myChecks.myFFmpegLbl     -row $aCheckRowIter -column 1 -sticky w
 grid .myFrame.myChecks.myVtkCheck      -row $aCheckRowIter -column 2 -sticky e
 grid .myFrame.myChecks.myVtkLbl        -row $aCheckRowIter -column 3 -sticky w
-grid .myFrame.myChecks.myJDKCheck      -row $aCheckRowIter -column 4 -sticky e
-grid .myFrame.myChecks.myJDKLbl        -row $aCheckRowIter -column 5 -sticky w
+if { "$::tcl_platform(platform)" == "windows" } {
+  grid .myFrame.myChecks.myD3dCheck    -row $aCheckRowIter -column 4 -sticky e
+  grid .myFrame.myChecks.myD3dLbl      -row $aCheckRowIter -column 5 -sticky w
+}
+grid .myFrame.myChecks.myLzmaCheck     -row $aCheckRowIter -column 6 -sticky e
+grid .myFrame.myChecks.myLzmaLbl       -row $aCheckRowIter -column 7 -sticky w
+grid .myFrame.myChecks.myJDKCheck      -row $aCheckRowIter -column 10 -sticky e
+grid .myFrame.myChecks.myJDKLbl        -row $aCheckRowIter -column 11 -sticky w
+
 incr aCheckRowIter
 if { "$::tcl_platform(os)" == "Darwin" } {
   grid .myFrame.myChecks.myMacGLXCheck -row $aCheckRowIter -column 0 -sticky e

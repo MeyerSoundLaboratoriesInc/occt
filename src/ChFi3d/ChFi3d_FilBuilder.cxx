@@ -71,6 +71,7 @@
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 
 #ifdef OCCT_DEBUG
+#include <OSD_Chronometer.hxx>
 extern Standard_Boolean ChFi3d_GettraceCHRON();
 extern Standard_Real  t_computedata ,t_completedata; 
                     
@@ -503,7 +504,7 @@ Handle(ChFiDS_SecHArray1) ChFi3d_FilBuilder::Sect (const Standard_Integer IC,
   Handle(ChFiDS_SecHArray1) res;
   for (itel.Initialize(myListStripe);itel.More(); itel.Next(), i++) {
     if(i == IC){
-      Handle(MMgt_TShared) bid = itel.Value()->SetOfSurfData()->Value(IS)->Simul();
+      Handle(Standard_Transient) bid = itel.Value()->SetOfSurfData()->Value(IS)->Simul();
       res = Handle(ChFiDS_SecHArray1)::DownCast(bid);
       return res;
     }
@@ -615,12 +616,11 @@ ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 			     const Standard_Boolean              RecOnS1,
 			     const Standard_Boolean              RecOnS2,
 			     const math_Vector&                  Soldep,
-			     Standard_Boolean&                   intf,
-			     Standard_Boolean&                   intl)
+			     Standard_Integer&                   intf,
+			     Standard_Integer&                   intl)
 {
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("SimulSurf : this is not the spine of the fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("SimulSurf : this is not the spine of the fillet");
   Handle(BRepBlend_Line) lin;
 #ifdef OCCT_DEBUG
 //  TopAbs_Orientation Or = S1->ChangeSurface().Face().Orientation();
@@ -700,12 +700,13 @@ ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 			Standard_False, Data->ChangeVertexLastOnS2(),tolesp);
   Standard_Boolean reverse = (!Forward || Inside);
   if(intf && reverse){
-    Standard_Boolean ok = 0;
+    Standard_Boolean ok = Standard_False;
     const ChFiDS_CommonPoint& cp1 = Data->VertexFirstOnS1();
     if(cp1.IsOnArc()){
       TopoDS_Face F1 = S1->ChangeSurface().Face();
       TopoDS_Face bid;
-      ok = intf = !SearchFace(Spine,cp1,F1,bid);
+      intf = !SearchFace(Spine,cp1,F1,bid);
+      ok = intf != 0;
     }
     const ChFiDS_CommonPoint& cp2 = Data->VertexFirstOnS2();
     if(cp2.IsOnArc() && !ok){
@@ -720,7 +721,8 @@ ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
     if(cp1.IsOnArc()){
       TopoDS_Face F1 = S1->ChangeSurface().Face();
       TopoDS_Face bid;
-      ok = intl = !SearchFace(Spine,cp1,F1,bid);
+      intl = !SearchFace(Spine,cp1,F1,bid);
+      ok = intl != 0;
     }
     const ChFiDS_CommonPoint& cp2 = Data->VertexLastOnS2();
     if(cp2.IsOnArc() && !ok){
@@ -763,8 +765,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 				   const math_Vector&                  Soldep)
 {
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of the fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of the fillet");
   Handle(BRepBlend_Line) lin;
   
   // Flexible parameters!
@@ -799,7 +800,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     PFirst,MaxStep,locfleche,TolGuide,First,Last,
 		     Soldep,4,Inside,Appro,Forward,RecP,RecS,RecRst);
     if(!done) {
-      Standard_Failure::Raise("SimulSurf : Failed process!");
+      throw Standard_Failure("SimulSurf : Failed process!");
     }
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1,nbp);
@@ -837,7 +838,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     func,finv,finvp,finvc,
 		     PFirst,MaxStep,locfleche,TolGuide,First,Last,
 		     Soldep,4,Inside,Appro,Forward,RecP,RecS,RecRst);
-    if(!done) Standard_Failure::Raise("SimulSurf : Fail !");
+    if(!done) throw Standard_Failure("SimulSurf : Fail !");
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1,nbp);
     for(Standard_Integer i = 1; i <= nbp; i++){
@@ -898,8 +899,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 				   const math_Vector&                  Soldep)
 {
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : it is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : it is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   
   // Flexible parameters!
@@ -933,7 +933,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     func,finv,finvp,finvc,
 		     PFirst,MaxStep,locfleche,TolGuide,First,Last,
 		     Soldep,4,Inside,Appro,Forward,RecP,RecS,RecRst);
-    if(!done) Standard_Failure::Raise("SimulSurf : Failed Processing!");
+    if(!done) throw Standard_Failure("SimulSurf : Failed Processing!");
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1,nbp);
     for(Standard_Integer i = 1; i <= nbp; i++){
@@ -970,7 +970,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     func,finv,finvp,finvc,
 		     PFirst,MaxStep,locfleche,TolGuide,First,Last,
 		     Soldep,4,Inside,Appro,Forward,RecP,RecS,RecRst);
-    if(!done) Standard_Failure::Raise("SimulSurf : Fail !");
+    if(!done) throw Standard_Failure("SimulSurf : Fail !");
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1,nbp);
     for(Standard_Integer i = 1; i <= nbp; i++){
@@ -1039,8 +1039,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 				   const math_Vector&                  Soldep)
 {
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : it is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : it is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   
   // Flexible parameters!
@@ -1083,7 +1082,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     func, finv1, finvp1, finv2, finvp2,
 		     PFirst, MaxStep, locfleche, TolGuide, First, Last,
 		     Soldep, 4, Inside, Appro, Forward, RecP1, RecRst1, RecP2, RecRst2);
-    if(!done) Standard_Failure::Raise("SimulSurf : Failed processing!");
+    if(!done) throw Standard_Failure("SimulSurf : Failed processing!");
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1,nbp);
     for(Standard_Integer i = 1; i <= nbp; i++){
@@ -1134,7 +1133,7 @@ void  ChFi3d_FilBuilder::SimulSurf(Handle(ChFiDS_SurfData)&            Data,
 		     PFirst, MaxStep, locfleche, TolGuide, First, Last,
 		     Soldep, 4, Inside, Appro, Forward, RecP1, RecRst1, RecP2, RecRst2);
 
-    if(!done) Standard_Failure::Raise("SimulSurf : Fail !");
+    if(!done) throw Standard_Failure("SimulSurf : Fail !");
     Standard_Integer nbp = lin->NbPoints();
     sec = new ChFiDS_SecHArray1(1, nbp);
     for(Standard_Integer i = 1; i <= nbp; i++){
@@ -1190,8 +1189,7 @@ Standard_Boolean ChFi3d_FilBuilder::PerformFirstSection
  TopAbs_State&                       Pos2) const 
 {
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Standard_Real TolGuide = HGuide->Resolution(tolesp);
   if(fsp->IsConstant()){
     BRepBlend_ConstRad Func(S1,S2,HGuide);
@@ -1236,16 +1234,15 @@ ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData,
 			       const Standard_Boolean              RecOnS1,
 			       const Standard_Boolean              RecOnS2,
 			       const math_Vector&                  Soldep,
-			       Standard_Boolean&                   intf,
-			       Standard_Boolean&                   intl)
+			       Standard_Integer&                   intf,
+			       Standard_Integer&                   intl)
 {
 #ifdef OCCT_DEBUG
   OSD_Chronometer ch;
 #endif
   Handle(ChFiDS_SurfData) Data = SeqData(1);
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Standard_Boolean gd1,gd2,gf1,gf2, maybesingular;
   Handle(BRepBlend_Line) lin;
   TopAbs_Orientation Or = S1->ChangeSurface().Face().Orientation();
@@ -1284,7 +1281,7 @@ ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData,
          ChFi3d_ResultChron(ch , t_completedata);// result perf CompleteData
 #endif 
 
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (Func.GetMinimalDistance()<=100*tolapp3d);
   }
   else {
@@ -1318,7 +1315,7 @@ ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData,
          ChFi3d_ResultChron(ch , t_completedata);// result perf CompleteData
 #endif 
 
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (Func.GetMinimalDistance()<=100*tolapp3d); 
   }
   if (maybesingular) SplitSurf(SeqData, lin);
@@ -1358,8 +1355,7 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 {
   Handle(ChFiDS_SurfData)  Data = SeqData(1);
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   Standard_Real PFirst = First;
   Standard_Boolean maybesingular;
@@ -1390,11 +1386,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 		       Soldep,Inside,Appro,Forward,RecP,RecS,RecRst);
     if(!done) {
        Spine->SetErrorStatus(ChFiDS_WalkingFailure); 
-       Standard_Failure::Raise("PerformSurf : Failed processing!");
+       throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS2->ChangeSurface().Face().Orientation();
     done = CompleteData(Data,func,lin,HS1,HS2,Or,1);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
   }
   else {
@@ -1420,11 +1416,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 		       Soldep,Inside,Appro,Forward,RecP,RecS,RecRst);
     if(!done) {
       Spine->SetErrorStatus(ChFiDS_WalkingFailure);
-      Standard_Failure::Raise("PerformSurf : Failed processing!");
+      throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS2->ChangeSurface().Face().Orientation();
     done = CompleteData(Data,func,lin,HS1,HS2,Or,1);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
    maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
   }
   if (maybesingular) SplitSurf(SeqData, lin);
@@ -1463,8 +1459,7 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 {
   Handle(ChFiDS_SurfData) Data = SeqData(1);;
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   Standard_Real PFirst = First;
   Standard_Boolean maybesingular;
@@ -1495,11 +1490,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 		       Soldep,Inside,Appro,Forward,RecP,RecS,RecRst);
     if(!done) {
       Spine->SetErrorStatus(ChFiDS_WalkingFailure);
-      Standard_Failure::Raise("PerformSurf : Failed processing!");
+      throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS1->ChangeSurface().Face().Orientation();
     done = CompleteData(Data,func,lin,HS1,HS2,Or,0);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
   }
   else {
@@ -1526,11 +1521,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 		       Soldep,Inside,Appro,Forward,RecP,RecS,RecRst);
     if(!done) {
       Spine->SetErrorStatus(ChFiDS_WalkingFailure);
-      Standard_Failure::Raise("PerformSurf : Failed processing!");
+      throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS1->ChangeSurface().Face().Orientation();
     done = CompleteData(Data,func,lin,HS1,HS2,Or,0);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
   }
   if (maybesingular) SplitSurf(SeqData, lin); 
@@ -1580,8 +1575,7 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 {
   Handle(ChFiDS_SurfData) Data = SeqData(1);;
   Handle(ChFiDS_FilSpine) fsp = Handle(ChFiDS_FilSpine)::DownCast(Spine);
-  if(fsp.IsNull()) Standard_ConstructionError::Raise
-    ("PerformSurf : this is not the spine of a fillet");
+  if(fsp.IsNull()) throw Standard_ConstructionError("PerformSurf : this is not the spine of a fillet");
   Handle(BRepBlend_Line) lin;
   Standard_Real PFirst = First;
   Standard_Boolean maybesingular;
@@ -1619,11 +1613,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 		       Soldep, Inside, Appro, Forward, RecP1, RecRst1, RecP2, RecRst2);
     if(!done) {
        Spine->SetErrorStatus(ChFiDS_WalkingFailure);
-       Standard_Failure::Raise("PerformSurf : Failed processing!");
+       throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS1->ChangeSurface().Face().Orientation();
     done = CompleteData(Data, func, lin, HS1, HS2, Or);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
   }
   else {
@@ -1662,11 +1656,11 @@ void  ChFi3d_FilBuilder::PerformSurf(ChFiDS_SequenceOfSurfData&          SeqData
 
     if(!done) {
       Spine->SetErrorStatus(ChFiDS_WalkingFailure);
-      Standard_Failure::Raise("PerformSurf : Failed processing!");
+      throw Standard_Failure("PerformSurf : Failed processing!");
     }
     TopAbs_Orientation Or = HS1->ChangeSurface().Face().Orientation();
     done = CompleteData(Data, func, lin, HS1, HS2, Or);
-    if(!done) Standard_Failure::Raise("PerformSurf : Failed approximation!");
+    if(!done) throw Standard_Failure("PerformSurf : Failed approximation!");
     maybesingular = (func.GetMinimalDistance()<=100*tolapp3d); 
 
 

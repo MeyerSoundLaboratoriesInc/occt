@@ -17,17 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__TestTopOpeDraw_DLL" />
-					<Add option="-D__TestTopOpeTools_DLL" />
-					<Add option="-D__TestTopOpe_DLL" />
-					<Add option="-D__BRepTest_DLL" />
-					<Add option="-D__GeometryTest_DLL" />
-					<Add option="-D__HLRTest_DLL" />
-					<Add option="-D__MeshTest_DLL" />
-					<Add option="-D__GeomliteTest_DLL" />
-					<Add option="-D__DrawFairCurve_DLL" />
-					<Add option="-D__BOPTest_DLL" />
-					<Add option="-D__SWDRAW_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKTopTest_obj.link" />
@@ -46,17 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__TestTopOpeDraw_DLL" />
-					<Add option="-D__TestTopOpeTools_DLL" />
-					<Add option="-D__TestTopOpe_DLL" />
-					<Add option="-D__BRepTest_DLL" />
-					<Add option="-D__GeometryTest_DLL" />
-					<Add option="-D__HLRTest_DLL" />
-					<Add option="-D__MeshTest_DLL" />
-					<Add option="-D__GeomliteTest_DLL" />
-					<Add option="-D__DrawFairCurve_DLL" />
-					<Add option="-D__BOPTest_DLL" />
-					<Add option="-D__SWDRAW_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKTopTest_objd.link" />
@@ -100,97 +78,7 @@
 			<Add library="TKFeat" />
 			<Add library="TKShHealing" />
 		</Linker>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw.cxx" />
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_Displayer.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableC2D.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableC3D.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableMesure.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableP2D.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableP3D.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableSHA.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_DrawableSUR.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_OtherCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_SaveRestore.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeDraw/TestTopOpeDraw_TTOT.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_Mesure.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_OtherCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_Trace.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpeTools/TestTopOpeTools_TraceCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_BOOP.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_BOOPCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_CORCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_DSF.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_EditBOOP.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_HDSCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_HDSDisplayer.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_KroBOOP.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_MesureCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_MiscBOOP.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_OtherCommands.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TestTopOpe/TestTopOpe_VarsTopo.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BRepTest/BRepTest.cxx">
-			<Option link="0" />
-		</Unit>
+		<Unit filename="../../../src/BRepTest/BRepTest.cxx" />
 		<Unit filename="../../../src/BRepTest/BRepTest_BasicCommands.cxx">
 			<Option link="0" />
 		</Unit>
@@ -204,6 +92,9 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BRepTest/BRepTest_DraftAngleCommands.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BRepTest/BRepTest_DrawableHistory.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BRepTest/BRepTest_ExtremaCommands.cxx">
@@ -224,7 +115,13 @@
 		<Unit filename="../../../src/BRepTest/BRepTest_GPropCommands.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BRepTest/BRepTest_HistoryCommands.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BRepTest/BRepTest_MatCommands.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BRepTest/BRepTest_Objects.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BRepTest/BRepTest_OtherCommands.cxx">
@@ -263,6 +160,12 @@
 		<Unit filename="../../../src/GeometryTest/GeometryTest_CurveCommands.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/GeometryTest/GeometryTest_CurveTanCommands.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/GeometryTest/GeometryTest_DrawableQualifiedCurve2d.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/GeometryTest/GeometryTest_FairCurveCommands.cxx">
 			<Option link="0" />
 		</Unit>
@@ -297,6 +200,9 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/MeshTest/MeshTest_CheckTopology.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/MeshTest/MeshTest_Debug.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/MeshTest/MeshTest_DrawableMesh.cxx">
@@ -350,9 +256,6 @@
 		<Unit filename="../../../src/BOPTest/BOPTest_DrawableShape.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPTest/BOPTest_HistoryCommands.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/BOPTest/BOPTest_LowCommands.cxx">
 			<Option link="0" />
 		</Unit>
@@ -366,6 +269,9 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPTest/BOPTest_PartitionCommands.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BOPTest/BOPTest_RemoveFeaturesCommands.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPTest/BOPTest_TolerCommands.cxx">

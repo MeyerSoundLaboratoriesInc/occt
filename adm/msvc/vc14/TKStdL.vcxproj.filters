@@ -2,16 +2,16 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{90798D91-05B5-06CB-076D-F83B6202A0F7}</UniqueIdentifier>
+      <UniqueIdentifier>{3404AC81-13F2-1264-1071-037385952669}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdLDrivers">
-      <UniqueIdentifier>{95C78575-0FCC-09A2-10FD-7C4598BD3F8B}</UniqueIdentifier>
+      <UniqueIdentifier>{0CBF7D1E-01BA-10BD-0F3E-1AE20FEF519C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdLPersistent">
-      <UniqueIdentifier>{96DB43D1-0F13-1631-1520-6C64A24301DB}</UniqueIdentifier>
+      <UniqueIdentifier>{D6E50AC5-0776-0946-0C34-5C3BDA5DA582}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\StdObjMgt">
-      <UniqueIdentifier>{2ED28940-018F-0AA0-003C-C6C637FF5320}</UniqueIdentifier>
+      <UniqueIdentifier>{1D13A34F-0E79-037B-0EE3-2D303EBA554F}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -54,13 +54,13 @@
     <ClCompile Include="..\..\..\src\StdLPersistent\StdLPersistent_Value.cxx">
       <Filter>Source files\StdLPersistent</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\StdObjMgt\StdObjMgt_MapOfInstantiators.cxx">
-      <Filter>Source files\StdObjMgt</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\StdObjMgt\StdObjMgt_Persistent.cxx">
       <Filter>Source files\StdObjMgt</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\StdObjMgt\StdObjMgt_ReadData.cxx">
+      <Filter>Source files\StdObjMgt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\StdObjMgt\StdObjMgt_WriteData.cxx">
       <Filter>Source files\StdObjMgt</Filter>
     </ClCompile>
   </ItemGroup>

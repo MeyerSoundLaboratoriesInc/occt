@@ -18,8 +18,12 @@
 
 #include <IVtkTools.hxx>
 #include <IVtkTools_SubPolyDataFilter.hxx>
-#include <IVtk_Types.hxx>
 #include <NCollection_DataMap.hxx>
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4251) // avoid warning C4251: "class needs to have dll-interface..."
+#endif
 
 //! @class IVtkTools_DisplayModeFilter 
 //! @brief Cells filter according to the selected display mode by mesh parts types.
@@ -47,7 +51,7 @@ protected:
   virtual int RequestData (vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
   IVtkTools_DisplayModeFilter();
-  ~IVtkTools_DisplayModeFilter();  
+  virtual ~IVtkTools_DisplayModeFilter();
 
 protected:
   //! Display mode defining mesh types to pass through this filter.
@@ -55,6 +59,10 @@ protected:
   NCollection_DataMap<IVtk_DisplayMode, IVtk_IdTypeMap> myModesDefinition;
   bool                                                  myDoDisplaySharedVertices;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #endif // IVtkTOOLS_DISPLAYMODEFILTER_H
 

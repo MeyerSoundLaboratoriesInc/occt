@@ -24,11 +24,29 @@ void StdLPersistent_HArray1::base::Read (StdObjMgt_ReadData& theReadData)
   theReadData >> aLowerBound >> anUpperBound;
   createArray (aLowerBound, anUpperBound);
 
-  StdObjMgt_ReadData::Object anObjectData (theReadData);
+  StdObjMgt_ReadData::ObjectSentry aSentry (theReadData);
 
   Standard_Integer aSize;
-  anObjectData >> aSize;
+  theReadData >> aSize;
 
   for (Standard_Integer i = aLowerBound; i <= anUpperBound; i++)
-    readValue (anObjectData, i);
+    readValue (theReadData, i);
+}
+
+//=======================================================================
+//function : Write
+//purpose  : Write persistent data to a file
+//=======================================================================
+void StdLPersistent_HArray1::base::Write (StdObjMgt_WriteData& theWriteData) const
+{
+  Standard_Integer aLowerBound = lowerBound(), anUpperBound = upperBound();
+  theWriteData << aLowerBound << anUpperBound;
+
+  StdObjMgt_WriteData::ObjectSentry aSentry (theWriteData);
+
+  Standard_Integer aSize = anUpperBound - aLowerBound + 1;
+  theWriteData << aSize;
+
+  for (Standard_Integer i = aLowerBound; i <= anUpperBound; i++)
+    writeValue(theWriteData, i);
 }

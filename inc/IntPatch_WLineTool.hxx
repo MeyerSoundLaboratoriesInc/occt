@@ -14,17 +14,12 @@
 #ifndef _IntPatch_WLineTool_HeaderFile
 #define _IntPatch_WLineTool_HeaderFile
 
-#include <Standard_Boolean.hxx>
-#include <Standard_Macro.hxx>
-#include <IntPatch_WLine.hxx>
+#include <Standard_DefineAlloc.hxx>
+
 #include <IntPatch_SequenceOfLine.hxx>
-#include <IntSurf_Quadric.hxx>
-class TopoDS_Face;
-class GeomAdaptor_HSurface;
-class GeomInt_LineConstructor;
-class IntTools_Context;
+#include <IntPatch_WLine.hxx>
+
 class Adaptor3d_TopolTool;
-class Adaptor3d_HSurface;
 
 //! IntPatch_WLineTool provides set of static methods related to walking lines.
 class IntPatch_WLineTool
@@ -63,37 +58,31 @@ public:
 //! this point will be deleted.
   Standard_EXPORT static void JoinWLines(IntPatch_SequenceOfLine& theSlin,
                                          IntPatch_SequenceOfPoint& theSPnt,
-                                         const Standard_Real theTol3D,
-                                         const Standard_Real theU1Period,
-                                         const Standard_Real theU2Period,
-                                         const Standard_Real theV1Period,
-                                         const Standard_Real theV2Period,
-                                         const Standard_Real theUfSurf1,
-                                         const Standard_Real theUlSurf1,
-                                         const Standard_Real theVfSurf1,
-                                         const Standard_Real theVlSurf1,
-                                         const Standard_Real theUfSurf2,
-                                         const Standard_Real theUlSurf2,
-                                         const Standard_Real theVfSurf2,
-                                         const Standard_Real theVlSurf2);
+                                         Handle(Adaptor3d_HSurface) theS1,
+                                         Handle(Adaptor3d_HSurface) theS2,
+                                         const Standard_Real theTol3D);
 
-
-//! Concatenates two some Walking lines from theSlin if it is possible.
-//! This method does not create single line from several. It allows every
-//! extended line to be started/finished in strictly determined point
-//! (in the place of joint of two lines). As result, some gaps between two lines
-//! will vanish.
+//! Extends every line from theSlin (if it is possible) to be started/finished
+//! in strictly determined point (in the place of joint of two lines).
+//! As result, some gaps between two lines will vanish.
 //! The Walking lines are supposed (algorithm will do nothing for not-Walking line)
-//! to be computed as a result of intersection of two quadrics.
-//! The quadrics definition is accepted in input parameters.
-  Standard_EXPORT static void ExtendTwoWlinesToEachOther(IntPatch_SequenceOfLine& theSlin,
-                                                         const IntSurf_Quadric& theS1,
-                                                         const IntSurf_Quadric& theS2,
-                                                         const Standard_Real theToler3D,
-                                                         const Standard_Real theU1Period,
-                                                         const Standard_Real theU2Period,
-                                                         const Standard_Real theV1Period,
-                                                         const Standard_Real theV2Period);
+//! to be computed as a result of intersection. Both theS1 and theS2 
+//! must be quadrics. Other cases are not supported.
+//! theArrPeriods must be filled as follows (every value must not be negative;
+//! if the surface is not periodic the period must be equal to 0.0 strictly):
+//! {<U-period of 1st surface>, <V-period of 1st surface>,
+//!               <U-period of 2nd surface>, <V-period of 2nd surface>}.
+  Standard_EXPORT static void
+            ExtendTwoWLines(IntPatch_SequenceOfLine& theSlin,
+                            const Handle(Adaptor3d_HSurface)& theS1,
+                            const Handle(Adaptor3d_HSurface)& theS2,
+                            const Standard_Real theToler3D,
+                            const Standard_Real* const theArrPeriods,
+                            const Bnd_Box2d& theBoxS1,
+                            const Bnd_Box2d& theBoxS2);
+
+  //! Max angle to concatenate two WLines to avoid result with C0-continuity
+  static const Standard_Real myMaxConcatAngle;
 };
 
 #endif

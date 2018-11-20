@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Storage_Schema.hxx>
 #include <TColStd_MapOfTransient.hxx>
 #include <TDF_Attribute.hxx>
@@ -33,6 +33,10 @@
 #include <XmlObjMgt_Document.hxx>
 #include <XmlObjMgt_DOMString.hxx>
 #include <XmlObjMgt_Persistent.hxx>
+#include <XmlLDrivers.hxx>
+#include <TDocStd_Owner.hxx>
+#include <TDocStd_Document.hxx>
+#include <Standard_GUID.hxx>
 
 IMPLEMENT_DOMSTRING (TagString,         "tag")
 IMPLEMENT_DOMSTRING (LabelString,       "label")
@@ -99,7 +103,16 @@ Standard_Integer XmlMDF::WriteSubTree
 
       //    Create DOM data item
       XmlObjMgt_Persistent pAtt;
-      pAtt.CreateElement (aLabElem, aDriver->TypeName().ToCString(), anId);
+      // In the document version 8 the attribute TPrsStd_AISPresentation
+      // was replaced by TDataXtd_Presentation. Therefore, for old versions
+      // we write old name of the attribute (TPrsStd_AISPresentation).
+      Standard_CString typeName = aDriver->TypeName().ToCString();
+      if (XmlLDrivers::StorageVersion() < 8 &&
+          strcmp(typeName, "TDataXtd_Presentation") == 0)
+      {
+        typeName = "TPrsStd_AISPresentation";
+      }
+      pAtt.CreateElement (aLabElem, typeName, anId);
 
       //    Paste
       aDriver -> Paste (tAtt, pAtt, theRelocTable);
@@ -121,7 +134,7 @@ Standard_Integer XmlMDF::WriteSubTree
     count += WriteSubTree(aChildLab, aLabElem, theRelocTable, theDrivers);
   }
 
-  if (count > 0)
+  if (count > 0 || TDocStd_Owner::GetDocument(theLabel.Data())->EmptyLabelsSavingMode())
   {
     theElement.appendChild(aLabElem);
 
@@ -196,7 +209,7 @@ Standard_Integer XmlMDF::ReadSubTree (const XmlObjMgt_Element&    theElement,
           TCollection_ExtendedString anErrorMessage =
             TCollection_ExtendedString ("Wrong Tag value for OCAF Label: ")
               + aTag;
-          theDriverMap.Find("TDF_TagSource") -> WriteMessage (anErrorMessage);
+          theDriverMap.Find("TDF_TagSource") -> myMessageDriver->Send (anErrorMessage, Message_Fail);
           return -1;
         }
         // create label
@@ -236,7 +249,7 @@ Standard_Integer XmlMDF::ReadSubTree (const XmlObjMgt_Element&    theElement,
             TCollection_ExtendedString anErrorMessage =
              TCollection_ExtendedString("Wrong ID of OCAF attribute with type ")
                + aName;
-            driver -> WriteMessage (anErrorMessage);
+            driver -> myMessageDriver->Send (anErrorMessage, Message_Fail);
             return -1;
           }
           Handle(TDF_Attribute) tAtt;
@@ -245,20 +258,36 @@ Standard_Integer XmlMDF::ReadSubTree (const XmlObjMgt_Element&    theElement,
             tAtt = Handle(TDF_Attribute)::DownCast(theRelocTable.Find(anID));
           else
             tAtt = driver -> NewEmpty();
-	  if (tAtt->Label().IsNull())
-	    theLabel.AddAttribute (tAtt);
+
+          if (tAtt->Label().IsNull())
+          {
+            try
+            {
+              theLabel.AddAttribute (tAtt);
+            }
+            catch (const Standard_DomainError&)
+            {
+              // For attributes that can have arbitrary GUID (e.g. TDataStd_Integer), exception
+              // will be raised in valid case if attribute of that type with default GUID is already
+              // present  on the same label; the reason is that actual GUID will be read later.
+              // To avoid this, set invalid (null) GUID to the newly added attribute (see #29669)
+              static const Standard_GUID fbidGuid;
+              tAtt->SetID (fbidGuid);
+              theLabel.AddAttribute (tAtt);
+            }
+          }
 	  else
-	    driver->WriteMessage
+	    driver->myMessageDriver->Send
 	      (TCollection_ExtendedString("XmlDriver warning: ") +
 	       "attempt to attach attribute " +
-	       aName + " to a second label");
+	       aName + " to a second label", Message_Warning);
 
           if (! driver -> Paste (pAtt, tAtt, theRelocTable))
           {
             // error converting persistent to transient
-            driver->WriteMessage
+            driver->myMessageDriver->Send
               (TCollection_ExtendedString("XmlDriver warning: ") +
-               "failure reading attribute " + aName);
+               "failure reading attribute " + aName, Message_Warning);
           }
           else if (isBound == Standard_False)
             theRelocTable.Bind (anID, tAtt);
@@ -291,7 +320,7 @@ Standard_Integer XmlMDF::ReadSubTree (const XmlObjMgt_Element&    theElement,
 //purpose  : 
 //=======================================================================
 void XmlMDF::AddDrivers (const Handle(XmlMDF_ADriverTable)& aDriverTable,
-                         const Handle(CDM_MessageDriver)&   aMessageDriver)
+                         const Handle(Message_Messenger)&   aMessageDriver)
 {
   aDriverTable->AddDriver (new XmlMDF_TagSourceDriver(aMessageDriver)); 
   aDriverTable->AddDriver (new XmlMDF_ReferenceDriver(aMessageDriver));
@@ -313,9 +342,9 @@ void XmlMDF::CreateDrvMap (const Handle(XmlMDF_ADriverTable)& theDrivers,
     if (theAsciiDriverMap.IsBound (aTypeName) == Standard_False)
       theAsciiDriverMap.Bind (aTypeName, aDriver);
     else
-      aDriver -> WriteMessage
+      aDriver -> myMessageDriver->Send
         (TCollection_ExtendedString ("Warning: skipped driver name: \"")
-         + aTypeName + '\"');
+         + aTypeName + '\"', Message_Warning);
     anIter.Next();
   }
 }

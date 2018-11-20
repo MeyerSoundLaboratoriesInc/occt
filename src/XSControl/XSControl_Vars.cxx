@@ -12,7 +12,6 @@
 // commercial license or contractual agreement.
 
 
-#include <Dico_DictionaryOfTransient.hxx>
 #include <Geom2d_CartesianPoint.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Geom_CartesianPoint.hxx>
@@ -28,22 +27,22 @@
 #include <TopoDS_Shape.hxx>
 #include <XSControl_Vars.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(XSControl_Vars,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(XSControl_Vars,Standard_Transient)
 
-XSControl_Vars::XSControl_Vars  ()
-    {  thevars = new Dico_DictionaryOfTransient;  }
+XSControl_Vars::XSControl_Vars() { }
 
 void  XSControl_Vars::Set
   (const Standard_CString name,
    const Handle(Standard_Transient)& val)
 {
-  thevars->SetItem (name,val);
+  thevars.Bind(name,val);
 }
 
 Handle(Standard_Transient)  XSControl_Vars::Get ( Standard_CString& name) const
 {
   Handle(Standard_Transient) val;
-  if (!thevars->GetItem (name,val)) val.Nullify();
+  if (!thevars.Find(name, val))
+    val.Nullify();
   return val;
 }
 

@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -58,11 +60,8 @@
 			<Add library="TKernel" />
 		</Linker>
 		<Unit filename="../../../src/CDM/CDM_Application.cxx" />
-		<Unit filename="../../../src/CDM/CDM_COutMessageDriver.cxx" />
 		<Unit filename="../../../src/CDM/CDM_Document.cxx" />
-		<Unit filename="../../../src/CDM/CDM_MessageDriver.cxx" />
 		<Unit filename="../../../src/CDM/CDM_MetaData.cxx" />
-		<Unit filename="../../../src/CDM/CDM_NullMessageDriver.cxx" />
 		<Unit filename="../../../src/CDM/CDM_Reference.cxx" />
 		<Unit filename="../../../src/CDM/CDM_ReferenceIterator.cxx" />
 		<Unit filename="../../../src/PCDM/PCDM.cxx" />
@@ -86,7 +85,6 @@
 		<Unit filename="../../../src/CDF/CDF_Session.cxx" />
 		<Unit filename="../../../src/CDF/CDF_Store.cxx" />
 		<Unit filename="../../../src/CDF/CDF_StoreList.cxx" />
-		<Unit filename="../../../src/CDF/CDF_Timer.cxx" />
 		<Unit filename="../../../src/UTL/UTL.cxx" />
 		<Unit filename="../../../src/LDOM/LDOMBasicString.cxx" />
 		<Unit filename="../../../src/LDOM/LDOMParser.cxx" />

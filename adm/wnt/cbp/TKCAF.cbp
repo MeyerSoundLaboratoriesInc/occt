@@ -17,9 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__TDataXtd_DLL" />
-					<Add option="-D__TNaming_DLL" />
-					<Add option="-D__AppStd_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKCAF_obj.link" />
@@ -38,9 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__TDataXtd_DLL" />
-					<Add option="-D__TNaming_DLL" />
-					<Add option="-D__AppStd_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKCAF_objd.link" />
@@ -108,10 +102,10 @@
 		<Unit filename="../../../src/TDataXtd/TDataXtd_Shape.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming.cxx">
+		<Unit filename="../../../src/TDataXtd/TDataXtd_Triangulation.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_Builder.cxx">
+		<Unit filename="../../../src/TNaming/TNaming.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TNaming/TNaming_CopyShape.cxx">
@@ -124,12 +118,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TNaming/TNaming_Identifier.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_Iterator.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_IteratorOnShapesSet.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TNaming/TNaming_Localizer.cxx">
@@ -145,18 +133,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TNaming/TNaming_NamingTool.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_NewShapeIterator.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_OldShapeIterator.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_RefShape.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TNaming/TNaming_SameShapeIterator.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TNaming/TNaming_Scope.cxx">

@@ -208,7 +208,7 @@ TopAbs_ShapeEnum TopOpeBRepDS_Transition::ShapeAfter() const
 Standard_Integer TopOpeBRepDS_Transition::Index() const
 {
   if ( myIndexAfter != myIndexBefore ) 
-    Standard_Failure::Raise("Transition::Index() on different shapes");
+    throw Standard_Failure("Transition::Index() on different shapes");
   return myIndexBefore;
 }
 
@@ -346,40 +346,3 @@ Standard_Boolean TopOpeBRepDS_Transition::IsUnknown() const
   return (myStateBefore == TopAbs_UNKNOWN) && (myStateAfter == TopAbs_UNKNOWN);
 }
 
-//=======================================================================
-//function : DumpB
-//purpose  : 
-//=======================================================================
-Standard_OStream& TopOpeBRepDS_Transition::DumpB(Standard_OStream& OS) const
-{
-#ifdef OCCT_DEBUG
-  TopOpeBRepDS::Print(myStateBefore,OS);
-  TopOpeBRepDS::Print(TopOpeBRepDS::ShapeToKind(myShapeBefore),myIndexBefore,OS);
-#endif
-  return OS;
-}
-
-//=======================================================================
-//function : DumpA
-//purpose  : 
-//=======================================================================
-Standard_OStream& TopOpeBRepDS_Transition::DumpA(Standard_OStream& OS) const
-{
-#ifdef OCCT_DEBUG
-  TopOpeBRepDS::Print(myStateAfter,OS);
-  TopOpeBRepDS::Print(TopOpeBRepDS::ShapeToKind(myShapeAfter),myIndexAfter,OS);
-#endif
-  return OS;
-}
-
-//=======================================================================
-//function : Dump
-//purpose  : 
-//=======================================================================
-Standard_OStream& TopOpeBRepDS_Transition::Dump(Standard_OStream& OS) const
-{
-#ifdef OCCT_DEBUG
-  OS<<"("; DumpB(OS); OS<<","; DumpA(OS); OS<<")";
-#endif
-  return OS;
-}

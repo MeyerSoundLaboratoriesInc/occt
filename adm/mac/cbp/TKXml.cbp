@@ -80,6 +80,7 @@
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_PositionDriver.cxx" />
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_PresentationDriver.cxx" />
 		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_ShapeDriver.cxx" />
+		<Unit filename="../../../src/XmlMDataXtd/XmlMDataXtd_TriangulationDriver.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming_NamedShapeDriver.cxx" />
 		<Unit filename="../../../src/XmlMNaming/XmlMNaming_NamingDriver.cxx" />

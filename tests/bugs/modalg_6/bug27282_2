@@ -1,5 +1,3 @@
-puts "TODO OCC27302 ALL: Error: Curve Number is bad!"
-
 puts "============"
 puts "OCC27282"
 puts "============"
@@ -8,7 +6,7 @@ puts ""
 ## [Regression to 6.9.1] smesh/bugs_00/A6: Cut produces an empty shape
 ###############################
 
-set MaxTol 4.8106951786435371e-006
+set MaxTol 2.1243683206633536e-006
 set GoodNbCurv 1
 
 restore [locate_data_file bug27282_cmpd.brep] a
@@ -27,7 +25,7 @@ checkreal ToleranceReached ${Toler} ${MaxTol} 0.0 0.1
 checkview -screenshot -2d -path ${imagedir}/${test_image}.png
 
 if {${NbCurv} != ${GoodNbCurv}} {
-  puts "Error: Curve Number is bad!"
+  puts "Error: Number of curves is bad!"
   
   for {set i 1} {$i < ${NbCurv}} {incr i} {
     for {set j [expr $i+1]} {$j <= $NbCurv} {incr j} {
@@ -43,5 +41,5 @@ if {${NbCurv} != ${GoodNbCurv}} {
     }
   }
 } else {
-  checklength c_1 -l 833.56846559428755
+  checklength c_1 -l 833.56846557106064
 }

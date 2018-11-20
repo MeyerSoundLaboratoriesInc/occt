@@ -24,7 +24,6 @@
 #include <Geom2dAdaptor.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <Geom2dInt_GInter.hxx>
-#include <Geom2d_Curve.hxx>
 #include <Geom2d_Line.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <GeomAdaptor.hxx>
@@ -42,14 +41,12 @@
 #include <Geom_Line.hxx>
 #include <Geom_Parabola.hxx>
 #include <Geom_TrimmedCurve.hxx>
-#include <IntPatch_ALine.hxx>
-#include <IntPatch_ALineToWLine.hxx>
 #include <IntPatch_GLine.hxx>
 #include <IntPatch_RLine.hxx>
 #include <IntPatch_WLine.hxx>
 #include <IntRes2d_IntersectionSegment.hxx>
 #include <IntSurf_Quadric.hxx>
-#include <Geom_Surface.hxx>
+#include <Precision.hxx>
 
 //=======================================================================
 //function : AdjustUPeriodic
@@ -107,7 +104,7 @@
     case GeomAbs_Cone:     quad1.SetValue(HS1->Surface().Cone()); break;
     case GeomAbs_Sphere:   quad1.SetValue(HS1->Surface().Sphere()); break;
     case GeomAbs_Torus:    quad1.SetValue(HS1->Surface().Torus()); break;
-    default: Standard_ConstructionError::Raise("GeomInt_IntSS::MakeCurve");
+    default: throw Standard_ConstructionError("GeomInt_IntSS::MakeCurve");
   }
 }
 
@@ -222,6 +219,37 @@ static void IntersectCurveAndBoundary(const Handle(Geom2d_Curve)& theC2d,
       GetSegmentBoundary(anIntCC2d.Segment(aSegmID), theC2d, theArrayOfParameters);
     }
   }
+}
+
+//=======================================================================
+//function : isDegenerated
+//purpose  : Check if theAHC2d corresponds to a degenerated edge.
+//=======================================================================
+static Standard_Boolean isDegenerated(const Handle(GeomAdaptor_HSurface)& theGAHS,
+                                      const Handle(Adaptor2d_HCurve2d)& theAHC2d,
+                                      const Standard_Real theFirstPar,
+                                      const Standard_Real theLastPar)
+{
+  const Standard_Real aSqTol = Precision::Confusion()*Precision::Confusion();
+  gp_Pnt2d aP2d;
+  gp_Pnt aP1, aP2;
+
+  theAHC2d->D0(theFirstPar, aP2d);
+  theGAHS->D0(aP2d.X(), aP2d.Y(), aP1);
+
+  theAHC2d->D0(theLastPar, aP2d);
+  theGAHS->D0(aP2d.X(), aP2d.Y(), aP2);
+
+  if(aP1.SquareDistance(aP2) > aSqTol)
+    return Standard_False;
+
+  theAHC2d->D0(0.5*(theFirstPar+theLastPar), aP2d);
+  theGAHS->D0(aP2d.X(), aP2d.Y(), aP2);
+
+  if(aP1.SquareDistance(aP2) > aSqTol)
+    return Standard_False;
+
+  return Standard_True;
 }
 
 //=======================================================================
@@ -521,134 +549,9 @@ void GeomInt_IntSS::MakeCurve(const Standard_Integer Index,
                          //########################################  
                          // Analytic
                          //######################################## 
-  case IntPatch_Analytic: {
-    IntSurf_Quadric quad1,quad2;
-    //
-    GetQuadric(myHS1, quad1);
-    GetQuadric(myHS2, quad2);
-    //=========
-    IntPatch_ALineToWLine convert (quad1, quad2);
+  case IntPatch_Analytic:
+    //This case was processed earlier (in IntPatch_Intersection)
 
-    if (!myApprox) {
-      Handle(Geom2d_BSplineCurve) aH1, aH2;
-      //
-      aNbParts=myLConstruct.NbParts();
-      for (i=1; i<=aNbParts; i++) {
-        myLConstruct.Part(i, fprm, lprm);
-        Handle(IntPatch_WLine) WL = 
-          convert.MakeWLine(Handle(IntPatch_ALine)::DownCast(L), fprm, lprm);
-        //
-        if(myApprox1) {
-          aH1 = MakeBSpline2d(WL, 1, WL->NbPnts(), Standard_True);
-        }
-
-        if(myApprox2) {
-          aH2 = MakeBSpline2d(WL, 1, WL->NbPnts(), Standard_False);
-        }
-        sline.Append(MakeBSpline(WL,1,WL->NbPnts()));
-        slineS1.Append(aH1);
-        slineS2.Append(aH2);
-      }
-    } // if (!myApprox)
-
-    else { // myApprox=TRUE
-      GeomInt_WLApprox theapp3d;
-      Standard_Real tol2d = myTolApprox;
-      // 	
-      theapp3d.SetParameters(myTolApprox, tol2d, 4, 8, 0, 30, Standard_True);
-
-      aNbParts=myLConstruct.NbParts();
-      for (i=1; i<=aNbParts; i++) {
-        myLConstruct.Part(i, fprm, lprm);
-        Handle(IntPatch_WLine) WL = 
-          convert.MakeWLine(Handle(IntPatch_ALine):: DownCast(L),fprm,lprm);
-
-        theapp3d.Perform(myHS1,myHS2,WL,Standard_True,myApprox1,myApprox2, 1, WL->NbPnts());
-        if (!theapp3d.IsDone()) {
-          //
-          Handle(Geom2d_BSplineCurve) aH1, aH2;
-
-          if(myApprox1) {
-            aH1 = MakeBSpline2d(WL, 1, WL->NbPnts(), Standard_True);
-          }
-
-          if(myApprox2) {
-            aH2 = MakeBSpline2d(WL, 1, WL->NbPnts(), Standard_False);
-          }
-          sline.Append(MakeBSpline(WL,1,WL->NbPnts()));
-          slineS1.Append(aH1);
-          slineS2.Append(aH1);
-        }
-        //
-        else {
-          if(myApprox1 || myApprox2) { 
-            if( theapp3d.TolReached2d()>myTolReached2d || myTolReached2d==0) { 
-              myTolReached2d = theapp3d.TolReached2d();
-            }
-          }
-
-          if( theapp3d.TolReached3d()>myTolReached3d || myTolReached3d==0) { 
-            myTolReached3d = theapp3d.TolReached3d();
-          }
-
-          Standard_Integer aNbMultiCurves, nbpoles;
-          aNbMultiCurves=theapp3d.NbMultiCurves();
-          for (j=1; j<=aNbMultiCurves; j++) {
-            const AppParCurves_MultiBSpCurve& mbspc = theapp3d.Value(j);
-
-            nbpoles = mbspc.NbPoles();
-            TColgp_Array1OfPnt tpoles(1, nbpoles);
-            mbspc.Curve(1, tpoles);
-            Handle(Geom_BSplineCurve) BS=new Geom_BSplineCurve(tpoles,
-              mbspc.Knots(),
-              mbspc.Multiplicities(),
-              mbspc.Degree());
-
-            GeomLib_CheckBSplineCurve Check(BS, myTolCheck, myTolAngCheck);
-            Check.FixTangent(Standard_True,Standard_True);
-            // 
-            sline.Append(BS);
-            //
-            if(myApprox1) { 
-              TColgp_Array1OfPnt2d tpoles2d(1,nbpoles);
-              mbspc.Curve(2,tpoles2d);
-              Handle(Geom2d_BSplineCurve) BS2=new Geom2d_BSplineCurve(tpoles2d,
-                mbspc.Knots(),
-                mbspc.Multiplicities(),
-                mbspc.Degree());
-
-              GeomLib_Check2dBSplineCurve newCheck(BS2,myTolCheck,myTolAngCheck);
-              newCheck.FixTangent(Standard_True,Standard_True);
-              slineS1.Append(BS2); 		
-            }
-            else {
-              slineS1.Append(H1);
-            }
-
-            if(myApprox2) { 
-              TColgp_Array1OfPnt2d tpoles2d(1, nbpoles);
-              Standard_Integer TwoOrThree;
-              TwoOrThree=myApprox1 ? 3 : 2;
-              mbspc.Curve(TwoOrThree, tpoles2d);
-              Handle(Geom2d_BSplineCurve) BS2 =new Geom2d_BSplineCurve(tpoles2d,
-                mbspc.Knots(),
-                mbspc.Multiplicities(),
-                mbspc.Degree());
-
-              GeomLib_Check2dBSplineCurve newCheck(BS2,myTolCheck,myTolAngCheck);
-              newCheck.FixTangent(Standard_True,Standard_True);
-              // 	
-              slineS2.Append(BS2);
-            }
-            else { 
-              slineS2.Append(H1);
-            }
-            // 
-          }// for (j=1; j<=aNbMultiCurves; j++) {
-        }// else from if (!theapp3d.IsDone())
-      }// for (i=1; i<=aNbParts; i++) {
-    }// else { // myApprox=TRUE
-  }// case IntPatch_Analytic:
   break;
 
   //########################################  
@@ -1117,6 +1020,12 @@ void GeomInt_IntSS::TreatRLine(const Handle(IntPatch_RLine)& theRL,
   {
     return;
   }
+
+  //Restriction line can correspond to a degenerated edge.
+  //In this case we return null-curve.
+  if(isDegenerated(aGAHS, anAHC2d, tf, tl))
+    return;
+
   //
   //To provide sameparameter it is necessary to get 3d curve as
   //approximation of curve on surface.
@@ -1167,11 +1076,27 @@ void GeomInt_IntSS::BuildPCurves (Standard_Real f,
   // in class ProjLib_Function the range of parameters is shrank by 1.e-09
   if((l - f) > 2.e-09) {
     C2d = GeomProjLib::Curve2d(C,f,l,S,umin,umax,vmin,vmax,Tol);
-    //
     if (C2d.IsNull()) {
       // proj. a circle that goes through the pole on a sphere to the sphere     
       Tol += Precision::Confusion();
       C2d = GeomProjLib::Curve2d(C,f,l,S,Tol);
+    }
+    const Handle(Standard_Type)& aType = C2d->DynamicType();
+    if ( aType == STANDARD_TYPE(Geom2d_BSplineCurve)) 
+    { 
+      //Check first, last knots to avoid problems with trimming
+      //First, last knots can differ from f, l because of numerical error 
+      //of projection and approximation
+      //The same checking as in Geom2d_TrimmedCurve
+      if((C2d->FirstParameter() - f > Precision::PConfusion()) ||
+        (l - C2d->LastParameter() > Precision::PConfusion()))   
+      {
+        Handle(Geom2d_BSplineCurve) aBspl = Handle(Geom2d_BSplineCurve)::DownCast(C2d);
+        TColStd_Array1OfReal aKnots(1, aBspl->NbKnots());
+        aBspl->Knots(aKnots);
+        BSplCLib::Reparametrize(f, l, aKnots);
+        aBspl->SetKnots(aKnots);
+      }
     }
   }
   else {

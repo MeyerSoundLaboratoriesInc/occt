@@ -26,10 +26,10 @@
 #include <Draw_Window.hxx>
 #include <Draw_Appli.hxx>
 #include <TCollection_AsciiString.hxx>
+#include <TCollection_ExtendedString.hxx>
 #include <Image_AlienPixMap.hxx>
 #include <NCollection_List.hxx>
 
-extern Draw_Interpretor theCommands;
 extern Standard_Boolean Draw_VirtualWindows;
 static Tcl_Interp *interp;        /* Interpreter for this application. */
 static NCollection_List<Draw_Window::FCallbackBeforeTerminate> MyCallbacks;
@@ -371,6 +371,9 @@ void Draw_Window::Init(Standard_Integer X, Standard_Integer Y,
     // advise to the window manager to place it where I need
     XSetWMNormalHints(Draw_WindowDisplay,win,&myHints);
 
+    Atom aDeleteWindowAtom = Draw_DisplayConnection->GetAtom (Aspect_XA_DELETE_WINDOW);
+    XSetWMProtocols (Draw_WindowDisplay, win, &aDeleteWindowAtom, 1);
+
     if (Draw_VirtualWindows)
     {
       myUseBuffer = Standard_True;
@@ -526,20 +529,20 @@ Standard_Integer Draw_Window::WidthWin() const
 //function : SetTitle
 //purpose  :
 //=======================================================================
-void Draw_Window::SetTitle(const char* title)
+void Draw_Window::SetTitle(const TCollection_AsciiString& theTitle)
 {
-  XStoreName(Draw_WindowDisplay, win, title);
+  XStoreName (Draw_WindowDisplay, win, theTitle.ToCString());
 }
 
 //=======================================================================
 //function : GetTitle
 //purpose  :
 //=======================================================================
-char* Draw_Window::GetTitle()
+TCollection_AsciiString Draw_Window::GetTitle() const
 {
-  char* title;
-  XFetchName(Draw_WindowDisplay, win, &title);
-  return title;
+  char* aTitle = NULL;
+  XFetchName (Draw_WindowDisplay, win, &aTitle);
+  return TCollection_AsciiString (aTitle);
 }
 
 //=======================================================================
@@ -565,6 +568,25 @@ Standard_Boolean Draw_Window::DefineColor(const Standard_Integer i, const char* 
     return Standard_False;
   thePixels[i % MAXCOLOR] = color.pixel;
   return Standard_True;
+}
+
+//=======================================================================
+//function : IsMapped
+//purpose  :
+//=======================================================================
+bool Draw_Window::IsMapped() const
+{
+  if (Draw_VirtualWindows
+   || win == 0)
+  {
+    return false;
+  }
+
+  XFlush (Draw_WindowDisplay);
+  XWindowAttributes aWinAttr;
+  XGetWindowAttributes (Draw_WindowDisplay, win, &aWinAttr);
+  return aWinAttr.map_state == IsUnviewable
+      || aWinAttr.map_state == IsViewable;
 }
 
 //=======================================================================
@@ -735,7 +757,7 @@ Standard_Boolean Draw_Window::Save (const char* theFileName) const
   Image_AlienPixMap anImage;
   bool isBigEndian = Image_PixMap::IsBigEndianHost();
   const Standard_Size aSizeRowBytes = Standard_Size(winAttr.width) * 4;
-  if (!anImage.InitTrash (isBigEndian ? Image_PixMap::ImgRGB32 : Image_PixMap::ImgBGR32,
+  if (!anImage.InitTrash (isBigEndian ? Image_Format_RGB32 : Image_Format_BGR32,
                           Standard_Size(winAttr.width), Standard_Size(winAttr.height), aSizeRowBytes))
   {
     return Standard_False;
@@ -793,9 +815,17 @@ void ProcessEvent(Draw_Window& win, XEvent& xev)
   XComposeStatus stat;
   char chainekey[10];
 
-
-  switch (xev.type) {
-
+  switch (xev.type)
+  {
+  case ClientMessage:
+  {
+    if (xev.xclient.data.l[0] == (int )Draw_DisplayConnection->GetAtom (Aspect_XA_DELETE_WINDOW))
+    {
+      // just hide the window
+      win.Hide();
+    }
+    return;
+  }
   case Expose :
     win.WExpose();
     break;
@@ -1020,8 +1050,10 @@ void Run_Appli(Standard_Boolean (*interprete) (const char*))
 
 #endif
 
-  if (tty) Prompt(theCommands.Interp(), 0);
-  Prompt(theCommands.Interp(), 0);
+  Draw_Interpretor& aCommands = Draw::GetInterpretor();
+
+  if (tty) Prompt(aCommands.Interp(), 0);
+  Prompt(aCommands.Interp(), 0);
 
   outChannel = Tcl_GetStdChannel(TCL_STDOUT);
   if (outChannel) {
@@ -1039,7 +1071,7 @@ void Run_Appli(Standard_Boolean (*interprete) (const char*))
   if (Draw_VirtualWindows) {
     // main window will never shown
     // but main loop will parse all Xlib messages
-    Tcl_Eval(theCommands.Interp(), "wm withdraw .");
+    Tcl_Eval(aCommands.Interp(), "wm withdraw .");
   }
   Tk_MainLoop();
 
@@ -1075,8 +1107,9 @@ void Run_Appli(Standard_Boolean (*interprete) (const char*))
 //======================================================
 Standard_Boolean Init_Appli()
 {
-  theCommands.Init();
-  interp = theCommands.Interp();
+  Draw_Interpretor& aCommands = Draw::GetInterpretor();
+  aCommands.Init();
+  interp = aCommands.Interp();
 
   Tcl_Init(interp) ;
   try {
@@ -1332,7 +1365,7 @@ int modeTab[16] = {R2_BLACK, R2_MASKPEN, R2_MASKPENNOT, R2_COPYPEN,
 HWND DrawWindow::CreateDrawWindow(HWND hWndClient, int nitem)
 {
   if (Draw_IsConsoleSubsystem) {
-    HWND aWin = CreateWindow (DRAWCLASS, DRAWTITLE,
+    HWND aWin = CreateWindowW (DRAWCLASS, DRAWTITLE,
                               WS_OVERLAPPEDWINDOW,
                               1,1,1,1,
                               NULL, NULL,::GetModuleHandle(NULL), NULL);
@@ -1344,10 +1377,9 @@ HWND DrawWindow::CreateDrawWindow(HWND hWndClient, int nitem)
     return aWin;
   }
   else {
-    HANDLE hInstance;
-    hInstance = (HANDLE)GetWindowLongPtr(hWndClient,GWLP_HINSTANCE);
+    HANDLE hInstance = (HANDLE )GetWindowLongPtrW (hWndClient, GWLP_HINSTANCE);
 
-    return CreateMDIWindow(DRAWCLASS, DRAWTITLE,
+    return CreateMDIWindowW(DRAWCLASS, DRAWTITLE,
                            WS_CAPTION | WS_CHILD | WS_THICKFRAME,
                            1,1,0,0,
                            hWndClient, (HINSTANCE)hInstance, nitem);
@@ -1360,43 +1392,51 @@ HWND DrawWindow::CreateDrawWindow(HWND hWndClient, int nitem)
 \*--------------------------------------------------------*/
 LRESULT APIENTRY DrawWindow::DrawProc(HWND hWnd, UINT wMsg, WPARAM wParam, LPARAM lParam )
 {
-  DrawWindow* localObjet = (DrawWindow*)GetWindowLongPtr(hWnd, CLIENTWND);
+  DrawWindow* localObjet = (DrawWindow* )GetWindowLongPtrW (hWnd, CLIENTWND);
   if (!localObjet)
-    {
-      if (Draw_IsConsoleSubsystem)
-        return (DefWindowProc(hWnd, wMsg, wParam, lParam));
-      else
-        return(DefMDIChildProc(hWnd, wMsg, wParam, lParam));
-    }
-
-  PAINTSTRUCT ps;
-
-  switch(wMsg)
   {
-  case WM_PAINT :
-    BeginPaint(hWnd, &ps);
-    if (localObjet->GetUseBuffer())
-      localObjet->Redraw();
-    else
-      localObjet->WExpose();
-    EndPaint(hWnd, &ps);
-    return 0l;
-    break;
-
-  case WM_SIZE:
-    if (localObjet->GetUseBuffer()) {
-      localObjet->InitBuffer();
-      localObjet->WExpose();
-      localObjet->Redraw();
-      return 0l;
-    }
-
-  default:
-    if (Draw_IsConsoleSubsystem)
-      return (DefWindowProc(hWnd, wMsg, wParam, lParam));
-    else
-      return(DefMDIChildProc(hWnd, wMsg, wParam, lParam));
+    return Draw_IsConsoleSubsystem
+         ? DefWindowProcW   (hWnd, wMsg, wParam, lParam)
+         : DefMDIChildProcW (hWnd, wMsg, wParam, lParam);
   }
+
+  switch (wMsg)
+  {
+    case WM_CLOSE:
+    {
+      localObjet->Hide();
+      return 0; // do nothing - window destruction should be performed by application
+    }
+    case WM_PAINT:
+    {
+      PAINTSTRUCT ps;
+      BeginPaint (hWnd, &ps);
+      if (localObjet->GetUseBuffer())
+      {
+        localObjet->Redraw();
+      }
+      else
+      {
+        localObjet->WExpose();
+      }
+      EndPaint (hWnd, &ps);
+      return 0;
+    }
+    case WM_SIZE:
+    {
+      if (localObjet->GetUseBuffer())
+      {
+        localObjet->InitBuffer();
+        localObjet->WExpose();
+        localObjet->Redraw();
+        return 0;
+      }
+      break;
+    }
+  }
+  return Draw_IsConsoleSubsystem
+       ? DefWindowProcW   (hWnd, wMsg, wParam, lParam)
+       : DefMDIChildProcW (hWnd, wMsg, wParam, lParam);
 }
 
 
@@ -1488,8 +1528,8 @@ void DrawWindow::Init(Standard_Integer theXLeft, Standard_Integer theYTop,
 
   // include decorations in the window dimensions
   // to reproduce same behaviour of Xlib window.
-  DWORD aWinStyle   = GetWindowLong (win, GWL_STYLE);
-  DWORD aWinStyleEx = GetWindowLong (win, GWL_EXSTYLE);
+  DWORD aWinStyle   = GetWindowLongW (win, GWL_STYLE);
+  DWORD aWinStyleEx = GetWindowLongW (win, GWL_EXSTYLE);
   HMENU aMenu       = GetMenu (win);
 
   RECT aRect;
@@ -1502,7 +1542,7 @@ void DrawWindow::Init(Standard_Integer theXLeft, Standard_Integer theYTop,
   SetPosition  (aRect.left, aRect.top);
   SetDimension (aRect.right - aRect.left, aRect.bottom - aRect.top);
   // Save the pointer at the instance associated to the window
-  SetWindowLongPtr(win, CLIENTWND, (LONG_PTR)this);
+  SetWindowLongPtrW (win, CLIENTWND, (LONG_PTR)this);
   HDC hDC = GetDC(win);
   SetBkColor(hDC, RGB(0, 0, 0));
   myCurrPen  = 3;
@@ -1539,7 +1579,7 @@ void DrawWindow::InitBuffer()
     GetClientRect(win, &rc);
     if (myMemHbm) {
       BITMAP aBmp;
-      GetObject(myMemHbm, sizeof(BITMAP), &aBmp);
+      GetObjectW (myMemHbm, sizeof(BITMAP), &aBmp);
       if (rc.right-rc.left == aBmp.bmWidth && rc.bottom-rc.top == aBmp.bmHeight) return;
       DeleteObject(myMemHbm);
     }
@@ -1657,23 +1697,39 @@ Standard_Integer DrawWindow::WidthWin() const
 /*--------------------------------------------------------*\
 |  SetTitle
 \*--------------------------------------------------------*/
-void DrawWindow::SetTitle(const char* title)
+void DrawWindow::SetTitle (const TCollection_AsciiString& theTitle)
 {
-  SetWindowText(win, title);
+  const TCollection_ExtendedString aTitleW (theTitle);
+  SetWindowTextW (win, aTitleW.ToWideString());
 }
 
 
 /*--------------------------------------------------------*\
 |  GetTitle
-|    Attention do not forget to unallocate the memory
 \*--------------------------------------------------------*/
-char* DrawWindow::GetTitle()
+TCollection_AsciiString DrawWindow::GetTitle() const
 {
-  char* title=new char[31];
-  GetWindowText(win, title, 30);
-  return title;
+  wchar_t aTitleW[32];
+  GetWindowTextW (win, aTitleW, 30);
+  return TCollection_AsciiString (aTitleW);
 }
 
+//=======================================================================
+//function : IsMapped
+//purpose  :
+//=======================================================================
+bool Draw_Window::IsMapped() const
+{
+  if (Draw_VirtualWindows
+   || win == NULL)
+  {
+    return false;
+  }
+
+  LONG aWinStyle = GetWindowLongW (win, GWL_STYLE);
+  return (aWinStyle & WS_VISIBLE)  != 0
+      && (aWinStyle & WS_MINIMIZE) == 0;
+}
 
 /*--------------------------------------------------------*\
 |  DisplayWindow
@@ -1733,14 +1789,14 @@ static Standard_Boolean SaveBitmap (HBITMAP     theHBitmap,
 {
   // Get informations about the bitmap
   BITMAP aBitmap;
-  if (GetObject (theHBitmap, sizeof(BITMAP), (LPSTR )&aBitmap) == 0)
+  if (GetObjectW (theHBitmap, sizeof(BITMAP), &aBitmap) == 0)
   {
     return Standard_False;
   }
 
   Image_AlienPixMap anImage;
-  const Standard_Size aSizeRowBytes = Standard_Size(aBitmap.bmWidth) * 4;
-  if (!anImage.InitTrash (Image_PixMap::ImgBGR32, Standard_Size(aBitmap.bmWidth), Standard_Size(aBitmap.bmHeight), aSizeRowBytes))
+  const Standard_Size aSizeRowBytes = ((Standard_Size(aBitmap.bmWidth) * 24 + 31) / 32) * 4; // 4 bytes alignment for GetDIBits()
+  if (!anImage.InitTrash (Image_Format_BGR, Standard_Size(aBitmap.bmWidth), Standard_Size(aBitmap.bmHeight), aSizeRowBytes))
   {
     return Standard_False;
   }
@@ -1753,7 +1809,7 @@ static Standard_Boolean SaveBitmap (HBITMAP     theHBitmap,
   aBitmapInfo.biWidth       = aBitmap.bmWidth;
   aBitmapInfo.biHeight      = aBitmap.bmHeight; // positive means bottom-up!
   aBitmapInfo.biPlanes      = 1;
-  aBitmapInfo.biBitCount    = 32; // use 32bit for automatic word-alignment per row
+  aBitmapInfo.biBitCount    = 24;
   aBitmapInfo.biCompression = BI_RGB;
 
   // Copy the pixels
@@ -1810,7 +1866,8 @@ void DrawWindow::DrawString(int x,int y, char* text)
   HDC hDC = GetDC(win);
   HDC aWorkDC = myUseBuffer ? GetMemDC(hDC) : hDC;
 
-  TextOut(aWorkDC, x, y, text, (int )strlen(text));
+  TCollection_ExtendedString textW (text);
+  TextOutW(aWorkDC, x, y, (const wchar_t*)textW.ToExtString(), (int )strlen(text));
 
   if (myUseBuffer) ReleaseMemDC(aWorkDC);
   ReleaseDC(win,hDC);
@@ -1960,9 +2017,8 @@ static Tk_Window mainWindow;
 //* threads sinchronization *//
 DWORD  dwMainThreadId;
 console_semaphore_value volatile console_semaphore = WAIT_CONSOLE_COMMAND;
-//char console_command[1000];
-#define COMMAND_SIZE 1000     /* Console Command size */
-char console_command[COMMAND_SIZE];
+#define THE_COMMAND_SIZE 1000     /* Console Command size */
+wchar_t console_command[THE_COMMAND_SIZE];
 bool volatile isTkLoopStarted = false;
 
 /*--------------------------------------------------------*\
@@ -1971,11 +2027,13 @@ bool volatile isTkLoopStarted = false;
 Standard_Boolean Init_Appli(HINSTANCE hInst,
                             HINSTANCE hPrevInst, int nShow, HWND& hWndFrame )
 {
+  Draw_Interpretor& aCommands = Draw::GetInterpretor();
+
   DWORD IDThread;
   HANDLE hThread;
   console_semaphore = STOP_CONSOLE;
-  theCommands.Init();
-  interp = theCommands.Interp();
+  aCommands.Init();
+  interp = aCommands.Interp();
   Tcl_Init(interp) ;
 
   dwMainThreadId = GetCurrentThreadId();
@@ -2031,16 +2089,62 @@ Standard_Boolean Draw_Interprete (const char*);
 /*--------------------------------------------------------*\
 |  readStdinThreadFunc
 \*--------------------------------------------------------*/
-static DWORD WINAPI readStdinThreadFunc(VOID)
+static DWORD WINAPI readStdinThreadFunc()
 {
-  if (!Draw_IsConsoleSubsystem) return 1;
-  for(;;) {
+  if (!Draw_IsConsoleSubsystem)
+  {
+    return 1;
+  }
+
+  // Console locale could be set to the system codepage .OCP (UTF-8 is not properly supported on Windows).
+  // However, to use it, we have to care using std::wcerr/fwprintf/WriteConsoleW for non-ascii strings everywhere (including Tcl itself),
+  // or otherwise we can have incomplete output issues
+  // (e.g. UNICODE string will be NOT just corrupted as in case when we don't set setlocale()
+  // but will break further normal output to console due to special characters being accidentally handled by console in the wrong way).
+  //setlocale (LC_ALL, ".OCP");
+
+  // _O_U16TEXT can be used with fgetws() to get similar result as ReadConsoleW() without affecting setlocale(),
+  // however it would break pipe input
+  //_setmode (_fileno(stdin), _O_U16TEXT);
+
+  bool isConsoleInput = true;
+  for (;;)
+  {
     while (console_semaphore != WAIT_CONSOLE_COMMAND)
-      Sleep(100);
-      if (fgets(console_command,COMMAND_SIZE,stdin))
+    {
+      Sleep (100);
+    }
+
+    const HANDLE anStdIn = ::GetStdHandle (STD_INPUT_HANDLE);
+    if (anStdIn != NULL
+     && anStdIn != INVALID_HANDLE_VALUE
+     && isConsoleInput)
+    {
+      DWORD aNbRead = 0;
+      if (ReadConsoleW (anStdIn, console_command, THE_COMMAND_SIZE, &aNbRead, NULL))
       {
+        console_command[aNbRead] = L'\0';
         console_semaphore = HAS_CONSOLE_COMMAND;
+        continue;
       }
+      else
+      {
+        const DWORD anErr = GetLastError();
+        if (anErr != ERROR_SUCCESS)
+        {
+          // fallback using fgetws() which would work with pipes
+          // but supports Unicode only through multi-byte encoding (which is not UTF-8)
+          isConsoleInput = false;
+          continue;
+        }
+      }
+    }
+
+    // fgetws() works only for characters within active locale (see setlocale())
+    if (fgetws (console_command, THE_COMMAND_SIZE, stdin))
+    {
+      console_semaphore = HAS_CONSOLE_COMMAND;
+    }
   }
 }
 
@@ -2063,11 +2167,27 @@ void exitProc(ClientData /*dc*/)
 \*--------------------------------------------------------*/
 static DWORD WINAPI tkLoop(VOID)
 {
+  Draw_Interpretor& aCommands = Draw::GetInterpretor();
+
   Tcl_CreateExitHandler(exitProc, 0);
 #if (TCL_MAJOR_VERSION > 8) || ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 5))
-  Tcl_RegisterChannel(theCommands.Interp(),  Tcl_GetStdChannel(TCL_STDIN));
-  Tcl_RegisterChannel(theCommands.Interp(),  Tcl_GetStdChannel(TCL_STDOUT));
-  Tcl_RegisterChannel(theCommands.Interp(),  Tcl_GetStdChannel(TCL_STDERR));
+  {
+    Tcl_Channel aChannelIn  = Tcl_GetStdChannel (TCL_STDIN);
+    Tcl_Channel aChannelOut = Tcl_GetStdChannel (TCL_STDOUT);
+    Tcl_Channel aChannelErr = Tcl_GetStdChannel (TCL_STDERR);
+    if (aChannelIn != NULL)
+    {
+      Tcl_RegisterChannel (aCommands.Interp(), aChannelIn);
+    }
+    if (aChannelOut != NULL)
+    {
+      Tcl_RegisterChannel (aCommands.Interp(), aChannelOut);
+    }
+    if (aChannelErr != NULL)
+    {
+      Tcl_RegisterChannel (aCommands.Interp(), aChannelErr);
+    }
+  }
 #endif
 
 #ifdef _TK
@@ -2128,7 +2248,8 @@ static DWORD WINAPI tkLoop(VOID)
     while(Tcl_DoOneEvent(TCL_ALL_EVENTS | TCL_DONT_WAIT));
     if (console_semaphore == HAS_CONSOLE_COMMAND)
     {
-      if (Draw_Interprete (console_command))
+      TCollection_AsciiString aCmdUtf8 (console_command);
+      if (Draw_Interprete (aCmdUtf8.ToCString()))
       {
         if (Draw_IsConsoleSubsystem) Prompt (interp, 0);
       }
@@ -2176,9 +2297,9 @@ void Run_Appli(HWND hWnd)
     if (!hThread) {
       cout << "pb in creation of the thread reading stdin" << endl;
       Draw_IsConsoleSubsystem = Standard_False;
-      Init_Appli(GetModuleHandle(NULL),
-                 GetModuleHandle(NULL),
-                 1, hWnd); // reinit => create MDI client wnd
+      Init_Appli (GetModuleHandleW (NULL),
+                  GetModuleHandleW (NULL),
+                  1, hWnd); // reinit => create MDI client wnd
     }
   }
 
@@ -2187,12 +2308,12 @@ void Run_Appli(HWND hWnd)
     console_semaphore = WAIT_CONSOLE_COMMAND;
 
   //simple Win32 message loop
-  while (GetMessage(&msg, NULL, 0, 0) > 0)
+  while (GetMessageW (&msg, NULL, 0, 0) > 0)
   {
-    if (!TranslateAccelerator(hWnd, hAccel, &msg))
+    if (!TranslateAcceleratorW (hWnd, hAccel, &msg))
     {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+      TranslateMessage (&msg);
+      DispatchMessageW (&msg);
     }
   }
   ExitProcess(0);
@@ -2218,10 +2339,12 @@ void DrawWindow::SelectWait(HANDLE& hWnd, int& x, int& y, int& button)
 
   msg.wParam = 1;
 
-  GetMessage(&msg,NULL,0,0);
+  GetMessageW (&msg, NULL, 0, 0);
   while((msg.message != WM_RBUTTONDOWN && msg.message != WM_LBUTTONDOWN) ||
         ! ( Draw_IsConsoleSubsystem || IsChild(DrawWindow::hWndClientMDI,msg.hwnd)) )
-    GetMessage(&msg,NULL,0,0);
+  {
+    GetMessageW (&msg, NULL, 0, 0);
+  }
 
   hWnd = msg.hwnd;
   x = LOWORD(msg.lParam);
@@ -2241,11 +2364,13 @@ void DrawWindow::SelectNoWait(HANDLE& hWnd, int& x, int& y, int& button)
 
   msg.wParam = 1;
 
-  GetMessage(&msg,NULL,0,0);
+  GetMessageW (&msg,NULL,0,0);
   while((msg.message != WM_RBUTTONDOWN && msg.message != WM_LBUTTONDOWN &&
         msg.message != WM_MOUSEMOVE) ||
         ! ( Draw_IsConsoleSubsystem || IsChild(DrawWindow::hWndClientMDI,msg.hwnd) ) )
-    GetMessage(&msg,NULL,0,0);
+  {
+    GetMessageW(&msg,NULL,0,0);
+  }
   hWnd = msg.hwnd;
   x = LOWORD(msg.lParam);
   y = HIWORD(msg.lParam);

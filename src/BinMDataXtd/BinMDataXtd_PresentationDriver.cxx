@@ -17,7 +17,7 @@
 
 #include <TDataXtd_Presentation.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(BinMDataXtd_PresentationDriver,BinMDF_ADriver)
 
@@ -26,7 +26,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataXtd_PresentationDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataXtd_PresentationDriver::BinMDataXtd_PresentationDriver
-                          (const Handle(CDM_MessageDriver)& theMsgDriver)
+                          (const Handle(Message_Messenger)& theMsgDriver)
 : BinMDF_ADriver(theMsgDriver, STANDARD_TYPE(TDataXtd_Presentation)->Name())
 {
 }
@@ -58,7 +58,7 @@ Standard_Boolean BinMDataXtd_PresentationDriver::Paste
   Standard_Integer aValue;
   ok = theSource >> aValue;
   if (!ok) return ok;
-  anAttribute->SetDisplayed(static_cast<Standard_Boolean>(aValue));
+  anAttribute->SetDisplayed (aValue != 0);
 
   // GUID
   Standard_GUID aGUID;

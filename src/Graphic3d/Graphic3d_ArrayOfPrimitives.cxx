@@ -12,25 +12,40 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-
-#include <gp_Dir.hxx>
-#include <gp_Pnt.hxx>
-#include <gp_Pnt2d.hxx>
 #include <Graphic3d_ArrayOfPrimitives.hxx>
-#include <Graphic3d_Group.hxx>
-#include <Graphic3d_InitialisationError.hxx>
+
+#include <Graphic3d_ArrayOfPoints.hxx>
+#include <Graphic3d_ArrayOfSegments.hxx>
+#include <Graphic3d_ArrayOfPolylines.hxx>
+#include <Graphic3d_ArrayOfTriangles.hxx>
+#include <Graphic3d_ArrayOfTriangleStrips.hxx>
+#include <Graphic3d_ArrayOfTriangleFans.hxx>
+#include <Graphic3d_ArrayOfQuadrangles.hxx>
+#include <Graphic3d_ArrayOfQuadrangleStrips.hxx>
+#include <Graphic3d_ArrayOfPolygons.hxx>
+
 #include <NCollection_AlignedAllocator.hxx>
-#include <OSD_Environment.hxx>
-#include <Quantity_Color.hxx>
-#include <Standard.hxx>
-#include <Standard_OutOfRange.hxx>
-#include <Standard_Type.hxx>
 #include <TCollection_AsciiString.hxx>
 
 #include <stdio.h>
 #include <stdlib.h>
-IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfPrimitives,MMgt_TShared)
 
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfPrimitives, Standard_Transient)
+
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfPoints,           Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfSegments,         Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfPolylines,        Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfTriangles,        Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfTriangleStrips,   Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfTriangleFans,     Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfQuadrangles,      Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfQuadrangleStrips, Graphic3d_ArrayOfPrimitives)
+IMPLEMENT_STANDARD_RTTIEXT(Graphic3d_ArrayOfPolygons,         Graphic3d_ArrayOfPrimitives)
+
+// =======================================================================
+// function : Graphic3d_ArrayOfPrimitives
+// purpose  :
+// =======================================================================
 Graphic3d_ArrayOfPrimitives::Graphic3d_ArrayOfPrimitives (const Graphic3d_TypeOfPrimitiveArray theType,
                                                           const Standard_Integer               theMaxVertexs,
                                                           const Standard_Integer               theMaxBounds,
@@ -57,7 +72,7 @@ Graphic3d_ArrayOfPrimitives::Graphic3d_ArrayOfPrimitives (const Graphic3d_TypeOf
   if (theMaxEdges > 0)
   {
     myIndices = new Graphic3d_IndexBuffer (anAlloc);
-    if (theMaxEdges < Standard_Integer(USHRT_MAX))
+    if (theMaxVertexs < Standard_Integer(USHRT_MAX))
     {
       if (!myIndices->Init<unsigned short> (theMaxEdges))
       {
@@ -153,7 +168,11 @@ Graphic3d_ArrayOfPrimitives::Graphic3d_ArrayOfPrimitives (const Graphic3d_TypeOf
   myMaxEdges   = theMaxEdges;
 }
 
-void Graphic3d_ArrayOfPrimitives::Destroy()
+// =======================================================================
+// function : ~Graphic3d_ArrayOfPrimitives
+// purpose  :
+// =======================================================================
+Graphic3d_ArrayOfPrimitives::~Graphic3d_ArrayOfPrimitives()
 {
   myVNor = 0;
   myVTex = 0;
@@ -163,98 +182,10 @@ void Graphic3d_ArrayOfPrimitives::Destroy()
   myBounds .Nullify();
 }
 
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const Standard_ShortReal theX,
-                                                         const Standard_ShortReal theY,
-                                                         const Standard_ShortReal theZ)
-{
-  if (myAttribs.IsNull())
-  {
-    return 0;
-  }
-
-  const Standard_Integer anIndex = myAttribs->NbElements + 1;
-  SetVertice (anIndex, theX, theY, theZ);
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const gp_Pnt&         theVertex,
-                                                         const Quantity_Color& theColor)
-{
-  const Standard_Integer anIndex = AddVertex (theVertex);
-  SetVertexColor (anIndex, theColor.Red(), theColor.Green(), theColor.Blue());
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const gp_Pnt&          theVertex,
-                                                         const Standard_Integer theColor32)
-{
-  const Standard_Integer anIndex = AddVertex (theVertex);
-  SetVertexColor (anIndex, theColor32);
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const Standard_ShortReal theX,  const Standard_ShortReal theY,  const Standard_ShortReal theZ,
-                                                         const Standard_ShortReal theNX, const Standard_ShortReal theNY, const Standard_ShortReal theNZ)
-{
-  if (myAttribs.IsNull())
-  {
-    return 0;
-  }
-
-  const Standard_Integer anIndex = myAttribs->NbElements + 1;
-  SetVertice      (anIndex, theX,  theY,  theZ);
-  SetVertexNormal (anIndex, theNX, theNY, theNZ);
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const gp_Pnt&         theVertex,
-                                                         const gp_Dir&         theNormal,
-                                                         const Quantity_Color& theColor)
-{
-  const Standard_Integer anIndex = AddVertex (theVertex, theNormal);
-  SetVertexColor (anIndex, theColor.Red(), theColor.Green(), theColor.Blue());
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const gp_Pnt&          theVertex,
-                                                         const gp_Dir&          theNormal,
-                                                         const Standard_Integer theColor32)
-{
-  const Standard_Integer anIndex = AddVertex (theVertex, theNormal);
-  SetVertexColor (anIndex, theColor32);
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const Standard_ShortReal theX,  const Standard_ShortReal theY, const Standard_ShortReal theZ,
-                                                         const Standard_ShortReal theTX, const Standard_ShortReal theTY)
-{
-  if (myAttribs.IsNull())
-  {
-    return 0;
-  }
-
-  const Standard_Integer anIndex = myAttribs->NbElements + 1;
-  SetVertice     (anIndex, theX, theY, theZ);
-  SetVertexTexel (anIndex, theTX, theTY);
-  return anIndex;
-}
-
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddVertex (const Standard_ShortReal theX,  const Standard_ShortReal theY,  const Standard_ShortReal theZ,
-                                                         const Standard_ShortReal theNX, const Standard_ShortReal theNY, const Standard_ShortReal theNZ,
-                                                         const Standard_ShortReal theTX, const Standard_ShortReal theTY)
-{
-  if (myAttribs.IsNull())
-  {
-    return 0;
-  }
-
-  const Standard_Integer anIndex = myAttribs->NbElements + 1;
-  SetVertice      (anIndex, theX,  theY,  theZ);
-  SetVertexNormal (anIndex, theNX, theNY, theNZ);
-  SetVertexTexel  (anIndex, theTX, theTY);
-  return anIndex;
-}
-
+// =======================================================================
+// function : AddBound
+// purpose  :
+// =======================================================================
 Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer theEdgeNumber)
 {
   if (myBounds.IsNull())
@@ -264,7 +195,7 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer t
   Standard_Integer anIndex = myBounds->NbBounds;
   if (anIndex >= myMaxBounds)
   {
-    Standard_OutOfRange::Raise ("TOO many BOUNDS");
+    throw Standard_OutOfRange("TOO many BOUNDS");
   }
 
   myBounds->Bounds[anIndex] = theEdgeNumber;
@@ -272,12 +203,10 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer t
   return anIndex;
 }
 
-Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer theEdgeNumber,
-                                                        const Quantity_Color&  theColor)
-{
-  return AddBound (theEdgeNumber, theColor.Red(), theColor.Green(), theColor.Blue());
-}
-
+// =======================================================================
+// function : AddBound
+// purpose  :
+// =======================================================================
 Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer theEdgeNumber,
                                                         const Standard_Real    theR,
                                                         const Standard_Real    theG,
@@ -290,7 +219,7 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer t
   Standard_Integer anIndex = myBounds->NbBounds;
   if (anIndex >= myMaxBounds)
   {
-    Standard_OutOfRange::Raise ("TOO many BOUND");
+    throw Standard_OutOfRange("TOO many BOUND");
   }
 
   myBounds->Bounds[anIndex] = theEdgeNumber;
@@ -299,6 +228,10 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddBound (const Standard_Integer t
   return anIndex;
 }
 
+// =======================================================================
+// function : AddEdge
+// purpose  :
+// =======================================================================
 Standard_Integer Graphic3d_ArrayOfPrimitives::AddEdge (const Standard_Integer theVertexIndex)
 {
   if (myIndices.IsNull())
@@ -309,14 +242,14 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddEdge (const Standard_Integer th
   Standard_Integer anIndex = myIndices->NbElements;
   if (anIndex >= myMaxEdges)
   {
-    Standard_OutOfRange::Raise ("TOO many EDGE");
+    throw Standard_OutOfRange("TOO many EDGE");
   }
 
   Standard_Integer aVertIndex = theVertexIndex - 1;
   if (theVertexIndex <= 0
    || aVertIndex >= myMaxVertexs)
   {
-    Standard_OutOfRange::Raise ("BAD EDGE vertex index");
+    throw Standard_OutOfRange("BAD EDGE vertex index");
   }
 
   myIndices->SetIndex (anIndex, aVertIndex);
@@ -324,112 +257,36 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::AddEdge (const Standard_Integer th
   return anIndex;
 }
 
-void Graphic3d_ArrayOfPrimitives::SetVertice (const Standard_Integer theIndex,
-                                              const gp_Pnt&          theVertex)
-{
-  SetVertice (theIndex,
-              Standard_ShortReal (theVertex.X()),
-              Standard_ShortReal (theVertex.Y()),
-              Standard_ShortReal (theVertex.Z()));
-}
-
-void Graphic3d_ArrayOfPrimitives::SetVertexColor (const Standard_Integer theIndex,
-                                                  const Quantity_Color&  theColor)
-{
-  SetVertexColor (theIndex, theColor.Red(), theColor.Green(), theColor.Blue());
-}
-
-void Graphic3d_ArrayOfPrimitives::SetVertexColor (const Standard_Integer theIndex,
-                                                  const Standard_Integer theColor)
-{
-  if (myAttribs.IsNull())
-  {
-    return;
-  }
-
-  if (theIndex < 1
-   || theIndex > myMaxVertexs)
-  {
-    Standard_OutOfRange::Raise ("BAD VERTEX index");
-  }
-
-  if (myVCol != 0)
-  {
-    *reinterpret_cast<Standard_Integer* >(myAttribs->changeValue (theIndex - 1) + size_t(myVCol)) = theColor;
-  }
-}
-
-void Graphic3d_ArrayOfPrimitives::SetVertexNormal (const Standard_Integer theIndex,
-                                                   const gp_Dir&          theNormal)
-{
-  SetVertexNormal (theIndex, theNormal.X(), theNormal.Y(), theNormal.Z());
-}
-
-void Graphic3d_ArrayOfPrimitives::SetVertexTexel (const Standard_Integer theIndex,
-                                                  const gp_Pnt2d&        theTexel)
-{
-  SetVertexTexel (theIndex, theTexel.X(), theTexel.Y());
-}
-
-void Graphic3d_ArrayOfPrimitives::SetBoundColor (const Standard_Integer theIndex,
-                                                 const Quantity_Color&  theColor)
-{
-  SetBoundColor (theIndex, theColor.Red(), theColor.Green(), theColor.Blue());
-}
-
+// =======================================================================
+// function : StringType
+// purpose  :
+// =======================================================================
 Standard_CString Graphic3d_ArrayOfPrimitives::StringType() const
 {
   switch (myType)
   {
     case Graphic3d_TOPA_POINTS:           return "ArrayOfPoints";
-    case Graphic3d_TOPA_POLYLINES:        return "ArrayOfPolylines";
     case Graphic3d_TOPA_SEGMENTS:         return "ArrayOfSegments";
-    case Graphic3d_TOPA_POLYGONS:         return "ArrayOfPolygons";
+    case Graphic3d_TOPA_POLYLINES:        return "ArrayOfPolylines";
     case Graphic3d_TOPA_TRIANGLES:        return "ArrayOfTriangles";
-    case Graphic3d_TOPA_QUADRANGLES:      return "ArrayOfQuadrangles";
     case Graphic3d_TOPA_TRIANGLESTRIPS:   return "ArrayOfTriangleStrips";
-    case Graphic3d_TOPA_QUADRANGLESTRIPS: return "ArrayOfQuadrangleStrips";
     case Graphic3d_TOPA_TRIANGLEFANS:     return "ArrayOfTriangleFans";
+    case Graphic3d_TOPA_LINES_ADJACENCY:          return "ArrayOfLinesAdjacency";
+    case Graphic3d_TOPA_LINE_STRIP_ADJACENCY:     return "ArrayOfLineStripAdjacency";
+    case Graphic3d_TOPA_TRIANGLES_ADJACENCY:      return "ArrayOfTrianglesAdjacency";
+    case Graphic3d_TOPA_TRIANGLE_STRIP_ADJACENCY: return "ArrayOfTriangleStripAdjacency";
+    case Graphic3d_TOPA_QUADRANGLES:      return "ArrayOfQuadrangles";
+    case Graphic3d_TOPA_QUADRANGLESTRIPS: return "ArrayOfQuadrangleStrips";
+    case Graphic3d_TOPA_POLYGONS:         return "ArrayOfPolygons";
     case Graphic3d_TOPA_UNDEFINED:        return "UndefinedArray";
   }
   return "UndefinedArray";
 }
 
-gp_Pnt Graphic3d_ArrayOfPrimitives::Vertice (const Standard_Integer theRank) const
-{
-  Standard_Real anXYZ[3];
-  Vertice (theRank, anXYZ[0], anXYZ[1], anXYZ[2]);
-  return gp_Pnt (anXYZ[0], anXYZ[1], anXYZ[2]);
-}
-
-Quantity_Color Graphic3d_ArrayOfPrimitives::VertexColor (const Standard_Integer theRank) const
-{
-  Standard_Real anRGB[3];
-  VertexColor (theRank, anRGB[0], anRGB[1], anRGB[2]);
-  return Quantity_Color (anRGB[0], anRGB[1], anRGB[2], Quantity_TOC_RGB);
-}
-
-gp_Dir Graphic3d_ArrayOfPrimitives::VertexNormal (const Standard_Integer theRank) const
-{
-  Standard_Real anXYZ[3];
-  VertexNormal (theRank, anXYZ[0], anXYZ[1], anXYZ[2]);
-  return gp_Dir (anXYZ[0], anXYZ[1], anXYZ[2]);
-}
-
-gp_Pnt2d Graphic3d_ArrayOfPrimitives::VertexTexel (const Standard_Integer theRank) const
-{
-  Standard_Real anXY[2];
-  VertexTexel (theRank, anXY[0], anXY[1]);
-  return gp_Pnt2d (anXY[0], anXY[1]);
-}
-
-Quantity_Color Graphic3d_ArrayOfPrimitives::BoundColor (const Standard_Integer theRank) const
-{
-  Standard_Real anRGB[3] = {0.0, 0.0, 0.0};
-  BoundColor (theRank, anRGB[0], anRGB[1], anRGB[2]);
-  return Quantity_Color (anRGB[0], anRGB[1], anRGB[2], Quantity_TOC_RGB);
-}
-
+// =======================================================================
+// function : ItemNumber
+// purpose  :
+// =======================================================================
 Standard_Integer Graphic3d_ArrayOfPrimitives::ItemNumber() const
 {
   if (myAttribs.IsNull())
@@ -460,71 +317,27 @@ Standard_Integer Graphic3d_ArrayOfPrimitives::ItemNumber() const
     case Graphic3d_TOPA_TRIANGLEFANS:     return !myBounds.IsNull()
                                                ? myAttribs->NbElements - 2 * myBounds->NbBounds
                                                : myAttribs->NbElements - 2;
+    case Graphic3d_TOPA_LINES_ADJACENCY:  return myIndices.IsNull() || myIndices->NbElements < 1
+                                               ? myAttribs->NbElements / 4
+                                               : myIndices->NbElements / 4;
+    case Graphic3d_TOPA_LINE_STRIP_ADJACENCY: return !myBounds.IsNull()
+                                                    ? myAttribs->NbElements - 4 * myBounds->NbBounds
+                                                    : myAttribs->NbElements - 4;
+    case Graphic3d_TOPA_TRIANGLES_ADJACENCY: return myIndices.IsNull() || myIndices->NbElements < 1
+                                                  ? myAttribs->NbElements / 6
+                                                  : myIndices->NbElements / 6;
+    case Graphic3d_TOPA_TRIANGLE_STRIP_ADJACENCY: return !myBounds.IsNull()
+                                                ? myAttribs->NbElements - 4 * myBounds->NbBounds
+                                                : myAttribs->NbElements - 4;
     case Graphic3d_TOPA_UNDEFINED:        return -1;
   }
   return -1;
 }
 
-void Graphic3d_ArrayOfPrimitives::ComputeVNormals (const Standard_Integer theFrom,
-                                                   const Standard_Integer theTo)
-{
-  Standard_Integer aNext = theFrom + 1;
-  Standard_Integer aLast = theTo   + 1;
-  gp_Pnt aTri[3];
-  if (myMaxEdges > 0)
-  {
-    aTri[0] = Vertice (Edge (aNext++));
-    aTri[1] = Vertice (Edge (aNext++));
-  }
-  else
-  {
-    aTri[0] = Vertice (aNext++);
-    aTri[1] = Vertice (aNext++);
-  }
-
-  gp_Vec vn;
-  while (aNext <= aLast)
-  {
-    if (myMaxEdges > 0)
-    {
-      aTri[2] = Vertice (Edge (aNext));
-    }
-    else
-    {
-      aTri[2] = Vertice (aNext);
-    }
-    gp_Vec v21 (aTri[1], aTri[0]);
-    gp_Vec v31 (aTri[2], aTri[0]);
-    vn = v21 ^ v31;
-    if (vn.SquareMagnitude() > 0.0)
-    {
-      break;
-    }
-    aNext++;
-  }
-
-  if (aNext > aLast)
-  {
-    return;
-  }
-
-  vn.Normalize();
-  if (myMaxEdges > 0)
-  {
-    for (int i = theFrom + 1; i <= theTo + 1; i++)
-    {
-      SetVertexNormal (Edge (i), vn);
-    }
-  }
-  else
-  {
-    for (int i = theFrom + 1; i <= theTo + 1; i++)
-    {
-      SetVertexNormal (i, vn);
-    }
-  }
-}
-
+// =======================================================================
+// function : IsValid
+// purpose  :
+// =======================================================================
 Standard_Boolean Graphic3d_ArrayOfPrimitives::IsValid()
 {
   if (myAttribs.IsNull())
@@ -626,6 +439,20 @@ Standard_Boolean Graphic3d_ArrayOfPrimitives::IsValid()
       break;
     case Graphic3d_TOPA_QUADRANGLESTRIPS:
       if (nvertexs < 4)
+      {
+        return Standard_False;
+      }
+      break;
+    case Graphic3d_TOPA_LINES_ADJACENCY:
+    case Graphic3d_TOPA_LINE_STRIP_ADJACENCY:
+      if (nvertexs < 4)
+      {
+        return Standard_False;
+      }
+      break;
+    case Graphic3d_TOPA_TRIANGLES_ADJACENCY:
+    case Graphic3d_TOPA_TRIANGLE_STRIP_ADJACENCY:
+      if (nvertexs < 6)
       {
         return Standard_False;
       }

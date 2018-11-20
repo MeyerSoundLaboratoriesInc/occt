@@ -35,6 +35,7 @@ SelectMgr_BaseFrustum::SelectMgr_BaseFrustum()
 //=======================================================================
 void SelectMgr_BaseFrustum::SetCamera (const Handle(Graphic3d_Camera)& theCamera)
 {
+  myCamera = theCamera;
   myBuilder->SetWorldViewMatrix (theCamera->OrientationMatrix());
   myBuilder->SetProjectionMatrix (theCamera->ProjectionMatrix());
   myBuilder->SetWorldViewProjState (theCamera->WorldViewProjState());
@@ -48,9 +49,10 @@ void SelectMgr_BaseFrustum::SetCamera (const Handle(Graphic3d_Camera)& theCamera
 //=======================================================================
 void SelectMgr_BaseFrustum::SetCamera (const Graphic3d_Mat4d& theProjection,
                                        const Graphic3d_Mat4d& theWorldView,
-                                       const Standard_Integer theIsOrthographic,
+                                       const Standard_Boolean theIsOrthographic,
                                        const Graphic3d_WorldViewProjState& theWVPState)
 {
+  myCamera.Nullify();
   myBuilder->SetWorldViewMatrix (theWorldView);
   myBuilder->SetProjectionMatrix (theProjection);
   myBuilder->SetWorldViewProjState (theWVPState);
@@ -115,6 +117,16 @@ void SelectMgr_BaseFrustum::SetPixelTolerance (const Standard_Integer theTol)
 void SelectMgr_BaseFrustum::SetWindowSize (const Standard_Integer theWidth, const Standard_Integer theHeight)
 {
   myBuilder->SetWindowSize (theWidth, theHeight);
+}
+
+//=======================================================================
+// function : WindowSize
+// purpose  :
+//=======================================================================
+void SelectMgr_BaseFrustum::WindowSize (Standard_Integer& theWidth,
+                                        Standard_Integer& theHeight) const
+{
+  myBuilder->WindowSize (theWidth, theHeight);
 }
 
 //=======================================================================

@@ -4,6 +4,7 @@
 #include "DocumentCommon.h"
 #include "ApplicationCommon.h"
 
+#include <Standard_WarningsDisable.hxx>
 #include <QFrame>
 #include <QToolBar>
 #include <QFileDialog>
@@ -14,6 +15,7 @@
 #include <QFileInfo>
 #include <QMainWindow> 
 #include <QVBoxLayout>
+#include <Standard_WarningsRestore.hxx>
 
 MDIWindow::MDIWindow(View* aView,
                      DocumentCommon* aDocument, 
@@ -105,9 +107,7 @@ void MDIWindow::onWindowActivated ()
 
 void MDIWindow::dump()
 {
-  QString datadir = (QString(qgetenv ("CSF_OCCTDataPath").constData()) + "/images");
-  static QString filter;
-  filter = "Images Files (*.bmp *.ppm *.png *.jpg *.tiff *.tga *.gif *.exr *.ps *.eps *.tex *.pdf *.svg *.pgf)";
+  QString filter = "Images Files (*.bmp *.ppm *.png *.jpg *.tiff *.tga *.gif *.exr)";
   QFileDialog fd ( 0 );
   fd.setModal( true );
   fd.setNameFilter ( filter );
@@ -128,12 +128,14 @@ void MDIWindow::dump()
     if ( !QFileInfo( file ).completeSuffix().length() )
       file += QString( ".bmp" );
 
-    bool res = myView->dump( (Standard_CString)file.toLatin1().constData() );
+    const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
+
+    bool res = myView->dump( anUtf8Path.ToCString() );
     QApplication::restoreOverrideCursor();                
     if ( !res )
     {
       QWidgetList list = qApp->allWidgets();
-      QWidget* mainWidget;
+      QWidget* mainWidget = NULL;
       for( int i = 0; i < list.size(); ++i )
       {
         if( qobject_cast<ApplicationCommonWindow*>( list.at( i ) ) )

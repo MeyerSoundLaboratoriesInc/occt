@@ -14,12 +14,11 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <AIS_Shape.hxx>
 
 #include <AIS_GraphicTool.hxx>
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_Shape.hxx>
 #include <Aspect_TypeOfLine.hxx>
-#include <Bnd_Box.hxx>
 #include <BRep_Builder.hxx>
 #include <BRepBndLib.hxx>
 #include <BRepTools.hxx>
@@ -35,6 +34,8 @@
 #include <Graphic3d_MaterialAspect.hxx>
 #include <Graphic3d_SequenceOfGroup.hxx>
 #include <Graphic3d_Structure.hxx>
+#include <Message.hxx>
+#include <Message_Messenger.hxx>
 #include <HLRBRep.hxx>
 #include <OSD_Timer.hxx>
 #include <Precision.hxx>
@@ -66,11 +67,8 @@
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopoDS_Iterator.hxx>
-#include <TopoDS_Shape.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(AIS_Shape,AIS_InteractiveObject)
-
-static Standard_Boolean myFirstCompute;
 
 static Standard_Boolean IsInList(const TColStd_ListOfInteger& LL, const Standard_Integer aMode)
 {
@@ -82,42 +80,20 @@ static Standard_Boolean IsInList(const TColStd_ListOfInteger& LL, const Standard
 }
 
 //==================================================
-// Function: 
+// Function: AIS_Shape
 // Purpose :
 //==================================================
-
-AIS_Shape::
-AIS_Shape(const TopoDS_Shape& shap):
-AIS_InteractiveObject(PrsMgr_TOP_ProjectorDependant),
-myInitAng(0.)
+AIS_Shape::AIS_Shape(const TopoDS_Shape& theShape)
+: AIS_InteractiveObject (PrsMgr_TOP_ProjectorDependant),
+  myshape (theShape),
+  myUVOrigin(0.0, 0.0),
+  myUVRepeat(1.0, 1.0),
+  myUVScale (1.0, 1.0),
+  myInitAng (0.0),
+  myCompBB (Standard_True)
 {
-  Set (shap);
-  myFirstCompute = Standard_True;
-  SetHilightMode(0);
-  myDrawer->SetShadingAspectGlobal(Standard_False);
+  //
 }
-
-//=======================================================================
-//function : Type
-//purpose  : 
-//=======================================================================
-AIS_KindOfInteractive AIS_Shape::Type() const 
-{return AIS_KOI_Shape;}
-
-
-//=======================================================================
-//function : Signature
-//purpose  : 
-//=======================================================================
-Standard_Integer AIS_Shape::Signature() const 
-{return 0;}
-
-//=======================================================================
-//function : AcceptShapeDecomposition
-//purpose  : 
-//=======================================================================
-Standard_Boolean AIS_Shape::AcceptShapeDecomposition() const 
-{return Standard_True;}
 
 //=======================================================================
 //function : Compute
@@ -125,9 +101,8 @@ Standard_Boolean AIS_Shape::AcceptShapeDecomposition() const
 //=======================================================================
 void AIS_Shape::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresentationManager*/,
                         const Handle(Prs3d_Presentation)& aPrs,
-                        const Standard_Integer aMode)
+                        const Standard_Integer theMode)
 {  
-  aPrs->Clear();
   if(myshape.IsNull()) return;
 
   // wire,edge,vertex -> pas de HLR + priorite display superieure
@@ -147,50 +122,36 @@ void AIS_Shape::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresentat
 
   if (IsInfinite())
   {
-    aPrs->SetInfiniteState (Standard_True); //not taken in account duting FITALL
+    aPrs->SetInfiniteState (Standard_True); //not taken in account during FITALL
   }
 
-  switch (aMode)
+  switch (theMode)
   {
     case AIS_WireFrame:
     {
+      StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (myshape, myDrawer, Standard_True);
       try
       {
         OCC_CATCH_SIGNALS
         StdPrs_WFShape::Add (aPrs, myshape, myDrawer);
       }
-      catch (Standard_Failure)
+      catch (Standard_Failure const& anException)
       {
-      #ifdef OCCT_DEBUG
-        cout << "AIS_Shape::Compute() failed" << endl;
-        cout << "a Shape should be incorrect : No Compute can be maked on it " << endl;
-      #endif
-        // presentation of the bounding box is calculated
-        //      Compute(aPresentationManager,aPrs,2);
+        Message::DefaultMessenger()->Send (TCollection_AsciiString()
+                                         + "Error: AIS_Shape::Compute() wireframe presentation builder has failed ("
+                                         + anException.GetMessageString() + ")", Message_Fail);
       }
       break;
     }
     case AIS_Shaded:
     {
-      if (myDrawer->IsAutoTriangulation())
-      {
-        Standard_Real anAnglePrev, anAngleNew, aCoeffPrev, aCoeffNew;
-        Standard_Boolean isOwnDeviationAngle       = OwnDeviationAngle      (anAngleNew, anAnglePrev);
-        Standard_Boolean isOwnDeviationCoefficient = OwnDeviationCoefficient(aCoeffNew,  aCoeffPrev);
-        if ((isOwnDeviationAngle       && Abs (anAngleNew - anAnglePrev) > Precision::Angular())
-         || (isOwnDeviationCoefficient && Abs (aCoeffNew  - aCoeffPrev)  > Precision::Confusion()))
-        {
-          BRepTools::Clean (myshape);
-        }
-      }
-
+      StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (myshape, myDrawer, Standard_True);
       if ((Standard_Integer) myshape.ShapeType() > 4)
       {
         StdPrs_WFShape::Add (aPrs, myshape, myDrawer);
       }
       else
       {
-        myDrawer->SetShadingAspectGlobal (Standard_False);
         if (IsInfinite())
         {
           StdPrs_WFShape::Add (aPrs, myshape, myDrawer);
@@ -200,13 +161,16 @@ void AIS_Shape::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresentat
           try
           {
             OCC_CATCH_SIGNALS
-            StdPrs_ShadedShape::Add (aPrs, myshape, myDrawer);
+            StdPrs_ShadedShape::Add (aPrs, myshape, myDrawer,
+                                     myDrawer->ShadingAspect()->Aspect()->ToMapTexture()
+                                 && !myDrawer->ShadingAspect()->Aspect()->TextureMap().IsNull(),
+                                     myUVOrigin, myUVRepeat, myUVScale);
           }
-          catch (Standard_Failure)
+          catch (Standard_Failure const& anException)
           {
-          #ifdef OCCT_DEBUG
-            cout << "AIS_Shape::Compute() in ShadingMode failed" << endl;
-          #endif
+            Message::DefaultMessenger()->Send (TCollection_AsciiString()
+                                               + "Error: AIS_Shape::Compute() shaded presentation builder has failed ("
+                                               + anException.GetMessageString() + ")", Message_Fail);
             StdPrs_WFShape::Add (aPrs, myshape, myDrawer);
           }
         }
@@ -238,149 +202,87 @@ void AIS_Shape::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresentat
 }
 
 //=======================================================================
-//function : Compute
-//purpose  : Hidden Line Removal
+//function : computeHlrPresentation
+//purpose  :
 //=======================================================================
-void AIS_Shape::Compute(const Handle(Prs3d_Projector)& aProjector,
-                        const Handle(Prs3d_Presentation)& aPresentation)
+void AIS_Shape::computeHlrPresentation (const Handle(Prs3d_Projector)& theProjector,
+                                        const Handle(Prs3d_Presentation)& thePrs,
+                                        const TopoDS_Shape& theShape,
+                                        const Handle(Prs3d_Drawer)& theDrawer)
 {
-  Compute(aProjector,aPresentation,myshape);
-}
-
-//=======================================================================
-//function : Compute
-//purpose  : 
-//=======================================================================
-
-void AIS_Shape::Compute(const Handle(Prs3d_Projector)&     aProjector,
-                        const Handle(Geom_Transformation)& TheTrsf,
-                        const Handle(Prs3d_Presentation)&  aPresentation)
-{
-  const TopLoc_Location& loc = myshape.Location();
-  TopoDS_Shape shbis = myshape.Located(TopLoc_Location(TheTrsf->Trsf())*loc);
-  Compute(aProjector,aPresentation,shbis);
-}
-
-//=======================================================================
-//function : Compute
-//purpose  : 
-//=======================================================================
-
-void AIS_Shape::Compute(const Handle(Prs3d_Projector)& aProjector,
-                        const Handle(Prs3d_Presentation)& aPresentation,
-                        const TopoDS_Shape& SH)
-{
-  if (SH.ShapeType() == TopAbs_COMPOUND) {
-    TopoDS_Iterator anExplor (SH);
-
-    if (!anExplor.More()) // Shape vide -> Assemblage vide.
-      return;
+  if (theShape.IsNull())
+  {
+    return;
   }
 
-  Handle (Prs3d_Drawer) defdrawer = GetContext()->DefaultDrawer();
-  if (defdrawer->DrawHiddenLine())
-    {myDrawer->EnableDrawHiddenLine();}
-  else {myDrawer->DisableDrawHiddenLine();}
-
-  Aspect_TypeOfDeflection prevdef = defdrawer->TypeOfDeflection();
-  defdrawer->SetTypeOfDeflection(Aspect_TOD_RELATIVE);
-
-  if (myDrawer->IsAutoTriangulation())
+  switch (theShape.ShapeType())
   {
-    // coefficients for calculation
-    Standard_Real aPrevAngle, aNewAngle, aPrevCoeff, aNewCoeff;
-    Standard_Boolean isOwnHLRDeviationAngle = OwnHLRDeviationAngle (aNewAngle, aPrevAngle);
-    Standard_Boolean isOwnHLRDeviationCoefficient = OwnHLRDeviationCoefficient (aNewCoeff, aPrevCoeff);
-    if (((Abs (aNewAngle - aPrevAngle) > Precision::Angular()) && isOwnHLRDeviationAngle) ||
-        ((Abs (aNewCoeff - aPrevCoeff) > Precision::Confusion()) && isOwnHLRDeviationCoefficient))
+    case TopAbs_VERTEX:
+    case TopAbs_EDGE:
+    case TopAbs_WIRE:
     {
-      BRepTools::Clean(SH);
+      thePrs->SetDisplayPriority (4);
+      StdPrs_WFShape::Add (thePrs, theShape, theDrawer);
+      return;
+    }
+    case TopAbs_COMPOUND:
+    {
+      TopoDS_Iterator anExplor (theShape);
+      if (!anExplor.More())
+      {
+        return;
+      }
+      break;
+    }
+    default:
+    {
+      break;
     }
   }
-  
+
+  const Handle(Prs3d_Drawer)& aDefDrawer = theDrawer->Link();
+  if (aDefDrawer->DrawHiddenLine())
   {
-    try {
+    theDrawer->EnableDrawHiddenLine();
+  }
+  else
+  {
+    theDrawer->DisableDrawHiddenLine();
+  }
+
+  const Aspect_TypeOfDeflection aPrevDef = aDefDrawer->TypeOfDeflection();
+  aDefDrawer->SetTypeOfDeflection (Aspect_TOD_RELATIVE);
+  if (theDrawer->IsAutoTriangulation())
+  {
+    StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (theShape, theDrawer, Standard_True);
+  }
+
+  {
+    try
+    {
       OCC_CATCH_SIGNALS
-      switch (TypeOfHLR()) {
+      switch (theDrawer->TypeOfHLR())
+      {
         case Prs3d_TOH_Algo:
-          StdPrs_HLRShape::Add (aPresentation, SH, myDrawer, aProjector);
+          StdPrs_HLRShape::Add (thePrs, theShape, theDrawer, theProjector);
           break;
         case Prs3d_TOH_PolyAlgo:
         default:
-          StdPrs_HLRPolyShape::Add (aPresentation, SH, myDrawer, aProjector);
+          StdPrs_HLRPolyShape::Add (thePrs, theShape, theDrawer, theProjector);
           break;
       }
     }
-    catch (Standard_Failure) {
-#ifdef OCCT_DEBUG
-      cout <<"AIS_Shape::Compute(Proj) HLR Algorithm failed" << endl;
-#endif
-      StdPrs_WFShape::Add(aPresentation,SH,myDrawer);
+    catch (Standard_Failure const& anException)
+    {
+      Message::DefaultMessenger()->Send (TCollection_AsciiString()
+                                       + "Error: AIS_Shape::Compute() HLR Algorithm has failed ("
+                                       + anException.GetMessageString() + ")", Message_Fail);
+      StdPrs_WFShape::Add (thePrs, theShape, theDrawer);
     }
   }
 
-  defdrawer->SetTypeOfDeflection (prevdef);
+  aDefDrawer->SetTypeOfDeflection (aPrevDef);
 }
-
-//=======================================================================
-//function : SelectionType
-//purpose  : gives the type according to the Index of Selection Mode
-//=======================================================================
-
-TopAbs_ShapeEnum AIS_Shape::SelectionType(const Standard_Integer aMode)
-{
-  switch(aMode){
-  case 1:
-    return TopAbs_VERTEX;
-  case 2:
-    return TopAbs_EDGE;
-  case 3:
-    return TopAbs_WIRE;
-  case 4:
-    return TopAbs_FACE;
-  case 5:
-    return TopAbs_SHELL;
-  case 6:
-    return TopAbs_SOLID;
-  case 7:
-    return TopAbs_COMPSOLID;
-  case 8:
-    return TopAbs_COMPOUND;
-  case 0:
-  default:
-    return TopAbs_SHAPE;
-  }
-  
-}
-//=======================================================================
-//function : SelectionType
-//purpose  : gives the SelectionMode according to the Type od Decomposition...
-//=======================================================================
-Standard_Integer AIS_Shape::SelectionMode(const TopAbs_ShapeEnum aType)
-{
-  switch(aType){
-  case TopAbs_VERTEX:
-    return 1;
-  case TopAbs_EDGE:
-    return 2;
-  case TopAbs_WIRE:
-    return 3;
-  case  TopAbs_FACE:
-    return 4;
-  case TopAbs_SHELL:
-    return 5;
-  case TopAbs_SOLID:
-    return 6;
-  case TopAbs_COMPSOLID:
-    return 7;
-  case TopAbs_COMPOUND:
-    return 8;
-  case TopAbs_SHAPE:
-  default:
-    return 0;
-  }
-}
-
 
 //=======================================================================
 //function : ComputeSelection
@@ -398,14 +300,14 @@ void AIS_Shape::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
       return;
   }
 
-  static TopAbs_ShapeEnum TypOfSel;
-  TypOfSel = AIS_Shape::SelectionType(aMode);
+  TopAbs_ShapeEnum TypOfSel = AIS_Shape::SelectionType(aMode);
   TopoDS_Shape shape = myshape;
 
 // POP protection against crash in low layers
 
   Standard_Real aDeflection = Prs3d::GetDeflection(shape, myDrawer);
-  try {  
+  try
+  {
     OCC_CATCH_SIGNALS
     StdSelect_BRepSelectionTool::Load(aSelection,
                                       this,
@@ -414,9 +316,14 @@ void AIS_Shape::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
                                       aDeflection,
                                       myDrawer->HLRAngle(),
                                       myDrawer->IsAutoTriangulation());
-  } catch ( Standard_Failure ) {
-//    cout << "a Shape should be incorrect : A Selection on the Bnd  is activated   "<<endl;
-    if ( aMode == 0 ) {
+  }
+  catch (Standard_Failure const& anException)
+  {
+    Message::DefaultMessenger()->Send (TCollection_AsciiString()
+                                       + "Error: AIS_Shape::ComputeSelection(" + aMode + ") has failed ("
+                                       + anException.GetMessageString() + ")", Message_Fail);
+    if (aMode == 0)
+    {
       aSelection->Clear();
       Bnd_Box B = BoundingBox();
       Handle(StdSelect_BRepOwner) aOwner = new StdSelect_BRepOwner(shape,this);
@@ -429,12 +336,6 @@ void AIS_Shape::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
   StdSelect::SetDrawerForBRepOwner(aSelection,myDrawer);
 }
 
-Quantity_NameOfColor AIS_Shape::Color() const {
-Quantity_Color aColor;
-  Color(aColor);
-  return aColor.Name();
-}
-
 void AIS_Shape::Color( Quantity_Color& aColor ) const {
   aColor = myDrawer->ShadingAspect()->Color(myCurrentFacingModel);
 }
@@ -445,16 +346,6 @@ Graphic3d_NameOfMaterial AIS_Shape::Material() const {
 
 Standard_Real AIS_Shape::Transparency() const {
   return myDrawer->ShadingAspect()->Transparency(myCurrentFacingModel);
-}
-
-//=======================================================================
-//function : SetColor
-//purpose  : 
-//=======================================================================
-
-void AIS_Shape::SetColor(const Quantity_NameOfColor aCol)
-{
-  SetColor(Quantity_Color(aCol));
 }
 
 //=======================================================================
@@ -524,7 +415,6 @@ void AIS_Shape::setColor (const Handle(Prs3d_Drawer)& theDrawer,
 
   // override color
   theDrawer->ShadingAspect()->SetColor (theColor, myCurrentFacingModel);
-  theDrawer->SetShadingAspectGlobal (Standard_False);
   theDrawer->LineAspect()->SetColor (theColor);
   theDrawer->WireAspect()->SetColor (theColor);
   theDrawer->PointAspect()->SetColor (theColor);
@@ -541,7 +431,7 @@ void AIS_Shape::setColor (const Handle(Prs3d_Drawer)& theDrawer,
 void AIS_Shape::SetColor (const Quantity_Color& theColor)
 {
   setColor (myDrawer, theColor);
-  myOwnColor  = theColor;
+  myDrawer->SetColor (theColor);
   hasOwnColor = Standard_True;
 
   // modify shading presentation without re-computation
@@ -558,13 +448,6 @@ void AIS_Shape::SetColor (const Quantity_Color& theColor)
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-
-    // Set aspects for presentation
-    aPrs->SetPrimitivesAspect (anAreaAspect);
-    aPrs->SetPrimitivesAspect (aLineAspect);
-    aPrs->SetPrimitivesAspect (aPointAspect);
-
-    // Go through all groups to change color for all primitives
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -604,6 +487,7 @@ void AIS_Shape::UnsetColor()
     return;
   }
   hasOwnColor = Standard_False;
+  myDrawer->SetColor (myDrawer->HasLink() ? myDrawer->Link()->Color() : Quantity_Color (Quantity_NOC_WHITE));
 
   if (!HasWidth())
   {
@@ -647,30 +531,44 @@ void AIS_Shape::UnsetColor()
     myDrawer->SeenLineAspect()->SetColor (aColor);
   }
 
-  if (HasMaterial()
-   || IsTransparent())
+  if (!myDrawer->HasOwnShadingAspect())
   {
-    Graphic3d_MaterialAspect aDefaultMat (Graphic3d_NOM_BRASS);
+    //
+  }
+  else if (HasMaterial()
+        || IsTransparent()
+        || myDrawer->ShadingAspect()->Aspect()->ToMapTexture())
+  {
+    const Graphic3d_MaterialAspect aDefaultMat (Graphic3d_NOM_BRASS);
     Graphic3d_MaterialAspect mat = aDefaultMat;
+    Quantity_Color anInteriorColors[2] = {Quantity_NOC_CYAN1, Quantity_NOC_CYAN1};
+    if (myDrawer->HasLink())
+    {
+      anInteriorColors[0] = myDrawer->Link()->ShadingAspect()->Aspect()->InteriorColor();
+      anInteriorColors[1] = myDrawer->Link()->ShadingAspect()->Aspect()->BackInteriorColor();
+    }
     if (HasMaterial() || myDrawer->HasLink())
     {
-      mat = AIS_GraphicTool::GetMaterial(HasMaterial()? myDrawer : myDrawer->Link());
+      const Handle(Graphic3d_AspectFillArea3d)& aSrcAspect = (HasMaterial() ? myDrawer : myDrawer->Link())->ShadingAspect()->Aspect();
+      mat = myCurrentFacingModel != Aspect_TOFM_BACK_SIDE
+          ? aSrcAspect->FrontMaterial()
+          : aSrcAspect->BackMaterial();
     }
     if (HasMaterial())
     {
-      Quantity_Color aColor = aDefaultMat.AmbientColor();
-      if (myDrawer->HasLink())
-      {
-        aColor = myDrawer->Link()->ShadingAspect()->Color (myCurrentFacingModel);
-      }
+      const Quantity_Color aColor = myDrawer->HasLink()
+                                  ? myDrawer->Link()->ShadingAspect()->Color (myCurrentFacingModel)
+                                  : aDefaultMat.AmbientColor();
       mat.SetColor (aColor);
     }
     if (IsTransparent())
     {
       Standard_Real aTransp = myDrawer->ShadingAspect()->Transparency (myCurrentFacingModel);
-      mat.SetTransparency (aTransp);
+      mat.SetTransparency (Standard_ShortReal(aTransp));
     }
-    myDrawer->ShadingAspect()->SetMaterial (mat ,myCurrentFacingModel);
+    myDrawer->ShadingAspect()->SetMaterial (mat, myCurrentFacingModel);
+    myDrawer->ShadingAspect()->Aspect()->SetInteriorColor    (anInteriorColors[0]);
+    myDrawer->ShadingAspect()->Aspect()->SetBackInteriorColor(anInteriorColors[1]);
   }
   else
   {
@@ -680,8 +578,8 @@ void AIS_Shape::UnsetColor()
 
   // modify shading presentation without re-computation
   const PrsMgr_Presentations&        aPrsList  = Presentations();
-  Handle(Graphic3d_AspectFillArea3d) anAreaAsp = myDrawer->Link()->ShadingAspect()->Aspect();
-  Handle(Graphic3d_AspectLine3d)     aLineAsp  = myDrawer->Link()->LineAspect()->Aspect();
+  Handle(Graphic3d_AspectFillArea3d) anAreaAsp = myDrawer->ShadingAspect()->Aspect();
+  Handle(Graphic3d_AspectLine3d)     aLineAsp  = myDrawer->LineAspect()->Aspect();
   for (Standard_Integer aPrsIt = 1; aPrsIt <= aPrsList.Length(); ++aPrsIt)
   {
     const PrsMgr_ModedPresentation& aPrsModed = aPrsList.Value (aPrsIt);
@@ -691,10 +589,6 @@ void AIS_Shape::UnsetColor()
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-
-    aPrs->SetPrimitivesAspect (anAreaAsp);
-    aPrs->SetPrimitivesAspect (aLineAsp);
-
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -862,16 +756,6 @@ void AIS_Shape::setMaterial (const Handle(Prs3d_Drawer)&     theDrawer,
 
 //=======================================================================
 //function : SetMaterial
-//purpose  : 
-//=======================================================================
-
-void AIS_Shape::SetMaterial(const Graphic3d_NameOfMaterial aMat)
-{
-  SetMaterial(Graphic3d_MaterialAspect(aMat));
-}
-
-//=======================================================================
-//function : SetMaterial
 //purpose  :
 //=======================================================================
 
@@ -892,7 +776,6 @@ void AIS_Shape::SetMaterial (const Graphic3d_MaterialAspect& theMat)
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-    aPrs->SetPrimitivesAspect (anAreaAsp);
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -923,8 +806,13 @@ void AIS_Shape::UnsetMaterial()
     return;
   }
 
-  if (HasColor()
-   || IsTransparent())
+  if (!myDrawer->HasOwnShadingAspect())
+  {
+    //
+  }
+  else if (HasColor()
+        || IsTransparent()
+        || myDrawer->ShadingAspect()->Aspect()->ToMapTexture())
   {
     if(myDrawer->HasLink())
     {
@@ -933,8 +821,8 @@ void AIS_Shape::UnsetMaterial()
     }
     if (HasColor())
     {
-      myDrawer->ShadingAspect()->SetColor        (myOwnColor,     myCurrentFacingModel);
-      myDrawer->ShadingAspect()->SetTransparency (myTransparency, myCurrentFacingModel);
+      myDrawer->ShadingAspect()->SetColor        (myDrawer->Color(),        myCurrentFacingModel);
+      myDrawer->ShadingAspect()->SetTransparency (myDrawer->Transparency(), myCurrentFacingModel);
     }
   }
   else
@@ -955,7 +843,6 @@ void AIS_Shape::UnsetMaterial()
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-    aPrs->SetPrimitivesAspect (anAreaAsp);
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -999,7 +886,7 @@ void AIS_Shape::setTransparency (const Handle(Prs3d_Drawer)& theDrawer,
 void AIS_Shape::SetTransparency (const Standard_Real theValue)
 {
   setTransparency (myDrawer, theValue);
-  myTransparency = theValue;
+  myDrawer->SetTransparency ((Standard_ShortReal )theValue);
 
   // modify shading presentation without re-computation
   const PrsMgr_Presentations&        aPrsList  = Presentations();
@@ -1013,8 +900,6 @@ void AIS_Shape::SetTransparency (const Standard_Real theValue)
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-    aPrs->SetPrimitivesAspect (anAreaAsp);
-    aPrs->SetDisplayPriority (10); // force highest priority for translucent objects
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -1036,12 +921,14 @@ void AIS_Shape::SetTransparency (const Standard_Real theValue)
 
 void AIS_Shape::UnsetTransparency()
 {
-  myTransparency = 0.0;
+  myDrawer->SetTransparency (0.0f);
   if (!myDrawer->HasOwnShadingAspect())
   {
     return;
   }
-  else if (HasColor() || HasMaterial())
+  else if (HasColor()
+        || HasMaterial()
+        || myDrawer->ShadingAspect()->Aspect()->ToMapTexture())
   {
     myDrawer->ShadingAspect()->SetTransparency (0.0, myCurrentFacingModel);
   }
@@ -1062,7 +949,6 @@ void AIS_Shape::UnsetTransparency()
     }
 
     const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
-    aPrs->SetPrimitivesAspect (anAreaAsp);
     for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
     {
       const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
@@ -1071,7 +957,6 @@ void AIS_Shape::UnsetTransparency()
         aGroup->SetGroupPrimitivesAspect (anAreaAsp);
       }
     }
-    aPrs->ResetDisplayPriority();
   }
 
   myRecomputeEveryPrs = Standard_False; // no mode to recalculate :only viewer update

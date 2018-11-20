@@ -17,133 +17,72 @@
 #ifndef _AIS_Selection_HeaderFile
 #define _AIS_Selection_HeaderFile
 
+#include <AIS_NListOfEntityOwner.hxx>
+#include <AIS_SelectStatus.hxx>
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
-#include <TCollection_AsciiString.hxx>
-#include <AIS_NListTransient.hxx>
-#include <AIS_NListIteratorOfListTransient.hxx>
-#include <AIS_NDataMapOfTransientIteratorOfListTransient.hxx>
-#include <Standard_Integer.hxx>
-#include <MMgt_TShared.hxx>
-#include <Standard_CString.hxx>
-#include <Standard_Boolean.hxx>
-#include <AIS_SelectStatus.hxx>
-class Standard_NoSuchObject;
-class Standard_MultiplyDefined;
-class Standard_TypeMismatch;
-class Standard_Transient;
-
-
-class AIS_Selection;
-DEFINE_STANDARD_HANDLE(AIS_Selection, MMgt_TShared)
-
-
-class AIS_Selection : public MMgt_TShared
+//! Class holding the list of selected owners.
+class AIS_Selection : public Standard_Transient
 {
-
+  DEFINE_STANDARD_RTTIEXT(AIS_Selection, Standard_Transient)
 public:
 
+  //! creates a new selection.
+  Standard_EXPORT AIS_Selection();
   
-  //! creates a new selection and make it current in the session.
-  //! the selection will be accessible later through its name
-  //! to make it again current.
-  //!
-  //! Note that if a session has been created, a session with
-  //! the name  "default" is created.
-  //!
-  //! In this case, the is always a current selection which
-  //! is the last one created  until SetCurrentSelection is used.
-  //!
-  //! The class methods deals with the current selection.
-  //!
-  //! Warning : Better Call AIS_Selection::CreateSelection.
-  Standard_EXPORT AIS_Selection(const Standard_CString aName);
+  //! removes all the object of the selection.
+  Standard_EXPORT void Clear();
   
-  Standard_EXPORT static void Remove (const Standard_CString aName);
-  
-  //! returns True if a selection having this name exsits.
-  Standard_EXPORT static Standard_Boolean Find (const Standard_CString aName);
-  
-  //! calls the private constructor and puts the new Selection
-  //! in the list of existing selections.
-  //! returns False if the selection exists.
-  Standard_EXPORT static Standard_Boolean CreateSelection (const Standard_CString aName);
-  
-  Standard_EXPORT static Handle(AIS_Selection) Selection (const Standard_CString aName);
-  
-  //! returns False if There is no selection of name <aName>
-  Standard_EXPORT static Standard_Boolean SetCurrentSelection (const Standard_CString aName);
-  
-  Standard_EXPORT static Handle(AIS_Selection) CurrentSelection();
-  
-  //! Clears selection.
-  Standard_EXPORT static void ClearCurrentSelection();
-  
-  //! removes all the object of the currentselection.
-  Standard_EXPORT static void Select();
-  
-  //! if the object is not yet in the current selection, it will be added.
-  //! if the object is already in the current selection, it will be removed.
-  Standard_EXPORT static AIS_SelectStatus Select (const Handle(Standard_Transient)& anObject);
+  //! if the object is not yet in the selection, it will be added.
+  //! if the object is already in the selection, it will be removed.
+  Standard_EXPORT AIS_SelectStatus Select (const Handle(SelectMgr_EntityOwner)& theObject);
   
   //! the object is always add int the selection.
   //! faster when the number of objects selected is great.
-  Standard_EXPORT static AIS_SelectStatus AddSelect (const Handle(Standard_Transient)& anObject);
-  
+  Standard_EXPORT AIS_SelectStatus AddSelect (const Handle(SelectMgr_EntityOwner)& theObject);
+
   //! clears the selection and adds the object in the selection.
-  Standard_EXPORT static void ClearAndSelect (const Handle(Standard_Transient)& anObject);
-  
-  Standard_EXPORT static Standard_Boolean IsSelected (const Handle(Standard_Transient)& anObject);
-  
-  //! returns the number of objects selected.
-  Standard_EXPORT static Standard_Integer Extent();
-  
-  //! returns the single object selected.
-  //! Warning: raises TypeMismatch from Standard if Extent is not equal to 1.
-  Standard_EXPORT static Handle(Standard_Transient) Single();
-  
-    void Init();
-  
-    Standard_Boolean More() const;
-  
-    void Next();
-  
-    const Handle(Standard_Transient)& Value() const;
-  
-    Standard_Integer NbStored() const;
-  
-    const AIS_NListTransient& Objects() const;
-  
-  Standard_EXPORT static Standard_Integer Index (const Standard_CString aName);
+  void ClearAndSelect (const Handle(SelectMgr_EntityOwner)& theObject)
+  {
+    Clear();
+    Select (theObject);
+  }
 
+  //! checks if the object is in the selection.
+  Standard_Boolean IsSelected (const Handle(SelectMgr_EntityOwner)& theObject) const { return myResultMap.IsBound (theObject); }
 
+  //! Return the list of selected objects.
+  const AIS_NListOfEntityOwner& Objects() const { return myresult; }
 
+  //! Return the number of selected objects.
+  Standard_Integer Extent() const { return myresult.Size(); }
 
-  DEFINE_STANDARD_RTTIEXT(AIS_Selection,MMgt_TShared)
+  //! Return true if list of selected objects is empty.
+  Standard_Boolean IsEmpty() const { return myresult.IsEmpty(); }
 
-protected:
+public:
 
+  //! Start iteration through selected objects.
+  void Init() { myIterator = AIS_NListOfEntityOwner::Iterator(myresult); }
 
+  //! Return true if iterator points to selected object.
+  Standard_Boolean More() const { return myIterator.More(); }
 
+  //! Continue iteration through selected objects.
+  void Next() { myIterator.Next(); }
+
+  //! Return selected object at iterator position.
+  const Handle(SelectMgr_EntityOwner)& Value() const { return myIterator.Value(); }
 
 private:
 
-
-  TCollection_AsciiString myName;
-  AIS_NListTransient myresult;
-  AIS_NListIteratorOfListTransient myIterator;
-  AIS_NDataMapOfTransientIteratorOfListTransient myResultMap;
-  Standard_Integer myNb;
-
+  AIS_NListOfEntityOwner myresult;
+  AIS_NListOfEntityOwner::Iterator myIterator;
+  NCollection_DataMap<Handle(SelectMgr_EntityOwner), AIS_NListOfEntityOwner::Iterator> myResultMap;
 
 };
 
-
-#include <AIS_Selection.lxx>
-
-
-
-
+DEFINE_STANDARD_HANDLE(AIS_Selection, Standard_Transient)
 
 #endif // _AIS_Selection_HeaderFile

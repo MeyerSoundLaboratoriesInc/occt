@@ -40,8 +40,8 @@ public:
                                       const gp_Pnt2d& theP3) Standard_OVERRIDE;
 
   //! Returns a copy of the frustum transformed according to the matrix given
-  Standard_EXPORT virtual NCollection_Handle<SelectMgr_BaseFrustum> ScaleAndTransform (const Standard_Integer theScale,
-                                                                                       const gp_Trsf& theTrsf) Standard_OVERRIDE;
+  Standard_EXPORT virtual Handle(SelectMgr_BaseFrustum) ScaleAndTransform (const Standard_Integer theScale,
+                                                                           const gp_GTrsf& theTrsf) const Standard_OVERRIDE;
 
   // SAT Tests for different objects
 
@@ -84,11 +84,15 @@ public:
   //! Nullifies the handle to corresponding builder instance to prevent memory leaks
   Standard_EXPORT void Clear();
 
+  //! Stores plane equation coefficients (in the following form:
+  //! Ax + By + Cz + D = 0) to the given vector
+  Standard_EXPORT virtual void GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const Standard_OVERRIDE;
+
 private:
 
-  void cacheVertexProjections (SelectMgr_TriangularFrustum* theFrustum);
+  void cacheVertexProjections (SelectMgr_TriangularFrustum* theFrustum) const;
 
-  DEFINE_STANDARD_RTTIEXT(SelectMgr_TriangularFrustum,Standard_Transient)
+  DEFINE_STANDARD_RTTIEXT(SelectMgr_TriangularFrustum,SelectMgr_Frustum<3>)
 };
 
 #endif // _SelectMgr_TriangularFrustum_HeaderFile

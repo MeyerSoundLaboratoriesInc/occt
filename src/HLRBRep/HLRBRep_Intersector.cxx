@@ -40,9 +40,9 @@
 #include <StdFail_UndefinedDerivative.hxx>
 
 #include <stdio.h>
-#define PERF 0
+//#define PERF
 
-#if PERF
+#ifdef PERF
 static Standard_Integer NbIntersCS=0;
 static Standard_Integer NbIntersCSVides=0;
 static Standard_Integer NbIntersAuto=0;
@@ -64,7 +64,7 @@ static Standard_Integer NbIntersSimulate=0;
 HLRBRep_Intersector::HLRBRep_Intersector () :
 myPolyhedron(NULL)
 {
-#if PERF
+#ifdef PERF
   if(NbInters) { 
     printf("\n--------------------------------------");
     printf("\nNbIntersSimulate  : %6d",NbIntersSimulate);
@@ -84,6 +84,10 @@ myPolyhedron(NULL)
   =NbInters=NbIntersVides=NbInters1Segment=NbInters1Point=NbIntersNPoints
   = NbIntersNSegments=NbIntersPointEtSegment=NbIntersCSVides=0;
 #endif
+
+  // Set minimal number of samples in case of HLR polygonal intersector.
+  const Standard_Integer aMinNbHLRSamples = 4;
+  myIntersector.SetMinNbSamples(aMinNbHLRSamples);
 }
 
 //=======================================================================
@@ -95,7 +99,7 @@ void  HLRBRep_Intersector::Perform (const Standard_Address A1,
 				    const Standard_Real da1,
 				    const Standard_Real db1)
 {
-#if PERF 
+#ifdef PERF
   NbIntersAuto++;
 #endif
 
@@ -118,7 +122,10 @@ void  HLRBRep_Intersector::Perform (const Standard_Address A1,
   b = ((HLRBRep_Curve*)myC1)->Parameter2d(b);
   IntRes2d_Domain D1(pa,a,(Standard_Real)ta,pb,b,(Standard_Real)tb);
 
-  tol = (Standard_Real)(((HLRBRep_EdgeData*) A1)->Tolerance());
+  //modified by jgv, 18.04.2016 for OCC27341
+  //tol = (Standard_Real)(((HLRBRep_EdgeData*) A1)->Tolerance());
+  tol = Precision::Confusion();
+  //////////////////////////////////////////
 
   myIntersector.Perform(myC1,D1,tol,tol);
 }
@@ -155,8 +162,12 @@ void  HLRBRep_Intersector::Perform (const Standard_Integer /*nA*/,
   Standard_Real a1,b1,a2,b2,d,dd,tol,tol1,tol2;
   Standard_ShortReal ta,tb;
 
-  tol1 = (Standard_Real)(((HLRBRep_EdgeData*) A1)->Tolerance());
-  tol2 = (Standard_Real)(((HLRBRep_EdgeData*) A2)->Tolerance());
+  //modified by jgv, 18.04.2016 for OCC27341
+  //tol1 = (Standard_Real)(((HLRBRep_EdgeData*) A1)->Tolerance());
+  //tol2 = (Standard_Real)(((HLRBRep_EdgeData*) A2)->Tolerance());
+  tol1 = Precision::Confusion();
+  tol2 = Precision::Confusion();
+  //////////////////////////////////////////
   if (tol1 > tol2) tol = tol1;
   else             tol = tol2;
 
@@ -350,7 +361,7 @@ void  HLRBRep_Intersector::Perform (const Standard_Integer /*nA*/,
 
   
   
-#if PERF
+#ifdef PERF
   NbInters++;
   if(myIntersector.NbPoints()==1) { 
     if(myIntersector.NbSegments()==0) { 
@@ -391,7 +402,7 @@ void  HLRBRep_Intersector::SimulateOnePoint(const Standard_Address A1,
 					    const Standard_Real    u,
 					    const Standard_Address A2,
 					    const Standard_Real    v) { 
-#if PERF
+#ifdef PERF
   NbIntersSimulate++;
 #endif
   Standard_Address myC1 = ((HLRBRep_EdgeData*) A1)->Curve();
@@ -424,7 +435,7 @@ void  HLRBRep_Intersector::Load (Standard_Address& A)
 {
   mySurface = A;
   if (myPolyhedron != NULL) { 
-    delete (HLRBRep_ThePolyhedronOfInterCSurf*)myPolyhedron;
+    delete myPolyhedron;
     myPolyhedron = NULL;
   }
 }
@@ -458,13 +469,11 @@ void  HLRBRep_Intersector::Perform (const gp_Lin& L,
 	v2   = HLRBRep_SurfaceTool::LastVParameter(mySurface);   
 	nbsu = HLRBRep_SurfaceTool::NbSamplesU(mySurface,u1,u2);
 	nbsv = HLRBRep_SurfaceTool::NbSamplesV(mySurface,v1,v2);
-	myPolyhedron = (Standard_Address)
-	  (new HLRBRep_ThePolyhedronOfInterCSurf
-	   (mySurface,nbsu,nbsv,u1,v1,u2,v2));
+	myPolyhedron =
+    new HLRBRep_ThePolyhedronOfInterCSurf(mySurface,nbsu,nbsv,u1,v1,u2,v2);
       }
       Standard_Real x0,y0,z0,x1,y1,z1,pmin,pmax;//,pp;
-      ((HLRBRep_ThePolyhedronOfInterCSurf*)myPolyhedron)
-	->Bounding().Get(x0,y0,z0,x1,y1,z1);
+      myPolyhedron->Bounding().Get(x0,y0,z0,x1,y1,z1);
 #if 0
       pmax = pmin = ElCLib::Parameter(L, gp_Pnt((x1+x0)*0.5,
 						(y1+y0)*0.5,
@@ -509,7 +518,7 @@ void  HLRBRep_Intersector::Perform (const gp_Lin& L,
 
     }
   }
-#if PERF
+#ifdef PERF
   NbIntersCS++;
   if(myCSIntersector.NbPoints()==0) { 
     NbIntersCSVides++;
@@ -620,7 +629,7 @@ HLRBRep_Intersector::CSSegment (const Standard_Integer N) const
 void HLRBRep_Intersector::Destroy ()
 {
   if (myPolyhedron != NULL)
-    delete (HLRBRep_ThePolyhedronOfInterCSurf *)myPolyhedron;
+    delete myPolyhedron;
 }
 
 
@@ -714,7 +723,7 @@ void  HLRBRep_Intersector::Perform (const Standard_Integer nA,
   
   
   
-#if PERF
+#ifdef PERF
   NbInters++;
   if(myIntersector.NbPoints()==1) { 
     if(myIntersector.NbSegments()==0) { 

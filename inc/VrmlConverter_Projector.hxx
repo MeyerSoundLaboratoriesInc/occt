@@ -29,15 +29,14 @@
 #include <VrmlConverter_TypeOfCamera.hxx>
 #include <VrmlConverter_TypeOfLight.hxx>
 #include <Vrml_MatrixTransform.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <TopTools_Array1OfShape.hxx>
-#include <Quantity_Length.hxx>
 #include <Standard_OStream.hxx>
 class HLRAlgo_Projector;
 
 
 class VrmlConverter_Projector;
-DEFINE_STANDARD_HANDLE(VrmlConverter_Projector, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(VrmlConverter_Projector, Standard_Transient)
 
 
 //! defines projector  and calculates properties of cameras and lights from Vrml
@@ -45,13 +44,13 @@ DEFINE_STANDARD_HANDLE(VrmlConverter_Projector, MMgt_TShared)
 //! and  MatrixTransform  )  to display all scene  shapes  with  arbitrary locations
 //! for requested the Projection Vector,  High Point Direction and the Focus
 //! and adds them ( method Add ) to anOSream.
-class VrmlConverter_Projector : public MMgt_TShared
+class VrmlConverter_Projector : public Standard_Transient
 {
 
 public:
 
   
-  Standard_EXPORT VrmlConverter_Projector(const TopTools_Array1OfShape& Shapes, const Quantity_Length Focus, const Quantity_Length DX, const Quantity_Length DY, const Quantity_Length DZ, const Quantity_Length XUp, const Quantity_Length YUp, const Quantity_Length ZUp, const VrmlConverter_TypeOfCamera Camera = VrmlConverter_NoCamera, const VrmlConverter_TypeOfLight Light = VrmlConverter_NoLight);
+  Standard_EXPORT VrmlConverter_Projector(const TopTools_Array1OfShape& Shapes, const Standard_Real Focus, const Standard_Real DX, const Standard_Real DY, const Standard_Real DZ, const Standard_Real XUp, const Standard_Real YUp, const Standard_Real ZUp, const VrmlConverter_TypeOfCamera Camera = VrmlConverter_NoCamera, const VrmlConverter_TypeOfLight Light = VrmlConverter_NoLight);
   
   Standard_EXPORT void SetCamera (const VrmlConverter_TypeOfCamera aCamera);
   
@@ -73,15 +72,7 @@ public:
   
   Standard_EXPORT HLRAlgo_Projector Projector() const;
 
-
-
-
-  DEFINE_STANDARD_RTTIEXT(VrmlConverter_Projector,MMgt_TShared)
-
-protected:
-
-
-
+  DEFINE_STANDARD_RTTIEXT(VrmlConverter_Projector,Standard_Transient)
 
 private:
 
@@ -98,11 +89,5 @@ private:
 
 
 };
-
-
-
-
-
-
 
 #endif // _VrmlConverter_Projector_HeaderFile

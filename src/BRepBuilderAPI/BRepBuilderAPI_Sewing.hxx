@@ -30,10 +30,11 @@
 #include <Standard_Integer.hxx>
 #include <TopTools_DataMapOfShapeListOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <TopTools_ListOfShape.hxx>
 #include <TopTools_SequenceOfShape.hxx>
 #include <TColStd_IndexedMapOfInteger.hxx>
+#include <TColStd_SequenceOfBoolean.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
 #include <TColStd_Array1OfBoolean.hxx>
 #include <TColStd_Array1OfReal.hxx>
@@ -56,7 +57,7 @@ class Geom_Curve;
 
 
 class BRepBuilderAPI_Sewing;
-DEFINE_STANDARD_HANDLE(BRepBuilderAPI_Sewing, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(BRepBuilderAPI_Sewing, Standard_Transient)
 
 //! Provides methods to
 //!
@@ -80,7 +81,7 @@ DEFINE_STANDARD_HANDLE(BRepBuilderAPI_Sewing, MMgt_TShared)
 //! - output free edges if necessary
 //! - output multiple edges if necessary
 //! - output the problems if any
-class BRepBuilderAPI_Sewing : public MMgt_TShared
+class BRepBuilderAPI_Sewing : public Standard_Transient
 {
 
 public:
@@ -241,7 +242,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(BRepBuilderAPI_Sewing,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(BRepBuilderAPI_Sewing,Standard_Transient)
 
 protected:
 
@@ -254,14 +255,17 @@ protected:
   
   Standard_EXPORT Standard_Boolean IsMergedClosed (const TopoDS_Edge& Edge1, const TopoDS_Edge& Edge2, const TopoDS_Face& fase) const;
   
-  Standard_EXPORT Standard_Boolean FindCandidates (TopTools_SequenceOfShape& seqSections, TColStd_IndexedMapOfInteger& mapReference, TColStd_SequenceOfInteger& seqCandidates, TColStd_SequenceOfInteger& seqOrientations);
+  Standard_EXPORT Standard_Boolean FindCandidates (TopTools_SequenceOfShape& seqSections, TColStd_IndexedMapOfInteger& mapReference, TColStd_SequenceOfInteger& seqCandidates, TColStd_SequenceOfBoolean& seqOrientations);
   
-  Standard_EXPORT void AnalysisNearestEdges (const TopTools_SequenceOfShape& sequenceSec, TColStd_SequenceOfInteger& seqIndCandidate, TColStd_SequenceOfInteger& seqOrientations, const Standard_Boolean evalDist = Standard_True);
+  Standard_EXPORT void AnalysisNearestEdges (const TopTools_SequenceOfShape& sequenceSec, TColStd_SequenceOfInteger& seqIndCandidate, TColStd_SequenceOfBoolean& seqOrientations, const Standard_Boolean evalDist = Standard_True);
   
   //! Merged nearest edges.
-  Standard_EXPORT Standard_Boolean MergedNearestEdges (const TopoDS_Shape& edge, TopTools_SequenceOfShape& SeqMergedEdge, TColStd_SequenceOfInteger& SeqMergedOri);
+  Standard_EXPORT Standard_Boolean MergedNearestEdges (const TopoDS_Shape& edge, TopTools_SequenceOfShape& SeqMergedEdge, TColStd_SequenceOfBoolean& SeqMergedOri);
   
   Standard_EXPORT void EdgeProcessing (const Handle(Message_ProgressIndicator)& thePI = 0);
+
+  //! Recompute regularity on merged edges
+  Standard_EXPORT void EdgeRegularity (const Handle(Message_ProgressIndicator)& thePI = 0);
   
   Standard_EXPORT void CreateOutputInformations();
   
@@ -291,7 +295,8 @@ protected:
   
   //! Get wire from free edges.
   //! This method is called from EdgeProcessing only
-  Standard_EXPORT virtual void GetFreeWires (TopTools_MapOfShape& MapFreeEdges, TopTools_SequenceOfShape& seqWires);
+  Standard_EXPORT virtual void GetFreeWires (TopTools_IndexedMapOfShape& MapFreeEdges,
+                                             TopTools_SequenceOfShape& seqWires);
   
 
   //! This method is called from MergingOfSections only
@@ -311,7 +316,7 @@ protected:
   
 
   //! This method is called from Merging only
-  Standard_EXPORT virtual TopoDS_Edge SameParameterEdge (const TopoDS_Shape& edge, const TopTools_SequenceOfShape& seqEdges, const TColStd_SequenceOfInteger& seqForward, TopTools_MapOfShape& mapMerged, const Handle(BRepTools_ReShape)& locReShape);
+  Standard_EXPORT virtual TopoDS_Edge SameParameterEdge (const TopoDS_Shape& edge, const TopTools_SequenceOfShape& seqEdges, const TColStd_SequenceOfBoolean& seqForward, TopTools_MapOfShape& mapMerged, const Handle(BRepTools_ReShape)& locReShape);
   
 
   //! This method is called from Merging only

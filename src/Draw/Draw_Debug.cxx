@@ -18,8 +18,6 @@
 #include <Standard_ErrorHandler.hxx>
 #include <Standard_Failure.hxx>
 
-extern Draw_Interpretor theCommands;
-
 // This file defines global functions not declared in any public header,
 // intended for use from debugger prompt (Command Window in Visual Studio)
 
@@ -32,11 +30,13 @@ Standard_EXPORT const char* Draw_Eval (const char *theCommandStr)
   }
   try {
     OCC_CATCH_SIGNALS
-    theCommands.Eval (theCommandStr);
-    return theCommands.Result();
+    Draw_Interpretor& aCommands = Draw::GetInterpretor();
+    aCommands.Eval (theCommandStr);
+    cout << aCommands.Result() << endl;
+    return aCommands.Result();
   }
-  catch (Standard_Failure)
+  catch (Standard_Failure const& anException)
   {
-    return Standard_Failure::Caught()->GetMessageString();
+    return anException.GetMessageString();
   }
 }

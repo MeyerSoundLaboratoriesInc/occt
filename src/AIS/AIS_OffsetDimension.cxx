@@ -90,10 +90,6 @@ void AIS_OffsetDimension::Compute(const Handle(PrsMgr_PresentationManager3d)&,
 				  const Handle(Prs3d_Presentation)& aprs,
 				  const Standard_Integer)
 {
-  aprs->Clear();
-
-  //cout << endl << "This is strange Offset Dimension!" << endl;
-
   gp_Trsf aInvertTrsf = myRelativePos;
   //myArrowSize = fabs (myVal/5.);
   myArrowSize = fabs (myVal/10.0);
@@ -144,7 +140,7 @@ void AIS_OffsetDimension::Compute(const Handle(PrsMgr_PresentationManager3d)&,
 void AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)& /*aProjector*/,
 				  const Handle(Prs3d_Presentation)& /*aPresentation*/)
 {
-// Standard_NotImplemented::Raise("AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)& aProjector,const Handle(Prs3d_Presentation)& aPresentation)");
+// throw Standard_NotImplemented("AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)& aProjector,const Handle(Prs3d_Presentation)& aPresentation)");
 // PrsMgr_PresentableObject::Compute( aProjector , aPresentation ) ;
 }
 
@@ -152,7 +148,7 @@ void AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)& aProjector,
 				  const Handle(Geom_Transformation)& aTransformation,
 				  const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)&,const Handle(Geom_Transformation)&,const Handle(Prs3d_Presentation)&)");
+// throw Standard_NotImplemented("AIS_OffsetDimension::Compute(const Handle(Prs3d_Projector)&,const Handle(Geom_Transformation)&,const Handle(Prs3d_Presentation)&)");
  PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation ) ;
 }
 

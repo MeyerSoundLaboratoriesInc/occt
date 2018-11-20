@@ -2,6 +2,7 @@
 
 #include "Application.h"
 
+#include <Standard_WarningsDisable.hxx>
 #include <QDir>
 #include <QLayout>
 #include <QComboBox>
@@ -12,6 +13,7 @@
 #include <QApplication>
 #include <QWidget>
 #include <QStyleFactory>
+#include <Standard_WarningsRestore.hxx>
 
 #include <AIS_Shape.hxx>
 #include <AIS_InteractiveObject.hxx>
@@ -245,39 +247,28 @@ bool Translate::exportModel( const int format, const Handle(AIS_InteractiveConte
 
 bool Translate::exportModel( const int format, const QString& file, const Handle(TopTools_HSequenceOfShape)& shapes )
 {
-    bool status;
     try {
         switch ( format )
         {
-        case FormatBREP:
-            status = exportBREP( file, shapes );
-            break;
-        case FormatIGES:
-            status = exportIGES( file, shapes );
-            break;
-        case FormatSTEP:
-            status = exportSTEP( file, shapes );
-            break;
-        case FormatSTL:
-            status = exportSTL( file, shapes );
-            break;
-        case FormatVRML:
-            status = exportVRML( file, shapes );
-            break;
+        case FormatBREP: return exportBREP( file, shapes );
+        case FormatIGES: return exportIGES( file, shapes );
+        case FormatSTEP: return exportSTEP( file, shapes );
+        case FormatSTL:  return exportSTL ( file, shapes );
+        case FormatVRML: return exportVRML( file, shapes );
         }
     } catch ( Standard_Failure ) {
-        status = false;
+        //
     }
-    return status;
+    return false;
 }
 
 Handle(TopTools_HSequenceOfShape) Translate::getShapes( const Handle(AIS_InteractiveContext)& ic )
 {
     Handle(TopTools_HSequenceOfShape) aSequence;
     Handle(AIS_InteractiveObject) picked;
-    for ( ic->InitCurrent(); ic->MoreCurrent(); ic->NextCurrent() )
+    for ( ic->InitSelected(); ic->MoreSelected(); ic->NextSelected() )
     {
-        Handle(AIS_InteractiveObject) obj = ic->Current();
+        Handle(AIS_InteractiveObject) obj = ic->SelectedInteractive();
         if ( obj->IsKind( STANDARD_TYPE( AIS_Shape ) ) )
         {
             TopoDS_Shape shape = Handle(AIS_Shape)::DownCast(obj)->Shape();
@@ -316,7 +307,7 @@ QString Translate::selectFileName( const int format, const bool import )
     if ( idx != -1 )
     {
       QString tail = selFilter.mid( idx + 3 );
-			int idx = tail.indexOf( " " );
+			idx = tail.indexOf( " " );
       if ( idx == -1 )
         idx = tail.indexOf( ")" );
       QString ext = tail.left( idx );
@@ -419,34 +410,37 @@ Handle(TopTools_HSequenceOfShape) Translate::importIGES( const QString& file )
 
 Handle(TopTools_HSequenceOfShape) Translate::importSTEP( const QString& file )
 {
-	Handle(TopTools_HSequenceOfShape) aSequence;
-  TCollection_AsciiString  aFilePath = file.toUtf8().data();
-	STEPControl_Reader aReader;
-	IFSelect_ReturnStatus status = aReader.ReadFile( aFilePath.ToCString() );
-	if ( status == IFSelect_RetDone )
+    Handle(TopTools_HSequenceOfShape) aSequence = new TopTools_HSequenceOfShape;
+    TCollection_AsciiString  aFilePath = file.toUtf8().data();
+    STEPControl_Reader aReader;
+    IFSelect_ReturnStatus status = aReader.ReadFile( aFilePath.ToCString() );
+    if ( status != IFSelect_RetDone )
     {
-	    //Interface_TraceFile::SetDefault();
-	    bool failsonly = false;
-	    aReader.PrintCheckLoad( failsonly, IFSelect_ItemsByEntity );
+        return aSequence;
+    }
 
-	    int nbr = aReader.NbRootsForTransfer();
-	    aReader.PrintCheckTransfer( failsonly, IFSelect_ItemsByEntity );
-	    for ( Standard_Integer n = 1; n <= nbr; n++ )
-	    {
-	        bool ok = aReader.TransferRoot( n );
-	        int nbs = aReader.NbShapes();
-	        if ( ok == true && nbs > 0 )
-            {
-	            aSequence = new TopTools_HSequenceOfShape();
-	            for ( int i = 1; i <= nbs; i++ )
-                {
-		            TopoDS_Shape shape = aReader.Shape( i );
-		            aSequence->Append( shape );
-	            }
-            }
+    //Interface_TraceFile::SetDefault();
+    bool failsonly = false;
+    aReader.PrintCheckLoad( failsonly, IFSelect_ItemsByEntity );
+
+    int nbr = aReader.NbRootsForTransfer();
+    aReader.PrintCheckTransfer( failsonly, IFSelect_ItemsByEntity );
+    for ( Standard_Integer n = 1; n <= nbr; n++ )
+    {
+        aReader.TransferRoot( n );
+    }
+
+    int nbs = aReader.NbShapes();
+    if ( nbs > 0 )
+    {
+        for ( int i = 1; i <= nbs; i++ )
+        {
+         TopoDS_Shape shape = aReader.Shape( i );
+         aSequence->Append( shape );
         }
     }
-	return aSequence;
+
+    return aSequence;
 }
 
 // ----------------------------- Export functionality -----------------------------
@@ -457,7 +451,10 @@ bool Translate::exportBREP( const QString& file, const Handle(TopTools_HSequence
         return false;
 
     TopoDS_Shape shape = shapes->Value( 1 );
-    return BRepTools::Write( shape, (Standard_CString)file.toLatin1().constData() ); 
+    
+    const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
+    
+    return BRepTools::Write( shape, anUtf8Path.ToCString() ); 
 }
 
 bool Translate::exportIGES( const QString& file, const Handle(TopTools_HSequenceOfShape)& shapes )
@@ -472,7 +469,10 @@ bool Translate::exportIGES( const QString& file, const Handle(TopTools_HSequence
 	for ( int i = 1; i <= shapes->Length(); i++ )
 		writer.AddShape ( shapes->Value( i ) );
 	writer.ComputeModel();
-	return writer.Write( (Standard_CString)file.toLatin1().constData() );
+	
+	const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
+	
+	return writer.Write( anUtf8Path.ToCString() );
 }
 
 bool Translate::exportSTEP( const QString& file, const Handle(TopTools_HSequenceOfShape)& shapes )
@@ -500,8 +500,10 @@ bool Translate::exportSTEP( const QString& file, const Handle(TopTools_HSequence
         if ( status != IFSelect_RetDone )
             return false;
     }
+    
+    const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
 
-    status = writer.Write( (Standard_CString)file.toLatin1().constData() );
+    status = writer.Write( anUtf8Path.ToCString() );
 
     switch ( status )
     {
@@ -513,6 +515,9 @@ bool Translate::exportSTEP( const QString& file, const Handle(TopTools_HSequence
         break;
     case IFSelect_RetVoid:
         myInfo = QObject::tr( "INF_NOTHING_ERROR" );
+        break;
+    case IFSelect_RetStop:
+    case IFSelect_RetDone:
         break;
     }
     return status == IFSelect_RetDone;
@@ -539,7 +544,10 @@ bool Translate::exportSTL( const QString& file, const Handle(TopTools_HSequenceO
 	}
 
 	StlAPI_Writer writer;
-	writer.Write( res, (Standard_CString)file.toLatin1().constData() );
+	
+	const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
+	
+	writer.Write( res, anUtf8Path.ToCString() );
 
     return true;
 }
@@ -565,7 +573,10 @@ bool Translate::exportVRML( const QString& file, const Handle(TopTools_HSequence
 	}
 
 	VrmlAPI_Writer writer;
-	writer.Write( res, (Standard_CString)file.toLatin1().constData() );
+	
+	const TCollection_AsciiString anUtf8Path (file.toUtf8().data());
+	
+	writer.Write( res, anUtf8Path.ToCString() );
 
     return true;
 }

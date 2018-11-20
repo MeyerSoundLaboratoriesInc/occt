@@ -60,6 +60,9 @@
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Wire.hxx>
 #include <TopTools_HSequenceOfShape.hxx>
+#include <Adaptor3d_CurveOnSurface.hxx>
+#include <BRepAdaptor_HCurve2d.hxx>
+#include <BRepAdaptor_HSurface.hxx>
 
 #include <stdio.h>
 static Standard_Integer tolerance
@@ -227,6 +230,66 @@ static Standard_Integer projcurve
   di<<"Result : "<<X<<"  "<<Y<<"  "<<Z<<"\nParam = "<<param<<"  Gap = "<<dist<<"\n";
   return 0;
 }
+static Standard_Integer projpcurve
+(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  //  admet une EDGE ou une CURVE
+  if (argc < 7)
+  {
+    di << "Give : projpcurve edge face tol X Y Z [start_param]\n";
+    return 1;
+  }
+
+  TopoDS_Edge aEdge = TopoDS::Edge(DBRep::Get(argv[1]));
+  if (aEdge.IsNull())
+  {
+    di << "SHAPE " << argv[1] << " is not an EDGE\n"; return 1 /* Error */;
+  }
+  TopoDS_Face aFace = TopoDS::Face(DBRep::Get(argv[2]));
+  if (aFace.IsNull())
+  {
+    di << "SHAPE " << argv[2] << " is not a FACE\n"; return 1 /* Error */;
+  }
+
+  Standard_Real aTol = Draw::Atof(argv[3]);
+
+
+  Standard_Real X = Draw::Atof(argv[4]);
+  Standard_Real Y = Draw::Atof(argv[5]);
+  Standard_Real Z = Draw::Atof(argv[6]);
+
+  gp_Pnt aP3D(X, Y, Z);
+
+  Standard_Boolean IsStartPoint = Standard_False;
+  Standard_Real startpar = 0.;
+  if (argc > 7)
+  {
+    startpar = Draw::Atof(argv[7]);
+    IsStartPoint = Standard_True;
+  }
+
+  Adaptor3d_CurveOnSurface aCOnS =
+    Adaptor3d_CurveOnSurface(new BRepAdaptor_HCurve2d(BRepAdaptor_Curve2d(aEdge, aFace)),
+    new BRepAdaptor_HSurface(BRepAdaptor_Surface(aFace, Standard_False)));
+
+  gp_Pnt aPnt;
+  Standard_Real aParam;
+  ShapeAnalysis_Curve aTool;
+  Standard_Real aDist = RealLast();
+  if (IsStartPoint)
+  {
+    aDist = aTool.NextProject(startpar, aCOnS, aP3D, aTol, aPnt, aParam);
+  }
+  else
+  {
+    aDist = aTool.Project(aCOnS, aP3D, aTol, aPnt, aParam, Standard_False);
+  }
+
+  di << "Point:" << "\n" << aPnt.X() << " " << aPnt.Y() << " " << aPnt.Z() << "\n";
+  di << "Param: " << aParam << "\n";
+  di << "Dist: " << aDist << "\n";
+  return 0;
+}
 
 static Standard_Integer anaface
   (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
@@ -295,20 +358,29 @@ static Standard_Integer anaface
 //      On va tacher de calculer les positions et les comparer
       gp_Pnt2d fuv,luv;
       if (Edge.Orientation() == TopAbs_FORWARD)
-	{ TopExp::Vertices (Edge,fv,lv);
-	  if (ia2d) BRep_Tool::UVPoints (Edge,Face,fuv,luv); }
+      {
+        TopExp::Vertices (Edge, fv, lv);
+        if (ia2d) BRep_Tool::UVPoints (Edge, Face, fuv, luv);
+      }
       else
-	{ TopExp::Vertices (Edge,lv,fv);
-	  if (ia2d) BRep_Tool::UVPoints (Edge,Face,luv,fuv); }
+      {
+        TopExp::Vertices (Edge, lv, fv);
+        if (ia2d) BRep_Tool::UVPoints (Edge, Face, luv, fuv);
+      }
       gp_Pnt fp = BRep_Tool::Pnt (fv);
       gp_Pnt lp = BRep_Tool::Pnt (lv);
       gp_Pnt fxyz, lxyz;
-      if (ia2d) {
+      if (ia2d)
+      {
 	surface->D0 (fuv.X(),fuv.Y(),fxyz);
 	surface->D0 (luv.X(),luv.Y(),lxyz);
 	df3d = fp.Distance    (fxyz); maxp3d = Max (maxp3d,df3d);
 	dl3d = lp.Distance    (lxyz); maxp3d = Max (maxp3d,dl3d);
-	if (nbe > 1) duv  = finuv.Distance (fuv);  maxuv  = Max (maxuv, duv);
+        if (nbe > 1)
+        {
+          duv = finuv.Distance (fuv);
+          maxuv = Max (maxuv, duv);
+        }
 // et les min-max
 	u1 = Min (fuv.X(),luv.X());  u2 = Max (fuv.X(),luv.X());
 	v1 = Min (fuv.Y(),luv.Y());  v2 = Max (fuv.Y(),luv.Y());
@@ -613,8 +685,8 @@ static Standard_Integer freebounds (Draw_Interpretor& di,
   if (shape.IsNull()) return 1;
   Standard_Real toler = Draw::Atof (a[2]);
   Standard_Boolean splitclosed = Standard_False, splitopen = Standard_False;
-  if ( n > 3) splitclosed = Draw::Atoi (a[3]);
-  if ( n > 4) splitopen   = Draw::Atoi (a[4]);
+  if ( n > 3) splitclosed = Draw::Atoi (a[3]) != 0;
+  if ( n > 4) splitopen   = Draw::Atoi (a[4]) != 0;
 
   ShapeAnalysis_FreeBounds F;
   if (toler <= 0)
@@ -677,8 +749,8 @@ static Standard_Integer FreeBoundsProps(Draw_Interpretor& di,
   Standard_Real toler = 0.;
   Standard_Boolean splitclosed = Standard_False, splitopen = Standard_False;
   if (n > 2) toler =  Draw::Atof(a[2]);
-  if (n > 3) splitclosed = Draw::Atoi(a[3]);
-  if (n > 4) splitopen   = Draw::Atoi(a[4]);
+  if (n > 3) splitclosed = Draw::Atoi(a[3]) != 0;
+  if (n > 4) splitopen   = Draw::Atoi(a[4]) != 0;
   ShapeAnalysis_FreeBoundsProperties analyzer;
   if (toler > 0)
     analyzer.Init(source, toler, splitclosed, splitopen);
@@ -735,8 +807,8 @@ static Standard_Integer closefreebounds (Draw_Interpretor& di,
   if (shape.IsNull()) return 1;
   Standard_Real sewtoler = Draw::Atof (a[2]), closetoler = Draw::Atof (a[3]);
   Standard_Boolean splitclosed = Standard_False, splitopen = Standard_False;
-  if ( n > 4) splitclosed = Draw::Atoi (a[3]);
-  if ( n > 5) splitopen   = Draw::Atoi (a[4]);
+  if ( n > 4) splitclosed = Draw::Atoi (a[3]) != 0;
+  if ( n > 5) splitopen   = Draw::Atoi (a[4]) != 0;
 
   ShapeFix_FreeBounds F;
   if (sewtoler <= 0)
@@ -975,15 +1047,21 @@ static Standard_Integer checkedge(Draw_Interpretor& di, Standard_Integer argc, c
  void SWDRAW_ShapeAnalysis::InitCommands(Draw_Interpretor& theCommands) 
 {
   static Standard_Integer initactor = 0;
-  if (initactor) return;  initactor = 1;
-  
+  if (initactor)
+  {
+    return;
+  }
+  initactor = 1;
+
   Standard_CString g = SWDRAW::GroupName();
 
   theCommands.Add ("tolerance","shape [tolmin tolmax:real]", __FILE__,tolerance,g);
   theCommands.Add ("projface","nom_face X Y [Z]", __FILE__,projface,g);
   theCommands.Add ("projcurve","nom_edge | curve3d | curve3d first last + X Y Z",
 		   __FILE__,projcurve,g);
-  theCommands.Add ("anaface","nomface",__FILE__,anaface,g);
+  theCommands.Add("projpcurve", "edge face tol x y z [start_param]",
+    __FILE__, projpcurve, g);
+  theCommands.Add("anaface", "nomface", __FILE__, anaface, g);
   theCommands.Add ("statshape","shape [particul] : stats/particularites",
 		   __FILE__,XSHAPE_statshape,g);
   theCommands.Add ("comptol","shape [nbpoints]",__FILE__,XSHAPE_comptoledge,g);

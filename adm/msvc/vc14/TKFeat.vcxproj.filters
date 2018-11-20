@@ -2,13 +2,13 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{9EB6524D-184D-0E57-16F1-995A52F8E444}</UniqueIdentifier>
+      <UniqueIdentifier>{A57038D6-039B-0007-0966-4CB7B7B1500B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\LocOpe">
-      <UniqueIdentifier>{524DAF26-011A-0A80-04FC-A629C700CE4D}</UniqueIdentifier>
+      <UniqueIdentifier>{FE2D1A34-049E-0022-185B-452B7728955B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepFeat">
-      <UniqueIdentifier>{E85B30DB-1263-01DC-150E-DAF878EEB8C7}</UniqueIdentifier>
+      <UniqueIdentifier>{65B17396-15DF-159C-0B0D-233D428ACA97}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,16 +48,10 @@
     <ClCompile Include="..\..\..\src\LocOpe\LocOpe_Gluer.cxx">
       <Filter>Source files\LocOpe</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\LocOpe\LocOpe_HBuilder.cxx">
-      <Filter>Source files\LocOpe</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\LocOpe\LocOpe_LinearForm.cxx">
       <Filter>Source files\LocOpe</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\LocOpe\LocOpe_Pipe.cxx">
-      <Filter>Source files\LocOpe</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\LocOpe\LocOpe_PntFace.cxx">
       <Filter>Source files\LocOpe</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\LocOpe\LocOpe_Prism.cxx">

@@ -167,10 +167,7 @@ static Standard_Integer CommandCmd
     if (fres != 0) 
       code = TCL_ERROR;
   }
-  catch (Standard_Failure) {
-
-    Handle(Standard_Failure) E = Standard_Failure::Caught();
-
+  catch (Standard_Failure const& anException) {
     // fail if Draw_ExitOnCatch is set
     // MKV 29.03.05
 #if ((TCL_MAJOR_VERSION > 8) || ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))) && !defined(USE_NON_CONST)
@@ -181,7 +178,7 @@ static Standard_Integer CommandCmd
 			  "Draw_ExitOnCatch",TCL_GLOBAL_ONLY);
 #endif
 
-    cout << "An exception was caught " << E << endl;
+    cout << "An exception was caught " << anException << endl;
 
     if (cc && Draw::Atoi(cc)) {
 #ifdef _WIN32
@@ -193,7 +190,7 @@ static Standard_Integer CommandCmd
 
     // get the error message
     Standard_SStream ss;
-    ss << "** Exception ** " << E << ends;
+    ss << "** Exception ** " << anException << ends;
     Tcl_SetResult(interp,(char*)(ss.str().c_str()),TCL_VOLATILE);
     code = TCL_ERROR;
   }
@@ -314,6 +311,8 @@ void Draw_Interpretor::add (const Standard_CString          theCommandName,
   aPath.SetNode ("");
   TCollection_AsciiString aSrcPath;
   aPath.SystemName (aSrcPath);
+  if (aSrcPath.Value(1) == '/')
+    aSrcPath.Remove(1);
   Tcl_SetVar2 (myInterp, "Draw_Files", aName, aSrcPath.ToCString(), TCL_GLOBAL_ONLY);
 }
 
@@ -473,11 +472,7 @@ void Draw_Interpretor::AppendElement(const Standard_CString s)
 
 Standard_Integer Draw_Interpretor::Eval(const Standard_CString line)
 {
-  Standard_PCharacter pLine;
-  //
-  pLine=(Standard_PCharacter)line;
-  //
-  return Tcl_Eval(myInterp,pLine);
+  return Tcl_Eval(myInterp,line);
 }
 
 
@@ -489,10 +484,7 @@ Standard_Integer Draw_Interpretor::Eval(const Standard_CString line)
 Standard_Integer Draw_Interpretor::RecordAndEval(const Standard_CString line,
 						 const Standard_Integer flags)
 {
-  Standard_PCharacter pLine;
-  //
-  pLine=(Standard_PCharacter)line;
-  return Tcl_RecordAndEval(myInterp,pLine,flags);
+  return Tcl_RecordAndEval(myInterp,line,flags);
 }
 
 //=======================================================================
@@ -502,10 +494,7 @@ Standard_Integer Draw_Interpretor::RecordAndEval(const Standard_CString line,
 
 Standard_Integer Draw_Interpretor::EvalFile(const Standard_CString fname)
 {
-  Standard_PCharacter pfname;
-  //
-  pfname=(Standard_PCharacter)fname;
-  return Tcl_EvalFile(myInterp,pfname);
+  return Tcl_EvalFile(myInterp,fname);
 }
 
 //=======================================================================
@@ -530,7 +519,7 @@ Standard_Boolean Draw_Interpretor::Complete(const Standard_CString line)
   Standard_PCharacter pLine;
   //
   pLine=(Standard_PCharacter)line;
-  return Tcl_CommandComplete(pLine);
+  return Tcl_CommandComplete (pLine) != 0;
 }
 
 //=======================================================================

@@ -15,7 +15,7 @@
 
 //AGV 150202: Changed prototype XmlObjMgt::SetStringValue()
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <NCollection_LocalArray.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_IntegerArray.hxx>
@@ -29,13 +29,15 @@ IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_IntegerArrayDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (FirstIndexString, "first")
 IMPLEMENT_DOMSTRING (LastIndexString,  "last")
 IMPLEMENT_DOMSTRING (IsDeltaOn,        "delta")
+IMPLEMENT_DOMSTRING (AttributeIDString, "intarrattguid")
+
 //=======================================================================
 //function : XmlMDataStd_IntegerArrayDriver
 //purpose  : Constructor
 //=======================================================================
 
 XmlMDataStd_IntegerArrayDriver::XmlMDataStd_IntegerArrayDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : XmlMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -69,7 +71,7 @@ Standard_Boolean XmlMDataStd_IntegerArrayDriver::Paste
       TCollection_ExtendedString("Cannot retrieve the first index"
                                  " for IntegerArray attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -79,7 +81,7 @@ Standard_Boolean XmlMDataStd_IntegerArrayDriver::Paste
       TCollection_ExtendedString("Cannot retrieve the last index"
                                  " for IntegerArray attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -87,16 +89,24 @@ Standard_Boolean XmlMDataStd_IntegerArrayDriver::Paste
     Handle(TDataStd_IntegerArray)::DownCast(theTarget);
   anIntArray->Init(aFirstInd, aLastInd);
 
+  // attribute id
+  Standard_GUID aGUID;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_IntegerArray::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
+  anIntArray->SetID(aGUID);
+
   if(aFirstInd == aLastInd) {
-    Standard_Integer anInteger;
-    if(!XmlObjMgt::GetStringValue(anElement).GetInteger( anInteger)) {
+    if(!XmlObjMgt::GetStringValue(anElement).GetInteger( aValue)) {
       TCollection_ExtendedString aMessageString =
         TCollection_ExtendedString("Cannot retrieve integer member"
                                    " for IntegerArray attribute as \"");
-      WriteMessage (aMessageString);
-      return Standard_False;
+      myMessageDriver->Send (aMessageString, Message_Warning);
+      aValue = 0;
     }
-    anIntArray->SetValue(aFirstInd, anInteger);
+    anIntArray->SetValue(aFirstInd, aValue);
     
   }
   else {
@@ -111,8 +121,8 @@ Standard_Boolean XmlMDataStd_IntegerArrayDriver::Paste
           TCollection_ExtendedString("Cannot retrieve integer member"
                                      " for IntegerArray attribute as \"")
             + aValueStr + "\"";
-        WriteMessage (aMessageString);
-        return Standard_False;
+        myMessageDriver->Send (aMessageString, Message_Warning);
+        aValue = 0;
       }
       anIntArray->SetValue(ind, aValue);
     }
@@ -123,22 +133,22 @@ Standard_Boolean XmlMDataStd_IntegerArrayDriver::Paste
     Standard_Integer aDeltaValue;
     if (!anElement.getAttribute(::IsDeltaOn()).GetInteger(aDeltaValue)) 
       {
-	TCollection_ExtendedString aMessageString =
-	  TCollection_ExtendedString("Cannot retrieve the isDelta value"
-                                 " for IntegerArray attribute as \"")
-        + aDeltaValue + "\"";
-	WriteMessage (aMessageString);
-	return Standard_False;
+        TCollection_ExtendedString aMessageString =
+          TCollection_ExtendedString("Cannot retrieve the isDelta value"
+                                     " for IntegerArray attribute as \"")
+                                     + aDeltaValue + "\"";
+        myMessageDriver->Send (aMessageString, Message_Fail);
+        return Standard_False;
       } 
     else
-      aDelta = (Standard_Boolean)aDeltaValue;
+      aDelta = aDeltaValue != 0;
   }
 #ifdef OCCT_DEBUG
   else if(XmlMDataStd::DocumentVersion() == -1)
     cout << "Current DocVersion field is not initialized. "  <<endl;
 #endif
   anIntArray->SetDelta(aDelta);
-  
+
   return Standard_True;
 }
 
@@ -160,7 +170,7 @@ void XmlMDataStd_IntegerArrayDriver::Paste
   if (aL != 1) 
     theTarget.Element().setAttribute(::FirstIndexString(), aL);
   theTarget.Element().setAttribute(::LastIndexString(), anU);
-  theTarget.Element().setAttribute(::IsDeltaOn(), anIntArray->GetDelta());
+  theTarget.Element().setAttribute(::IsDeltaOn(), anIntArray->GetDelta() ? 1 : 0);
 
   // Allocation of 12 chars for each integer including the space.
   // An example: -2 147 483 648
@@ -183,5 +193,12 @@ void XmlMDataStd_IntegerArrayDriver::Paste
     // No occurrence of '&', '<' and other irregular XML characters
     str[iChar - 1] = '\0';
     XmlObjMgt::SetStringValue (theTarget, (Standard_Character*)str, Standard_True);
+  }
+  if(anIntArray->ID() != TDataStd_IntegerArray::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    anIntArray->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
   }
 }

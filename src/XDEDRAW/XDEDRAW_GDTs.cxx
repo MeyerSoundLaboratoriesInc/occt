@@ -18,6 +18,8 @@
 #include <Draw.hxx>
 #include <DBRep.hxx>
 #include <DDocStd.hxx>
+#include <DrawTrSurf.hxx>
+#include <Geom_Plane.hxx>
 
 #include <STEPCAFControl_GDTProperty.hxx>
 
@@ -137,6 +139,10 @@ static Standard_Integer DumpDGTs (Draw_Interpretor& di, Standard_Integer argc, c
         if (argc > 3)
         {
           di <<" (";
+          if (aDimTolObj->GetSemanticName())
+          {
+            di << " N \"" << aDimTolObj->GetSemanticName()->String() << "\"";
+          }
           di << " T " << aDimTolObj->GetType();
           if(aDimTolObj->IsDimWithRange())
           {
@@ -207,6 +213,10 @@ static Standard_Integer DumpDGTs (Draw_Interpretor& di, Standard_Integer argc, c
         if (argc > 3)
         {
           di <<" (";
+          if (aDimTolObj->GetSemanticName())
+          {
+            di << " N \"" << aDimTolObj->GetSemanticName()->String() << "\"";
+          }
           di << " T " << aDimTolObj->GetType();
           di << " TV " << aDimTolObj->GetTypeOfValue();
           di << ", V " << aDimTolObj->GetValue();
@@ -244,7 +254,6 @@ static Standard_Integer DumpDGTs (Draw_Interpretor& di, Standard_Integer argc, c
               di << " ZMV " <<aDimTolObj->GetValueOfZoneModifier();
             }
           }
-
           di << " )";
         }
         Handle(XCAFDoc_GraphNode) aNode;
@@ -262,7 +271,11 @@ static Standard_Integer DumpDGTs (Draw_Interpretor& di, Standard_Integer argc, c
               di << " Datum."<< i << "."<< j << "."<< k;
               if (argc > 3)
               {
-                di <<" (";
+                di << " (";
+                if (aDimTolObj->GetSemanticName())
+                {
+                  di << " N \"" << aDimTolObj->GetSemanticName()->String() << "\"";
+                }
                 XCAFDimTolObjects_DatumModifiersSequence aModif = 
                   aDatumObj->GetModifiers();
                 if (!aModif.IsEmpty())
@@ -313,6 +326,10 @@ static Standard_Integer DumpDGTs (Draw_Interpretor& di, Standard_Integer argc, c
           if (argc > 3)
           {
             di <<" (";
+            if (aDatumObj->GetSemanticName())
+            {
+              di << " N \"" << aDatumObj->GetSemanticName()->String() << "\"";
+            }
             di << " T " << aDatumObj->GetDatumTargetType();
             if (aDatumObj->GetDatumTargetType() != XCAFDimTolObjects_DatumTargetType_Area)
             {
@@ -371,7 +388,8 @@ static Standard_Integer DumpNbDGTs (Draw_Interpretor& di, Standard_Integer argc,
     Standard_Integer nbSize = 0,
                      nbLocation = 0,
                      nbAngular = 0,
-                     nbWithPath = 0;
+                     nbWithPath = 0,
+                     nbCommon = 0;
     for (Standard_Integer i = 1; i <= aGDTs.Length(); i++) {
       Handle(XCAFDoc_Dimension) aDimAttr;
       if (!aGDTs.Value(i).FindAttribute(XCAFDoc_Dimension::GetID(),aDimAttr)) 
@@ -380,7 +398,10 @@ static Standard_Integer DumpNbDGTs (Draw_Interpretor& di, Standard_Integer argc,
       if (anObject.IsNull())
         continue;
       XCAFDimTolObjects_DimensionType aDimType = anObject->GetType();
-      if (STEPCAFControl_GDTProperty::IsDimensionalLocation(aDimType)) {
+      if (aDimType == XCAFDimTolObjects_DimensionType_CommonLabel) {
+        nbCommon++;
+      }
+      else if (STEPCAFControl_GDTProperty::IsDimensionalLocation(aDimType)) {
         nbLocation++;
       }
       else if (aDimType == XCAFDimTolObjects_DimensionType_Location_Angular) {
@@ -407,6 +428,7 @@ static Standard_Integer DumpNbDGTs (Draw_Interpretor& di, Standard_Integer argc,
     di << "\n  NbOfDimensionalLocation: " << nbLocation;
     di << "\n  NbOfAngular            : " << nbAngular;
     di << "\n  NbOfWithPath           : " << nbWithPath;
+    di << "\n  NbOfCommonLabels       : " << nbCommon;
   }
 
   aGDTs.Clear();
@@ -423,9 +445,19 @@ static Standard_Integer DumpNbDGTs (Draw_Interpretor& di, Standard_Integer argc,
       Handle(XCAFDimTolObjects_GeomToleranceObject) anObject = aGTAttr->GetObject();
       if (anObject.IsNull())
         continue;
-      if (anObject->GetModifiers().Length() > 0 ||
-          anObject->GetMaterialRequirementModifier() != XCAFDimTolObjects_GeomToleranceMatReqModif_None) {
+      if (anObject->GetMaterialRequirementModifier() != XCAFDimTolObjects_GeomToleranceMatReqModif_None) {
         nbWithModif++;
+      }
+      else if (anObject->GetModifiers().Length() > 0) {
+        Standard_Boolean isHasModif = Standard_False;
+        for (Standard_Integer j = 1; j <= anObject->GetModifiers().Length(); j++)
+          if (anObject->GetModifiers().Value(j) != XCAFDimTolObjects_GeomToleranceModif_All_Around &&
+            anObject->GetModifiers().Value(j) != XCAFDimTolObjects_GeomToleranceModif_All_Over) {
+            isHasModif = Standard_True;
+            break;
+          }
+        if (isHasModif)
+          nbWithModif++;
       }
       if (anObject->GetMaxValueModifier() != 0) {
         nbWithMaxTol++;
@@ -574,7 +606,7 @@ static Standard_Integer addGTol (Draw_Interpretor& di, Standard_Integer argc, co
 static Standard_Integer addDatum (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
   if (argc < 3) {
-    di<<"Use: XAddDatum Doc shape/label\n";
+    di<<"Use: XAddDatum Doc shape1/label1 ... shapeN/labelN\n";
     return 1;
   }
   Handle(TDocStd_Document) Doc;
@@ -583,24 +615,22 @@ static Standard_Integer addDatum (Draw_Interpretor& di, Standard_Integer argc, c
   Handle(XCAFDoc_DimTolTool) aDimTolTool = XCAFDoc_DocumentTool::DimTolTool(Doc->Main());
   Handle(XCAFDoc_ShapeTool) aShapeTool= XCAFDoc_DocumentTool::ShapeTool(Doc->Main());
 
-  TDF_Label aLabel;
-  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
-  if ( aLabel.IsNull() ) 
-  {
-    TopoDS_Shape aShape= DBRep::Get(argv[2]);
-    if ( !aShape.IsNull() )
-    {
-      aShapeTool->Search(aShape, aLabel);
-      if ( aLabel.IsNull() )
-      {
-        di<<"Shape "<<argv[2]<<" is absent in "<<argv[1]<<"\n";
-        return 1;
-      }
+  TDF_LabelSequence aLabelSeq;
+  for (Standard_Integer i = 2; i < argc; i++) {
+    TDF_Label aLabel;
+    TDF_Tool::Label(Doc->GetData(), argv[i], aLabel);
+    if (aLabel.IsNull()) {
+      TopoDS_Shape aShape = DBRep::Get(argv[i]);
+      if (!aShape.IsNull())
+        aShapeTool->Search(aShape, aLabel);
+      if (aLabel.IsNull())
+        continue;
     }
+    aLabelSeq.Append(aLabel);
   }
 
   TDF_Label aDatumL = aDimTolTool->AddDatum();
-  aDimTolTool->SetDatum(aLabel, aDatumL);
+  aDimTolTool->SetDatum(aLabelSeq, aDatumL);
   TCollection_AsciiString Entry;
   TDF_Tool::Entry(aDatumL, Entry);
   di << Entry;
@@ -635,9 +665,92 @@ static Standard_Integer setDatum (Draw_Interpretor& di, Standard_Integer argc, c
     return 1;
   }
 
+  // check datum position number
+  Handle(XCAFDoc_Datum) aDatumAttr;
+  if (!aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatumAttr))
+  {
+    di<<"Invalid datum object\n";
+    return 1;
+  }
+  Handle(XCAFDimTolObjects_DatumObject) aDatumObj = aDatumAttr->GetObject();
+  if (aDatumObj.IsNull())
+  {
+    di<<"Invalid datum object\n";
+    return 1;
+  }
+
+  if (aDatumObj->GetPosition() < 1 || aDatumObj->GetPosition() > 3)
+  {
+    di<<"Invalid datum position number: use XSetDatumPosition\n";
+    return 1;
+  }
+
   aDimTolTool->SetDatumToGeomTol(aLabel, aTol);
   return 0;
 }
+
+static Standard_Integer setDatumPosition (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 4) {
+    di<<"Use: XSetDatumPosition Doc Datum_Label position[1-3]\n";
+    return 1;
+  }
+
+  if (Draw::Atoi(argv[3]) < 1 || Draw::Atoi(argv[3]) > 3) {
+    di<<"Datum position should be 1, 2 or 3\n";
+    return 1;
+  }
+
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+  Handle(XCAFDoc_DimTolTool) aDimTolTool = XCAFDoc_DocumentTool::DimTolTool(Doc->Main());
+  Handle(XCAFDoc_ShapeTool) aShapeTool= XCAFDoc_DocumentTool::ShapeTool(Doc->Main());
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di<<"Datum "<<argv[2]<<" is absent in "<<argv[1]<<"\n";
+    return 1;
+  }
+  Handle(XCAFDoc_Datum) aDatum;
+  if(aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    anObj->SetPosition(Draw::Atoi(argv[3]));
+    aDatum->SetObject(anObj);
+  }
+  return 0;
+}
+
+static Standard_Integer getDatumPosition (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di<<"Use: XGetDatumPosition Doc Datum_Label\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+  Handle(XCAFDoc_DimTolTool) aDimTolTool = XCAFDoc_DocumentTool::DimTolTool(Doc->Main());
+  Handle(XCAFDoc_ShapeTool) aShapeTool= XCAFDoc_DocumentTool::ShapeTool(Doc->Main());
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di<<"Datum "<<argv[2]<<" is absent in "<<argv[1]<<"\n";
+    return 1;
+  }
+  Handle(XCAFDoc_Datum) aDatum;
+  if(aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    di << aDatum->GetObject()->GetPosition();
+  }
+  return 0;
+}
+
 
 static Standard_Integer getDatum (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
@@ -1226,7 +1339,7 @@ static Standard_Integer addTolModif (Draw_Interpretor& di, Standard_Integer argc
   {
     for(Standard_Integer i = 3; i < argc; i++)
     {
-      if(Draw::Atoi(argv[i]) > -1 && Draw::Atoi(argv[i]) < 15)
+      if(Draw::Atoi(argv[i]) > -1 && Draw::Atoi(argv[i]) < 17)
       {
         Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
         anObj->AddModifier((XCAFDimTolObjects_GeomToleranceModif)Draw::Atoi(argv[i]));
@@ -2018,8 +2131,8 @@ static Standard_Integer addDimPath (Draw_Interpretor& di, Standard_Integer argc,
 
 static Standard_Integer addDimPoints (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
-  if (argc < 5) {
-    di<<"Use: XSetDimensionPoints Doc Dim_Label v1 v2\n";
+  if (argc < 4) {
+    di<<"Use: XSetDimensionPoints Doc Dim_Label v1 [v2]\n";
     return 1;
   }
   Handle(TDocStd_Document) Doc;
@@ -2038,17 +2151,19 @@ static Standard_Integer addDimPoints (Draw_Interpretor& di, Standard_Integer arg
   Handle(XCAFDoc_Dimension) aDimension;
   if(aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
   {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+
     TopoDS_Vertex aV1 = TopoDS::Vertex(DBRep::Get(argv[3],TopAbs_VERTEX));
-    TopoDS_Vertex aV2 = TopoDS::Vertex(DBRep::Get(argv[4],TopAbs_VERTEX));
-    if(!aV1.IsNull() && !aV1.IsNull())
-    {
-      Handle(TColgp_HArray1OfPnt) arr = new TColgp_HArray1OfPnt(1,2);
-      arr->SetValue(1, BRep_Tool::Pnt(aV1));
-      arr->SetValue(2, BRep_Tool::Pnt(aV2));
-      Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
-      anObj->SetPoints(arr);
-      aDimension->SetObject(anObj);
+    if(!aV1.IsNull()) {
+      anObj->SetPoint(BRep_Tool::Pnt(aV1));
     }
+    if (argc == 5) {
+      TopoDS_Vertex aV2 = TopoDS::Vertex(DBRep::Get(argv[4],TopAbs_VERTEX));
+      if(!aV2.IsNull()) {
+        anObj->SetPoint2(BRep_Tool::Pnt(aV2));
+      }
+    }
+    aDimension->SetObject(anObj);
   }
   return 0;
 }
@@ -2075,11 +2190,12 @@ static Standard_Integer getDimPoints (Draw_Interpretor& di, Standard_Integer arg
   Handle(XCAFDoc_Dimension) aDimension;
   if(aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
   {
-    Handle(TColgp_HArray1OfPnt) pnts = aDimension->GetObject()->GetPoints();
-    if(!pnts.IsNull() && pnts->Length() == 2)
-    {
-      di << pnts->Value(1).X() << ";" << pnts->Value(1).Y() << ";" << pnts->Value(1).Z() << " ";
-      di << pnts->Value(2).X() << ";" << pnts->Value(2).Y() << ";" << pnts->Value(2).Z();
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    if(anObj->HasPoint()) {
+      di << anObj->GetPoint().X() << ";" << anObj->GetPoint().Y() << ";" << anObj->GetPoint().Z() << " ";
+    }
+    if(anObj->HasPoint2()) {
+      di << anObj->GetPoint2().X() << ";" << anObj->GetPoint2().Y() << ";" << anObj->GetPoint2().Z();
     }
  }
   return 0;
@@ -2117,7 +2233,7 @@ static Standard_Integer addDimDir (Draw_Interpretor& di, Standard_Integer argc, 
 static Standard_Integer getDimDir (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
   if (argc < 3) {
-    di<<"Use: XSetDimensionDir Doc Dim_Label\n";
+    di<<"Use: XGetDimensionDir Doc Dim_Label\n";
     return 1;
   }
   Handle(TDocStd_Document) Doc;
@@ -2145,6 +2261,441 @@ static Standard_Integer getDimDir (Draw_Interpretor& di, Standard_Integer argc, 
   return 0;
 }
 
+static Standard_Integer addDimDescr (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 4) {
+    di<<"Use: XAddDimensionDescr Doc Dim_Label Description [DescriptionName]\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "Dimension "<< argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  Handle(XCAFDoc_Dimension) aDimension;
+  if(aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    Handle(TCollection_HAsciiString) aDescription = new TCollection_HAsciiString(argv[3]);
+    Handle(TCollection_HAsciiString) aDescrName = (argc == 4) ? new TCollection_HAsciiString()
+        : new TCollection_HAsciiString(argv[4]);
+    anObj->AddDescription(aDescription, aDescrName);
+    aDimension->SetObject(anObj);
+  }
+  return 0;
+}
+
+static Standard_Integer getDimDescr (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di << "Use: XGetDimensionDescr Doc Dim_Label\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) {
+    di << argv[1] << " is not a document\n";
+    return 1;
+  }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "Dimension "<< argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  Handle(XCAFDoc_Dimension) aDimension;
+  if(aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObject = aDimension->GetObject();
+    for (Standard_Integer i = 0; i < anObject->NbDescriptions(); i++) {
+      Handle(TCollection_HAsciiString) aDescription = anObject->GetDescription(i);
+      Handle(TCollection_HAsciiString) aDescrName = anObject->GetDescriptionName(i);
+      di << "name: " << aDescrName->ToCString() << " description: " << aDescription->ToCString() << "\n";
+    }
+  }
+  return 0;
+}
+
+static Standard_Integer addGDTPosition (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 12) {
+    di << "Use: XSetGDTPosition Doc GDT_Label loc_x loc_y loc_z normal_x normal_y normal_z xdir_x xdir_y xdir_z\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  
+  gp_Pnt aPoint(Draw::Atof(argv[3]), Draw::Atof(argv[4]), Draw::Atof(argv[5]));
+  gp_Dir aNormal(Draw::Atof(argv[6]), Draw::Atof(argv[7]), Draw::Atof(argv[8]));
+  gp_Dir aDir(Draw::Atof(argv[9]), Draw::Atof(argv[10]), Draw::Atof(argv[11]));
+  gp_Ax2 aPlane(aPoint, aNormal, aDir);
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    anObj->SetPlane(aPlane);
+    anObj->SetPointTextAttach(aPoint);
+    aDimension->SetObject(anObj);
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    anObj->SetPlane(aPlane);
+    anObj->SetPointTextAttach(aPoint);
+    aGeomTolerance->SetObject(anObj);
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    anObj->SetPlane(aPlane);
+    anObj->SetPointTextAttach(aPoint);
+    aDatum->SetObject(anObj);
+  }
+  return 0;
+}
+
+static Standard_Integer getGDTPosition (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di << "Use: XGetGDTPosition Doc GDT_Label\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  gp_Pnt aPoint;
+  gp_Dir aNormal, aDir;
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    aPoint = anObj->GetPointTextAttach();
+    aNormal = anObj->GetPlane().Direction();
+    aDir = anObj->GetPlane().XDirection();
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    aPoint = anObj->GetPointTextAttach();
+    aNormal = anObj->GetPlane().Direction();
+    aDir = anObj->GetPlane().XDirection();
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    aPoint = anObj->GetPointTextAttach();
+    aNormal = anObj->GetPlane().Direction();
+    aDir = anObj->GetPlane().XDirection();
+  }
+
+  di << "position: " << aPoint.X() << " " << aPoint.Y() << " " << aPoint.Z() << "\n";
+  di << "normal: " << aNormal.X() << " " << aNormal.Y() << " " << aNormal.Z() << "\n";
+  di << "x_direction: " << aDir.X() << " " << aDir.Y() << " " << aDir.Z() << "\n";
+  return 0;
+}
+
+static Standard_Integer addGDTPresentation (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 5) {
+    di << "Use: XSetGDTPresentation Doc GDT_Label Shape Name\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  
+  TopoDS_Shape aPresentation= DBRep::Get(argv[3]);
+  Handle(TCollection_HAsciiString) aName = new TCollection_HAsciiString(argv[4]);
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    anObj->SetPresentation(aPresentation, aName);
+    aDimension->SetObject(anObj);
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    anObj->SetPresentation(aPresentation, aName);
+    aGeomTolerance->SetObject(anObj);
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    anObj->SetPresentation(aPresentation, aName);
+    aDatum->SetObject(anObj);
+  }
+  return 0;
+}
+
+static Standard_Integer getGDTPresentation (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di << "Use: XGetGDTPresentation Doc GDT_Label Shape\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if ( Doc.IsNull() ) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if ( aLabel.IsNull() ) 
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  TopoDS_Shape aPresentation;
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    aPresentation = anObj->GetPresentation();
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    aPresentation = anObj->GetPresentation();
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    aPresentation = anObj->GetPresentation();
+  }
+
+  DBRep::Set (argv[3], aPresentation);
+  return 0;
+}
+
+static Standard_Integer addGDTAffectedPlane(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc != 5) {
+    di << "Use: XSetGDTAffectedPlane Doc GDT_Label plane type[1 - intersection/ 2 - orientation]\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if (Doc.IsNull()) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if (aLabel.IsNull())
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+
+  Handle(Geom_Surface) aSurf = DrawTrSurf::GetSurface(argv[3]);
+  Handle(Geom_Plane) aPlane = Handle(Geom_Plane)::DownCast(aSurf);
+  if (aPlane.IsNull())
+  {
+    di << "Invalid plane\n";
+    return 1;
+  }
+  Standard_Integer aType = Draw::Atoi(argv[4]);
+
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (!aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    di << "Geometric tolerance is abcent on label" << argv[2] << "\n";
+    return 1;
+  }
+
+  Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+  anObj->SetAffectedPlane(aPlane->Pln(), (XCAFDimTolObjects_ToleranceZoneAffectedPlane)aType);
+  aGeomTolerance->SetObject(anObj);
+  return 0;
+}
+
+static Standard_Integer getGDTAffectedPlane(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc != 4) {
+    di << "Use: XGetGDTAffectedPlane Doc GDT_Label Plane\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if (Doc.IsNull()) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if (aLabel.IsNull())
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  Handle(Geom_Plane) aPlane;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    if (anObj->GetAffectedPlaneType() == XCAFDimTolObjects_ToleranceZoneAffectedPlane_None)
+    {
+      di << "No affected plane\n";
+      return 0;
+    }
+    gp_Pln aPln = anObj->GetAffectedPlane();
+    aPlane = new Geom_Plane(aPln);
+    if (anObj->GetAffectedPlaneType() == XCAFDimTolObjects_ToleranceZoneAffectedPlane_Intersection)
+      di << "intersection plane\n";
+    if (anObj->GetAffectedPlaneType() == XCAFDimTolObjects_ToleranceZoneAffectedPlane_Orientation)
+      di << "orientation plane\n";
+    DrawTrSurf::Set(argv[3], aPlane);
+  }
+
+  return 0;
+}
+
+static Standard_Integer getGDTSemanticName(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di << "Use: XGetGDTSemanticName Doc GDT_Label\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if (Doc.IsNull()) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if (aLabel.IsNull())
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  Handle(TCollection_HAsciiString) aSemanticName;
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    aSemanticName = anObj->GetSemanticName();
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    aSemanticName = anObj->GetSemanticName();
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    aSemanticName = anObj->GetSemanticName();
+  }
+  if (aSemanticName)
+  {
+    di << aSemanticName->String();
+  }
+  return 0;
+}
+
+static Standard_Integer setGDTSemanticName(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+{
+  if (argc < 3) {
+    di << "Use: XSetGDTSemanticName Doc GDT_Label Name\n";
+    return 1;
+  }
+  Handle(TDocStd_Document) Doc;
+  DDocStd::GetDocument(argv[1], Doc);
+  if (Doc.IsNull()) { di << argv[1] << " is not a document\n"; return 1; }
+
+  TDF_Label aLabel;
+  TDF_Tool::Label(Doc->GetData(), argv[2], aLabel);
+  if (aLabel.IsNull())
+  {
+    di << "GDT " << argv[2] << " is absent in " << argv[1] << "\n";
+    return 1;
+  }
+  Handle(TCollection_HAsciiString) aSemanticName = new TCollection_HAsciiString(argv[3]);
+  // Dimension
+  Handle(XCAFDoc_Dimension) aDimension;
+  if (aLabel.FindAttribute(XCAFDoc_Dimension::GetID(), aDimension))
+  {
+    Handle(XCAFDimTolObjects_DimensionObject) anObj = aDimension->GetObject();
+    anObj->SetSemanticName(aSemanticName);
+    aDimension->SetObject(anObj);
+  }
+  // Geometric Tolerance
+  Handle(XCAFDoc_GeomTolerance) aGeomTolerance;
+  if (aLabel.FindAttribute(XCAFDoc_GeomTolerance::GetID(), aGeomTolerance))
+  {
+    Handle(XCAFDimTolObjects_GeomToleranceObject) anObj = aGeomTolerance->GetObject();
+    anObj->SetSemanticName(aSemanticName);
+    aGeomTolerance->SetObject(anObj);
+  }
+  // Datum
+  Handle(XCAFDoc_Datum) aDatum;
+  if (aLabel.FindAttribute(XCAFDoc_Datum::GetID(), aDatum))
+  {
+    Handle(XCAFDimTolObjects_DatumObject) anObj = aDatum->GetObject();
+    anObj->SetSemanticName(aSemanticName);
+    aDatum->SetObject(anObj);
+  }
+  return 0;
+}
+
 //=======================================================================
 //function : InitCommands
 //purpose  : 
@@ -2152,10 +2703,12 @@ static Standard_Integer getDimDir (Draw_Interpretor& di, Standard_Integer argc, 
 
 void XDEDRAW_GDTs::InitCommands(Draw_Interpretor& di) 
 {
-
   static Standard_Boolean initactor = Standard_False;
-  if (initactor) return;  initactor = Standard_True;
-
+  if (initactor)
+  {
+    return;
+  }
+  initactor = Standard_True;
   
   Standard_CString g = "XDE G&DTs commands";
 
@@ -2171,7 +2724,7 @@ void XDEDRAW_GDTs::InitCommands(Draw_Interpretor& di)
   di.Add ("XAddGeomTolerance","XAddGeomTolerance Doc shape/label",
     __FILE__, addGTol, g);
 
-  di.Add ("XAddDatum","XAddDatum Doc shape/label",
+  di.Add ("XAddDatum","XAddDatum Doc shape1/label1 ... shapeN/labelN",
     __FILE__, addDatum, g);
 
   di.Add ("XSetDatum","XSetDatum Doc Datum_Label GeomTol_Label",
@@ -2214,6 +2767,13 @@ void XDEDRAW_GDTs::InitCommands(Draw_Interpretor& di)
 
   di.Add ("XGetDatumName","XGetDatumName Doc Datum_Label",
     __FILE__, getDatumName, g);
+
+  di.Add ("XSetDatumPosition","XSetDatumPosition Doc Datum_Label position[1-3]"
+      "Set datum position number in geometric tolerance datum system",
+    __FILE__, setDatumPosition, g);
+
+  di.Add ("XGetDatumPosition","XGetDatumPosition Doc Datum_Label",
+    __FILE__, getDatumPosition, g);
 
   di.Add ("XSetTypeOfTolerance","XSetTypeOfTolerance Doc GTol_Label type"
         "Values:\n"
@@ -2470,7 +3030,7 @@ void XDEDRAW_GDTs::InitCommands(Draw_Interpretor& di)
   di.Add ("XSetDimensionPath","XSetDimensionPath Doc Dim_Label path(edge)",
     __FILE__, addDimPath, g);
 
-  di.Add ("XSetDimensionPoints","XSetDimensionPoints Doc Dim_Label v1 v2",
+  di.Add ("XSetDimensionPoints","XSetDimensionPoints Doc Dim_Label v1 [v2]",
     __FILE__, addDimPoints, g);
 
   di.Add ("XGetDimensionPoints","XGetDimensionPoints Doc Dim_Label",
@@ -2481,4 +3041,42 @@ void XDEDRAW_GDTs::InitCommands(Draw_Interpretor& di)
 
   di.Add ("XGetDimensionDir","XGetDimensionDir Doc Dim_Label",
     __FILE__, getDimDir, g);
+
+  di.Add ("XAddDimensionDescr","XAddDimensionDescr Doc Dim_Label Description [DescriptionName]\n"
+    "Add named text description to given Dimension, if DescriptionName is missed"
+    "name will be an empty string.",
+    __FILE__, addDimDescr, g);
+
+  di.Add ("XGetDimensionDescr","XGetDimensionDescr Doc Dim_Label\n"
+    "Return all descriptions of given Dimension.",
+    __FILE__, getDimDescr, g);
+
+  di.Add ("XSetGDTPosition","XSetGDTPosition Doc GDT_Label loc_x loc_y loc_z normal_x normal_y normal_z xdir_x xdir_y xdir_z"
+    "Set plane to display dimension parallel to and point to display text (loc)",
+    __FILE__, addGDTPosition, g);
+
+  di.Add ("XGetGDTPosition","XGetGDTPosition Doc GDT_Label"
+    "Returns text position and plane, parallel to which dimension is displayed",
+    __FILE__, getGDTPosition, g);
+
+  di.Add ("XSetGDTPresentation","XSetGDTPresentation Doc GDT_Label Shape Name"
+    "Set presentation with given name for dimension",
+    __FILE__, addGDTPresentation, g);
+
+  di.Add ("XGetGDTPresentation","XGetGDTPresentation Doc GDT_Label Shape"
+    "Returns Presentation into Shape",
+    __FILE__, getGDTPresentation, g);
+  di.Add("XSetGDTAffectedPlane", "XSetGDTAffectedPlane Doc GDT_Label Plane type[1 - intersection/ 2 - orientation]"
+    "Set affectedP plane for geometric tolerance",
+    __FILE__, addGDTAffectedPlane, g);
+
+  di.Add("XGetGDTAffectedPlane", "XGetGDTAffectedPlane Doc GDT_Label Plane"
+    "Returns affected plane into Plane",
+    __FILE__, getGDTAffectedPlane, g);
+  di.Add("XGetGDTSemanticName", "XGetGDTSemanticName Doc GDT_Label"
+    __FILE__, getGDTSemanticName, g);
+
+  di.Add("XSetGDTSemanticName", "XSetGDTSemanticName Doc GDT_Label Name"
+    "Set semantic name",
+    __FILE__, setGDTSemanticName, g);
 }

@@ -2,41 +2,32 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{AE7990BA-0C88-077C-029E-F8BECEB6C764}</UniqueIdentifier>
+      <UniqueIdentifier>{BB135C9F-16D4-0F27-057D-ECF2ED40A928}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\CDM">
-      <UniqueIdentifier>{DCB08F2C-07D3-04E4-01E5-D500AC1F35C3}</UniqueIdentifier>
+      <UniqueIdentifier>{2198D12B-001C-00D5-0160-A0D65757F3D2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\PCDM">
-      <UniqueIdentifier>{02A11109-0B49-02F9-178F-CC1F160CFE12}</UniqueIdentifier>
+      <UniqueIdentifier>{4872A215-1839-001C-0D24-387FA443E89C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\CDF">
-      <UniqueIdentifier>{FC8A3D6D-136F-01F7-0AE1-E6C5309BEAE1}</UniqueIdentifier>
+      <UniqueIdentifier>{5C6C5DCC-138B-18E3-181D-BB5DED138DA6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\UTL">
-      <UniqueIdentifier>{5986B679-004A-15CE-14F0-47E6365B18B6}</UniqueIdentifier>
+      <UniqueIdentifier>{B8CB63E3-16D6-130F-0BDE-4CC88901C495}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\LDOM">
-      <UniqueIdentifier>{B379D6A0-0F32-18C1-07E4-521789873706}</UniqueIdentifier>
+      <UniqueIdentifier>{112A4F3F-0F82-0A86-192F-915DD6A7A375}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\CDM\CDM_Application.cxx">
       <Filter>Source files\CDM</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\CDM\CDM_COutMessageDriver.cxx">
-      <Filter>Source files\CDM</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\CDM\CDM_Document.cxx">
       <Filter>Source files\CDM</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\CDM\CDM_MessageDriver.cxx">
-      <Filter>Source files\CDM</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\CDM\CDM_MetaData.cxx">
-      <Filter>Source files\CDM</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\CDM\CDM_NullMessageDriver.cxx">
       <Filter>Source files\CDM</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\CDM\CDM_Reference.cxx">
@@ -106,9 +97,6 @@
       <Filter>Source files\CDF</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\CDF\CDF_StoreList.cxx">
-      <Filter>Source files\CDF</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\CDF\CDF_Timer.cxx">
       <Filter>Source files\CDF</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\UTL\UTL.cxx">

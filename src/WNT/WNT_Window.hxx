@@ -18,8 +18,10 @@
 #define _WNT_Window_HeaderFile
 
 #include <Standard.hxx>
-#include <Standard_Type.hxx>
 
+#if defined(_WIN32) && !defined(OCCT_UWP)
+
+#include <Standard_Type.hxx>
 #include <Standard_Integer.hxx>
 #include <Aspect_Handle.hxx>
 #include <Standard_Boolean.hxx>
@@ -29,7 +31,6 @@
 #include <Quantity_NameOfColor.hxx>
 #include <Standard_Address.hxx>
 #include <Aspect_TypeOfResize.hxx>
-#include <Quantity_Ratio.hxx>
 #include <Aspect_Drawable.hxx>
 class WNT_WClass;
 class Aspect_WindowDefinitionError;
@@ -91,7 +92,7 @@ public:
   
   //! Returns The Window RATIO equal to the physical
   //! WIDTH/HEIGHT dimensions.
-  Standard_EXPORT virtual Quantity_Ratio Ratio() const Standard_OVERRIDE;
+  Standard_EXPORT virtual Standard_Real Ratio() const Standard_OVERRIDE;
   
   //! Returns The Window POSITION in PIXEL
   Standard_EXPORT virtual void Position (Standard_Integer& X1, Standard_Integer& Y1, Standard_Integer& X2, Standard_Integer& Y2) const Standard_OVERRIDE;
@@ -118,7 +119,6 @@ public:
 
 protected:
 
-
   Standard_Integer aXLeft;
   Standard_Integer aYTop;
   Standard_Integer aXRight;
@@ -128,19 +128,9 @@ protected:
   Aspect_Handle myHParentWindow;
   Standard_Boolean myIsForeign;
 
-
-private:
-
-
-
-
 };
-
 
 #include <WNT_Window.lxx>
 
-
-
-
-
+#endif // _WIN32
 #endif // _WNT_Window_HeaderFile

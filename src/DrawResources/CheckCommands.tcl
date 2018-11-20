@@ -359,15 +359,18 @@ proc checkfreebounds {shape ref_value args} {
 }
 
 help checkmaxtol {
-  Compare max tolerance of shape with reference value.
-  Command returns max tolerance of the shape.
+  Returns max tolerance of the shape and prints error message if specified
+  criteria are not satisfied.
 
   Use: checkmaxtol shape [options...]
-  Allowed options are:
-    -ref: reference value of maximum tolerance.
-    -source: list of shapes to compare with, e.g.: -source {shape1 shape2 shape3}
-    -min_tol: minimum tolerance for comparison.
-    -multi_tol: tolerance multiplier.
+
+  Options specify criteria for checking the maximal tolerance value:
+    -ref <value>: check it to be equal to reference value.
+    -min_tol <value>: check it to be not greater than specified value.
+    -source <list of shapes>: check it to be not greater than 
+            maximal tolerance of specified shape(s)
+    -multi_tol <value>: additional multiplier for value specified by -min_tol 
+               or -shapes options.
 }
 
 proc checkmaxtol {shape args} {
@@ -470,7 +473,7 @@ proc _check_args { args {options {}} {command_name ""}} {
       set get_value              [lindex ${option} 2]
       set local_value ""
       if { [_check_arg ${option_name} local_value ${get_value}] } {
-        upvar ${variable_to_save_value} ${variable_to_save_value}
+        upvar 1 ${variable_to_save_value} ${variable_to_save_value}
         set ${variable_to_save_value} ${local_value}
         set toContinue 1
       }
@@ -501,6 +504,7 @@ help checkprops {
     -s AREA: command sprops, computes the mass properties of all faces with a surface density of 1 
     -v VOLUME: command vprops, computes the mass properties of all solids with a density of 1
     -eps EPSILON: the epsilon defines relative precision of computation
+    -deps DEPSILON: the epsilon defines relative precision to compare corresponding values
     -equal SHAPE: compare area\volume\length of input shapes. Puts error if its are not equal
     -notequal SHAPE: compare area\volume\length of input shapes. Puts error if its are equal
     -skip: count shared shapes only once, skipping repeatitions
@@ -524,11 +528,13 @@ proc checkprops {shape args} {
     set compared_notequal_shape -1
     set equal_check 0
     set skip 0
+    set depsilon 1e-2
 
     set options {{"-eps" epsilon 1}
                  {"-equal" compared_equal_shape 1}
                  {"-notequal" compared_notequal_shape 1}
-                 {"-skip" skip 0}}
+                 {"-skip" skip 0}
+                 {"-deps" depsilon 1}}
 
     if { [regexp {\-[not]*equal} $args] } {
         lappend options {"-s" area 0}
@@ -543,21 +549,15 @@ proc checkprops {shape args} {
     _check_args ${args} ${options} "checkprops"
 
     if { ${length} != -1 || ${equal_check} == 1 } {
-        set CommandName lprops
-        set mass $length
-        set prop "length"
+        lappend CommandNames {lprops}
         set equal_check 0
     }
     if { ${area} != -1 || ${equal_check} == 1 } {
-        set CommandName sprops
-        set mass $area
-        set prop "area"
+        lappend CommandNames {sprops}
         set equal_check 0
     }
     if { ${volume} != -1 || ${equal_check} == 1 } {
-        set CommandName vprops
-        set mass $volume
-        set prop "volume"
+        lappend CommandNames {vprops}
         set equal_check 0
     }
 
@@ -565,41 +565,45 @@ proc checkprops {shape args} {
     if { $skip } {
         set skip_option "-skip"
     }
-        
     
-    regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${shape} ${epsilon} $skip_option] full m
-
-    if { ${compared_equal_shape} != -1 } {
-        upvar ${compared_equal_shape} ${compared_equal_shape}
-        regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${compared_equal_shape} ${epsilon} $skip_option] full compared_m
-        if { $compared_m != $m } {
-            puts "Error: Shape ${compared_equal_shape} is not equal to shape ${shape}"
+    foreach CommandName ${CommandNames} {
+        switch $CommandName {
+            "lprops"    { set mass ${length}; set prop "length" }
+            "sprops"    { set mass ${area}; set prop "area" }
+            "vprops"    { set mass ${volume}; set prop "volume" }
         }
-    }
+        regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${shape} ${epsilon} $skip_option] full m
 
-    if { ${compared_notequal_shape} != -1 } {
-        upvar ${compared_notequal_shape} ${compared_notequal_shape}
-        regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${compared_notequal_shape} ${epsilon} $skip_option] full compared_m
-        if { $compared_m == $m } {
-            puts "Error: Shape ${compared_notequal_shape} is equal shape to ${shape}"
+        if { ${compared_equal_shape} != -1 } {
+            upvar ${compared_equal_shape} ${compared_equal_shape}
+            regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${compared_equal_shape} ${epsilon} $skip_option] full compared_m
+            if { $compared_m != $m } {
+                puts "Error: Shape ${compared_equal_shape} is not equal to shape ${shape}"
+            }
         }
-    }
 
-    if { ${compared_equal_shape} == -1 && ${compared_notequal_shape} == -1 } {
-        if { [string compare "$mass" "empty"] != 0 } {
-            if { $m == 0 } {
-                puts "Error : The command is not valid. The $prop is 0."
+        if { ${compared_notequal_shape} != -1 } {
+            upvar ${compared_notequal_shape} ${compared_notequal_shape}
+            regexp {Mass +: +([-0-9.+eE]+)} [eval ${CommandName} ${compared_notequal_shape} ${epsilon} $skip_option] full compared_m
+            if { $compared_m == $m } {
+                puts "Error: Shape ${compared_notequal_shape} is equal shape to ${shape}"
             }
-            if { $mass > 0 } {
-                puts "The expected $prop is $mass"
-            }
-            #check of change of area is < 1%
-            if { ($mass != 0 && [expr 1.*abs($mass - $m)/$mass] > 0.01) || ($mass == 0 && $m != 0) } {
-                puts "Error : The $prop of result shape is $m"
-            }
-        } else {
-            if { $m != 0 } {
-                puts "Error : The command is not valid. The $prop is $m"
+        }
+
+        if { ${compared_equal_shape} == -1 && ${compared_notequal_shape} == -1 } {
+            if { [string compare "$mass" "empty"] != 0 } {
+                if { $m == 0 } {
+                    puts "Error : The command is not valid. The $prop is 0."
+                }
+                # check of change of area is < 1%
+                if { ($mass != 0 && abs (($mass - $m) / double($mass)) > $depsilon) || 
+                     ($mass == 0 && $m != 0) } {
+                    puts "Error : The $prop of result shape is $m, expected $mass"
+                }
+            } else {
+                if { $m != 0 } {
+                    puts "Error : The command is not valid. The $prop is $m"
+                }
             }
         }
     }
@@ -761,9 +765,10 @@ help checkview {
     -display shapename: display shape with name 'shapename'
     -3d: display shape in 3d viewer
     -2d [ v2d / smallview ]: display shape in 2d viewer (default viewer is a 'smallview')
-    -path PATH: location of saved screenshot of viewer
     -vdispmode N: it is possible to set vdispmode for 3d viewer (default value is 1)
     -screenshot: procedure will try to make screenshot of already created viewer
+    -path <path>: location of saved screenshot of viewer
+
     Procedure can check some property of shape (length, area or volume) and compare it with some value N:
       -l [N]
       -s [N]
@@ -1021,4 +1026,64 @@ proc checktrinfo {shape args} {
     if { ${max_defl} != -1 && ${cur_deflection} > ${max_defl} } {
         puts "Error: Maximal deflection is too big"
     }
+}
+
+help checkplatform {
+  Return name of current platform if no options are given.
+
+  Use: checkplatform [options...]
+  Allowed options are:
+    -windows : return 1 if current platform is 'Windows', overwise return 0
+    -linux   : return 1 if current platform is 'Linux', overwise return 0
+    -osx     : return 1 if current platform is 'MacOS X', overwise return 0
+
+  Only one option can be used at once.
+  If no option is given, procedure will return the name of current platform.
+}
+proc checkplatform {args} {
+    set check_for_windows false
+    set check_for_linux false
+    set check_for_macosx false
+
+    set options {{"-windows" check_for_windows 0}
+                 {"-linux" check_for_linux 0}
+                 {"-osx" check_for_macosx 0}}
+
+    _check_args ${args} ${options} "checkplatform"
+
+    if { [regexp "indows" $::tcl_platform(os)] } {
+        set current_platform Windows
+    } elseif { $::tcl_platform(os) == "Linux" } {
+        set current_platform Linux
+    } elseif { $::tcl_platform(os) == "Darwin" } {
+        set current_platform MacOS
+    }
+
+    # no args are given
+    if { !${check_for_windows} && !${check_for_linux} && !${check_for_macosx}} {
+        return ${current_platform}
+    }
+
+    # check usage of proc checkplatform
+    if { [expr [string is true ${check_for_windows}] + [string is true ${check_for_linux}] + [string is true ${check_for_macosx}] ] > 1} {
+        error "Error: wrong usage of command checkplatform, only single option can be used at once"
+    }
+
+    # checking for Windows platform
+    if { ${check_for_windows} && ${current_platform} == "Windows" } {
+        return 1
+    }
+
+    # checking for Mac OS X platforms
+    if { ${check_for_linux} && ${current_platform} == "Linux" } {
+        return 1
+    }
+
+    # checking for Mac OS X platforms
+    if { ${check_for_macosx} && ${current_platform} == "MacOS" } {
+        return 1
+    }
+
+    # current platform is not equal to given as argument platform, return false
+    return 0
 }

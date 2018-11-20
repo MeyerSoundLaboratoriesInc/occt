@@ -18,15 +18,11 @@
 
 #include <Graphic3d_BufferType.hxx>
 
-#include <InterfaceGraphic_Graphic3d.hxx>
-
 #include <OpenGl_AspectFace.hxx>
 #include <OpenGl_CappingAlgo.hxx>
 #include <OpenGl_FrameBuffer.hxx>
-#include <OpenGl_LineAttributes.hxx>
+#include <OpenGl_Material.hxx>
 #include <OpenGl_Matrix.hxx>
-#include <OpenGl_NamedStatus.hxx>
-#include <OpenGl_PrinterContext.hxx>
 #include <OpenGl_RenderFilter.hxx>
 #include <OpenGl_ShaderObject.hxx>
 #include <OpenGl_ShaderProgram.hxx>
@@ -35,37 +31,8 @@
 #include <OpenGl_Vec.hxx>
 #include <OpenGl_Window.hxx>
 
-class OpenGl_AspectLine;
-class OpenGl_AspectMarker;
-class OpenGl_AspectText;
-class OpenGl_Element;
 class OpenGl_View;
 class Image_PixMap;
-
-//! OpenGL material definition
-struct OpenGl_Material
-{
-
-  OpenGl_Vec4 Ambient;  //!< ambient reflection coefficient
-  OpenGl_Vec4 Diffuse;  //!< diffuse reflection coefficient
-  OpenGl_Vec4 Specular; //!< glossy  reflection coefficient
-  OpenGl_Vec4 Emission; //!< material emission
-  OpenGl_Vec4 Params;   //!< extra packed parameters
-
-  Standard_ShortReal  Shine()              const { return Params.x(); }
-  Standard_ShortReal& ChangeShine()              { return Params.x(); }
-
-  Standard_ShortReal  Transparency()       const { return Params.y(); }
-  Standard_ShortReal& ChangeTransparency()       { return Params.y(); }
-
-  //! Initialize material
-  void Init (const OPENGL_SURF_PROP& theProps);
-
-  //! Returns packed (serialized) representation of material properties
-  const OpenGl_Vec4* Packed() const { return reinterpret_cast<const OpenGl_Vec4*> (this); }
-  static Standard_Integer NbOfVec4() { return 5; }
-
-};
 
 class OpenGl_RaytraceFilter;
 DEFINE_STANDARD_HANDLE (OpenGl_RaytraceFilter, OpenGl_RenderFilter)
@@ -94,7 +61,8 @@ public:
   //! Checks whether the element can be rendered or not.
   //! @param theElement [in] the element to check.
   //! @return True if element can be rendered.
-  virtual Standard_Boolean CanRender (const OpenGl_Element* theElement) Standard_OVERRIDE;
+  virtual Standard_Boolean ShouldRender (const Handle(OpenGl_Workspace)& theWorkspace,
+                                         const OpenGl_Element*           theElement) Standard_OVERRIDE;
 
 private:
 
@@ -118,7 +86,7 @@ public:
   Standard_EXPORT OpenGl_Workspace (OpenGl_View* theView, const Handle(OpenGl_Window)& theWindow);
 
   //! Destructor
-  Standard_EXPORT virtual ~OpenGl_Workspace();
+  virtual ~OpenGl_Workspace() {}
 
   //! Activate rendering context.
   Standard_EXPORT Standard_Boolean Activate();
@@ -148,47 +116,124 @@ public:
     return wasUsed;
   }
 
-  Handle(OpenGl_PrinterContext)& PrinterContext() { return myPrintContext; }
-
   //! @return true if usage of Z buffer is enabled.
   Standard_Boolean& UseZBuffer() { return myUseZBuffer; }
 
   //! @return true if depth writing is enabled.
   Standard_Boolean& UseDepthWrite() { return myUseDepthWrite; }
 
-  //! @return true if usage of GL light is enabled.
-  Standard_EXPORT Standard_Boolean  UseGLLight() const;
-
-  //! @return true if antialiasing is enabled.
-  Standard_EXPORT Standard_Integer AntiAliasingMode() const;
-
   //! @return true if clipping algorithm enabled
   Standard_EXPORT Standard_Boolean IsCullingEnabled() const;
 
-  Standard_Integer NamedStatus;
-
   //// RELATED TO STATUS ////
 
-  const TEL_COLOUR* HighlightColor;
+  //! Return true if active group might activate face culling (e.g. primitives are closed).
+  bool ToAllowFaceCulling() const { return myToAllowFaceCulling; }
 
+  //! Allow or disallow face culling.
+  //! This call does NOT affect current state of back face culling;
+  //! ApplyAspectFace() should be called to update state.
+  void SetAllowFaceCulling (bool theToAllow) { myToAllowFaceCulling = theToAllow; }
+
+  //! Return true if following structures should apply highlight color.
+  bool ToHighlight() const { return !myHighlightStyle.IsNull(); }
+
+  //! Return highlight style.
+  const Handle(Graphic3d_PresentationAttributes)& HighlightStyle() const { return myHighlightStyle; }
+
+  //! Set highlight style.
+  void SetHighlightStyle (const Handle(Graphic3d_PresentationAttributes)& theStyle) {  myHighlightStyle = theStyle; }
+
+  //! Return line color taking into account highlight flag.
+  const OpenGl_Vec4& LineColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectLineSet->Aspect()->ColorRGBA();
+  }
+
+  //! Return edge color taking into account highlight flag.
+  const OpenGl_Vec4& EdgeColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectFaceSet->AspectEdge()->Aspect()->ColorRGBA();
+  }
+
+  //! Return marker color taking into account highlight flag.
+  const OpenGl_Vec4& MarkerColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectMarkerSet->Aspect()->ColorRGBA();
+  }
+
+  //! Return Interior color taking into account highlight flag.
+  const OpenGl_Vec4& InteriorColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectFaceSet->Aspect()->InteriorColorRGBA();
+  }
+
+  //! Return text color taking into account highlight flag.
+  const OpenGl_Vec4& TextColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectTextSet->Aspect()->ColorRGBA();
+  }
+
+  //! Return text Subtitle color taking into account highlight flag.
+  const OpenGl_Vec4& TextSubtitleColor() const
+  {
+    return !myHighlightStyle.IsNull()
+         ?  myHighlightStyle->ColorRGBA()
+         :  myAspectTextSet->Aspect()->ColorSubTitleRGBA();
+  }
+
+  //! Currently set line aspect (can differ from applied).
+  const OpenGl_AspectLine*   AspectLine()   const { return myAspectLineSet; }
+
+  //! Currently set face aspect (can differ from applied).
+  const OpenGl_AspectFace*   AspectFace()   const { return myAspectFaceSet; }
+
+  //! Currently set marker aspect (can differ from applied).
+  const OpenGl_AspectMarker* AspectMarker() const { return myAspectMarkerSet; }
+
+  //! Currently set text aspect (can differ from applied).
+  const OpenGl_AspectText*   AspectText()   const { return myAspectTextSet; }
+
+  //! Assign new line aspect (will be applied within ApplyAspectLine()).
   Standard_EXPORT const OpenGl_AspectLine*   SetAspectLine   (const OpenGl_AspectLine*   theAspect);
+
+  //! Assign new face aspect (will be applied within ApplyAspectFace()).
   Standard_EXPORT const OpenGl_AspectFace*   SetAspectFace   (const OpenGl_AspectFace*   theAspect);
+
+  //! Assign new marker aspect (will be applied within ApplyAspectMarker()).
   Standard_EXPORT const OpenGl_AspectMarker* SetAspectMarker (const OpenGl_AspectMarker* theAspect);
+
+  //! Assign new text aspect (will be applied within ApplyAspectText()).
   Standard_EXPORT const OpenGl_AspectText*   SetAspectText   (const OpenGl_AspectText*   theAspect);
 
-  //// THESE METHODS ARE EXPORTED AS THEY PROVIDE STATE INFO TO USERDRAW
-  Standard_EXPORT const OpenGl_AspectLine*   AspectLine   (const Standard_Boolean theWithApply);
-  Standard_EXPORT const OpenGl_AspectFace*   AspectFace   (const Standard_Boolean theWithApply);
-  Standard_EXPORT const OpenGl_AspectMarker* AspectMarker (const Standard_Boolean theWithApply);
-  Standard_EXPORT const OpenGl_AspectText*   AspectText   (const Standard_Boolean theWithApply);
+  //! Apply line aspect.
+  //! @return aspect set by SetAspectLine()
+  const OpenGl_AspectLine* ApplyAspectLine() { return myAspectLineSet; }
 
-  //! Clear the applied aspect state.
+  //! Apply face aspect.
+  //! @return aspect set by SetAspectFace()
+  Standard_EXPORT const OpenGl_AspectFace*   ApplyAspectFace();
+
+  //! Apply marker aspect.
+  //! @return aspect set by SetAspectMarker()
+  Standard_EXPORT const OpenGl_AspectMarker* ApplyAspectMarker();
+
+  //! Apply text aspect.
+  //! @return aspect set by SetAspectText()
+  const OpenGl_AspectText* ApplyAspectText() { return myAspectTextSet; }
+
+  //! Clear the applied aspect state to default values.
   void ResetAppliedAspect();
-
-  Standard_EXPORT Handle(OpenGl_Texture) DisableTexture();
-  Standard_EXPORT Handle(OpenGl_Texture) EnableTexture (const Handle(OpenGl_Texture)&          theTexture,
-                                                        const Handle(Graphic3d_TextureParams)& theParams = NULL);
-  const Handle(OpenGl_Texture)& ActiveTexture() const { return myTextureBound; }
 
   //! Set filter for restricting rendering of particular elements.
   //! Filter can be applied for rendering passes used by recursive
@@ -212,74 +257,58 @@ public:
   //! @return applied model structure matrix.
   inline const OpenGl_Matrix* ModelMatrix() const { return StructureMatrix_applied; }
 
-  //! Sets and applies current polygon offset.
-  void SetPolygonOffset (int theMode, Standard_ShortReal theFactor, Standard_ShortReal theUnits);
-
-  //! Returns currently applied polygon offset params.
-  const TEL_POFFSET_PARAM& AppliedPolygonOffset() { return PolygonOffset_applied; }
+  //! Returns face aspect for textured font rendering.
+  const OpenGl_AspectFace& FontFaceAspect() const { return myFontFaceAspect; }
 
   //! Returns capping algorithm rendering filter.
-  const Handle(OpenGl_CappingAlgoFilter)& DefaultCappingAlgoFilter() const
-  {
-    return myDefaultCappingAlgoFilter;
-  }
+  const Handle(OpenGl_CappingAlgoFilter)& DefaultCappingAlgoFilter() const { return myDefaultCappingAlgoFilter; }
 
   //! Returns face aspect for none culling mode.
-  const OpenGl_AspectFace& NoneCulling() const
-  {
-    return myNoneCulling;
-  }
+  const OpenGl_AspectFace& NoneCulling() const { return myNoneCulling; }
 
   //! Returns face aspect for front face culling mode.
-  const OpenGl_AspectFace& FrontCulling() const
-  {
-    return myFrontCulling;
-  }
+  const OpenGl_AspectFace& FrontCulling() const { return myFrontCulling; }
 
-protected:
+  //! Sets a new environment texture.
+  void SetEnvironmentTexture (const Handle(OpenGl_TextureSet)& theTexture) { myEnvironmentTexture = theTexture; }
 
-  void updateMaterial (const int theFlag);
-
-  void setTextureParams (Handle(OpenGl_Texture)&                theTexture,
-                         const Handle(Graphic3d_TextureParams)& theParams);
+  //! Returns environment texture.
+  const Handle(OpenGl_TextureSet)& EnvironmentTexture() const { return myEnvironmentTexture; }
 
 protected: //! @name protected fields
 
   OpenGl_View*                     myView;
   Handle(OpenGl_Window)            myWindow;
   Handle(OpenGl_Context)           myGlContext;
-  Handle(OpenGl_PrinterContext)    myPrintContext;
-  Handle(OpenGl_LineAttributes)    myLineAttribs;
-  Standard_Integer                 myAntiAliasingMode;
   Standard_Boolean                 myUseZBuffer;
   Standard_Boolean                 myUseDepthWrite;
-  Standard_Boolean                 myUseGLLight;
   Handle(OpenGl_CappingAlgoFilter) myDefaultCappingAlgoFilter;
   OpenGl_AspectFace                myNoneCulling;
   OpenGl_AspectFace                myFrontCulling;
+  OpenGl_AspectFace                myFontFaceAspect;
 
 protected: //! @name fields related to status
 
   Handle(OpenGl_RenderFilter) myRenderFilter;
-  Handle(OpenGl_Texture) myTextureBound;    //!< currently bound texture (managed by OpenGl_AspectFace and OpenGl_View environment texture)
-  const OpenGl_AspectLine *AspectLine_set, *AspectLine_applied;
-  const OpenGl_AspectFace *AspectFace_set, *AspectFace_applied;
-  const OpenGl_AspectMarker *AspectMarker_set, *AspectMarker_applied;
-  const OpenGl_AspectText *AspectText_set, *AspectText_applied;
+  const OpenGl_AspectLine*   myAspectLineSet;
+  const OpenGl_AspectFace*   myAspectFaceSet;
+  Handle(Graphic3d_AspectFillArea3d) myAspectFaceApplied;
+  const OpenGl_AspectMarker* myAspectMarkerSet;
+  Handle(Graphic3d_AspectMarker3d) myAspectMarkerApplied;
+  const OpenGl_AspectText*   myAspectTextSet;
+  Handle(Graphic3d_PresentationAttributes) myAspectFaceAppliedWithHL;
 
   const OpenGl_Matrix* ViewMatrix_applied;
   const OpenGl_Matrix* StructureMatrix_applied;
 
-  OpenGl_Material myMatFront;    //!< current front material state (cached to reduce GL context updates)
-  OpenGl_Material myMatBack;     //!< current back  material state
-  OpenGl_Material myMatTmp;      //!< temporary variable
-  TelCullMode     myCullingMode; //!< back face culling mode, applied from face aspect
+  bool            myToAllowFaceCulling; //!< allow back face culling
+  Handle(Graphic3d_PresentationAttributes) myHighlightStyle; //!< active highlight style
 
   OpenGl_Matrix myModelViewMatrix; //!< Model matrix with applied structure transformations
 
-  TEL_POFFSET_PARAM PolygonOffset_applied; //!< Currently applied polygon offset.
-
   OpenGl_AspectFace myAspectFaceHl; //!< Hiddenline aspect
+
+  Handle(OpenGl_TextureSet) myEnvironmentTexture;
 
 public: //! @name type definition
 

@@ -6,133 +6,133 @@
 	objectVersion = 46;
 	objects = {
 
-		1031081E0C6B14FD1664019A = {isa = PBXBuildFile; fileRef = 1061152F15CC096C037E0428 ;};
-		0820105C1581014504B51157 = {isa = PBXBuildFile; fileRef = 189C032A006E17DA13EE0702 ;};
-		135F11D410A512F810FE03DC = {isa = PBXBuildFile; fileRef = 0C540274050C02A110A817BA ;};
-		17B7149A0F690E5201C1114C = {isa = PBXBuildFile; fileRef = 14220F9B15280570024C109E ;};
-		0AE70B41035B0D6502F60589 = {isa = PBXBuildFile; fileRef = 17EA03B507EF1539158C0A35 ;};
-		0E6307E1160B105A06E50F4D = {isa = PBXBuildFile; fileRef = 0BFA120808EF0C74054C0819 ;};
-		03351273193A16A2192114FA = {isa = PBXBuildFile; fileRef = 17160B520A90098F165818AC ;};
-		0B471519099200A60AB2150B = {isa = PBXBuildFile; fileRef = 01E2047E031E116B0DCC08F5 ;};
-		092204BD16C715BF131007C6 = {isa = PBXBuildFile; fileRef = 18B015F912F8149014B215FA ;};
-		1898007B097900440C81051F = {isa = PBXBuildFile; fileRef = 05C6029516DD0F63061B13C1 ;};
-		107D0E8E1287011E10B118FF = {isa = PBXBuildFile; fileRef = 06AF008A174704FC13091203 ;};
+		1346146B126118DF125515D8 = {isa = PBXBuildFile; fileRef = 001418F81003156314DA06DC ;};
+		00B300EE068F0F170FFA18BC = {isa = PBXBuildFile; fileRef = 02D81002165B15B00108012F ;};
+		184B16AF029B18BE06690887 = {isa = PBXBuildFile; fileRef = 0BFB14BD12FF0F9014AB15C2 ;};
+		0E5916750B17089D01291475 = {isa = PBXBuildFile; fileRef = 131A03A200280929193702E1 ;};
+		08220F2006730C1609FF1088 = {isa = PBXBuildFile; fileRef = 104602750F0B143D13361247 ;};
+		14A00226111D10D4062D0B8B = {isa = PBXBuildFile; fileRef = 124014BF1086063E00430A6A ;};
+		01030CAA0F6D003D044A0777 = {isa = PBXBuildFile; fileRef = 0CBC09C614AC0EC609BC02B2 ;};
+		09B90BBE15E312BF15B1101D = {isa = PBXBuildFile; fileRef = 18C618F501C40D07053A0091 ;};
+		17341407055404070BF1117E = {isa = PBXBuildFile; fileRef = 0F4B0EF51757165A192D16CD ;};
+		0AB40910003D177C107E0E59 = {isa = PBXBuildFile; fileRef = 15F4025118B41205136B04DA ;};
+		1042182605640CAB01D01733 = {isa = PBXBuildFile; fileRef = 09FA0439148401F600910646 ;};
 
-		04680303179D15001108046C = {isa = PBXBuildFile; fileRef = 12B703051241115911E708BA ; };
-		0E6F0F7F0C211326002106F2 = {isa = PBXBuildFile; fileRef = 16E111EC182A0B44037206ED ; };
-		01AB092209041472149215F2 = {isa = PBXBuildFile; fileRef = 0D5D11B50FB70B6F131C0618 ; };
-		0400009D000905F115151924 = {isa = PBXBuildFile; fileRef = 168901A001780AAC0B410619 ; };
-		1250043D10600C0704921562 = {isa = PBXBuildFile; fileRef = 075A0E7F096E135811F814BF ; };
-		0CE00D051166108D028409AB = {isa = PBXBuildFile; fileRef = 0EE10A5718540E5714FF099D ; };
-		06DB028C03C5173E0F720D56 = {isa = PBXBuildFile; fileRef = 029C18E70E830C8D0165026F ; };
-		046B02AC0CB405CE0A00116E = {isa = PBXBuildFile; fileRef = 174B034E083210C510CA1830 ; };
-		054E004407500C2A098E16C3 = {isa = PBXBuildFile; fileRef = 12CB080415A10664131617B9 ; };
-		028B07D80514171B0DDF1370 = {isa = PBXBuildFile; fileRef = 04450C9E16AF025F09300972 ; };
-		017C0ED514C50C7B04380036 = {isa = PBXBuildFile; fileRef = 09C506500C080BCB10BF0B9F ; };
-		132C053F1401024E0D160527 = {isa = PBXBuildFile; fileRef = 02D216710A770A460B33146F ; };
-		0BD1054007E70C81050B00EA = {isa = PBXBuildFile; fileRef = 034F0EE80FF103790CE603CD ; };
+		019B06360AAE11220C170FC1 = {isa = PBXBuildFile; fileRef = 140C0F9E0D330DDD13E112CA ; };
+		01FE13290ACD0D790B6A00D0 = {isa = PBXBuildFile; fileRef = 04DC100B0112023C14B80956 ; };
+		03A9031F05A416F80936130D = {isa = PBXBuildFile; fileRef = 1346025905E90E5C03E10EE4 ; };
+		092F178F0FF306540FE305E9 = {isa = PBXBuildFile; fileRef = 10790973184916EC022E0E7B ; };
+		106F157418ED0D1F0A06174E = {isa = PBXBuildFile; fileRef = 0D580467011D11BC175402F0 ; };
+		14480444024C0AAD15891791 = {isa = PBXBuildFile; fileRef = 0BB8042101D0080811DC09E4 ; };
+		16F70A880FD410A2043E090C = {isa = PBXBuildFile; fileRef = 0E97141412E604A5107B0EA5 ; };
+		14E0168D065209F8010100A1 = {isa = PBXBuildFile; fileRef = 072E13E914EB0B7C0F0D1561 ; };
+		05FE0A130F62125E077605CA = {isa = PBXBuildFile; fileRef = 126F02ED0AD8125812FD052E ; };
+		06F3057403B713B6022300FA = {isa = PBXBuildFile; fileRef = 0F0E0899198500830E090A9D ; };
+		18970D850E6317D6175C0686 = {isa = PBXBuildFile; fileRef = 0BCF12A015B40260135D054C ; };
+		123D111D03340B6A058F058E = {isa = PBXBuildFile; fileRef = 167405430EF7167700090B9B ; };
+		14B818A50AB306B2167303A5 = {isa = PBXBuildFile; fileRef = 04410F3B15C711FF0A010DD4 ; };
 
-		043C13E000E70ADD07430299 = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libTKVCAF.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		000802B70A4C074A00741484 = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libTKVCAF.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 
-		1061152F15CC096C037E0428 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AISPresentation.cxx; path = ../../../src/TPrsStd/TPrsStd_AISPresentation.cxx; sourceTree = "<group>"; };
-		189C032A006E17DA13EE0702 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AISViewer.cxx; path = ../../../src/TPrsStd/TPrsStd_AISViewer.cxx; sourceTree = "<group>"; };
-		0C540274050C02A110A817BA = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AxisDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_AxisDriver.cxx; sourceTree = "<group>"; };
-		14220F9B15280570024C109E = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_ConstraintDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_ConstraintDriver.cxx; sourceTree = "<group>"; };
-		17EA03B507EF1539158C0A35 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_ConstraintTools.cxx; path = ../../../src/TPrsStd/TPrsStd_ConstraintTools.cxx; sourceTree = "<group>"; };
-		0BFA120808EF0C74054C0819 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_Driver.cxx; path = ../../../src/TPrsStd/TPrsStd_Driver.cxx; sourceTree = "<group>"; };
-		17160B520A90098F165818AC = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_DriverTable.cxx; path = ../../../src/TPrsStd/TPrsStd_DriverTable.cxx; sourceTree = "<group>"; };
-		01E2047E031E116B0DCC08F5 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_GeometryDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_GeometryDriver.cxx; sourceTree = "<group>"; };
-		18B015F912F8149014B215FA = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_NamedShapeDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_NamedShapeDriver.cxx; sourceTree = "<group>"; };
-		05C6029516DD0F63061B13C1 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_PlaneDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_PlaneDriver.cxx; sourceTree = "<group>"; };
-		06AF008A174704FC13091203 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_PointDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_PointDriver.cxx; sourceTree = "<group>"; };
+		001418F81003156314DA06DC = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AISPresentation.cxx; path = ../../../src/TPrsStd/TPrsStd_AISPresentation.cxx; sourceTree = "<group>"; };
+		02D81002165B15B00108012F = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AISViewer.cxx; path = ../../../src/TPrsStd/TPrsStd_AISViewer.cxx; sourceTree = "<group>"; };
+		0BFB14BD12FF0F9014AB15C2 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_AxisDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_AxisDriver.cxx; sourceTree = "<group>"; };
+		131A03A200280929193702E1 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_ConstraintDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_ConstraintDriver.cxx; sourceTree = "<group>"; };
+		104602750F0B143D13361247 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_ConstraintTools.cxx; path = ../../../src/TPrsStd/TPrsStd_ConstraintTools.cxx; sourceTree = "<group>"; };
+		124014BF1086063E00430A6A = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_Driver.cxx; path = ../../../src/TPrsStd/TPrsStd_Driver.cxx; sourceTree = "<group>"; };
+		0CBC09C614AC0EC609BC02B2 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_DriverTable.cxx; path = ../../../src/TPrsStd/TPrsStd_DriverTable.cxx; sourceTree = "<group>"; };
+		18C618F501C40D07053A0091 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_GeometryDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_GeometryDriver.cxx; sourceTree = "<group>"; };
+		0F4B0EF51757165A192D16CD = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_NamedShapeDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_NamedShapeDriver.cxx; sourceTree = "<group>"; };
+		15F4025118B41205136B04DA = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_PlaneDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_PlaneDriver.cxx; sourceTree = "<group>"; };
+		09FA0439148401F600910646 = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TPrsStd_PointDriver.cxx; path = ../../../src/TPrsStd/TPrsStd_PointDriver.cxx; sourceTree = "<group>"; };
 
-		12B703051241115911E708BA = {isa = PBXFileReference; lastKnownFileType = file; name = libTKernel.dylib; path = libTKernel.dylib; sourceTree = "<group>"; };
-		16E111EC182A0B44037206ED = {isa = PBXFileReference; lastKnownFileType = file; name = libTKGeomBase.dylib; path = libTKGeomBase.dylib; sourceTree = "<group>"; };
-		0D5D11B50FB70B6F131C0618 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKBRep.dylib; path = libTKBRep.dylib; sourceTree = "<group>"; };
-		168901A001780AAC0B410619 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKTopAlgo.dylib; path = libTKTopAlgo.dylib; sourceTree = "<group>"; };
-		075A0E7F096E135811F814BF = {isa = PBXFileReference; lastKnownFileType = file; name = libTKMath.dylib; path = libTKMath.dylib; sourceTree = "<group>"; };
-		0EE10A5718540E5714FF099D = {isa = PBXFileReference; lastKnownFileType = file; name = libTKService.dylib; path = libTKService.dylib; sourceTree = "<group>"; };
-		029C18E70E830C8D0165026F = {isa = PBXFileReference; lastKnownFileType = file; name = libTKG2d.dylib; path = libTKG2d.dylib; sourceTree = "<group>"; };
-		174B034E083210C510CA1830 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKG3d.dylib; path = libTKG3d.dylib; sourceTree = "<group>"; };
-		12CB080415A10664131617B9 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKCDF.dylib; path = libTKCDF.dylib; sourceTree = "<group>"; };
-		04450C9E16AF025F09300972 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKLCAF.dylib; path = libTKLCAF.dylib; sourceTree = "<group>"; };
-		09C506500C080BCB10BF0B9F = {isa = PBXFileReference; lastKnownFileType = file; name = libTKBO.dylib; path = libTKBO.dylib; sourceTree = "<group>"; };
-		02D216710A770A460B33146F = {isa = PBXFileReference; lastKnownFileType = file; name = libTKCAF.dylib; path = libTKCAF.dylib; sourceTree = "<group>"; };
-		034F0EE80FF103790CE603CD = {isa = PBXFileReference; lastKnownFileType = file; name = libTKV3d.dylib; path = libTKV3d.dylib; sourceTree = "<group>"; };
+		140C0F9E0D330DDD13E112CA = {isa = PBXFileReference; lastKnownFileType = file; name = libTKernel.dylib; path = libTKernel.dylib; sourceTree = "<group>"; };
+		04DC100B0112023C14B80956 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKGeomBase.dylib; path = libTKGeomBase.dylib; sourceTree = "<group>"; };
+		1346025905E90E5C03E10EE4 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKBRep.dylib; path = libTKBRep.dylib; sourceTree = "<group>"; };
+		10790973184916EC022E0E7B = {isa = PBXFileReference; lastKnownFileType = file; name = libTKTopAlgo.dylib; path = libTKTopAlgo.dylib; sourceTree = "<group>"; };
+		0D580467011D11BC175402F0 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKMath.dylib; path = libTKMath.dylib; sourceTree = "<group>"; };
+		0BB8042101D0080811DC09E4 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKService.dylib; path = libTKService.dylib; sourceTree = "<group>"; };
+		0E97141412E604A5107B0EA5 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKG2d.dylib; path = libTKG2d.dylib; sourceTree = "<group>"; };
+		072E13E914EB0B7C0F0D1561 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKG3d.dylib; path = libTKG3d.dylib; sourceTree = "<group>"; };
+		126F02ED0AD8125812FD052E = {isa = PBXFileReference; lastKnownFileType = file; name = libTKCDF.dylib; path = libTKCDF.dylib; sourceTree = "<group>"; };
+		0F0E0899198500830E090A9D = {isa = PBXFileReference; lastKnownFileType = file; name = libTKLCAF.dylib; path = libTKLCAF.dylib; sourceTree = "<group>"; };
+		0BCF12A015B40260135D054C = {isa = PBXFileReference; lastKnownFileType = file; name = libTKBO.dylib; path = libTKBO.dylib; sourceTree = "<group>"; };
+		167405430EF7167700090B9B = {isa = PBXFileReference; lastKnownFileType = file; name = libTKCAF.dylib; path = libTKCAF.dylib; sourceTree = "<group>"; };
+		04410F3B15C711FF0A010DD4 = {isa = PBXFileReference; lastKnownFileType = file; name = libTKV3d.dylib; path = libTKV3d.dylib; sourceTree = "<group>"; };
 
-		10DE0E47169F060E02FB0F3E = {
+		0CDB0DB517D80B51114B0C41 = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				04680303179D15001108046C ,
-				0E6F0F7F0C211326002106F2 ,
-				01AB092209041472149215F2 ,
-				0400009D000905F115151924 ,
-				1250043D10600C0704921562 ,
-				0CE00D051166108D028409AB ,
-				06DB028C03C5173E0F720D56 ,
-				046B02AC0CB405CE0A00116E ,
-				054E004407500C2A098E16C3 ,
-				028B07D80514171B0DDF1370 ,
-				017C0ED514C50C7B04380036 ,
-				132C053F1401024E0D160527 ,
-				0BD1054007E70C81050B00EA ,
+				019B06360AAE11220C170FC1 ,
+				01FE13290ACD0D790B6A00D0 ,
+				03A9031F05A416F80936130D ,
+				092F178F0FF306540FE305E9 ,
+				106F157418ED0D1F0A06174E ,
+				14480444024C0AAD15891791 ,
+				16F70A880FD410A2043E090C ,
+				14E0168D065209F8010100A1 ,
+				05FE0A130F62125E077605CA ,
+				06F3057403B713B6022300FA ,
+				18970D850E6317D6175C0686 ,
+				123D111D03340B6A058F058E ,
+				14B818A50AB306B2167303A5 ,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 
-		08C30C3E0735119C10190408 = {
+		038606FA02B117630F7D0789 = {
 			isa = PBXGroup;
 			children = (
-				1061152F15CC096C037E0428 ,
-				189C032A006E17DA13EE0702 ,
-				0C540274050C02A110A817BA ,
-				14220F9B15280570024C109E ,
-				17EA03B507EF1539158C0A35 ,
-				0BFA120808EF0C74054C0819 ,
-				17160B520A90098F165818AC ,
-				01E2047E031E116B0DCC08F5 ,
-				18B015F912F8149014B215FA ,
-				05C6029516DD0F63061B13C1 ,
-				06AF008A174704FC13091203 ,
+				001418F81003156314DA06DC ,
+				02D81002165B15B00108012F ,
+				0BFB14BD12FF0F9014AB15C2 ,
+				131A03A200280929193702E1 ,
+				104602750F0B143D13361247 ,
+				124014BF1086063E00430A6A ,
+				0CBC09C614AC0EC609BC02B2 ,
+				18C618F501C40D07053A0091 ,
+				0F4B0EF51757165A192D16CD ,
+				15F4025118B41205136B04DA ,
+				09FA0439148401F600910646 ,
 			);
 			name = TPrsStd;
 			sourceTree = "<group>";
 		};
 
-		01910D060F02115B02DF06E8 = {
+		1941104718D80038129008DE = {
 			isa = PBXGroup;
 			children = (
-				12B703051241115911E708BA ,
-				16E111EC182A0B44037206ED ,
-				0D5D11B50FB70B6F131C0618 ,
-				168901A001780AAC0B410619 ,
-				075A0E7F096E135811F814BF ,
-				0EE10A5718540E5714FF099D ,
-				029C18E70E830C8D0165026F ,
-				174B034E083210C510CA1830 ,
-				12CB080415A10664131617B9 ,
-				04450C9E16AF025F09300972 ,
-				09C506500C080BCB10BF0B9F ,
-				02D216710A770A460B33146F ,
-				034F0EE80FF103790CE603CD ,
+				140C0F9E0D330DDD13E112CA ,
+				04DC100B0112023C14B80956 ,
+				1346025905E90E5C03E10EE4 ,
+				10790973184916EC022E0E7B ,
+				0D580467011D11BC175402F0 ,
+				0BB8042101D0080811DC09E4 ,
+				0E97141412E604A5107B0EA5 ,
+				072E13E914EB0B7C0F0D1561 ,
+				126F02ED0AD8125812FD052E ,
+				0F0E0899198500830E090A9D ,
+				0BCF12A015B40260135D054C ,
+				167405430EF7167700090B9B ,
+				04410F3B15C711FF0A010DD4 ,
 
-				0E6F009613FE069C15131591 ,
-				043C13E000E70ADD07430299 ,
+				1898080E0FC91508088506F0 ,
+				000802B70A4C074A00741484 ,
 			);
 			sourceTree = "<group>";
 		};
-		0E6F009613FE069C15131591 = {
+		1898080E0FC91508088506F0 = {
 			isa = PBXGroup;
 			children = (
-				08C30C3E0735119C10190408 ,
+				038606FA02B117630F7D0789 ,
 			);
 			name = "Source files";
 			sourceTree = "<group>";
 		};
 
-		068C0BF20BA112E400A106BC = {
+		044909240BAD056B0F9F1389 = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -140,13 +140,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 
-		044108C413B5068E0D2415FE = {
+		0467163614FD084A10A40107 = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0ABC14D316A9193B12C20A55 ;
+			buildConfigurationList = 09DB02A20C69120C05F611D4 ;
 			buildPhases = (
-				03770567044A14680F561538 ,
-				10DE0E47169F060E02FB0F3E ,
-				068C0BF20BA112E400A106BC ,
+				155A14FF0B1518A405990AAC ,
+				0CDB0DB517D80B51114B0C41 ,
+				044909240BAD056B0F9F1389 ,
 			);
 			buildRules = (
 			);
@@ -154,58 +154,59 @@
 			);
 			name = TKVCAF;
 			productName = TKVCAF;
-			productReference = 043C13E000E70ADD07430299 ;
+			productReference = 000802B70A4C074A00741484 ;
 			productType = "com.apple.product-type.library.dynamic";
 		};
 
-		048D141C14BD10AA168F01F2 = {
+		153A09FE182B135B070101F9 = {
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0430;
 			};
-			buildConfigurationList = 057E13BA0F66059F046D1985 ;
+			buildConfigurationList = 131604911632023005E3063F ;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = 01910D060F02115B02DF06E8;
-			productRefGroup = 01910D060F02115B02DF06E8;
+			mainGroup = 1941104718D80038129008DE;
+			productRefGroup = 1941104718D80038129008DE;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				044108C413B5068E0D2415FE ,
+				0467163614FD084A10A40107 ,
 			);
 		};
 
-		03770567044A14680F561538 = {
+		155A14FF0B1518A405990AAC = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1031081E0C6B14FD1664019A ,
-				0820105C1581014504B51157 ,
-				135F11D410A512F810FE03DC ,
-				17B7149A0F690E5201C1114C ,
-				0AE70B41035B0D6502F60589 ,
-				0E6307E1160B105A06E50F4D ,
-				03351273193A16A2192114FA ,
-				0B471519099200A60AB2150B ,
-				092204BD16C715BF131007C6 ,
-				1898007B097900440C81051F ,
-				107D0E8E1287011E10B118FF ,
+				1346146B126118DF125515D8 ,
+				00B300EE068F0F170FFA18BC ,
+				184B16AF029B18BE06690887 ,
+				0E5916750B17089D01291475 ,
+				08220F2006730C1609FF1088 ,
+				14A00226111D10D4062D0B8B ,
+				01030CAA0F6D003D044A0777 ,
+				09B90BBE15E312BF15B1101D ,
+				17341407055404070BF1117E ,
+				0AB40910003D177C107E0E59 ,
+				1042182605640CAB01D01733 ,
 
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 
-		13D70E9D08CA0ABF02DA13D3 = {
+		04A709B5093D11FE0E8B1721 = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -226,13 +227,14 @@
 			};
 			name = Debug;
 		};
-		06460AB80897011712791151 = {
+		15AB143914690E1303FA0B8A = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -247,7 +249,7 @@
 			};
 			name = Release;
 		};
-		0EF51089174B1649045711AD = {
+		09FD0B9716CF06DB05A302DA = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_EXTENSION = dylib;
@@ -263,7 +265,7 @@
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include,
-					/Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/inc,
+					/Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/inc,
 					"$(CSF_OPT_INC)",
 				);
 				LIBRARY_SEARCH_PATHS = (
@@ -273,7 +275,7 @@
 					/Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/lib,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/lib,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/lib,
-					/Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/adm/mac/xcd/build/Release,
+					/Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/adm/mac/xcd/build/Release,
 				);
 				OTHER_CFLAGS = (
 					"$(CSF_OPT_CMPL)",
@@ -282,12 +284,12 @@
 					"$(OTHER_CFLAGS)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = " ../../../inc /usr/local/include /Users/mnt/tools/WOK680/3rdparty/mac64/gl2ps/include /Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype /Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include /Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/inc";
+				USER_HEADER_SEARCH_PATHS = " ../../../inc /usr/local/include /Users/mnt/tools/WOK680/3rdparty/mac64/gl2ps/include /Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype /Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include /Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/inc";
 				WRAPPER_EXTENSION = dylib;
 			};
 			name = Debug;
 		};
-		0A330CCB173A0281085A0D02 = {
+		05620C780ADD020D028F0B9E = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_EXTENSION = dylib;
@@ -303,7 +305,7 @@
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include,
-					/Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/inc,
+					/Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/inc,
 					"$(CSF_OPT_INC)",
 				);
 				LIBRARY_SEARCH_PATHS = (
@@ -313,7 +315,7 @@
 					/Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/lib,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/lib,
 					/Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/lib,
-					/Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/adm/mac/xcd/build/Release,
+					/Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/adm/mac/xcd/build/Release,
 				);
 				OTHER_CFLAGS = (
 					"$(CSF_OPT_CMPL)",
@@ -322,31 +324,31 @@
 					"$(OTHER_CFLAGS)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = " ../../../inc /usr/local/include /Users/mnt/tools/WOK680/3rdparty/mac64/gl2ps/include /Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype /Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include /Users/mnt/builds/CR0-OCCT700_CR0-OCCT700/MacOS-opt/OCCT/inc";
+				USER_HEADER_SEARCH_PATHS = " ../../../inc /usr/local/include /Users/mnt/tools/WOK680/3rdparty/mac64/gl2ps/include /Users/mnt/tools/WOK680/3rdparty/mac64/tbb42_20140416oss/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include /Users/mnt/tools/WOK680/3rdparty/mac64/FreeType2/include/freetype /Users/mnt/tools/WOK680/3rdparty/mac64/FreeImage/include /Users/mnt/builds/CR0-OCCT730_IR-2018-05-25/MacOS-opt/OCCT/inc";
 				WRAPPER_EXTENSION = dylib;
 			};
 			name = Release;
 		};
 
-		057E13BA0F66059F046D1985 = {
+		131604911632023005E3063F = {
 			isa = XCConfigurationList;
 		buildConfigurations = (
-				13D70E9D08CA0ABF02DA13D3 ,
-				06460AB80897011712791151 ,
+				04A709B5093D11FE0E8B1721 ,
+				15AB143914690E1303FA0B8A ,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0ABC14D316A9193B12C20A55 = {
+		09DB02A20C69120C05F611D4 = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				0EF51089174B1649045711AD ,
-				0A330CCB173A0281085A0D02 ,
+				09FD0B9716CF06DB05A302DA ,
+				05620C780ADD020D028F0B9E ,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 
 	};
-	rootObject = 048D141C14BD10AA168F01F2 ;
+	rootObject = 153A09FE182B135B070101F9 ;
 }

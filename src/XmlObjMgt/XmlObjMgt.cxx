@@ -23,6 +23,8 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <limits>
+
 static const char aRefPrefix [] = "/document/label";
 static const char aRefElem1  [] = "/label[@tag=";
 static const char aRefElem2  [] = "]";
@@ -190,10 +192,10 @@ Standard_Boolean XmlObjMgt::GetTagEntryString
     errno = 0;
     char * aPtr;
     long aTagValue = strtol (&aSource[1], &aPtr, 10);
-    if (aTagValue <= 0 || aPtr[0] != aQuote ||
+    Standard_Integer aLen = (Standard_Integer)(aPtr - &aSource[1]);
+    if (aTagValue < 0 || aLen == 0 || aPtr[0] != aQuote ||
         errno == ERANGE || errno == EINVAL)
       return Standard_False;
-    Standard_Integer aLen = (Standard_Integer)(aPtr - &aSource[1]);
     aTagEntryPtr[0] = ':';
     memcpy (&aTagEntryPtr[1], &aSource[1], aLen);
     aTagEntryPtr += (aLen + 1);
@@ -246,9 +248,10 @@ void XmlObjMgt::SetTagEntryString (XmlObjMgt_DOMString&           theTarget,
     errno = 0;
     char * ptr;
     long aTagValue = strtol (aTagEntry, &ptr, 10);
-    if (aTagValue <= 0 || errno == ERANGE || errno == EINVAL)
-      return;           // error
     Standard_Integer aTagSize = (Standard_Integer)(ptr - aTagEntry);
+    if (aTagValue < 0 || aTagSize == 0 ||
+        errno == ERANGE || errno == EINVAL)
+      return;           // error
 
     //  Add one XPath level to the expression in aTarget
     memcpy (&aTargetPtr[0],                     aRefElem1, anElem1Size);
@@ -343,11 +346,37 @@ Standard_Boolean XmlObjMgt::GetReal (Standard_CString& theString,
 {
   char * ptr;
   errno = 0;
-  double aValue = Strtod (theString, &ptr);
+  theValue = Strtod (theString, &ptr);
   if (ptr == theString || errno == ERANGE || errno == EINVAL)
     return Standard_False;
-  theValue = Standard_Real (aValue);
+
   theString = ptr;
+
+  // detect NAN or infinite values written by old MSVC run-time as -1. with 
+  // suffix "#QNAN" or "#SNAN" or "#INF"
+  if (*ptr == '#')
+  {
+    if (! strncmp (ptr, "#QNAN", 5) || ! strncmp (ptr, "#SNAN", 5))
+    {
+      theString = ptr + 5;
+      theValue = std::numeric_limits<double>::quiet_NaN();
+      return Standard_True;
+    }
+    else if (! strncmp (ptr, "#INF", 4))
+    {
+      theString = ptr + 4;
+      theValue = (theValue < 0 ? -std::numeric_limits<double>::infinity() : std::numeric_limits<double>::infinity());
+      return Standard_True;
+    }
+    else 
+      return Standard_False;
+  }
+  else if (*ptr && ! IsSpace (*ptr))
+  {
+    // report failure if reading stopped not at the end of the string or space
+    return Standard_False;
+  }
+
   return Standard_True;
 }
 
@@ -370,13 +399,8 @@ Standard_Boolean XmlObjMgt::GetReal (const XmlObjMgt_DOMString& theString,
     }
   default:      // LDOM_Ascii*
     {
-      char       * ptr;
       const char * aString = theString.GetString();
-      errno = 0;
-      double aValue = Strtod (aString, &ptr);
-      if (ptr == aString || errno == ERANGE || errno == EINVAL)
-        return Standard_False;
-      theValue = Standard_Real (aValue);
+      return GetReal (aString, theValue);
     }
   }
   return Standard_True;

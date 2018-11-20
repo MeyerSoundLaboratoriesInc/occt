@@ -52,6 +52,10 @@
 #include <Aspect_Window.hxx>
 #include <Graphic3d_AspectMarker3d.hxx>
 #include <Graphic3d_ArrayOfPoints.hxx>
+#include <math_BullardGenerator.hxx>
+#include <Message.hxx>
+#include <Message_Messenger.hxx>
+#include <Quantity_ColorHasher.hxx>
 #include <Poly_Connect.hxx>
 #include <TColStd_HArray1OfInteger.hxx>
 
@@ -113,6 +117,7 @@ void StdSelect_ViewerSelector3d::Pick (const Standard_Integer theXPix,
                                        const Standard_Integer theYPix,
                                        const Handle(V3d_View)& theView)
 {
+  updateZLayers (theView);
   if(myToUpdateTolerance)
   {
     mySelectingVolumeMgr.SetPixelTolerance (myTolerances.Tolerance());
@@ -127,7 +132,7 @@ void StdSelect_ViewerSelector3d::Pick (const Standard_Integer theXPix,
   gp_Pnt2d aMousePos (static_cast<Standard_Real> (theXPix),
                       static_cast<Standard_Real> (theYPix));
   mySelectingVolumeMgr.BuildSelectingVolume (aMousePos);
-  mySelectingVolumeMgr.SetViewClipping (theView->GetClipPlanes());
+  mySelectingVolumeMgr.SetViewClipping (theView->ClipPlanes());
 
   TraverseSensitives();
 }
@@ -142,6 +147,7 @@ void StdSelect_ViewerSelector3d::Pick (const Standard_Integer theXPMin,
                                        const Standard_Integer theYPMax,
                                        const Handle(V3d_View)& theView)
 {
+  updateZLayers (theView);
   mySelectingVolumeMgr.SetCamera (theView->Camera());
   mySelectingVolumeMgr.SetActiveSelectionType (SelectMgr_SelectingVolumeManager::Box);
   Standard_Integer aWidth = 0, aHeight = 0;
@@ -164,6 +170,7 @@ void StdSelect_ViewerSelector3d::Pick (const Standard_Integer theXPMin,
 void StdSelect_ViewerSelector3d::Pick (const TColgp_Array1OfPnt2d& thePolyline,
                                        const Handle(V3d_View)& theView)
 {
+  updateZLayers (theView);
   mySelectingVolumeMgr.SetCamera (theView->Camera());
   mySelectingVolumeMgr.SetActiveSelectionType (SelectMgr_SelectingVolumeManager::Polyline);
   Standard_Integer aWidth = 0, aHeight = 0;
@@ -180,48 +187,24 @@ void StdSelect_ViewerSelector3d::Pick (const TColgp_Array1OfPnt2d& thePolyline,
 //=======================================================================
 void StdSelect_ViewerSelector3d::DisplaySensitive (const Handle(V3d_View)& theView)
 {
-  for (Standard_Integer anObjectIdx = 0; anObjectIdx <= mySelectableObjects.Size(); ++anObjectIdx)
+  for (SelectMgr_SelectableObjectSet::Iterator aSelectableIt (mySelectableObjects); aSelectableIt.More(); aSelectableIt.Next())
   {
-    const Handle (SelectMgr_SelectableObject)& anObj = mySelectableObjects.GetObjectById (anObjectIdx);
-
     Handle(Graphic3d_Structure) aStruct = new Graphic3d_Structure (theView->Viewer()->StructureManager());
-
-    for (anObj->Init(); anObj->More(); anObj->Next())
+    const Handle (SelectMgr_SelectableObject)& anObj = aSelectableIt.Value();
+    for (SelectMgr_SequenceOfSelection::Iterator aSelIter (anObj->Selections()); aSelIter.More(); aSelIter.Next())
     {
-      if (anObj->CurrentSelection()->GetSelectionState() == SelectMgr_SOS_Activated)
+      if (aSelIter.Value()->GetSelectionState() == SelectMgr_SOS_Activated)
       {
-        ComputeSensitivePrs (aStruct, anObj->CurrentSelection(), anObj->Transformation(), Graphic3d_TransformPers());
+        computeSensitivePrs (aStruct, aSelIter.Value(), anObj->Transformation(), Handle(Graphic3d_TransformPers)());
       }
     }
 
     myStructs.Append (aStruct);
   }
 
-  for (Standard_Integer anObjectIdx = 0; anObjectIdx <= mySelectableObjectsTrsfPers.Size(); ++anObjectIdx)
+  for (Graphic3d_SequenceOfStructure::Iterator aStructIter (myStructs); aStructIter.More(); aStructIter.Next())
   {
-    const Handle (SelectMgr_SelectableObject)& anObj = mySelectableObjectsTrsfPers.GetObjectById (anObjectIdx);
-
-    Handle(Graphic3d_Structure) aStruct = new Graphic3d_Structure (theView->Viewer()->StructureManager());
-
-    if (!anObj->TransformPersistence().Flags || (anObj->TransformPersistence().Flags & Graphic3d_TMF_2d))
-    {
-      continue;
-    }
-
-    for (anObj->Init(); anObj->More(); anObj->Next())
-    {
-      if (anObj->CurrentSelection()->GetSelectionState() == SelectMgr_SOS_Activated)
-      {
-        ComputeSensitivePrs (aStruct, anObj->CurrentSelection(), anObj->Transformation(), anObj->TransformPersistence());
-      }
-    }
-
-    myStructs.Append (aStruct);
-  }
-
-  for (Standard_Integer aStructIdx = 1; aStructIdx <= myStructs.Length(); ++aStructIdx)
-  {
-    Handle(Graphic3d_Structure)& aStruct = myStructs.ChangeValue (aStructIdx);
+    Handle(Graphic3d_Structure)& aStruct = aStructIter.ChangeValue();
     aStruct->SetDisplayPriority (10);
     aStruct->Display();
   }
@@ -235,11 +218,10 @@ void StdSelect_ViewerSelector3d::DisplaySensitive (const Handle(V3d_View)& theVi
 //=======================================================================
 void StdSelect_ViewerSelector3d::ClearSensitive (const Handle(V3d_View)& theView)
 {
-  for (Standard_Integer aStructIdx = 1; aStructIdx <= myStructs.Length(); ++aStructIdx)
+  for (Graphic3d_SequenceOfStructure::Iterator aStructIter (myStructs); aStructIter.More(); aStructIter.Next())
   {
-    myStructs.Value (aStructIdx)->Remove();
+    aStructIter.ChangeValue()->Remove();
   }
-
   myStructs.Clear();
 
   if (!theView.IsNull())
@@ -264,7 +246,7 @@ void StdSelect_ViewerSelector3d::DisplaySensitive (const Handle(SelectMgr_Select
 
   Handle(Graphic3d_Structure) aStruct = new Graphic3d_Structure (theView->Viewer()->StructureManager());
 
-  ComputeSensitivePrs (aStruct, theSel, theTrsf, Graphic3d_TransformPers());
+  computeSensitivePrs (aStruct, theSel, theTrsf, Handle(Graphic3d_TransformPers)());
 
   myStructs.Append (aStruct);
   myStructs.Last()->SetDisplayPriority (10);
@@ -274,40 +256,33 @@ void StdSelect_ViewerSelector3d::DisplaySensitive (const Handle(SelectMgr_Select
 }
 
 //=======================================================================
-//function : ComputeSensitivePrs
+//function : computeSensitivePrs
 //purpose  :
 //=======================================================================
-void StdSelect_ViewerSelector3d::ComputeSensitivePrs (const Handle(Graphic3d_Structure)& theStructure,
+void StdSelect_ViewerSelector3d::computeSensitivePrs (const Handle(Graphic3d_Structure)& theStructure,
                                                       const Handle(SelectMgr_Selection)& theSel,
                                                       const gp_Trsf& theLoc,
-                                                      const Graphic3d_TransformPers& theTransPers)
+                                                      const Handle(Graphic3d_TransformPers)& theTrsfPers)
 {
-  theStructure->SetTransformPersistence (theTransPers.Flags, gp_Pnt (theTransPers.Point.x(),
-                                                                     theTransPers.Point.y(),
-                                                                     theTransPers.Point.z()));
+  theStructure->SetTransformPersistence (theTrsfPers);
 
   Handle(Graphic3d_Group) aSensGroup  = theStructure->NewGroup();
 
   Quantity_Color aColor (Quantity_NOC_INDIANRED3);
-  Handle(Graphic3d_AspectMarker3d) aMarkerAspect =
-    new Graphic3d_AspectMarker3d (Aspect_TOM_O_PLUS, aColor, 2.0);
+  Handle(Graphic3d_AspectMarker3d) aMarkerAspect =new Graphic3d_AspectMarker3d (Aspect_TOM_O_PLUS, aColor, 2.0);
 
   aSensGroup->SetPrimitivesAspect (aMarkerAspect);
-  aSensGroup->SetPrimitivesAspect (
-    new Graphic3d_AspectLine3d (Quantity_NOC_GRAY40, Aspect_TOL_SOLID, 2.0));
+  aSensGroup->SetPrimitivesAspect (new Graphic3d_AspectLine3d (Quantity_NOC_GRAY40, Aspect_TOL_SOLID, 2.0));
 
   Handle(Graphic3d_Group) anAreaGroup = theStructure->NewGroup();
 
-  anAreaGroup->SetPrimitivesAspect (
-    new Graphic3d_AspectLine3d (Quantity_NOC_AQUAMARINE1, Aspect_TOL_DASH, 1.0));
+  anAreaGroup->SetPrimitivesAspect (new Graphic3d_AspectLine3d (Quantity_NOC_AQUAMARINE1, Aspect_TOL_DASH, 1.0));
 
   TColgp_SequenceOfPnt aSeqLines, aSeqFree;
   TColStd_SequenceOfInteger aSeqBnds;
-
-  for (theSel->Init(); theSel->More(); theSel->Next())
+  for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (theSel->Entities()); aSelEntIter.More(); aSelEntIter.Next())
   {
-    Handle(Select3D_SensitiveEntity) Ent =
-      Handle(Select3D_SensitiveEntity)::DownCast(theSel->Sensitive()->BaseSensitive());
+    Handle(Select3D_SensitiveEntity) Ent = Handle(Select3D_SensitiveEntity)::DownCast(aSelEntIter.Value()->BaseSensitive());
     const Standard_Boolean hasloc = theLoc.Form() != gp_Identity;
 
     //==============
@@ -661,5 +636,465 @@ Standard_Boolean StdSelect_ViewerSelector3d::HasDepthClipping (const Handle(Sele
   }
 
   const Handle(SelectMgr_SelectableObject)& aSelectable = theOwner->Selectable();
-  return (aSelectable->GetClipPlanes().Size() > 0);
+  return !aSelectable->ClipPlanes().IsNull()
+      && !aSelectable->ClipPlanes()->IsEmpty();
+}
+
+//=======================================================================
+// Function: updateZLayers
+// Purpose :
+//=======================================================================
+void StdSelect_ViewerSelector3d::updateZLayers (const Handle(V3d_View)& theView)
+{
+  myZLayerOrderMap.Clear();
+  TColStd_SequenceOfInteger aZLayers;
+  theView->Viewer()->GetAllZLayers (aZLayers);
+  Standard_Integer aPos = 0;
+  Standard_Boolean isPrevDepthWrite = true;
+  for (TColStd_SequenceOfInteger::Iterator aLayerIter (aZLayers); aLayerIter.More(); aLayerIter.Next())
+  {
+    Graphic3d_ZLayerSettings aSettings = theView->Viewer()->ZLayerSettings (aLayerIter.Value());
+    if (aSettings.ToClearDepth()
+     || isPrevDepthWrite != aSettings.ToEnableDepthWrite())
+    {
+      ++aPos;
+    }
+    isPrevDepthWrite = aSettings.ToEnableDepthWrite();
+    myZLayerOrderMap.Bind (aLayerIter.Value(), aPos);
+  }
+}
+
+namespace
+{
+  //! Abstract class for filling pixel with color.
+  class BaseFiller : public Standard_Transient
+  {
+    DEFINE_STANDARD_RTTI_INLINE(BaseFiller, Standard_Transient)
+  public:
+
+    //! Main constructor.
+    BaseFiller (Image_PixMap&               thePixMap,
+                StdSelect_ViewerSelector3d* theSelector)
+    : myImage  (&thePixMap),
+      myMainSel(theSelector) {}
+
+    //! Fill pixel at specified position.
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) = 0;
+
+    //! Flush results into final image.
+    virtual void Flush() {}
+
+  protected:
+
+    //! Find the new unique random color.
+    void randomPastelColor (Quantity_Color& theColor)
+    {
+      for (;;)
+      {
+        nextRandomPastelColor (theColor);
+        if (myUniqueColors.Add (theColor))
+        {
+          return;
+        }
+      }
+    }
+
+    //! Fills the given color as random.
+    void nextRandomPastelColor (Quantity_Color& theColor)
+    {
+      theColor = Quantity_Color (Standard_Real(myBullardGenerator.NextInt() % 256) / 255.0,
+                                 Standard_Real(myBullardGenerator.NextInt() % 256) / 255.0,
+                                 Standard_Real(myBullardGenerator.NextInt() % 256) / 255.0,
+                                 Quantity_TOC_RGB);
+    }
+
+  protected:
+    Image_PixMap*               myImage;
+    StdSelect_ViewerSelector3d* myMainSel;
+    math_BullardGenerator       myBullardGenerator;
+    NCollection_Map<Quantity_Color, Quantity_ColorHasher> myUniqueColors;
+  };
+
+  //! Help class for filling pixel with random color.
+  class GeneratedEntityColorFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(GeneratedEntityColorFiller, BaseFiller)
+  public:
+    GeneratedEntityColorFiller (Image_PixMap& thePixMap,
+                                StdSelect_ViewerSelector3d* theSelector,
+                                const SelectMgr_SelectableObjectSet& theSelObjects)
+    : BaseFiller (thePixMap, theSelector)
+    {
+      // generate per-entity colors in the order as they have been activated
+      for (SelectMgr_SelectableObjectSet::Iterator anObjIter (theSelObjects); anObjIter.More(); anObjIter.Next())
+      {
+        const Handle(SelectMgr_SelectableObject)& anObj = anObjIter.Value();
+        for (SelectMgr_SequenceOfSelection::Iterator aSelIter (anObj->Selections()); aSelIter.More(); aSelIter.Next())
+        {
+          const Handle(SelectMgr_Selection)& aSel = aSelIter.Value();
+          for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (aSel->Entities()); aSelEntIter.More(); aSelEntIter.Next())
+          {
+            const Handle(SelectMgr_SensitiveEntity)& aSens = aSelEntIter.Value();
+            if (!myMapEntityColors.IsBound (aSens->BaseSensitive()))
+            {
+              Quantity_Color aColor;
+              randomPastelColor (aColor);
+              myMapEntityColors.Bind (aSens->BaseSensitive(), aColor);
+            }
+          }
+        }
+      }
+    }
+
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      if (thePicked < 1
+       || thePicked > myMainSel->NbPicked())
+      {
+        myImage->SetPixelColor (theCol, theRow, Quantity_Color(Quantity_NOC_BLACK));
+        return;
+      }
+
+      const Handle(SelectBasics_SensitiveEntity)& aPickedEntity = myMainSel->PickedEntity (thePicked);
+      Quantity_Color aColor (Quantity_NOC_BLACK);
+      myMapEntityColors.Find (aPickedEntity, aColor);
+      myImage->SetPixelColor (theCol, theRow, aColor);
+    }
+
+  protected:
+    NCollection_DataMap<Handle(SelectBasics_SensitiveEntity), Quantity_Color> myMapEntityColors;
+  };
+
+  //! Help class for filling pixel with normalized depth of ray.
+  class NormalizedDepthFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(NormalizedDepthFiller, BaseFiller)
+  public:
+    NormalizedDepthFiller (Image_PixMap& thePixMap,
+                           StdSelect_ViewerSelector3d* theSelector,
+                           const Standard_Boolean theToInverse)
+    : BaseFiller (thePixMap, theSelector),
+      myDepthMin ( RealLast()),
+      myDepthMax (-RealLast()),
+      myToInverse(theToInverse)
+    {
+      myUnnormImage.InitZero (Image_Format_GrayF, thePixMap.SizeX(), thePixMap.SizeY());
+    }
+
+    //! Accumulate the data.
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      if (myUnnormImage.IsEmpty())
+      {
+        return;
+      }
+
+      if (thePicked < 1
+       || thePicked > myMainSel->NbPicked())
+      {
+        myUnnormImage.ChangeValue<float> (theRow, theCol) = ShortRealLast();
+        return;
+      }
+
+      const SelectMgr_SortCriterion& aSortCriterion = myMainSel->PickedData (thePicked);
+      myUnnormImage.ChangeValue<float> (theRow, theCol) = float(aSortCriterion.Depth);
+      myDepthMin = Min (myDepthMin, aSortCriterion.Depth);
+      myDepthMax = Max (myDepthMax, aSortCriterion.Depth);
+    }
+
+    //! Normalize the depth values.
+    virtual void Flush() Standard_OVERRIDE
+    {
+      float aFrom  = 0.0f;
+      float aDelta = 1.0f;
+      if (myDepthMin <= myDepthMax)
+      {
+        aFrom  = float(myDepthMin);
+        aDelta = float(myDepthMax) - float(myDepthMin);
+        if (aDelta <= ShortRealEpsilon())
+        {
+          aDelta = 1.0f;
+        }
+      }
+      for (Standard_Size aRowIter = 0; aRowIter < myUnnormImage.SizeY(); ++aRowIter)
+      {
+        for (Standard_Size aColIter = 0; aColIter < myUnnormImage.SizeX(); ++aColIter)
+        {
+          float aDepth = myUnnormImage.Value<float> (aRowIter, aColIter);
+          if (aDepth <= -ShortRealLast()
+           || aDepth >=  ShortRealLast())
+          {
+            myImage->SetPixelColor (Standard_Integer(aColIter), Standard_Integer(aRowIter),
+                                    Quantity_ColorRGBA (0.0f, 0.0f, 0.0f, 1.0f));
+            continue;
+          }
+
+          float aNormDepth = (aDepth - aFrom) / aDelta;
+          if (myToInverse)
+          {
+            aNormDepth = 1.0f - aNormDepth;
+          }
+          myImage->SetPixelColor (Standard_Integer(aColIter), Standard_Integer(aRowIter),
+                                  Quantity_ColorRGBA (aNormDepth, aNormDepth, aNormDepth, 1.0f));
+        }
+      }
+    }
+
+  private:
+    Image_PixMap     myUnnormImage;
+    Standard_Real    myDepthMin;
+    Standard_Real    myDepthMax;
+    Standard_Boolean myToInverse;
+  };
+
+  //! Help class for filling pixel with unnormalized depth of ray.
+  class UnnormalizedDepthFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(UnnormalizedDepthFiller, BaseFiller)
+  public:
+    UnnormalizedDepthFiller (Image_PixMap&               thePixMap,
+                             StdSelect_ViewerSelector3d* theSelector)
+    : BaseFiller (thePixMap, theSelector) {}
+
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      if (thePicked < 1
+       || thePicked > myMainSel->NbPicked())
+      {
+        myImage->SetPixelColor (theCol, theRow, Quantity_ColorRGBA (0.0f, 0.0f, 0.0f, 1.0f));
+        return;
+      }
+
+      const SelectMgr_SortCriterion& aSortCriterion = myMainSel->PickedData (thePicked);
+      const float aDepth = float(aSortCriterion.Depth);
+      myImage->SetPixelColor (theCol, theRow, Quantity_ColorRGBA (Graphic3d_Vec4 (aDepth, aDepth, aDepth, 1.0f)));
+    }
+  };
+
+  //! Help class for filling pixel with color of detected object.
+  class GeneratedOwnerColorFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(GeneratedOwnerColorFiller, BaseFiller)
+  public:
+    GeneratedOwnerColorFiller (Image_PixMap& thePixMap,
+                               StdSelect_ViewerSelector3d* theSelector,
+                               const SelectMgr_SelectableObjectSet& theSelObjects)
+    : BaseFiller (thePixMap, theSelector)
+    {
+      // generate per-owner colors in the order as they have been activated
+      for (SelectMgr_SelectableObjectSet::Iterator anObjIter (theSelObjects); anObjIter.More(); anObjIter.Next())
+      {
+        const Handle(SelectMgr_SelectableObject)& anObj = anObjIter.Value();
+        for (SelectMgr_SequenceOfSelection::Iterator aSelIter (anObj->Selections()); aSelIter.More(); aSelIter.Next())
+        {
+          const Handle(SelectMgr_Selection)& aSel = aSelIter.Value();
+          for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (aSel->Entities()); aSelEntIter.More(); aSelEntIter.Next())
+          {
+            const Handle(SelectMgr_SensitiveEntity)& aSens   = aSelEntIter.Value();
+            const Handle(SelectBasics_EntityOwner)&  anOwner = aSens->BaseSensitive()->OwnerId();
+            if (!myMapOwnerColors.IsBound (anOwner))
+            {
+              Quantity_Color aColor;
+              randomPastelColor (aColor);
+              myMapOwnerColors.Bind (anOwner, aColor);
+            }
+          }
+        }
+      }
+    }
+
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      if (thePicked < 1
+       || thePicked > myMainSel->NbPicked())
+      {
+        myImage->SetPixelColor (theCol, theRow, Quantity_Color(Quantity_NOC_BLACK));
+        return;
+      }
+
+      const Handle(SelectMgr_EntityOwner)& aPickedOwner = myMainSel->Picked (thePicked);
+      Quantity_Color aColor (Quantity_NOC_BLACK);
+      myMapOwnerColors.Find (aPickedOwner, aColor);
+      myImage->SetPixelColor (theCol, theRow, aColor);
+    }
+
+  protected:
+    NCollection_DataMap<Handle(SelectBasics_EntityOwner), Quantity_Color> myMapOwnerColors;
+  };
+
+  //! Help class for filling pixel with random color for each selection mode.
+  class GeneratedSelModeColorFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(GeneratedSelModeColorFiller, BaseFiller)
+  public:
+    GeneratedSelModeColorFiller (Image_PixMap&               thePixMap,
+                                 StdSelect_ViewerSelector3d* theSelector)
+    : BaseFiller (thePixMap, theSelector)
+    {
+      // generate standard modes in proper order, consider custom objects would use similar scheme
+      myMapSelectionModeColors.Bind (     0, Quantity_NOC_WHITE);          // default (entire object selection)
+      myMapSelectionModeColors.Bind (     1, Quantity_NOC_YELLOW);         // TopAbs_VERTEX
+      myMapSelectionModeColors.Bind (     2, Quantity_NOC_GREEN);          // TopAbs_EDGE
+      myMapSelectionModeColors.Bind (     3, Quantity_NOC_RED);            // TopAbs_WIRE
+      myMapSelectionModeColors.Bind (     4, Quantity_NOC_BLUE1);          // TopAbs_FACE
+      myMapSelectionModeColors.Bind (     5, Quantity_NOC_CYAN1);          // TopAbs_SHELL
+      myMapSelectionModeColors.Bind (     6, Quantity_NOC_PURPLE);         // TopAbs_SOLID
+      myMapSelectionModeColors.Bind (     7, Quantity_NOC_MAGENTA1);       // TopAbs_COMPSOLID
+      myMapSelectionModeColors.Bind (     8, Quantity_NOC_BROWN);          // TopAbs_COMPOUND
+      myMapSelectionModeColors.Bind (0x0010, Quantity_NOC_PINK);           // MeshVS_SMF_Volume
+      myMapSelectionModeColors.Bind (0x001E, Quantity_NOC_LIMEGREEN);      // MeshVS_SMF_Element
+      myMapSelectionModeColors.Bind (0x001F, Quantity_NOC_DARKOLIVEGREEN); // MeshVS_SMF_All
+      myMapSelectionModeColors.Bind (0x0100, Quantity_NOC_GOLD);           // MeshVS_SMF_Group
+    }
+
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      if (thePicked < 1
+       || thePicked > myMainSel->NbPicked())
+      {
+        myImage->SetPixelColor (theCol, theRow, Quantity_Color (Quantity_NOC_BLACK));
+        return;
+      }
+
+      Standard_Integer aSelectionMode = -1;
+      const Handle(SelectMgr_SelectableObject)&   aSelectable = myMainSel->Picked       (thePicked)->Selectable();
+      const Handle(SelectBasics_SensitiveEntity)& anEntity    = myMainSel->PickedEntity (thePicked);
+      for (SelectMgr_SequenceOfSelection::Iterator aSelIter (aSelectable->Selections()); aSelIter.More(); aSelIter.Next())
+      {
+        const Handle(SelectMgr_Selection)& aSelection = aSelIter.Value();
+        for (NCollection_Vector<Handle(SelectMgr_SensitiveEntity)>::Iterator aSelEntIter (aSelection->Entities()); aSelEntIter.More(); aSelEntIter.Next())
+        {
+          if (aSelEntIter.Value()->BaseSensitive() == anEntity)
+          {
+            aSelectionMode = aSelection->Mode();
+            break;
+          }
+        }
+      }
+      if (aSelectionMode == -1)
+      {
+        myImage->SetPixelColor (theCol, theRow, Quantity_Color (Quantity_NOC_BLACK));
+        return;
+      }
+
+      if (!myMapSelectionModeColors.IsBound (aSelectionMode))
+      {
+        Quantity_Color aColor;
+        randomPastelColor (aColor);
+        myMapSelectionModeColors.Bind (aSelectionMode, aColor);
+      }
+
+      const Quantity_Color& aColor = myMapSelectionModeColors.Find (aSelectionMode);
+      myImage->SetPixelColor (theCol, theRow, aColor);
+    }
+
+  protected:
+    NCollection_DataMap<Standard_Integer, Quantity_Color> myMapSelectionModeColors;
+  };
+
+  //! Help class for filling pixel with color of detected shape.
+  class DetectedObjectColorFiller : public BaseFiller
+  {
+    DEFINE_STANDARD_RTTI_INLINE(DetectedObjectColorFiller, BaseFiller)
+  public:
+    DetectedObjectColorFiller (Image_PixMap&               thePixMap,
+                               StdSelect_ViewerSelector3d* theSelector)
+    : BaseFiller (thePixMap, theSelector) {}
+
+    virtual void Fill (const Standard_Integer theCol,
+                       const Standard_Integer theRow,
+                       const Standard_Integer thePicked) Standard_OVERRIDE
+    {
+      Quantity_Color aColor (Quantity_NOC_BLACK);
+      if (thePicked > 0
+       && thePicked <= myMainSel->NbPicked())
+      {
+        const Handle(SelectMgr_SelectableObject)& aSelectable = myMainSel->Picked (thePicked)->Selectable();
+        aColor = aSelectable->Attributes()->Color();
+      }
+      myImage->SetPixelColor (theCol, theRow, aColor);
+    }
+  };
+
+}
+
+//=======================================================================
+//function : ToPixMap
+//purpose  :
+//=======================================================================
+Standard_Boolean StdSelect_ViewerSelector3d::ToPixMap (Image_PixMap&                        theImage,
+                                                       const Handle(V3d_View)&              theView,
+                                                       const StdSelect_TypeOfSelectionImage theType,
+                                                       const Standard_Integer               thePickedIndex)
+{
+  if (theImage.IsEmpty())
+  {
+    throw Standard_ProgramError("StdSelect_ViewerSelector3d::ToPixMap() has been called with empty image");
+  }
+
+  Handle(BaseFiller) aFiller;
+  switch (theType)
+  {
+    case StdSelect_TypeOfSelectionImage_NormalizedDepth:
+    case StdSelect_TypeOfSelectionImage_NormalizedDepthInverted:
+    {
+      aFiller = new NormalizedDepthFiller (theImage, this,
+                                           theType == StdSelect_TypeOfSelectionImage_NormalizedDepthInverted);
+      break;
+    }
+    case StdSelect_TypeOfSelectionImage_UnnormalizedDepth:
+    {
+      aFiller = new UnnormalizedDepthFiller (theImage, this);
+      break;
+    }
+    case StdSelect_TypeOfSelectionImage_ColoredDetectedObject:
+    {
+      aFiller = new DetectedObjectColorFiller (theImage, this);
+      break;
+    }
+    case StdSelect_TypeOfSelectionImage_ColoredEntity:
+    {
+      aFiller = new GeneratedEntityColorFiller (theImage, this, mySelectableObjects);
+      break;
+    }
+    case StdSelect_TypeOfSelectionImage_ColoredOwner:
+    {
+      aFiller = new GeneratedOwnerColorFiller (theImage, this, mySelectableObjects);
+      break;
+    }
+    case StdSelect_TypeOfSelectionImage_ColoredSelectionMode:
+    {
+      aFiller = new GeneratedSelModeColorFiller (theImage, this);
+      break;
+    }
+  }
+  if (aFiller.IsNull())
+  {
+    return Standard_False;
+  }
+
+  const Standard_Integer aSizeX = static_cast<Standard_Integer> (theImage.SizeX());
+  const Standard_Integer aSizeY = static_cast<Standard_Integer> (theImage.SizeY());
+  for (Standard_Integer aRowIter = 0; aRowIter < aSizeY; ++aRowIter)
+  {
+    for (Standard_Integer aColIter = 0; aColIter < aSizeX; ++aColIter)
+    {
+      Pick (aColIter, aRowIter, theView);
+      aFiller->Fill (aColIter, aRowIter, thePickedIndex);
+    }
+  }
+  aFiller->Flush();
+  return Standard_True;
 }

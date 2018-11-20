@@ -17,12 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__IntTools_DLL" />
-					<Add option="-D__BRepAlgoAPI_DLL" />
-					<Add option="-D__BOPCol_DLL" />
-					<Add option="-D__BOPDS_DLL" />
-					<Add option="-D__BOPAlgo_DLL" />
-					<Add option="-D__BOPTools_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBO_obj.link" />
@@ -41,12 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__IntTools_DLL" />
-					<Add option="-D__BRepAlgoAPI_DLL" />
-					<Add option="-D__BOPCol_DLL" />
-					<Add option="-D__BOPDS_DLL" />
-					<Add option="-D__BOPAlgo_DLL" />
-					<Add option="-D__BOPTools_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKBO_objd.link" />
@@ -108,9 +96,6 @@
 		<Unit filename="../../../src/IntTools/IntTools_CurveRangeSample.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/IntTools/IntTools_CurveRangeSampleMapHasher.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/IntTools/IntTools_EdgeEdge.cxx">
 			<Option link="0" />
 		</Unit>
@@ -147,9 +132,6 @@
 		<Unit filename="../../../src/IntTools/IntTools_SurfaceRangeSample.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/IntTools/IntTools_SurfaceRangeSampleMapHasher.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/IntTools/IntTools_Tools.cxx">
 			<Option link="0" />
 		</Unit>
@@ -177,28 +159,22 @@
 		<Unit filename="../../../src/BRepAlgoAPI/BRepAlgoAPI_Cut.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BRepAlgoAPI/BRepAlgoAPI_Defeaturing.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BRepAlgoAPI/BRepAlgoAPI_Fuse.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BRepAlgoAPI/BRepAlgoAPI_Section.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPCol/BOPCol_Box2DBndTree.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPCol/BOPCol_BoxBndTree.cxx">
+		<Unit filename="../../../src/BRepAlgoAPI/BRepAlgoAPI_Splitter.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_CommonBlock.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_Curve.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_DS.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_FaceInfo.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_IndexRange.cxx">
@@ -210,34 +186,16 @@
 		<Unit filename="../../../src/BOPDS/BOPDS_IteratorSI.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_PassKey.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_PassKeyBoolean.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_PassKeyMapHasher.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_Pave.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_PaveBlock.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_PaveMapHasher.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_Point.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_ShapeInfo.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPDS/BOPDS_SubIterator.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPDS/BOPDS_Tools.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Algo.cxx">
@@ -285,7 +243,13 @@
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_CheckerSI.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_CheckerSI_1.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_MakerVolume.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Options.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_PaveFiller.cxx">
@@ -324,28 +288,28 @@
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_PaveFiller_9.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Section.cxx">
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_RemoveFeatures.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPAlgo/BOPAlgo_SectionAttribute.cxx">
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Section.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_ShellSplitter.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Splitter.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_Tools.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPAlgo/BOPAlgo_WireEdgeSet.cxx">
+		<Unit filename="../../../src/BOPAlgo/BOPAlgo_ToolsProvider.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_WireSplitter.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPAlgo/BOPAlgo_WireSplitter_1.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPTools/BOPTools.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/BOPTools/BOPTools_AlgoTools.cxx">
@@ -366,16 +330,7 @@
 		<Unit filename="../../../src/BOPTools/BOPTools_AlgoTools_2.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/BOPTools/BOPTools_EdgeSet.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/BOPTools/BOPTools_Set.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPTools/BOPTools_SetMapHasher.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/BOPTools/BOPTools_ShapeSet.cxx">
 			<Option link="0" />
 		</Unit>
 	</Project>

@@ -46,12 +46,12 @@ NCollection_IncAllocator.cxx
 NCollection_IncAllocator.hxx
 NCollection_IndexedDataMap.hxx
 NCollection_IndexedMap.hxx
+NCollection_Lerp.hxx
 NCollection_List.hxx
 NCollection_ListNode.hxx
 NCollection_LocalArray.hxx
 NCollection_Map.hxx
 NCollection_Mat4.hxx
-NCollection_QuickSort.hxx
 NCollection_Sequence.hxx
 NCollection_Shared.hxx
 NCollection_SparseArray.hxx

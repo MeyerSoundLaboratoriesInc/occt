@@ -63,64 +63,6 @@
 #include <TopoDS_Vertex.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 
-#define INTERPOLATE 0
-#define BRISE       0
-#define APPROX      1
-
-
-static Standard_Boolean IntLineRisesFromRegularity(const TopoDS_Edge& anIntLine,
-                                                   const TopoDS_Edge& anEdge,
-                                                   const TopoDS_Face&,
-                                                   const TopTools_ListOfShape& aList)
-{
-  TopoDS_Vertex Ver [2];
-  TopExp::Vertices(anIntLine, Ver[0], Ver[1]);
-
-  //find min param and max param
-  Standard_Real MinPar = RealLast(), MaxPar = RealFirst();
-  TopTools_ListIteratorOfListOfShape itl(aList);
-  for (; itl.More(); itl.Next())
-  {
-    const TopoDS_Edge& anOutLine = TopoDS::Edge(itl.Value());
-    Standard_Real aFirst, aLast;
-    BRep_Tool::Range(anOutLine, aFirst, aLast);
-    if (aFirst < MinPar)
-      MinPar = aFirst;
-    if (aLast > MaxPar)
-      MaxPar = aLast;
-  }
-  
-  Standard_Real theTol = BRep_Tool::Tolerance(anEdge);
-  Standard_Real ParamTol = Precision::Confusion();
-  
-  Standard_Integer i, j;
-  for (i = 0; i < 2; i++)
-  {
-    BRepExtrema_ExtPC anExtPC(Ver[i], anEdge);
-    if (!anExtPC.IsDone())
-      continue;
-    Standard_Integer NbExt = anExtPC.NbExt();
-    if (NbExt == 0)
-      continue;
-    Standard_Integer jmin = 1;
-    for (j = 2; j <= NbExt; j++)
-      if (anExtPC.SquareDistance(j) < anExtPC.SquareDistance(jmin))
-        jmin = j;
-    Standard_Real aDist = anExtPC.SquareDistance(jmin);
-    aDist = Sqrt(aDist);
-    if (aDist > theTol)
-      continue;
-
-    Standard_Real theParam = anExtPC.Parameter(jmin);
-    if (theParam > MinPar + ParamTol &&
-        theParam < MaxPar - ParamTol)
-      return Standard_True;
-  }
-
-  return Standard_False;
-}
-
-
 //=======================================================================
 //function : Insert
 //purpose  : explore the faces and insert them
@@ -477,7 +419,7 @@ void  HLRTopoBRep_DSFiller::InsertFace (const Standard_Integer /*FI*/,
 	      
               case Contap_Restriction :
               {
-                Standard_ProgramError::Raise("HLRTopoBRep_DSFiller::InsertFace : Restriction");
+                throw Standard_ProgramError("HLRTopoBRep_DSFiller::InsertFace : Restriction");
               }
               break;
             }
@@ -508,49 +450,45 @@ void  HLRTopoBRep_DSFiller::InsertFace (const Standard_Integer /*FI*/,
     }
   }
 
-  //jgv: correction of internal outlines: remove those that rise from middle of boundary outlines
-  TopTools_ListIteratorOfListOfShape itl(IntL);
-  while (itl.More())
+  //Correction of internal outlines: unite coinciding vertices
+  const Standard_Real SqTol = tol*tol;
+  TopTools_ListIteratorOfListOfShape itl1(IntL);
+  for (; itl1.More(); itl1.Next())
   {
-    TopoDS_Edge anIntLine = TopoDS::Edge(itl.Value());
-    Standard_Real found = Standard_False;
-    TopExp_Explorer Explo(F, TopAbs_EDGE);
-    for (; Explo.More(); Explo.Next())
+    TopoDS_Edge anIntLine = TopoDS::Edge(itl1.Value());
+    anIntLine.Orientation(TopAbs_FORWARD);
+    TopoDS_Vertex aVer [2];
+    TopExp::Vertices(anIntLine, aVer[0], aVer[1]);
+    TopTools_ListIteratorOfListOfShape itl2 = itl1;
+    for (; itl2.More(); itl2.Next())
     {
-      TopoDS_Edge anEdge = TopoDS::Edge(Explo.Current());
-      if (!BRep_Tool::HasContinuity(anEdge))
+      TopoDS_Edge anIntLine2 = TopoDS::Edge(itl2.Value());
+      anIntLine2.Orientation(TopAbs_FORWARD);
+      if (anIntLine2.IsSame(anIntLine))
         continue;
-
-      TopLoc_Location RegLoc;
-      Standard_Real fpar, lpar;
-      Handle(Geom_Curve) RegCurve = BRep_Tool::Curve(anEdge, RegLoc, fpar, lpar);
-      TopTools_ListOfShape thelist;
-      TopTools_ListIteratorOfListOfShape itoutl(OutL);
-      for (; itoutl.More(); itoutl.Next())
+      TopoDS_Vertex aVer2 [2];
+      TopExp::Vertices(anIntLine2, aVer2[0], aVer2[1]);
+      for (Standard_Integer i = 0; i < 2; i++)
       {
-        TopoDS_Edge anOutLine = TopoDS::Edge(itoutl.Value());
-        TopLoc_Location aLoc;
-        Standard_Real aFirst, aLast;
-        Handle(Geom_Curve) aCurve = BRep_Tool::Curve(anOutLine, aLoc, aFirst, aLast);
-        if (aCurve == RegCurve && aLoc == RegLoc)
-          thelist.Append(anOutLine);
-      }
-
-      if (thelist.IsEmpty())
-        continue;
-
-      if (IntLineRisesFromRegularity(anIntLine, anEdge, F, thelist))
-      {
-        IntL.Remove(itl);
-        found = Standard_True;
-        break;
+        if (i == 1 && aVer[0].IsSame(aVer[1]))
+          continue;
+        gp_Pnt Pnt1 = BRep_Tool::Pnt(aVer[i]);
+        for (Standard_Integer j = 0; j < 2; j++)
+        {
+          if (aVer[i].IsSame(aVer2[j]))
+            continue;
+          gp_Pnt Pnt2 = BRep_Tool::Pnt(aVer2[j]);
+          if (Pnt1.SquareDistance(Pnt2) <= SqTol)
+          {
+            BRep_Builder aBB;
+            aBB.Remove(anIntLine2, aVer2[j]);
+            aVer[i].Orientation((j==0)? TopAbs_FORWARD : TopAbs_REVERSED);
+            aBB.Add(anIntLine2, aVer[i]);
+          }
+        }
       }
     }
-    
-    if (!found)
-      itl.Next();
   }
-  ///////////////////////////////////////////////////
 }
 
 //=======================================================================

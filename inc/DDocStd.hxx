@@ -50,9 +50,8 @@ public:
   DEFINE_STANDARD_ALLOC
 
   
-  //! return the application of the session. False
-  //! if there is noone current application.
-  Standard_EXPORT static Standard_Boolean Find (Handle(TDocStd_Application)& Appli, const Standard_Boolean Complain = Standard_True);
+  //! Returns the global instance of application.
+  Standard_EXPORT static const Handle(TDocStd_Application)& GetApplication ();
   
   Standard_EXPORT static Standard_Boolean GetDocument (Standard_CString& Name, Handle(TDocStd_Document)& Doc, const Standard_Boolean Complain = Standard_True);
   
@@ -84,7 +83,8 @@ public:
   //! Create, Add, Remove, Open, Commit, Undo, Redo, SetNestedMode
   Standard_EXPORT static void MTMCommands (Draw_Interpretor& theCommands);
 
-
+  //! ShapeSchema_Read
+  Standard_EXPORT static void ShapeSchemaCommands(Draw_Interpretor& theCommands);
 
 
 protected:

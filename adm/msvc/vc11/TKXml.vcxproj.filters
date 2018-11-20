@@ -2,16 +2,16 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{5511765E-09B4-17D7-0204-5A3DE3950E0F}</UniqueIdentifier>
+      <UniqueIdentifier>{6DC0E589-17BD-0069-0CFD-C7FC267B2A5E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XmlDrivers">
-      <UniqueIdentifier>{CE0E0FBF-174F-1867-1038-0060049FCD14}</UniqueIdentifier>
+      <UniqueIdentifier>{1AB872C4-070C-1840-022E-09D83050540E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XmlMDataXtd">
-      <UniqueIdentifier>{50DEEE75-142A-0E0E-0E9C-2E81963DDD01}</UniqueIdentifier>
+      <UniqueIdentifier>{BE6A7974-09EA-0EDE-04AE-CBED8E5912DD}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XmlMNaming">
-      <UniqueIdentifier>{789BF6C4-08A7-0D58-12B6-BFFBB024EE8F}</UniqueIdentifier>
+      <UniqueIdentifier>{E57931E7-14FE-0787-0F02-D1E1B338DD5A}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +55,9 @@
       <Filter>Source files\XmlMDataXtd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMDataXtd\XmlMDataXtd_ShapeDriver.cxx">
+      <Filter>Source files\XmlMDataXtd</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMDataXtd\XmlMDataXtd_TriangulationDriver.cxx">
       <Filter>Source files\XmlMDataXtd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMNaming\XmlMNaming.cxx">

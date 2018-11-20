@@ -72,8 +72,8 @@
 		<Unit filename="../../../src/StdLPersistent/StdLPersistent_NamedData.cxx" />
 		<Unit filename="../../../src/StdLPersistent/StdLPersistent_TreeNode.cxx" />
 		<Unit filename="../../../src/StdLPersistent/StdLPersistent_Value.cxx" />
-		<Unit filename="../../../src/StdObjMgt/StdObjMgt_MapOfInstantiators.cxx" />
 		<Unit filename="../../../src/StdObjMgt/StdObjMgt_Persistent.cxx" />
 		<Unit filename="../../../src/StdObjMgt/StdObjMgt_ReadData.cxx" />
+		<Unit filename="../../../src/StdObjMgt/StdObjMgt_WriteData.cxx" />
 	</Project>
 </CodeBlocks_project_file>

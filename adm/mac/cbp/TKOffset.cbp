@@ -95,7 +95,10 @@
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Interval.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeLoops.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeOffset.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeOffset_1.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_MakeSimpleOffset.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Offset.cxx" />
+		<Unit filename="../../../src/BRepOffset/BRepOffset_SimpleOffset.cxx" />
 		<Unit filename="../../../src/BRepOffset/BRepOffset_Tool.cxx" />
 		<Unit filename="../../../src/BiTgte/BiTgte_Blend.cxx" />
 		<Unit filename="../../../src/BiTgte/BiTgte_CurveOnEdge.cxx" />

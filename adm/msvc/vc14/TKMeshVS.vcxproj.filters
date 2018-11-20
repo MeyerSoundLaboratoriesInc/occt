@@ -2,16 +2,13 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{D21E151B-0F4D-0CF0-11B2-FD1D98A1ED54}</UniqueIdentifier>
+      <UniqueIdentifier>{18FC3245-0BEE-03DE-130A-D5E18DCB1C84}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\MeshVS">
-      <UniqueIdentifier>{E459698A-1464-060A-0EA0-9BC122A4CCA0}</UniqueIdentifier>
+      <UniqueIdentifier>{BD598033-049F-0276-0C56-6950CD37D3DE}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\MeshVS\MeshVS_ColorHasher.cxx">
-      <Filter>Source files\MeshVS</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\MeshVS\MeshVS_CommonSensitiveEntity.cxx">
       <Filter>Source files\MeshVS</Filter>
     </ClCompile>

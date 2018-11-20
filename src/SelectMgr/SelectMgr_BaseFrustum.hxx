@@ -16,6 +16,7 @@
 #ifndef _SelectMgr_BaseFrustum_HeaderFile
 #define _SelectMgr_BaseFrustum_HeaderFile
 
+#include <gp_GTrsf.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Pln.hxx>
 
@@ -47,13 +48,16 @@ public:
 
   virtual ~SelectMgr_BaseFrustum() {}
 
+  //! Return camera definition.
+  const Handle(Graphic3d_Camera)& Camera() const { return myCamera; }
+
   //! Passes camera projection and orientation matrices to builder
   Standard_EXPORT void SetCamera (const Handle(Graphic3d_Camera)& theCamera);
 
   //! Passes camera projection and orientation matrices to builder
   Standard_EXPORT void SetCamera (const Graphic3d_Mat4d& theProjection,
                                   const Graphic3d_Mat4d& theWorldView,
-                                  const Standard_Integer theIsOrthographic,
+                                  const Standard_Boolean theIsOrthographic,
                                   const Graphic3d_WorldViewProjState& theWVPState = Graphic3d_WorldViewProjState());
 
   //! @return current camera projection transformation common for all selecting volumes
@@ -69,6 +73,9 @@ public:
 
   Standard_EXPORT void SetWindowSize (const Standard_Integer theWidth, 
                                       const Standard_Integer theHeight);
+
+  Standard_EXPORT void WindowSize (Standard_Integer& theWidth,
+                                   Standard_Integer& theHeight) const;
 
   //! Passes viewport parameters to builder
   Standard_EXPORT void SetViewport (const Standard_Real theX,
@@ -102,8 +109,11 @@ public:
   //! There are no default parameters, but in case if:
   //!    - transformation only is needed: @theScaleFactor must be initialized as any negative value;
   //!    - scale only is needed: @theTrsf must be set to gp_Identity.
-  Standard_EXPORT virtual NCollection_Handle<SelectMgr_BaseFrustum> ScaleAndTransform (const Standard_Integer /*theScaleFactor*/,
-                                                                                       const gp_Trsf& /*theTrsf*/) { return NULL; }
+  virtual Handle(SelectMgr_BaseFrustum) ScaleAndTransform (const Standard_Integer /*theScaleFactor*/,
+                                                           const gp_GTrsf& /*theTrsf*/) const
+  { 
+    return NULL; 
+  }
 
   //! SAT intersection test between defined volume and given axis-aligned box
   Standard_EXPORT virtual Standard_Boolean Overlaps (const SelectMgr_Vec3& theBoxMin,
@@ -160,7 +170,19 @@ public:
 
   //! Valid for point selection only!
   //! Computes depth range for global (defined for the whole view) clipping planes.
-  Standard_EXPORT virtual void SetViewClipping (const Graphic3d_SequenceOfHClipPlane& /*thePlanes*/) {};
+  virtual void SetViewClipping (const Handle(Graphic3d_SequenceOfHClipPlane)& /*thePlanes*/) {};
+
+  //! Set if view clipping plane is enabled or not.
+  //! @return previous value of the flag
+  virtual Standard_Boolean SetViewClippingEnabled (const Standard_Boolean /*theToEnable*/) { return Standard_False; }
+
+  //! Stores plane equation coefficients (in the following form:
+  //! Ax + By + Cz + D = 0) to the given vector
+  virtual void GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const
+  {
+    thePlaneEquations.Clear();
+    return;
+  }
 
   DEFINE_STANDARD_RTTIEXT(SelectMgr_BaseFrustum,Standard_Transient)
 
@@ -169,6 +191,7 @@ protected:
   Standard_Boolean    myIsOrthographic;      //!< Defines if current camera is orthographic
 
   Handle(SelectMgr_FrustumBuilder) myBuilder; //!< A tool implementing methods for volume build
+  Handle(Graphic3d_Camera)         myCamera;  //!< camera definition
 };
 
 #endif // _SelectMgr_BaseFrustum_HeaderFile

@@ -11,6 +11,7 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <AIS_DisplayMode.hxx>
 #include <AIS_Triangulation.hxx>
 #include <AIS_InteractiveObject.hxx>
 #include <Standard_Type.hxx>
@@ -39,6 +40,87 @@ AIS_Triangulation::AIS_Triangulation(const Handle(Poly_Triangulation)& Triangula
 }
 
 //=======================================================================
+//function : SetTransparency
+//purpose  :
+//=======================================================================
+void AIS_Triangulation::SetTransparency (const Standard_Real theValue)
+{
+  if (!myDrawer->HasOwnShadingAspect())
+  {
+    myDrawer->SetShadingAspect (new Prs3d_ShadingAspect());
+    if (myDrawer->HasLink())
+    {
+      *myDrawer->ShadingAspect()->Aspect() = *myDrawer->Link()->ShadingAspect()->Aspect();
+    }
+  }
+
+  // override transparency
+  myDrawer->ShadingAspect()->SetTransparency (theValue, myCurrentFacingModel);
+  myDrawer->SetTransparency ((Standard_ShortReal )theValue);
+
+  updatePresentation();
+}
+
+//=======================================================================
+//function : UnsetTransparency
+//purpose  :
+//=======================================================================
+void AIS_Triangulation::UnsetTransparency()
+{
+  myDrawer->SetTransparency (0.0f);
+  if (!myDrawer->HasOwnShadingAspect())
+  {
+    return;
+  }
+  else if (HasColor() || HasMaterial())
+  {
+    myDrawer->ShadingAspect()->SetTransparency (0.0, myCurrentFacingModel);
+  }
+
+  updatePresentation();
+}
+
+//=======================================================================
+//function : updatePresentation
+//purpose  :
+//=======================================================================
+void AIS_Triangulation::updatePresentation()
+{
+  if (HasVertexColors())
+  {
+    SetToUpdate (AIS_WireFrame);
+  }
+  else
+  {
+    // modify shading presentation without re-computation
+    const PrsMgr_Presentations&        aPrsList  = Presentations();
+    Handle(Graphic3d_AspectFillArea3d) anAreaAsp = myDrawer->ShadingAspect()->Aspect();
+    for (Standard_Integer aPrsIt = 1; aPrsIt <= aPrsList.Length(); ++aPrsIt)
+    {
+      const PrsMgr_ModedPresentation& aPrsModed = aPrsList.Value (aPrsIt);
+      if (aPrsModed.Mode() != AIS_WireFrame)
+      {
+        continue;
+      }
+
+      const Handle(Prs3d_Presentation)& aPrs = aPrsModed.Presentation()->Presentation();
+
+      for (Graphic3d_SequenceOfGroup::Iterator aGroupIt (aPrs->Groups()); aGroupIt.More(); aGroupIt.Next())
+      {
+        const Handle(Graphic3d_Group)& aGroup = aGroupIt.Value();
+        if (aGroup->IsGroupPrimitivesAspectSet (Graphic3d_ASPECT_FILL_AREA))
+        {
+          aGroup->SetGroupPrimitivesAspect (anAreaAsp);
+        }
+      }
+    }
+
+    myRecomputeEveryPrs = Standard_False; // no mode to recalculate - only viewer update
+    myToRecomputeModes.Clear();
+  }
+}
+
+//=======================================================================
 //function : Compute
 //purpose  :
 //=======================================================================
@@ -46,14 +128,14 @@ void AIS_Triangulation::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aP
                                 const Handle(Prs3d_Presentation)& aPresentation,
                                 const Standard_Integer aMode)
 {
-  switch (aMode) 
+  switch (aMode)
   {
     case 0:
       const TColgp_Array1OfPnt& nodes = myTriangulation->Nodes();             //Nodes
       const Poly_Array1OfTriangle& triangles = myTriangulation->Triangles();  //Triangle
 
       Standard_Boolean hasVNormals = myTriangulation->HasNormals();
-      Standard_Boolean hasVColors  = (myFlagColor == 1);
+      Standard_Boolean hasVColors  = HasVertexColors();
 
       Handle(Graphic3d_ArrayOfTriangles) anArray = new Graphic3d_ArrayOfTriangles (myNbNodes, myNbTriangles * 3,
                                                                                    hasVNormals, hasVColors, Standard_False);
@@ -73,7 +155,7 @@ void AIS_Triangulation::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aP
           for ( i = nodes.Lower(); i <= nodes.Upper(); i++ )
           {
             j = (i - nodes.Lower()) * 3;
-            anArray->AddVertex(nodes(i), AttenuateColor(colors(i), ambient));
+            anArray->AddVertex(nodes(i), attenuateColor(colors(i), ambient));
             anArray->SetVertexNormal(i, normals(j+1), normals(j+2), normals(j+3));
           }
         }
@@ -94,7 +176,7 @@ void AIS_Triangulation::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aP
           const TColStd_Array1OfInteger& colors = myColor->Array1();
           for ( i = nodes.Lower(); i <= nodes.Upper(); i++ )
           {
-            anArray->AddVertex(nodes(i), AttenuateColor(colors(i), ambient));
+            anArray->AddVertex(nodes(i), attenuateColor(colors(i), ambient));
           }
         }
         else // !hasVColors
@@ -121,7 +203,7 @@ void AIS_Triangulation::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aP
 
 //=======================================================================
 //function : ComputeSelection
-//purpose  : 
+//purpose  :
 //=======================================================================
 void AIS_Triangulation::ComputeSelection(const Handle(SelectMgr_Selection)& /*aSelection*/,
                                          const Standard_Integer /*aMode*/)
@@ -156,7 +238,7 @@ Handle(TColStd_HArray1OfInteger) AIS_Triangulation::GetColors() const
 
 //=======================================================================
 //function : SetTriangulation
-//purpose  : 
+//purpose  :
 //=======================================================================
 void AIS_Triangulation::SetTriangulation(const Handle(Poly_Triangulation)& aTriangulation)
 {
@@ -165,7 +247,7 @@ void AIS_Triangulation::SetTriangulation(const Handle(Poly_Triangulation)& aTria
 
 //=======================================================================
 //function : GetTriangulation
-//purpose  : 
+//purpose  :
 //=======================================================================
 Handle(Poly_Triangulation) AIS_Triangulation::GetTriangulation() const{
   return myTriangulation;
@@ -173,42 +255,19 @@ Handle(Poly_Triangulation) AIS_Triangulation::GetTriangulation() const{
 
 //=======================================================================
 //function : AttenuateColor
-//purpose  : Attenuates 32-bit color by a given attenuation factor (0...1):
-//           aColor = Alpha << 24 + Blue << 16 + Green << 8 + Red
-//           All color components are multiplied by aComponent, the result is then packed again as 32-bit integer.
-//           Color attenuation is applied to the vertex colors in order to have correct visual result 
-//           after glColorMaterial(GL_AMBIENT_AND_DIFFUSE). Without it, colors look unnatural and flat.
+//purpose  :
 //=======================================================================
-
-Standard_Integer AIS_Triangulation::AttenuateColor( const Standard_Integer aColor,
-                                                    const Standard_Real aComposition)
+Graphic3d_Vec4ub AIS_Triangulation::attenuateColor (const Standard_Integer theColor,
+                                                    const Standard_Real    theComposition)
 {
-  Standard_Integer  red,
-                    green,
-                    blue,
-                    alpha;
+  const Standard_Byte* anRgbx = reinterpret_cast<const Standard_Byte*> (&theColor);
 
-  alpha = aColor&0xff000000;
-  alpha >>= 24;
+  // If IsTranparent() is false alpha value will be ignored anyway.
+  Standard_Byte anAlpha = IsTransparent() ? static_cast<Standard_Byte> (255.0 - myDrawer->ShadingAspect()->Aspect()->FrontMaterial().Transparency() * 255.0)
+                                          : 255;
 
-  blue = aColor&0x00ff0000;
-  blue >>= 16;
-
-  green = aColor&0x0000ff00;
-  green >>= 8;
-
-  red = aColor&0x000000ff;
-  red >>= 0; 
-
-  red   = (Standard_Integer)(aComposition * red);
-  green = (Standard_Integer)(aComposition * green);
-  blue  = (Standard_Integer)(aComposition * blue);
-
-  Standard_Integer  color;
-  color = red;
-  color += green << 8;
-  color += blue  << 16; 
-  color += alpha << 24;
-  return color;
+  return Graphic3d_Vec4ub ((Standard_Byte)(theComposition * anRgbx[0]),
+                           (Standard_Byte)(theComposition * anRgbx[1]),
+                           (Standard_Byte)(theComposition * anRgbx[2]),
+                           anAlpha);
 }
-

@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -79,7 +81,6 @@
 		<Unit filename="../../../src/math/math_FunctionSample.cxx" />
 		<Unit filename="../../../src/math/math_FunctionSet.cxx" />
 		<Unit filename="../../../src/math/math_FunctionSetRoot.cxx" />
-		<Unit filename="../../../src/math/math_FunctionSetWithDerivatives.cxx" />
 		<Unit filename="../../../src/math/math_FunctionWithDerivative.cxx" />
 		<Unit filename="../../../src/math/math_Gauss.cxx" />
 		<Unit filename="../../../src/math/math_GaussLeastSquare.cxx" />
@@ -94,8 +95,6 @@
 		<Unit filename="../../../src/math/math_KronrodSingleIntegration.cxx" />
 		<Unit filename="../../../src/math/math_Matrix.cxx" />
 		<Unit filename="../../../src/math/math_MultipleVarFunction.cxx" />
-		<Unit filename="../../../src/math/math_MultipleVarFunctionWithGradient.cxx" />
-		<Unit filename="../../../src/math/math_MultipleVarFunctionWithHessian.cxx" />
 		<Unit filename="../../../src/math/math_NewtonFunctionRoot.cxx" />
 		<Unit filename="../../../src/math/math_NewtonFunctionSetRoot.cxx" />
 		<Unit filename="../../../src/math/math_NewtonMinimum.cxx" />
@@ -123,7 +122,6 @@
 		<Unit filename="../../../src/PLib/PLib_DoubleJacobiPolynomial.cxx" />
 		<Unit filename="../../../src/PLib/PLib_HermitJacobi.cxx" />
 		<Unit filename="../../../src/PLib/PLib_JacobiPolynomial.cxx" />
-		<Unit filename="../../../src/Precision/Precision.cxx" />
 		<Unit filename="../../../src/Poly/Poly.cxx" />
 		<Unit filename="../../../src/Poly/Poly_CoherentLink.cxx" />
 		<Unit filename="../../../src/Poly/Poly_CoherentNode.cxx" />
@@ -163,6 +161,8 @@
 		<Unit filename="../../../src/Bnd/Bnd_BoundSortBox2d.cxx" />
 		<Unit filename="../../../src/Bnd/Bnd_Box.cxx" />
 		<Unit filename="../../../src/Bnd/Bnd_Box2d.cxx" />
+		<Unit filename="../../../src/Bnd/Bnd_OBB.cxx" />
+		<Unit filename="../../../src/Bnd/Bnd_Range.cxx" />
 		<Unit filename="../../../src/Bnd/Bnd_Sphere.cxx" />
 		<Unit filename="../../../src/BVH/BVH.cxx" />
 		<Unit filename="../../../src/BVH/BVH_BuildQueue.cxx" />

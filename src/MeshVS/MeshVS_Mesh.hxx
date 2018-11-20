@@ -47,12 +47,14 @@ class MeshVS_Mesh : public AIS_InteractiveObject
 
 public:
 
-  
   //! Constructor.
   //! theIsAllowOverlapped is Standard_True, if it is allowed to draw edges overlapped with beams
   //! Its value is stored in drawer
   Standard_EXPORT MeshVS_Mesh(const Standard_Boolean theIsAllowOverlapped = Standard_False);
-  
+
+  //! Returns true for supported display modes basing on a list of defined builders.
+  Standard_EXPORT virtual Standard_Boolean AcceptDisplayMode (const Standard_Integer theMode) const Standard_OVERRIDE;
+
   //! Computes presentation using builders added to sequence. Each builder computes
   //! own part of mesh presentation according to its type.
   Standard_EXPORT virtual void Compute (const Handle(PrsMgr_PresentationManager3d)& PM, const Handle(Prs3d_Presentation)& Prs, const Standard_Integer DisplayMode) Standard_OVERRIDE;
@@ -64,7 +66,9 @@ public:
   Standard_EXPORT virtual void HilightSelected (const Handle(PrsMgr_PresentationManager3d)& PM, const SelectMgr_SequenceOfOwner& Owners) Standard_OVERRIDE;
   
   //! Draw hilighted owner presentation
-  Standard_EXPORT virtual void HilightOwnerWithColor (const Handle(PrsMgr_PresentationManager3d)& PM, const Quantity_NameOfColor Color, const Handle(SelectMgr_EntityOwner)& Owner) Standard_OVERRIDE;
+  Standard_EXPORT virtual void HilightOwnerWithColor (const Handle(PrsMgr_PresentationManager3d)& thePM,
+                                                      const Handle(Prs3d_Drawer)& theColor,
+                                                      const Handle(SelectMgr_EntityOwner)& theOwner) Standard_OVERRIDE;
   
   //! Clears internal selection presentation
   Standard_EXPORT virtual void ClearSelected() Standard_OVERRIDE;

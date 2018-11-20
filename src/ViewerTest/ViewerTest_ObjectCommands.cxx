@@ -16,15 +16,21 @@
 
 #include <ViewerTest.hxx>
 
+#include <AIS_PlaneTrihedron.hxx>
+
 #include <Quantity_NameOfColor.hxx>
 #include <Draw_Interpretor.hxx>
 #include <Draw.hxx>
 #include <Draw_Appli.hxx>
 #include <DBRep.hxx>
+#include <DBRep_DrawableShape.hxx>
 
 #include <Font_BRepFont.hxx>
 #include <Font_BRepTextBuilder.hxx>
 #include <Font_FontMgr.hxx>
+
+#include <NCollection_List.hxx>
+
 #include <OSD_Chronometer.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <V3d_Viewer.hxx>
@@ -78,6 +84,7 @@
 #include <AIS_Trihedron.hxx>
 #include <AIS_Axis.hxx>
 #include <gp_Trsf.hxx>
+#include <gp_Quaternion.hxx>
 #include <TopLoc_Location.hxx>
 
 #include <HLRAlgo_Projector.hxx>
@@ -104,7 +111,6 @@
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <Geom_Circle.hxx>
 #include <GC_MakeCircle.hxx>
-#include <Prs3d_Presentation.hxx>
 #include <Select3D_SensitiveCircle.hxx>
 #include <SelectMgr_EntityOwner.hxx>
 #include <SelectMgr_Selection.hxx>
@@ -128,21 +134,20 @@
 #include <BRepExtrema_ExtPC.hxx>
 #include <BRepExtrema_ExtPF.hxx>
 
+#include <Prs3d_Arrow.hxx>
+#include <Prs3d_ArrowAspect.hxx>
+#include <Prs3d_DatumAttribute.hxx>
 #include <Prs3d_DatumAspect.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Prs3d_VertexDrawMode.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Prs3d_PointAspect.hxx>
+#include <Prs3d_Presentation.hxx>
 #include <Prs3d_TextAspect.hxx>
 
 #include <Image_AlienPixMap.hxx>
 #include <TColStd_HArray1OfAsciiString.hxx>
 #include <TColStd_HSequenceOfAsciiString.hxx>
-
-#if defined(_MSC_VER)
-# define _CRT_SECURE_NO_DEPRECATE
-# pragma warning (disable:4996)
-#endif
 
 extern ViewerTest_DoubleMapOfInteractiveAndName& GetMapOfAIS();
 extern Standard_Boolean VDisplayAISObject (const TCollection_AsciiString& theName,
@@ -151,219 +156,468 @@ extern Standard_Boolean VDisplayAISObject (const TCollection_AsciiString& theNam
 extern int ViewerMainLoop(Standard_Integer argc, const char** argv);
 extern Handle(AIS_InteractiveContext)& TheAISContext();
 
+namespace
+{
+  static bool convertToColor (const Handle(TColStd_HSequenceOfAsciiString)& theColorValues,
+                              Quantity_Color& theColor)
+  {
+    const char* anArgs[3] =
+    {
+      theColorValues->Size() >= 1 ? theColorValues->Value (1).ToCString() : "",
+      theColorValues->Size() >= 2 ? theColorValues->Value (2).ToCString() : "",
+      theColorValues->Size() >= 3 ? theColorValues->Value (3).ToCString() : ""
+    };
+    return ViewerTest::ParseColor (theColorValues->Size(), anArgs, theColor) != 0;
+  }
+
+  static bool convertToDatumPart (const TCollection_AsciiString& theValue,
+                                  Prs3d_DatumParts& theDatumPart)
+  {
+    TCollection_AsciiString aValue = theValue;
+    aValue.LowerCase();
+    if      (aValue == "origin")  theDatumPart = Prs3d_DP_Origin;
+    else if (aValue == "xaxis")   theDatumPart = Prs3d_DP_XAxis;
+    else if (aValue == "yaxis")   theDatumPart = Prs3d_DP_YAxis;
+    else if (aValue == "zaxis")   theDatumPart = Prs3d_DP_ZAxis;
+    else if (aValue == "xarrow")  theDatumPart = Prs3d_DP_XArrow;
+    else if (aValue == "yarrow")  theDatumPart = Prs3d_DP_YArrow;
+    else if (aValue == "zarrow")  theDatumPart = Prs3d_DP_ZArrow;
+    else if (aValue == "xoyaxis") theDatumPart = Prs3d_DP_XOYAxis;
+    else if (aValue == "yozaxis") theDatumPart = Prs3d_DP_YOZAxis;
+    else if (aValue == "xozaxis") theDatumPart = Prs3d_DP_XOZAxis;
+    else if (aValue == "whole")   theDatumPart = Prs3d_DP_None;
+    else
+    {
+      return false;
+    }
+    return true;
+  }
+
+  static void convertToDatumParts (const TCollection_AsciiString& theValue,
+                                   NCollection_List<Prs3d_DatumParts>& theParts)
+  {
+    TCollection_AsciiString aValue = theValue;
+    const Standard_Integer aSplitPos = theValue.Search ("|");
+    Prs3d_DatumParts aPart = Prs3d_DP_None;
+    if (aSplitPos > 0)
+    {
+      convertToDatumParts (theValue.SubString (aSplitPos + 1, theValue.Length()), theParts);
+      if (aSplitPos == 1) // first symbol
+      {
+        return;
+      }
+      aValue = theValue.SubString (1, aSplitPos - 1);
+    }
+    if (convertToDatumPart (aValue, aPart))
+    {
+      theParts.Append (aPart);
+    }
+  }
+
+  static bool convertToDatumAttribute (const TCollection_AsciiString& theValue,
+                                       Prs3d_DatumAttribute& theAttribute)
+  {
+    TCollection_AsciiString aValue = theValue;
+    aValue.LowerCase();
+    if      (aValue == "xaxislength")       theAttribute = Prs3d_DA_XAxisLength;
+    else if (aValue == "yaxislength")       theAttribute = Prs3d_DA_YAxisLength;
+    else if (aValue == "zaxislength")       theAttribute = Prs3d_DA_ZAxisLength;
+    else if (aValue == "tuberadiuspercent") theAttribute = Prs3d_DP_ShadingTubeRadiusPercent;
+    else if (aValue == "coneradiuspercent") theAttribute = Prs3d_DP_ShadingConeRadiusPercent;
+    else if (aValue == "conelengthpercent") theAttribute = Prs3d_DP_ShadingConeLengthPercent;
+    else if (aValue == "originradiuspercent") theAttribute = Prs3d_DP_ShadingOriginRadiusPercent;
+    else if (aValue == "shadingnumberoffacettes") theAttribute = Prs3d_DP_ShadingNumberOfFacettes;
+    else
+      return false;
+    return true;
+  }
+
+  static void convertToDatumAttributes (const TCollection_AsciiString& theValue,
+                                        NCollection_List<Prs3d_DatumAttribute>& theAttributes)
+  {
+    TCollection_AsciiString aValue = theValue;
+    const Standard_Integer aSplitPos = theValue.Search ("|");
+    Prs3d_DatumAttribute anAttribute = Prs3d_DA_XAxisLength;
+    if (aSplitPos > 0)
+    {
+      convertToDatumAttributes (theValue.SubString (aSplitPos + 1, theValue.Length()), theAttributes);
+      if (aSplitPos == 1) // first symbol
+      {
+        return;
+      }
+      aValue = theValue.SubString (1, aSplitPos - 1);
+    }
+    if (convertToDatumAttribute (aValue, anAttribute))
+    {
+      theAttributes.Append (anAttribute);
+    }
+  }
+
+  static bool convertToDatumAxes (const TCollection_AsciiString& theValue,
+                                  Prs3d_DatumAxes& theDatumAxes)
+  {
+    TCollection_AsciiString aValue = theValue;
+    aValue.LowerCase();
+    if      (aValue == "x")   theDatumAxes = Prs3d_DA_XAxis;
+    else if (aValue == "y")   theDatumAxes = Prs3d_DA_YAxis;
+    else if (aValue == "z")   theDatumAxes = Prs3d_DA_ZAxis;
+    else if (aValue == "xy")  theDatumAxes = Prs3d_DA_XYAxis;
+    else if (aValue == "zy")  theDatumAxes = Prs3d_DA_YZAxis;
+    else if (aValue == "xz")  theDatumAxes = Prs3d_DA_XZAxis;
+    else if (aValue == "xyz") theDatumAxes = Prs3d_DA_XYZAxis;
+    else
+    {
+      return false;
+    }
+    return true;
+  }
+
+  static Standard_Boolean setTrihedronParams (Standard_Integer  theArgsNb,
+                                              const char** theArgVec,
+                                              Handle(AIS_Trihedron) theTrihedron)
+  {
+    NCollection_DataMap<TCollection_AsciiString, Handle(TColStd_HSequenceOfAsciiString)> aMapOfArgs;
+    TCollection_AsciiString aParseKey;
+    for (Standard_Integer anArgIt = 1; anArgIt < theArgsNb; ++anArgIt)
+    {
+      TCollection_AsciiString anArg (theArgVec [anArgIt]);
+      if (anArg.Value (1) == '-'
+      && !anArg.IsRealValue())
+      {
+        aParseKey = anArg;
+        aParseKey.Remove (1);
+        aParseKey.LowerCase();
+        std::string aKey = aParseKey.ToCString();
+        aMapOfArgs.Bind (aParseKey, new TColStd_HSequenceOfAsciiString());
+        continue;
+      }
+
+      if (aParseKey.IsEmpty())
+      {
+        continue;
+      }
+
+      aMapOfArgs (aParseKey)->Append (anArg);
+    }
+
+    // Check parameters
+    if ((aMapOfArgs.IsBound ("xaxis") && !aMapOfArgs.IsBound ("zaxis"))
+    || (!aMapOfArgs.IsBound ("xaxis") &&  aMapOfArgs.IsBound ("zaxis")))
+    {
+      std::cout << "Syntax error: -xaxis and -zaxis parameters are to set together.\n";
+      return Standard_False;
+    }
+
+    Handle(TColStd_HSequenceOfAsciiString) aValues;
+    Handle(Geom_Axis2Placement) aComponent = theTrihedron->Component();
+    if (aMapOfArgs.Find ("origin", aValues))
+    {
+      aComponent->SetLocation (gp_Pnt (aValues->Value (1).RealValue(),
+                                       aValues->Value (2).RealValue(),
+                                       aValues->Value (3).RealValue()));
+    }
+    Handle(TColStd_HSequenceOfAsciiString) aXValues, aZValues;
+    if (aMapOfArgs.Find ("xaxis", aXValues) && aMapOfArgs.Find ("zaxis", aZValues))
+    {
+      gp_Dir aXDir (aXValues->Value (1).RealValue(),
+                    aXValues->Value (2).RealValue(),
+                    aXValues->Value (3).RealValue());
+
+      gp_Dir aZDir (aZValues->Value (1).RealValue(),
+                    aZValues->Value (2).RealValue(),
+                    aZValues->Value (3).RealValue());
+
+      if (!aZDir.IsNormal (aXDir, M_PI / 180.0))
+      {
+        std::cout << "Syntax error - parameters 'xaxis' and 'zaxis' are not applied as VectorX is not normal to VectorZ\n";
+        return Standard_False;
+      }
+
+      aComponent->SetXDirection(aXDir);
+      aComponent->SetDirection (aZDir);
+    }
+
+    if (aMapOfArgs.Find ("dispmode", aValues))
+    {
+      TCollection_AsciiString aValue (aValues->Value (1));
+      bool isWireframe = true;
+      if (aValue.IsEqual ("sh") || aValue.IsEqual ("shading"))
+        isWireframe = false;
+      theTrihedron->SetDatumDisplayMode (isWireframe ? Prs3d_DM_WireFrame
+                                                     : Prs3d_DM_Shaded);
+    }
+
+    if (aMapOfArgs.Find ("hidelabels", aValues))
+    {
+      Standard_Boolean toHideLabels = Standard_True;
+      if (aValues->Size() == 1)
+      {
+        ViewerTest::ParseOnOff (aValues->First().ToCString(), toHideLabels);
+      }
+      else if (aValues->Size() != 0)
+      {
+        std::cout << "Syntax error: -hidelabels expects parameter 'on' or 'off' after.\n";
+        return Standard_False;
+      }
+
+      if (!theTrihedron->Attributes()->HasOwnDatumAspect())
+      {
+        theTrihedron->Attributes()->SetDatumAspect (new Prs3d_DatumAspect());
+      }
+      theTrihedron->Attributes()->DatumAspect()->SetDrawLabels (!toHideLabels);
+    }
+
+    if (aMapOfArgs.Find ("hidearrows", aValues))
+    {
+      Standard_Boolean toHideArrows = Standard_True;
+      if (aValues->Size() == 1)
+      {
+        ViewerTest::ParseOnOff (aValues->First().ToCString(), toHideArrows);
+      }
+      else if (aValues->Size() != 0)
+      {
+        std::cout << "Syntax error: -hidearrows expects parameter 'on' or 'off' after.\n";
+        return Standard_False;
+      }
+
+      if (!theTrihedron->Attributes()->HasOwnDatumAspect())
+      {
+        theTrihedron->Attributes()->SetDatumAspect (new Prs3d_DatumAspect());
+      }
+      theTrihedron->Attributes()->DatumAspect()->SetDrawArrows (!toHideArrows);
+    }
+
+    if (aMapOfArgs.Find ("color", aValues))
+    {
+      NCollection_List<Prs3d_DatumParts> aParts;
+      if (aValues->Size() < 2)
+      {
+        std::cout << "Syntax error: -color wrong parameters.\n";
+        return Standard_False;
+      }
+
+      convertToDatumParts (aValues->Value(1), aParts);
+      aValues->Remove (1); // datum part is processed
+      Quantity_Color aColor;
+      if (!convertToColor (aValues, aColor))
+      {
+        std::cout << "Syntax error: -color wrong parameters.\n";
+        return Standard_False;
+      }
+
+      for (NCollection_List<Prs3d_DatumParts>::Iterator anIterator (aParts); anIterator.More(); anIterator.Next())
+      {
+        Prs3d_DatumParts aDatumPart = anIterator.Value();
+        if (aDatumPart == Prs3d_DP_None)
+        {
+          theTrihedron->SetColor (aColor);
+        }
+        else
+        {
+          theTrihedron->SetDatumPartColor (aDatumPart, aColor);
+        }
+      }
+    }
+
+    if (aMapOfArgs.Find ("textcolor", aValues))
+    {
+      Quantity_Color aColor;
+      if (!convertToColor (aValues, aColor))
+      {
+        std::cout << "Syntax error: -textcolor wrong parameters.\n";
+        return Standard_False;
+      }
+      theTrihedron->SetTextColor (aColor);
+    }
+
+    if (aMapOfArgs.Find ("arrowcolor", aValues))
+    {
+      Quantity_Color aColor;
+      if (!convertToColor (aValues, aColor))
+      {
+        std::cout << "Syntax error: -arrowcolor wrong parameters.\n";
+        return Standard_False;
+      }
+      theTrihedron->SetArrowColor (aColor);
+    }
+
+    if (aMapOfArgs.Find ("attribute", aValues))
+    {
+      NCollection_List<Prs3d_DatumAttribute> anAttributes;
+      if (aValues->Size() != 2)
+      {
+        std::cout << "Syntax error: -attribute wrong parameters.\n";
+        return Standard_False;
+      }
+
+      convertToDatumAttributes (aValues->Value (1), anAttributes);
+      if (!theTrihedron->Attributes()->HasOwnDatumAspect())
+        theTrihedron->Attributes()->SetDatumAspect(new Prs3d_DatumAspect());
+      for (NCollection_List<Prs3d_DatumAttribute>::Iterator anIterator (anAttributes); anIterator.More(); anIterator.Next())
+      {
+        theTrihedron->Attributes()->DatumAspect()->SetAttribute (anIterator.Value(), aValues->Value (2).RealValue());
+      }
+    }
+
+    if (aMapOfArgs.Find ("priority", aValues))
+    {
+      Prs3d_DatumParts aDatumPart;
+      if (aValues->Size() < 2
+      || !convertToDatumPart (aValues->Value (1), aDatumPart))
+      {
+        std::cout << "Syntax error: -priority wrong parameters.\n";
+        return Standard_False;
+      }
+      theTrihedron->SetSelectionPriority (aDatumPart, aValues->Value (2).IntegerValue());
+    }
+
+    if (aMapOfArgs.Find ("labels", aValues))
+    {
+      Prs3d_DatumParts aDatumPart = Prs3d_DP_None;
+      if (aValues->Size() > 2
+       && convertToDatumPart(aValues->Value(1), aDatumPart)
+       && aDatumPart >= Prs3d_DP_XAxis
+       && aDatumPart <= Prs3d_DP_ZAxis) // labels are set to axes only
+      {
+        theTrihedron->SetLabel (aDatumPart, aValues->Value (2));
+      }
+      else
+      {
+        std::cout << "Syntax error: -labels wrong parameters.\n";
+        return Standard_False;
+      }
+    }
+
+    if (aMapOfArgs.Find ("drawaxes", aValues))
+    {
+      Prs3d_DatumAxes aDatumAxes = Prs3d_DA_XAxis;
+      if (aValues->Size() < 1
+      || !convertToDatumAxes (aValues->Value (1), aDatumAxes))
+      {
+        std::cout << "Syntax error: -drawaxes wrong parameters.\n";
+        return Standard_False;
+      }
+      if (!theTrihedron->Attributes()->HasOwnDatumAspect())
+        theTrihedron->Attributes()->SetDatumAspect(new Prs3d_DatumAspect());
+      theTrihedron->Attributes()->DatumAspect()->SetDrawDatumAxes (aDatumAxes);
+    }
+    return Standard_True;
+  }
+}
 
 //==============================================================================
 //function : Vtrihedron 2d
 //purpose  : Create a plane with a 2D  trihedron from a faceselection
 //Draw arg : vtri2d  name
 //==============================================================================
-#include <AIS_PlaneTrihedron.hxx>
-
-
-
-static int VTrihedron2D (Draw_Interpretor& di, Standard_Integer argc, const char** argv)
-
+static int VTrihedron2D (Draw_Interpretor& /*theDI*/,
+                         Standard_Integer  theArgsNum,
+                         const char**      theArgVec)
 {
-  // Verification des arguments
-  if ( argc!=2) {di<<argv[0]<<" error\n"; return 1;}
-
-  // Declarations
-  Standard_Integer myCurrentIndex;
-  // Fermeture des contextes
-  TheAISContext()->CloseAllContexts();
-  // Ouverture d'un contexte local et recuperation de son index.
-  TheAISContext()->OpenLocalContext();
-  myCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-  // On active les modes de selections faces.
-  TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(4) );
-  di<<" Select a face .\n";
-
-  // Boucle d'attente waitpick.
-  Standard_Integer argccc = 5;
-  const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-  const char **argvvv = (const char **) bufff;
-  while (ViewerMainLoop( argccc, argvvv) ) { }
-  // fin de la boucle
-
-  TopoDS_Shape ShapeB;
-  for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-    ShapeB = TheAISContext()->SelectedShape();
+  if (theArgsNum != 2)
+  {
+    std::cerr << theArgVec[0]<< " error.\n";
+    return 1;
   }
 
-  TopoDS_Face  FaceB=TopoDS::Face(ShapeB);
+  TopTools_ListOfShape aShapes;
+  ViewerTest::GetSelectedShapes (aShapes);
 
-  // Construction du Plane
-  // recuperation des edges des faces.
-  TopExp_Explorer FaceExpB(FaceB,TopAbs_EDGE);
+  if (aShapes.Extent() != 1)
+  {
+    std::cerr << "Error: wrong number of selected shapes.\n";
+    return 1;
+  }
 
-  TopoDS_Edge EdgeB=TopoDS::Edge(FaceExpB.Current() );
-  // declarations
+  const TopoDS_Shape& aShape = aShapes.First();
+
+  TopoDS_Face     aFace = TopoDS::Face (aShape);
+  TopExp_Explorer aFaceExp (aFace, TopAbs_EDGE);
+  TopoDS_Edge     anEdge0 = TopoDS::Edge (aFaceExp.Current());
+
   gp_Pnt A,B,C;
-
-  // si il y a plusieurs edges
-  if (FaceExpB.More() ) {
-    FaceExpB.Next();
-    TopoDS_Edge EdgeC=TopoDS::Edge(FaceExpB.Current() );
-    BRepAdaptor_Curve theCurveB(EdgeB);
-    BRepAdaptor_Curve theCurveC(EdgeC);
-    A=theCurveC.Value(0.1);
-    B=theCurveC.Value(0.9);
-    C=theCurveB.Value(0.5);
+  if (aFaceExp.More())
+  {
+    aFaceExp.Next();
+    TopoDS_Edge anEdge1 = TopoDS::Edge (aFaceExp.Current() );
+    BRepAdaptor_Curve aCurve0 (anEdge0);
+    BRepAdaptor_Curve aCurve1 (anEdge1);
+    A = aCurve1.Value (0.1);
+    B = aCurve1.Value (0.9);
+    C = aCurve0.Value (0.5);
   }
-  else {
-    // FaceB a 1 unique edge courbe
-    BRepAdaptor_Curve theCurveB(EdgeB);
-    A=theCurveB.Value(0.1);
-    B=theCurveB.Value(0.9);
-    C=theCurveB.Value(0.5);
+  else
+  {
+    BRepAdaptor_Curve aCurve0 (anEdge0);
+    A = aCurve0.Value (0.1);
+    B = aCurve0.Value (0.9);
+    C = aCurve0.Value (0.5);
   }
-  // Construction du Geom_Plane
-  GC_MakePlane MkPlane(A,B,C);
-  Handle(Geom_Plane) theGeomPlane=MkPlane.Value();
 
-  // Construction de l'AIS_PlaneTrihedron
-  Handle(AIS_PlaneTrihedron) theAISPlaneTri= new AIS_PlaneTrihedron(theGeomPlane );
+  GC_MakePlane aMkPlane (A,B,C);
 
-  // Fermeture du contexte local.
-  TheAISContext()->CloseLocalContext(myCurrentIndex);
+  Handle(AIS_PlaneTrihedron) anAISPlaneTri = new AIS_PlaneTrihedron (aMkPlane.Value());
+  TCollection_AsciiString aName (theArgVec[1]);
 
-  // on le display & bind
-  TheAISContext()->Display(theAISPlaneTri );
-  GetMapOfAIS().Bind ( theAISPlaneTri ,argv[1]);
+  VDisplayAISObject (aName, anAISPlaneTri);
 
   return 0;
 }
 
-
-
-//==============================================================================
-//function : VTriherdron
-//purpose  : Create a trihedron. If no arguments are set, the default
-//           trihedron (Oxyz) is created.
-//Draw arg : vtrihedron  name  [Xo] [Yo] [Zo] [Zu] [Zv] [Zw] [Xu] [Xv] [Xw]
-//==============================================================================
-
-static int VTrihedron (Draw_Interpretor& /*theDi*/,
-                       Standard_Integer  theArgsNb,
-                       const char**      theArgVec)
+//=======================================================================
+//function : VTrihedron
+//purpose  :
+//=======================================================================
+static int VTrihedron (Draw_Interpretor& ,
+                       Standard_Integer theArgsNb,
+                       const char** theArgVec)
 {
-  if (theArgsNb < 2 || theArgsNb > 11)
+  if (theArgsNb < 2)
   {
-    std::cout << theArgVec[0] << " syntax error\n";
+    std::cout << "Syntax error: the wrong number of input parameters.\n";
     return 1;
   }
 
-  // Parse parameters
-  NCollection_DataMap<TCollection_AsciiString, Handle(TColStd_HSequenceOfAsciiString)> aMapOfArgs;
-  TCollection_AsciiString aParseKey;
-  for (Standard_Integer anArgIt = 1; anArgIt < theArgsNb; ++anArgIt)
+  TCollection_AsciiString aName (theArgVec[1]);
+  gp_Pln aWorkingPlane;
+  Standard_Boolean toUpdate = Standard_True;
+
+  NCollection_DataMap<TCollection_AsciiString, Standard_Real> aRealParams;
+  NCollection_DataMap<TCollection_AsciiString, TCollection_AsciiString> aStringParams;
+
+  Handle(AIS_Trihedron) aTrihedron;
+  if (GetMapOfAIS().IsBound2 (aName))
   {
-    TCollection_AsciiString anArg (theArgVec [anArgIt]);
-
-    if (anArg.Value (1) == '-' && !anArg.IsRealValue())
+    Handle(AIS_InteractiveObject) anObject = Handle(AIS_InteractiveObject)::DownCast (GetMapOfAIS().Find2 (aName));
+    aTrihedron = Handle(AIS_Trihedron)::DownCast (anObject);
+    if (aTrihedron.IsNull())
     {
-      aParseKey = anArg;
-      aParseKey.Remove (1);
-      aParseKey.LowerCase();
-      aMapOfArgs.Bind (aParseKey, new TColStd_HSequenceOfAsciiString);
-      continue;
+      std::cout << "Syntax error: no trihedron with this name.\n";
+      return 1;
     }
-
-    if (aParseKey.IsEmpty())
-    {
-      continue;
-    }
-
-    aMapOfArgs(aParseKey)->Append (anArg);
+  }
+  else
+  {
+    Handle(Geom_Axis2Placement) aPlacement = new Geom_Axis2Placement (gp_Pnt (0.0, 0.0, 0.0),
+                                                                      gp::DZ(), gp::DX());
+    aTrihedron = new AIS_Trihedron (aPlacement);
   }
 
-  // Check parameters
-  if ( (aMapOfArgs.IsBound ("xaxis") && !aMapOfArgs.IsBound ("zaxis"))
-    || (!aMapOfArgs.IsBound ("xaxis") && aMapOfArgs.IsBound ("zaxis")) )
+  if (!setTrihedronParams (theArgsNb, theArgVec, aTrihedron))
   {
-    std::cout << theArgVec[0] << " error: -xaxis and -yaxis parameters are to set together.\n";
     return 1;
   }
 
-  for (NCollection_DataMap<TCollection_AsciiString, Handle(TColStd_HSequenceOfAsciiString)>::Iterator aMapIt (aMapOfArgs);
-       aMapIt.More(); aMapIt.Next())
+  // Redisplay a dimension after parameter changing.
+  if (ViewerTest::GetAISContext()->IsDisplayed (aTrihedron))
   {
-    const TCollection_AsciiString& aKey = aMapIt.Key();
-    const Handle(TColStd_HSequenceOfAsciiString)& anArgs = aMapIt.Value();
-
-    // Bool key, without arguments
-    if (aKey.IsEqual ("hidelabels") && anArgs->IsEmpty())
-    {
-      continue;
-    }
-
-    if ( (aKey.IsEqual ("xaxis") || aKey.IsEqual ("zaxis") || aKey.IsEqual ("origin")) && anArgs->Length() == 3
-      && anArgs->Value(1).IsRealValue() && anArgs->Value(2).IsRealValue() && anArgs->Value(3).IsRealValue() )
-    {
-      continue;
-    }
+    ViewerTest::GetAISContext()->Redisplay (aTrihedron, toUpdate);
+  }
+  else
+  {
+    VDisplayAISObject (theArgVec[1], aTrihedron);
   }
 
-  // Process parameters
-  gp_Pnt anOrigin (0.0, 0.0, 0.0);
-  gp_Dir aDirZ = gp::DZ();
-  gp_Dir aDirX = gp::DX();
-
-  Handle(TColStd_HSequenceOfAsciiString) aValues;
-
-  if (aMapOfArgs.Find ("origin", aValues))
-  {
-    anOrigin.SetX (aValues->Value(1).RealValue());
-    anOrigin.SetY (aValues->Value(2).RealValue());
-    anOrigin.SetZ (aValues->Value(3).RealValue());
-  }
-
-  Handle(TColStd_HSequenceOfAsciiString) aValues2;
-  if (aMapOfArgs.Find ("xaxis", aValues) && aMapOfArgs.Find ("zaxis", aValues2))
-  {
-    Standard_Real aX = aValues->Value(1).RealValue();
-    Standard_Real aY = aValues->Value(2).RealValue();
-    Standard_Real aZ = aValues->Value(3).RealValue();
-    aDirX.SetCoord (aX, aY, aZ);
-
-    aX = aValues->Value(1).RealValue();
-    aY = aValues->Value(2).RealValue();
-    aZ = aValues->Value(3).RealValue();
-    aDirZ.SetCoord (aX, aY, aZ);
-  }
-
-  if (!aDirZ.IsNormal (aDirX, M_PI / 180.0))
-  {
-    std::cout << theArgVec[0] << " error - VectorX is not normal to VectorZ\n";
-    return 1;
-  }
-
-  Handle(Geom_Axis2Placement) aPlacement = new Geom_Axis2Placement (anOrigin, aDirZ, aDirX);
-  Handle(AIS_Trihedron) aShape = new AIS_Trihedron (aPlacement);
-
-  if (aMapOfArgs.Find ("hidelabels", aValues))
-  {
-    const Handle(Prs3d_Drawer)& aDrawer = aShape->Attributes();
-
-    if(!aDrawer->HasOwnDatumAspect())
-    {
-      Handle(Prs3d_DatumAspect) aDefAspect = ViewerTest::GetAISContext()->DefaultDrawer()->DatumAspect();
-
-      Handle(Prs3d_DatumAspect) aDatumAspect = new Prs3d_DatumAspect();
-      aDatumAspect->FirstAxisAspect()->SetAspect (aDefAspect->FirstAxisAspect()->Aspect());
-      aDatumAspect->SecondAxisAspect()->SetAspect (aDefAspect->SecondAxisAspect()->Aspect());
-      aDatumAspect->ThirdAxisAspect()->SetAspect (aDefAspect->ThirdAxisAspect()->Aspect());
-      aDatumAspect->SetAxisLength (aDefAspect->FirstAxisLength(),
-                                   aDefAspect->SecondAxisLength(),
-                                   aDefAspect->ThirdAxisLength());
-
-      aDrawer->SetDatumAspect (aDatumAspect);
-    }
-
-    aDrawer->DatumAspect()->SetToDrawLabels (Standard_False);
-  }
-
-  VDisplayAISObject (theArgVec[1], aShape);
   return 0;
 }
 
@@ -385,7 +639,7 @@ static int VSize (Draw_Interpretor& di, Standard_Integer argc, const char** argv
   Standard_Real                value;
   Standard_Boolean             hascol;
 
-  Quantity_NameOfColor         col = Quantity_NOC_BLACK ;
+  Quantity_Color col = Quantity_NOC_BLACK;
 
   // Verification des arguments
   if ( argc>3 ) {di<<argv[0]<<" Syntaxe error\n"; return 1;}
@@ -394,10 +648,6 @@ static int VSize (Draw_Interpretor& di, Standard_Integer argc, const char** argv
   if (argc==1)      {ThereIsName=Standard_False;value=100;}
   else if (argc==2) {ThereIsName=Standard_False;value=Draw::Atof(argv[1]);}
   else              {ThereIsName=Standard_True;value=Draw::Atof(argv[2]);}
-
-  // On ferme le contexte local pour travailler dans le contexte global
-  if(TheAISContext()->HasOpenedContext())
-    TheAISContext()->CloseLocalContext();
 
   // On set le booleen ThereIsCurrent
   if (TheAISContext() -> NbSelected() > 0) {ThereIsCurrent=Standard_True;}
@@ -426,13 +676,17 @@ static int VSize (Draw_Interpretor& di, Standard_Integer argc, const char** argv
         // un AIS_Trihedron
         if (aShape->Type()==AIS_KOI_Datum && aShape->Signature()==3) {
 
-          if (aShape->HasColor()) {
-            hascol=Standard_True;
+          if (aShape->HasColor())
+          {
+            hascol = Standard_True;
 
             // On recupere la couleur de aShape
-            col=aShape->Color();}
-
-          else hascol=Standard_False;
+            aShape->Color (col);
+          }
+          else
+          {
+            hascol = Standard_False;
+          }
 
           // On downcast aShape  de AIS_InteractiveObject a AIS_Trihedron
           // pour lui appliquer la methode SetSize()
@@ -486,14 +740,17 @@ static int VSize (Draw_Interpretor& di, Standard_Integer argc, const char** argv
       if (!aShape.IsNull() &&
         aShape->Type()==AIS_KOI_Datum && aShape->Signature()==3)
       {
-
-        if (aShape->HasColor()) {
+        if (aShape->HasColor())
+        {
           hascol=Standard_True;
 
           // On recupere la couleur de aShape
-          col=aShape->Color();}
-
-        else hascol=Standard_False;
+          aShape->Color (col);
+        }
+        else
+        {
+          hascol = Standard_False;
+        }
 
         // On downcast aShape de AIS_InteractiveObject a AIS_Trihedron
         // pour lui appliquer la methode SetSize()
@@ -535,57 +792,22 @@ static int VPlaneTrihedron (Draw_Interpretor& di, Standard_Integer argc, const c
   // Verification des arguments
   if ( argc!=2) {di<<argv[0]<<" error\n"; return 1;}
 
-  // Declarations
-  Standard_Integer myCurrentIndex;
-  // Fermeture des contextes locaux
-  TheAISContext()->CloseAllContexts();
-
-  // On recupere tous les trihedrons de la GetMapOfAIS()
-  // et on active le mode de selection par face.
-  // =================================================
-
-  // Ouverture d'un contexte local et recuperation de son index.
-  TheAISContext()->OpenLocalContext(Standard_False);
-  myCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-  ViewerTest_DoubleMapIteratorOfDoubleMapOfInteractiveAndName
-    it (GetMapOfAIS());
-  while(it.More()){
-    Handle(AIS_InteractiveObject) ShapeA =
-      Handle(AIS_InteractiveObject)::DownCast(it.Key1());
-    // On verifie que c'est bien un trihedron
-    if (!ShapeA.IsNull() &&
-      ShapeA->Type()==AIS_KOI_Datum  && ShapeA->Signature()==3  ) {
-        // on le downcast
-        Handle(AIS_Trihedron) TrihedronA =(Handle(AIS_Trihedron)::DownCast (ShapeA));
-        // on le charge dans le contexte et on active le mode Plane.
-        TheAISContext()->Load(TrihedronA,0,Standard_False);
-        TheAISContext()->Activate(TrihedronA,3);
-      }
-      it.Next();
+  if (TheAISContext()->NbSelected() != 1)
+  {
+    std::cerr << "Error: Wrong number of selected shapes.\n";
+    return 1;
   }
 
-  di<<" Select a plane.\n";
-  // Boucle d'attente waitpick.
-  Standard_Integer argccc = 5;
-  const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-  const char **argvvv = (const char **) bufff;
-  while (ViewerMainLoop( argccc, argvvv) ) { }
-  // fin de la boucle
-
-  Handle(AIS_InteractiveObject) theIOB;
-  for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-    theIOB = TheAISContext()->SelectedInteractive();
+  TheAISContext()->InitSelected();
+  Handle(AIS_InteractiveObject) aTest = TheAISContext()->SelectedInteractive();
+  Handle(AIS_Plane) aPlane = Handle(AIS_Plane)::DownCast (aTest);
+  if (aPlane.IsNull())
+  {
+    std::cerr << "Error: Selected shape is not a plane.\n";
+    return 1;
   }
-  // on le downcast
-  Handle(AIS_Plane) PlaneB =(Handle(AIS_Plane)::DownCast (theIOB));
 
-  // Fermeture du contexte local.
-  TheAISContext()->CloseLocalContext(myCurrentIndex);
-
-  // on le display & bind
-  TheAISContext()->Display(PlaneB );
-  GetMapOfAIS().Bind ( PlaneB ,argv[1]);
+  VDisplayAISObject (argv[1], aPlane);
 
   return 0;
 }
@@ -617,7 +839,6 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
   // Declarations
   Standard_Boolean HasArg;
   TCollection_AsciiString name;
-  Standard_Integer MyCurrentIndex;
 
   // Verification
   if (argc<2 || argc>8 ) {di<<" Syntaxe error\n";return 1;}
@@ -625,8 +846,9 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
   else HasArg=Standard_False;
 
   name=argv[1];
-  // Fermeture des contextes
-  TheAISContext()->CloseAllContexts();
+
+  TopTools_ListOfShape aShapes;
+  ViewerTest::GetSelectedShapes (aShapes);
 
   // Cas ou il y a des arguments
   // Purpose: Teste le constructeur AIS_Axis::AIS_Axis(x: Line from Geom)
@@ -641,7 +863,7 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
     Handle(Geom_Line) myLine=new Geom_Line (p1 ,myVect );
     Handle(AIS_Axis) TheAxis=new AIS_Axis (myLine );
     GetMapOfAIS().Bind (TheAxis,name);
-    TheAISContext()->Display(TheAxis);
+    TheAISContext()->Display(TheAxis, Standard_True);
   }
 
   // Pas d'arguments
@@ -649,70 +871,41 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
     // fonction vaxis
     // Purpose: Teste le constructeur AIS_Axis::AIS_Axis (x:Axis1Placement from Geom)
     if ( !strcasecmp(argv[0], "vaxis")) {
-      TheAISContext()->OpenLocalContext();
-      MyCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-      // Active le mode edge et le mode vertex
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(1) );
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(2) );
-      di<<" Select an edge or a vertex.\n";
-
-      // Boucle d'attente waitpick.
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // fin de la boucle
-
-      // recuperation de la shape.
-      TopoDS_Shape ShapeA;
-      for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-        ShapeA = TheAISContext()->SelectedShape();
+      if (aShapes.Extent() != 2 && aShapes.Extent() != 1)
+      {
+        std::cerr << "Error: Wrong number of selected shapes.\n";
+        return 1;
       }
-      // recuperation de l'AIS_InteractiveObject
-      //Handle(AIS_InteractiveObject) myAISio=TheAISContext()->Current();
-      // down cast en AIS_Point si sig et type
-      // AIS_Point -> Geom_Pnt ....
 
-      if (ShapeA.ShapeType()==TopAbs_VERTEX) {
-        // on desactive le mode edge
-        TheAISContext()->DeactivateStandardMode(AIS_Shape::SelectionType(2) );
-        di<<" Select a different vertex.\n";
+      const TopoDS_Shape& aShapeA = aShapes.First();
+      if (aShapeA.ShapeType() == TopAbs_VERTEX)
+      {
+        if (aShapes.Extent() != 2)
+        {
+          std::cerr << "Error: Wron number of selected shapes.\n";
+          return 1;
+        }
 
-        TopoDS_Shape ShapeB;
-        do {
-          // Boucle d'attente waitpick.
-          Standard_Integer argccc = 5;
-          const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-          const char **argvvv = (const char **) bufff;
-          while (ViewerMainLoop( argccc, argvvv) ) { }
-          // fin de la boucle
-          for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-            ShapeB = TheAISContext()->SelectedShape();
-          }
-
-
-        } while(ShapeB.IsSame(ShapeA) );
-
-        // Fermeture du context local
-        TheAISContext()->CloseLocalContext(MyCurrentIndex);
+        const TopoDS_Shape& aShapeB = aShapes.Last();
+        if (aShapeB.ShapeType() != TopAbs_VERTEX)
+        {
+          std::cerr << "Syntax error: You should select two vertices or one edge.\n";
+          return 1;
+        }
 
         // Construction de l'axe
-        gp_Pnt   A=BRep_Tool::Pnt(TopoDS::Vertex(ShapeA)  );
-        gp_Pnt   B=BRep_Tool::Pnt(TopoDS::Vertex(ShapeB)  );
-        gp_Vec   V (A,B);
-        gp_Dir   D (V);
+        gp_Pnt A = BRep_Tool::Pnt (TopoDS::Vertex (aShapeA));
+        gp_Pnt B = BRep_Tool::Pnt (TopoDS::Vertex (aShapeB));
+        gp_Vec V (A,B);
+        gp_Dir D (V);
         Handle(Geom_Axis1Placement) OrigineAndVect=new Geom_Axis1Placement (A,D);
         Handle(AIS_Axis) TheAxis=new AIS_Axis (OrigineAndVect);
         GetMapOfAIS().Bind (TheAxis,name);
-        TheAISContext()->Display(TheAxis);
+        TheAISContext()->Display (TheAxis, Standard_True);
       }
-      else {
-        // Un unique edge (ShapeA) a ete picke
-        // Fermeture du context local
-        TheAISContext()->CloseLocalContext(MyCurrentIndex);
-        // Constuction de l'axe
-        TopoDS_Edge    ed =TopoDS::Edge(ShapeA);
+      else
+      {
+        TopoDS_Edge    ed =TopoDS::Edge (aShapeA);
         TopoDS_Vertex  Va,Vb;
         TopExp::Vertices(ed,Va,Vb );
         gp_Pnt A=BRep_Tool::Pnt(Va);
@@ -722,56 +915,32 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
         Handle(Geom_Axis1Placement) OrigineAndVect=new Geom_Axis1Placement (A,D);
         Handle(AIS_Axis) TheAxis=new AIS_Axis (OrigineAndVect);
         GetMapOfAIS().Bind (TheAxis,name);
-        TheAISContext()->Display(TheAxis);
+        TheAISContext()->Display (TheAxis, Standard_True);
       }
 
     }
 
     // Fonction axispara
     // Purpose: Teste le constructeur AIS_Axis::AIS_Axis(x: Axis2Placement from Geom, y: TypeOfAxis from AIS)
-    else if ( !strcasecmp(argv[0], "vaxispara")) {
-
-      TheAISContext()->OpenLocalContext();
-      MyCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-      // Active le mode edge
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(2) );
-      di<<" Select an edge.\n";
-
-      // Boucle d'attente waitpick.
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // fin de la boucle
-
-      TopoDS_Shape ShapeA;
-      for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-        ShapeA = TheAISContext()->SelectedShape();
+    else if ( !strcasecmp(argv[0], "vaxispara"))
+    {
+      if (aShapes.Extent() != 2)
+      {
+        std::cerr << "Error: Wrong number of selected shapes.\n";
+        return 1;
       }
-      // Active le mode vertex et deactive edges
-      TheAISContext()->DeactivateStandardMode(AIS_Shape::SelectionType(2) );
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(1) );
-      di<<" Select a vertex.\n";
 
-      // Boucle d'attente waitpick.
-      Standard_Integer argccc = 5;
-      const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvvv = (const char **) bufff;
-      while (ViewerMainLoop( argccc, argvvv) ) { }
-      // fin de la boucle
-
-      // On peut choisir un pnt sur l'edge
-      TopoDS_Shape ShapeB;
-      for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-        ShapeB = TheAISContext()->SelectedShape();
+      const TopoDS_Shape& aShapeA = aShapes.First();
+      const TopoDS_Shape& aShapeB = aShapes.Last();
+      if (!(aShapeA.ShapeType() == TopAbs_EDGE
+         && aShapeB.ShapeType() == TopAbs_VERTEX))
+      {
+        std::cerr << "Syntax error: You should select face and then vertex.\n";
+        return 1;
       }
-      // Fermeture du context local
-      TheAISContext()->CloseLocalContext(MyCurrentIndex);
 
-      // Construction de l'axe
-      TopoDS_Edge    ed=TopoDS::Edge(ShapeA) ;
-      gp_Pnt B=BRep_Tool::Pnt(TopoDS::Vertex(ShapeB) );
+      TopoDS_Edge    ed=TopoDS::Edge (aShapeA);
+      gp_Pnt B=BRep_Tool::Pnt(TopoDS::Vertex(aShapeB));
       TopoDS_Vertex  Va,Vc;
       TopExp::Vertices(ed,Va,Vc );
       gp_Pnt A=BRep_Tool::Pnt(Va);
@@ -781,53 +950,31 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
       Handle(Geom_Axis1Placement) OrigineAndVect=new Geom_Axis1Placement (B,D);
       Handle(AIS_Axis) TheAxis=new AIS_Axis (OrigineAndVect);
       GetMapOfAIS().Bind (TheAxis,name);
-      TheAISContext()->Display(TheAxis);
+      TheAISContext()->Display (TheAxis, Standard_True);
 
     }
 
     // Fonction axisortho
-    else  {
-      TheAISContext()->OpenLocalContext();
-      MyCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-      // Active le mode edge
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(2) );
-      di<<" Select an edge.\n";
-
-      // Boucle d'attente waitpick.
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // fin de la boucle
-
-      TopoDS_Shape ShapeA;
-      for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-        ShapeA = TheAISContext()->SelectedShape();
+    else
+    {
+      if (aShapes.Extent() != 2)
+      {
+        std::cerr << "Error: Wrong number of selected shapes.\n";
+        return 1;
       }
-      // Active le mode vertex et deactive edges
-      TheAISContext()->DeactivateStandardMode(AIS_Shape::SelectionType(2) );
-      TheAISContext()->ActivateStandardMode(AIS_Shape::SelectionType(1) );
-      di<<" Slect a vertex.\n";
 
-      // Boucle d'attente waitpick.
-      Standard_Integer argccc = 5;
-      const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvvv = (const char **) bufff;
-      while (ViewerMainLoop( argccc, argvvv) ) { }
-      // fin de la boucle
-
-      // On peut choisir un pnt sur l'edge
-      TopoDS_Shape ShapeB;
-      for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-        ShapeB = TheAISContext()->SelectedShape();
+      const TopoDS_Shape& aShapeA = aShapes.First();
+      const TopoDS_Shape& aShapeB = aShapes.Last();
+      if (!(aShapeA.ShapeType() == TopAbs_EDGE
+         && aShapeB.ShapeType() == TopAbs_VERTEX))
+      {
+        std::cerr << "Syntax error: You should select face and then vertex.\n";
+        return 1;
       }
-      // Fermeture du context local
-      TheAISContext()->CloseLocalContext(MyCurrentIndex);
 
       // Construction de l'axe
-      TopoDS_Edge    ed=TopoDS::Edge(ShapeA) ;
-      gp_Pnt B=BRep_Tool::Pnt(TopoDS::Vertex(ShapeB) );
+      TopoDS_Edge    ed=TopoDS::Edge(aShapeA) ;
+      gp_Pnt B=BRep_Tool::Pnt(TopoDS::Vertex(aShapeB) );
       TopoDS_Vertex  Va,Vc;
       TopExp::Vertices(ed,Va,Vc );
       gp_Pnt A=BRep_Tool::Pnt(Va);
@@ -838,7 +985,7 @@ static int VAxisBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
       Handle(Geom_Axis1Placement) OrigineAndVect=new Geom_Axis1Placement (B,D);
       Handle(AIS_Axis) TheAxis=new AIS_Axis (OrigineAndVect);
       GetMapOfAIS().Bind (TheAxis,name);
-      TheAISContext()->Display(TheAxis);
+      TheAISContext()->Display (TheAxis, Standard_True);
 
     }
 
@@ -870,7 +1017,6 @@ static int VPointBuilder(Draw_Interpretor& di, Standard_Integer argc, const char
   // Declarations
   Standard_Boolean HasArg;
   TCollection_AsciiString name;
-  Standard_Integer myCurrentIndex;
 
   // Verification
   if (argc<2 || argc>5 ) {di<<" Syntaxe error\n";return 1;}
@@ -878,8 +1024,6 @@ static int VPointBuilder(Draw_Interpretor& di, Standard_Integer argc, const char
   else HasArg=Standard_False;
 
   name=argv[1];
-  // Fermeture des contextes
-  TheAISContext()->CloseAllContexts();
 
   // Il y a des arguments: teste l'unique constructeur AIS_Pnt::AIS_Pnt(Point from Geom)
   if (HasArg) {
@@ -889,50 +1033,35 @@ static int VPointBuilder(Draw_Interpretor& di, Standard_Integer argc, const char
     Handle(Geom_CartesianPoint )  myGeomPoint= new Geom_CartesianPoint (thecoord[0],thecoord[1],thecoord[2]);
     Handle(AIS_Point)  myAISPoint=new AIS_Point(myGeomPoint );
     GetMapOfAIS().Bind (myAISPoint,name);
-    TheAISContext()->Display(myAISPoint);
+    TheAISContext()->Display (myAISPoint, Standard_True);
   }
 
   // Il n'a pas d'arguments
-  else {
-    TheAISContext()->OpenLocalContext();
-    myCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
+  else
+  {
+    TopTools_ListOfShape aShapes;
+    ViewerTest::GetSelectedShapes (aShapes);
 
-    // Active le mode Vertex et Edges
-    TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(1) );
-    TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(2) );
-    di<<" Select a vertex or an edge(build the middle)\n";
-
-    // Boucle d'attente waitpick.
-    Standard_Integer argcc = 5;
-    const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-    const char **argvv = (const char **) buff;
-    while (ViewerMainLoop( argcc, argvv) ) { }
-    // fin de la boucle
-
-    TopoDS_Shape ShapeA;
-    for (TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-      ShapeA= TheAISContext()->SelectedShape();
+    if (aShapes.Extent() != 1)
+    {
+      std::cerr << "Error: Wrong number of selected shapes.\n";
+      std::cerr << "\tYou should select one edge or vertex.\n";
+      return 1;
     }
 
-    if (ShapeA.ShapeType()==TopAbs_VERTEX ) {
-      // Un vertex a ete selectionne
-      // Fermeture du context local
-      TheAISContext()->CloseLocalContext(myCurrentIndex);
+    const TopoDS_Shape& aShapeA = aShapes.First();
 
-      // Construction du point
-      gp_Pnt A=BRep_Tool::Pnt(TopoDS::Vertex(ShapeA ) );
+    if (aShapeA.ShapeType()==TopAbs_VERTEX )
+    {
+      gp_Pnt A=BRep_Tool::Pnt(TopoDS::Vertex(aShapeA ) );
       Handle(Geom_CartesianPoint) myGeomPoint= new Geom_CartesianPoint (A );
       Handle(AIS_Point)  myAISPoint = new AIS_Point  (myGeomPoint );
       GetMapOfAIS().Bind(myAISPoint,name);
-      TheAISContext()->Display(myAISPoint);
+      TheAISContext()->Display (myAISPoint, Standard_True);
     }
-    else {
-      // Un Edge a ete selectionne
-      // Fermeture du context local
-      TheAISContext()->CloseLocalContext(myCurrentIndex);
-
-      // Construction du point milieu de l'edge
-      TopoDS_Edge myEdge=TopoDS::Edge(ShapeA);
+    else
+    {
+      TopoDS_Edge myEdge=TopoDS::Edge(aShapeA);
       TopoDS_Vertex myVertexA,myVertexB;
       TopExp::Vertices (myEdge ,myVertexA ,myVertexB );
       gp_Pnt A=BRep_Tool::Pnt(myVertexA );
@@ -941,7 +1070,7 @@ static int VPointBuilder(Draw_Interpretor& di, Standard_Integer argc, const char
       Handle(Geom_CartesianPoint) myGeomPointM= new Geom_CartesianPoint ( (A.X()+B.X())/2  , (A.Y()+B.Y())/2  , (A.Z()+B.Z())/2  );
       Handle(AIS_Point)  myAISPointM = new AIS_Point  (myGeomPointM );
       GetMapOfAIS().Bind(myAISPointM,name);
-      TheAISContext()->Display(myAISPointM);
+      TheAISContext()->Display (myAISPointM, Standard_True);
     }
 
   }
@@ -976,7 +1105,6 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
   // Declarations
   Standard_Boolean hasArg;
   TCollection_AsciiString aName;
-  Standard_Integer aCurrentIndex;
 
   // Verification
   if (argc<2 || argc>6 )
@@ -990,8 +1118,6 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
     hasArg=Standard_False;
 
   aName=argv[1];
-  // Close all contexts
-  TheAISContext()->CloseAllContexts();
 
   // There are some arguments
   if (hasArg)
@@ -1107,7 +1233,7 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
             anAISPlane->SetTypeOfSensitivity (Select3D_TypeOfSensitivity (aType));
           }
         }
-        TheAISContext()->Display(anAISPlane);
+        TheAISContext()->Display (anAISPlane, Standard_True);
       }
 
       // The first argument is an AIS_Axis
@@ -1165,7 +1291,7 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
           anAISPlane->SetTypeOfSensitivity (Select3D_TypeOfSensitivity (aType));
         }
       }
-      TheAISContext()->Display(anAISPlane);
+      TheAISContext()->Display (anAISPlane, Standard_True);
 
     }
     // The first argumnet is an AIS_Plane
@@ -1220,7 +1346,7 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
           anAISPlane->SetTypeOfSensitivity (Select3D_TypeOfSensitivity (aType));
         }
       }
-      TheAISContext()->Display(anAISPlane);
+      TheAISContext()->Display (anAISPlane, Standard_True);
     }
     // Error
     else
@@ -1232,103 +1358,32 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
   // There are no arguments
   else 
   {
+    TopTools_ListOfShape aShapes;
+    ViewerTest::GetSelectedShapes (aShapes);
+
     // Function vplane
     // Test the constructor AIS_Plane::AIS_Plane(Geom_Plane, Standard_Boolean )
     if (!strcasecmp(argv[0], "vplane"))
     {
-      TheAISContext()->OpenLocalContext();
-      aCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-      // Active modes Vertex, Edge and Face
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(1));
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(2));
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(4));
-      std::cout<<"Select a vertex, a face or an edge\n";
-
-      // Wait for picking
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // end of the loop
-
-      TopoDS_Shape aShapeA;
-      for (TheAISContext()->InitSelected();
-           TheAISContext()->MoreSelected();
-           TheAISContext()->NextSelected())
+      if (aShapes.Extent() < 1 || aShapes.Extent() > 3)
       {
-        aShapeA = TheAISContext()->SelectedShape();
+        std::cerr << "Error: Wront number of selected shapes.\n";
+        std::cerr << "\tYou should one of variant: face, edge and vertex or three vertices.\n";
+        return 1;
       }
 
-      // aShapeA is a Vertex
-      if (aShapeA.ShapeType()==TopAbs_VERTEX )
+      const TopoDS_Shape& aShapeA = aShapes.First();
+      if (aShapeA.ShapeType() == TopAbs_VERTEX)
       {
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4));
-        std::cout<<" Select an edge or a different vertex\n";
-
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
-
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-          TheAISContext()->MoreSelected();
-          TheAISContext()->NextSelected())
+        if (aShapes.Extent() == 2)
         {
-          aShapeB = TheAISContext()->SelectedShape();
-        }
-        // aShapeB is a Vertex
-        if (aShapeB.ShapeType()==TopAbs_VERTEX)
-        {
-          // A and B are the same
-          if (aShapeB.IsSame(aShapeA))
+          const TopoDS_Shape& aShapeB = aShapes.Last();
+          if (aShapeB.ShapeType() != TopAbs_EDGE)
           {
-            std::cout<<" vplane: error, same points selected\n";
-            return 1;
-          }
-          TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(2));
-          std::cout<<" Select a different vertex\n";
-
-          // Wait for picking
-          Standard_Integer argcccc = 5;
-          const char *buffff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-          const char **argvvvv = (const char **) buffff;
-          while (ViewerMainLoop( argcccc, argvvvv) ) { }
-          // end of the loop
-
-          TopoDS_Shape aShapeC;
-          for (TheAISContext()->InitSelected();
-               TheAISContext()->MoreSelected();
-               TheAISContext()->NextSelected())
-          {
-            aShapeC = TheAISContext()->SelectedShape();
-          }
-          // aShapeC is the same as A or B
-          if (aShapeC.IsSame(aShapeA)||aShapeC.IsSame(aShapeB))
-          {
-            std::cout<<" vplane: error, same points selected\n";
+            std::cerr << "Syntax error: Together with vertex should be edge.\n";
             return 1;
           }
 
-          // Close the local context
-          TheAISContext()->CloseLocalContext(aCurrentIndex);
-
-          // Construction of plane
-          gp_Pnt A = BRep_Tool::Pnt(TopoDS::Vertex(aShapeA));
-          gp_Pnt B = BRep_Tool::Pnt(TopoDS::Vertex(aShapeB));
-          gp_Pnt C = BRep_Tool::Pnt(TopoDS::Vertex(aShapeC));
-          GC_MakePlane MkPlane(A, B, C);
-          Handle(Geom_Plane) aGeomPlane = MkPlane.Value();
-          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane);
-          GetMapOfAIS().Bind (anAISPlane, aName);
-          TheAISContext()->Display(anAISPlane);
-        }
-        // ShapeB is an edge
-        else
-        {
           // Verify that the vertex is not on the edge ShapeB
           TopoDS_Edge anEdgeB = TopoDS::Edge(aShapeB);
           TopoDS_Vertex aVertA = TopoDS::Vertex(aShapeA);
@@ -1342,9 +1397,6 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
           }
           else
           {
-            // Close the local context
-            TheAISContext()->CloseLocalContext(aCurrentIndex);
-            // Construction of plane
             gp_Pnt A = BRep_Tool::Pnt(aVertA);
             TopoDS_Vertex aVBa, aVBb;
             TopExp::Vertices(anEdgeB ,aVBa ,aVBb);
@@ -1354,32 +1406,56 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
             Handle(Geom_Plane) aGeomPlane = MkPlane.Value();
             Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane);
             GetMapOfAIS().Bind (anAISPlane, aName);
-            TheAISContext()->Display(anAISPlane);
+            TheAISContext()->Display (anAISPlane, Standard_True);
           }
         }
-      }
-      // aShapeA is an edge
-      else if (aShapeA.ShapeType()==TopAbs_EDGE)
-      {
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4));
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(2));
-        std::cout<<" Select a vertex that don't belong to the edge\n";
-
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
-
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-             TheAISContext()->MoreSelected();
-             TheAISContext()->NextSelected())
+        else if (aShapes.Extent() == 3)
         {
-          aShapeB = TheAISContext()->SelectedShape();
+          TopTools_ListOfShape::Iterator anIter (aShapes);
+
+          anIter.Next();
+          const TopoDS_Shape& aShapeB = anIter.Value();
+
+          anIter.Next();
+          const TopoDS_Shape& aShapeC = anIter.Value();
+
+          if (!(aShapeB.ShapeType() == TopAbs_VERTEX
+             && aShapeC.ShapeType() == TopAbs_VERTEX))
+          {
+            std::cerr << "Syntax error: You should one of variant: face, edge and vertex or three vertices.\n";
+            return 1;
+          }
+
+          gp_Pnt A = BRep_Tool::Pnt(TopoDS::Vertex(aShapeA));
+          gp_Pnt B = BRep_Tool::Pnt(TopoDS::Vertex(aShapeB));
+          gp_Pnt C = BRep_Tool::Pnt(TopoDS::Vertex(aShapeC));
+          GC_MakePlane MkPlane(A, B, C);
+          Handle(Geom_Plane) aGeomPlane = MkPlane.Value();
+          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane);
+          GetMapOfAIS().Bind (anAISPlane, aName);
+          TheAISContext()->Display (anAISPlane, Standard_True);
         }
-        // aShapeB should be a Vertex
+        else
+        {
+          std::cerr << "Syntax error: You should one of variant: face, edge and vertex or three vertices.\n";
+          return 1;
+        }
+      }
+      else if (aShapeA.ShapeType() == TopAbs_EDGE)
+      {
+        if (aShapes.Extent() != 2)
+        {
+          std::cerr << "Error: wrong number of selected shapes.\n";
+          return 1;
+        }
+
+        const TopoDS_Shape& aShapeB = aShapes.Last();
+        if (aShapeB.ShapeType() != TopAbs_VERTEX)
+        {
+          std::cerr << "Syntax error: Together with edge should be vertex.\n";
+          return 1;
+        }
+
         // Check that the vertex aShapeB is not on the edge
         TopoDS_Edge anEdgeA = TopoDS::Edge(aShapeA);
         TopoDS_Vertex aVertB = TopoDS::Vertex(aShapeB);
@@ -1391,29 +1467,20 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
           std::cout<<" vplane: error point is on the edge\n";
           return 1;
         }
-        else
-        {
-          // Close the local context
-          TheAISContext()->CloseLocalContext(aCurrentIndex);
-          // Construction of plane
-          gp_Pnt B = BRep_Tool::Pnt(aVertB);
-          TopoDS_Vertex aVAa, aVAb;
-          TopExp::Vertices(anEdgeA, aVAa, aVAb);
-          gp_Pnt Aa = BRep_Tool::Pnt(aVAa);
-          gp_Pnt Ab = BRep_Tool::Pnt(aVAb);
-          GC_MakePlane MkPlane (B,Aa,Ab);
-          Handle(Geom_Plane) aGeomPlane = MkPlane.Value();
-          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane);
-          GetMapOfAIS().Bind (anAISPlane ,aName);
-          TheAISContext()->Display(anAISPlane);
-        }
+
+        gp_Pnt B = BRep_Tool::Pnt(aVertB);
+        TopoDS_Vertex aVAa, aVAb;
+        TopExp::Vertices(anEdgeA, aVAa, aVAb);
+        gp_Pnt Aa = BRep_Tool::Pnt(aVAa);
+        gp_Pnt Ab = BRep_Tool::Pnt(aVAb);
+        GC_MakePlane MkPlane (B,Aa,Ab);
+        Handle(Geom_Plane) aGeomPlane = MkPlane.Value();
+        Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane);
+        GetMapOfAIS().Bind (anAISPlane ,aName);
+        TheAISContext()->Display (anAISPlane, Standard_True);
       }
-      // aShapeA is a Face
-      else
+      else if (aShapeA.ShapeType() == TopAbs_FACE)
       {
-        // Close the local context: nothing to select
-        TheAISContext()->CloseLocalContext(aCurrentIndex);
-        // Construction of plane
         TopoDS_Face aFace = TopoDS::Face(aShapeA);
         BRepAdaptor_Surface aSurface (aFace, Standard_False);
         if (aSurface.GetType()==GeomAbs_Plane)
@@ -1422,13 +1489,18 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
           Handle(Geom_Plane) aGeomPlane = new Geom_Plane(aPlane);
           Handle(AIS_Plane) anAISPlane = new AIS_Plane(aGeomPlane);
           GetMapOfAIS().Bind (anAISPlane, aName);
-          TheAISContext()->Display(anAISPlane);
+          TheAISContext()->Display (anAISPlane, Standard_True);
         }
         else
         {
           std::cout<<" vplane: error\n";
           return 1;
         }
+      }
+      else
+      {
+        std::cerr << "Syntax error: You should one of variant: face, edge and vertex or three vertices.\n";
+        return 1;
       }
     }
 
@@ -1437,120 +1509,44 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
     // test the constructor AIS_Plane::AIS_Plane(Geom_Plane,gp_Pnt)
     else if (!strcasecmp(argv[0], "vplanepara"))
     {
-      TheAISContext()->OpenLocalContext();
-      aCurrentIndex = TheAISContext()->IndexOfCurrentLocal();
-
-      // Activate modes Vertex and Face
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(1));
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(4));
-      std::cout<<" Select a vertex or a face\n";
-
-      // Wait for picking
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // end of the loop
-
-      TopoDS_Shape aShapeA;
-      for (TheAISContext()->InitSelected();
-           TheAISContext()->MoreSelected();
-           TheAISContext()->NextSelected())
+      if (aShapes.Extent() != 2)
       {
-        aShapeA = TheAISContext()->SelectedShape();
+        std::cerr << "Error: Wrong number of selected shapes.\n";
+        return 1;
       }
 
-      if (aShapeA.ShapeType()==TopAbs_VERTEX )
+      const TopoDS_Shape* aShapeA = &aShapes.First();
+      const TopoDS_Shape* aShapeB = &aShapes.Last();
+      if (aShapeA->ShapeType() != TopAbs_VERTEX)
       {
-        // aShapeA is a vertex
-        // Deactivate the mode Vertex
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(1));
-        std::cout<<" Select a face\n";
+        std::swap (aShapeA, aShapeB);
+      }
 
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
+      if (!(aShapeA->ShapeType() == TopAbs_VERTEX
+         && aShapeB->ShapeType() == TopAbs_FACE))
+      {
+        std::cerr << "Syntax error: you should select face and vertex.\n";
+        return 1;
+      }
 
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-             TheAISContext()->MoreSelected();
-             TheAISContext()->NextSelected())
-        {
-          // A vertex ShapeA can be on Face ShapeB
-          aShapeB = TheAISContext()->SelectedShape();
-        }
+      gp_Pnt A = BRep_Tool::Pnt(TopoDS::Vertex(*aShapeA));
 
-        // Close the local context
-        TheAISContext()->CloseLocalContext(aCurrentIndex);
-
-        // Construction of plane
-        gp_Pnt A = BRep_Tool::Pnt(TopoDS::Vertex(aShapeA));
-
-        TopoDS_Face aFace = TopoDS::Face(aShapeB);
-        BRepAdaptor_Surface aSurface (aFace, Standard_False);
-        if (aSurface.GetType()==GeomAbs_Plane )
-        {
-          gp_Pln aPlane = aSurface.Plane();
-          // Construct a plane parallel to aGeomPlane through A
-          aPlane.SetLocation(A);
-          Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
-          Handle(AIS_Plane) aAISPlane = new AIS_Plane (aGeomPlane, A);
-          GetMapOfAIS().Bind (aAISPlane ,aName);
-          TheAISContext()->Display(aAISPlane);
-        }
-        else
-        {
-          std::cout<<" vplanepara: error\n";
-          return 1;
-        }
+      TopoDS_Face aFace = TopoDS::Face(*aShapeB);
+      BRepAdaptor_Surface aSurface (aFace, Standard_False);
+      if (aSurface.GetType() == GeomAbs_Plane)
+      {
+        gp_Pln aPlane = aSurface.Plane();
+        // Construct a plane parallel to aGeomPlane through A
+        aPlane.SetLocation(A);
+        Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
+        Handle(AIS_Plane) aAISPlane = new AIS_Plane (aGeomPlane, A);
+        GetMapOfAIS().Bind (aAISPlane ,aName);
+        TheAISContext()->Display (aAISPlane, Standard_True);
       }
       else
       {
-        // ShapeA is a Face
-        // Deactive the mode Face
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4));
-        std::cout<<" Select a vertex\n";
-
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
-
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-             TheAISContext()->MoreSelected();
-             TheAISContext()->NextSelected())
-        {
-          // A vertex ShapeB can be on Face ShapeA
-          aShapeB = TheAISContext()->SelectedShape();
-        }
-        // Close the local context
-        TheAISContext()->CloseLocalContext(aCurrentIndex);
-
-        // Construction of plane
-        gp_Pnt B = BRep_Tool::Pnt(TopoDS::Vertex(aShapeB));
-
-        TopoDS_Face aFace=TopoDS::Face(aShapeA);
-        BRepAdaptor_Surface aSurface (aFace, Standard_False);
-        if (aSurface.GetType()==GeomAbs_Plane )
-        {
-          gp_Pln aPlane = aSurface.Plane();
-          aPlane.SetLocation(B);
-          Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
-          // Construct a plane parallel to aGeomPlane through B
-          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane, B);
-          GetMapOfAIS().Bind (anAISPlane, aName);
-          TheAISContext()->Display(anAISPlane);
-        }
-        else
-        {
-          std::cout<<" vplanepara: error\n";return 1;
-        }
+        std::cerr << "Error: Builded surface is not a plane.\n";
+        return 1;
       }
     }
 
@@ -1559,165 +1555,70 @@ static Standard_Integer VPlaneBuilder (Draw_Interpretor& /*di*/,
     // test the constructor AIS_Plane::AIS_Plane(Geom_Plane,gp_Pnt,gp_Pnt,gp_Pnt)
     else
     {
-      TheAISContext()->OpenLocalContext();
-      aCurrentIndex = TheAISContext()->IndexOfCurrentLocal();
-
-      // Activate the modes Edge and Face
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(2));
-      TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(4));
-      std::cout<<" Select a face and an edge coplanar\n";
-
-      // Wait for picking
-      Standard_Integer argcc = 5;
-      const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvv = (const char **) buff;
-      while (ViewerMainLoop( argcc, argvv) ) { }
-      // end of the loop
-
-      TopoDS_Shape aShapeA;
-      for (TheAISContext()->InitSelected();
-           TheAISContext()->MoreSelected();
-           TheAISContext()->NextSelected())
+      if (aShapes.Extent() != 2)
       {
-        aShapeA = TheAISContext()->SelectedShape();
+        std::cerr << "Error: wrong number of selected shapes.\n";
+        return 1;
       }
 
-      if (aShapeA.ShapeType()==TopAbs_EDGE )
+      const TopoDS_Shape* aShapeA = &aShapes.First();
+      const TopoDS_Shape* aShapeB = &aShapes.Last();
+
+      if (aShapeA->ShapeType() != TopAbs_EDGE)
       {
-        // ShapeA is an edge, deactivate the mode Edge...
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(2));
-        std::cout<<" Select a face\n";
+        std::swap (aShapeA, aShapeB);
+      }
 
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
+      if (!(aShapeA->ShapeType() == TopAbs_EDGE
+         && aShapeB->ShapeType() == TopAbs_FACE))
+      {
+        std::cerr << "Error: you should select edge and face.\n";
+        return 1;
+      }
 
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-             TheAISContext()->MoreSelected();
-             TheAISContext()->NextSelected())
-        {
-          // Edge ShapeA can be on Face ShapeB
-          aShapeB = TheAISContext()->SelectedShape();
-        }
+      // Construction of plane
+      TopoDS_Edge anEdgeA = TopoDS::Edge(*aShapeA);
+      TopoDS_Vertex aVAa, aVAb;
+      TopExp::Vertices(anEdgeA, aVAa, aVAb);
+      gp_Pnt Aa = BRep_Tool::Pnt(aVAa);
+      gp_Pnt Ab = BRep_Tool::Pnt(aVAb);
+      gp_Vec ab (Aa,Ab);
 
-        // Close the local context
-        TheAISContext()->CloseLocalContext(aCurrentIndex);
+      gp_Dir Dab (ab);
+      // Creation of rotation axis
+      gp_Ax1 aRotAxis (Aa,Dab);
 
-        // Construction of plane
-        TopoDS_Edge anEdgeA = TopoDS::Edge(aShapeA);
-        TopoDS_Vertex aVAa, aVAb;
-        TopExp::Vertices(anEdgeA, aVAa, aVAb);
-        gp_Pnt Aa = BRep_Tool::Pnt(aVAa);
-        gp_Pnt Ab = BRep_Tool::Pnt(aVAb);
-        gp_Vec ab (Aa,Ab);
+      TopoDS_Face aFace = TopoDS::Face(*aShapeB);
+      // The edge must be parallel to the face
+      BRepExtrema_ExtPF aHeightA (aVAa, aFace);
+      BRepExtrema_ExtPF aHeightB (aVAb, aFace);
+      // Compare to heights
+      if (fabs(sqrt(aHeightA.SquareDistance(1)) - sqrt(aHeightB.SquareDistance(1)))
+          >Precision::Confusion())
+      {
+        // the edge is not parallel to the face
+        std::cout<<" vplaneortho error: the edge is not parallel to the face\n";
+        return 1;
+      }
+      // the edge is OK
+      BRepAdaptor_Surface aSurface (aFace, Standard_False);
+      if (aSurface.GetType()==GeomAbs_Plane)
+      {
+        gp_Pln aPlane = aSurface.Plane();
+        // It rotates a half turn round the axis of rotation
+        aPlane.Rotate(aRotAxis , M_PI/2);
 
-        gp_Dir Dab (ab);
-        // Creation of rotation axis
-        gp_Ax1 aRotAxis (Aa,Dab);
-
-        TopoDS_Face aFace = TopoDS::Face(aShapeB);
-        // The edge must be parallel to the face
-        BRepExtrema_ExtPF aHeightA (aVAa, aFace);
-        BRepExtrema_ExtPF aHeightB (aVAb, aFace);
-        // Compare to heights
-        if (fabs(sqrt(aHeightA.SquareDistance(1)) - sqrt(aHeightB.SquareDistance(1)))
-            >Precision::Confusion())
-        {
-          // the edge is not parallel to the face
-          std::cout<<" vplaneortho error: the edge is not parallel to the face\n";
-          return 1;
-        }
-        // the edge is OK
-        BRepAdaptor_Surface aSurface (aFace, Standard_False);
-        if (aSurface.GetType()==GeomAbs_Plane)
-        {
-          gp_Pln aPlane = aSurface.Plane();
-          // It rotates a half turn round the axis of rotation
-          aPlane.Rotate(aRotAxis , M_PI/2);
-
-          Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
-          // constructed aGeomPlane parallel to a plane containing the edge (center mid-edge)
-          gp_Pnt aMiddle ((Aa.X()+Ab.X() )/2 ,(Aa.Y()+Ab.Y() )/2 ,(Aa.Z()+Ab.Z() )/2 );
-          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane, aMiddle);
-          GetMapOfAIS().Bind (anAISPlane, aName);
-          TheAISContext()->Display(anAISPlane);
-        }
-        else
-        {
-          std::cout<<" vplaneortho: error\n";
-          return 1;
-        }
+        Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
+        // constructed aGeomPlane parallel to a plane containing the edge (center mid-edge)
+        gp_Pnt aMiddle ((Aa.X()+Ab.X() )/2 ,(Aa.Y()+Ab.Y() )/2 ,(Aa.Z()+Ab.Z() )/2 );
+        Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane, aMiddle);
+        GetMapOfAIS().Bind (anAISPlane, aName);
+        TheAISContext()->Display (anAISPlane, Standard_True);
       }
       else
       {
-        // ShapeA is a Face, deactive the mode Face.
-        TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4));
-        std::cout<<" Select an edge\n";
-
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
-
-        TopoDS_Shape aShapeB;
-        for (TheAISContext()->InitSelected();
-             TheAISContext()->MoreSelected();
-             TheAISContext()->NextSelected())
-        {
-          // Edge ShapeB can be on Face ShapeA
-          aShapeB = TheAISContext()->SelectedShape();
-        }
-        // Close the local context
-        TheAISContext()->CloseLocalContext(aCurrentIndex);
-
-        // Construction of plane
-        TopoDS_Edge anEdgeB = TopoDS::Edge(aShapeB);
-        TopoDS_Vertex aVBa, aVBb;
-        TopExp::Vertices(anEdgeB, aVBa, aVBb);
-        gp_Pnt aBa = BRep_Tool::Pnt(aVBa);
-        gp_Pnt aBb = BRep_Tool::Pnt(aVBb);
-        gp_Vec ab (aBa,aBb);
-        gp_Dir Dab (ab);
-        // Creation of rotation axe
-        gp_Ax1 aRotAxis (aBa,Dab);
-
-        TopoDS_Face aFace = TopoDS::Face(aShapeA);
-        // The edge must be parallel to the face
-        BRepExtrema_ExtPF aHeightA (aVBa, aFace);
-        BRepExtrema_ExtPF aHeightB (aVBb, aFace);
-        // Comparing the two heights
-        if (fabs(sqrt(aHeightA.SquareDistance(1)) - sqrt(aHeightB.SquareDistance(1)))
-            >Precision::Confusion())
-        {
-          // the edge is not parallel to the face
-          std::cout<<" vplaneortho error: the edge is not parallel to the face\n";
-          return 1;
-        }
-        // The edge is OK
-        BRepAdaptor_Surface aSurface (aFace, Standard_False);
-        if (aSurface.GetType()==GeomAbs_Plane)
-        {
-          gp_Pln aPlane = aSurface.Plane();
-          // It rotates a half turn round the axis of rotation
-          aPlane.Rotate(aRotAxis , M_PI/2);
-          Handle(Geom_Plane) aGeomPlane = new Geom_Plane (aPlane);
-          // constructed aGeomPlane parallel to a plane containing the edge theGeomPlane (center mid-edge)
-          gp_Pnt aMiddle ((aBa.X()+aBb.X() )/2 , (aBa.Y()+aBb.Y() )/2 , (aBa.Z()+aBb.Z() )/2 );
-          Handle(AIS_Plane) anAISPlane = new AIS_Plane (aGeomPlane, aMiddle);
-          GetMapOfAIS().Bind (anAISPlane ,aName);
-          TheAISContext()->Display(anAISPlane);
-        }
-        else
-        {
-          std::cout<<" vplaneortho: error\n";
-          return 1;
-        }
+        std::cout<<" vplaneortho: error\n";
+        return 1;
       }
     }
   }
@@ -1848,11 +1749,8 @@ static int VChangePlane (Draw_Interpretor& /*theDi*/, Standard_Integer theArgsNb
 
 static int VLineBuilder(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
 {
-  Standard_Integer myCurrentIndex;
   // Verifications
   if (argc!=4 && argc!=8 && argc!=2 )  {di<<"vline error: number of arguments not correct \n";return 1; }
-  // Fermeture des contextes
-  TheAISContext()->CloseAllContexts();
 
   // On recupere les parametres
   Handle(AIS_InteractiveObject) theShapeA;
@@ -1896,7 +1794,7 @@ static int VLineBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
     // Les deux points sont OK...Construction de l'AIS_Line (en faite, le segment AB)
     Handle(AIS_Line) theAISLine= new AIS_Line(myCartPointA,myCartPointB );
     GetMapOfAIS().Bind(theAISLine,argv[1] );
-    TheAISContext()->Display(theAISLine );
+    TheAISContext()->Display (theAISLine, Standard_True);
 
   }
 
@@ -1917,74 +1815,43 @@ static int VLineBuilder(Draw_Interpretor& di, Standard_Integer argc, const char*
 
     Handle(AIS_Line) theAISLine= new AIS_Line(myCartPointA,myCartPointB );
     GetMapOfAIS().Bind(theAISLine,argv[1] );
-    TheAISContext()->Display(theAISLine );
+    TheAISContext()->Display (theAISLine, Standard_True);
 
   }
 
   // Pas de parametres: Selection dans le viewer.
   // ============================================
 
-  else {
-    TheAISContext()->OpenLocalContext();
-    myCurrentIndex=TheAISContext()->IndexOfCurrentLocal();
-
-    // Active le mode Vertex.
-    TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(1) );
-    di<<" Select a vertex \n";
-
-    // Boucle d'attente waitpick.
-    Standard_Integer argcc = 5;
-    const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-    const char **argvv = (const char **) buff;
-    while (ViewerMainLoop( argcc, argvv) ) { }
-    // fin de la boucle
-
-    TopoDS_Shape ShapeA;
-    for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-      ShapeA = TheAISContext()->SelectedShape();
+  else
+  {
+    TopTools_ListOfShape aShapes;
+    ViewerTest::GetSelectedShapes (aShapes);
+    if (aShapes.Extent() != 2)
+    {
+      std::cerr << "Error: wrong number of selected shapes.\n";
+      return 1;
     }
 
-    // ShapeA est un Vertex
-    if (ShapeA.ShapeType()==TopAbs_VERTEX ) {
+    const TopoDS_Shape& aShapeA = aShapes.First();
+    const TopoDS_Shape& aShapeB = aShapes.Last();
 
-      di<<" Select a different vertex.\n";
-
-      TopoDS_Shape ShapeB;
-      do {
-
-        // Boucle d'attente waitpick.
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // fin de la boucle
-
-        for(TheAISContext()->InitSelected() ;TheAISContext()->MoreSelected() ;TheAISContext()->NextSelected() ) {
-          ShapeB = TheAISContext()->SelectedShape();
-        }
-
-
-      } while(ShapeB.IsSame(ShapeA) );
-
-      // Fermeture du context local
-      TheAISContext()->CloseLocalContext(myCurrentIndex);
-
-      // Construction de la line
-      gp_Pnt   A=BRep_Tool::Pnt(TopoDS::Vertex(ShapeA)  );
-      gp_Pnt   B=BRep_Tool::Pnt(TopoDS::Vertex(ShapeB)  );
-
-      Handle(Geom_CartesianPoint ) myCartPointA=new Geom_CartesianPoint(A);
-      Handle(Geom_CartesianPoint ) myCartPointB=new Geom_CartesianPoint(B);
-
-      Handle(AIS_Line) theAISLine= new AIS_Line(myCartPointA,myCartPointB );
-      GetMapOfAIS().Bind(theAISLine,argv[1] );
-      TheAISContext()->Display(theAISLine );
-
-    }
-    else  {
-      di<<"vline error.\n";
+    if (!(aShapeA.ShapeType() == TopAbs_VERTEX
+       && aShapeB.ShapeType() == TopAbs_VERTEX))
+    {
+      std::cerr << "Error: you should select two different vertex.\n";
+      return 1;
     }
 
+    // Construction de la line
+    gp_Pnt A = BRep_Tool::Pnt (TopoDS::Vertex (aShapeA));
+    gp_Pnt B = BRep_Tool::Pnt (TopoDS::Vertex (aShapeB));
+
+    Handle(Geom_CartesianPoint ) myCartPointA=new Geom_CartesianPoint(A);
+    Handle(Geom_CartesianPoint ) myCartPointB=new Geom_CartesianPoint(B);
+
+    Handle(AIS_Line) theAISLine= new AIS_Line(myCartPointA,myCartPointB );
+    GetMapOfAIS().Bind(theAISLine,argv[1] );
+    TheAISContext()->Display (theAISLine, Standard_True);
   }
 
   return 0;
@@ -2130,27 +1997,25 @@ void DisplayCircle (Handle (Geom_Circle) theGeomCircle,
    GetMapOfAIS().Bind(aCircle, theName);
 
    // Display the circle
-   TheAISContext()->Display(aCircle);
+   TheAISContext()->Display (aCircle, Standard_True);
   
 }
 
 static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const char** argv)
 {
-  Standard_Integer myCurrentIndex;
   // Verification of the arguments
   if (argc>6 || argc<2) 
   { 
     std::cout << "vcircle error: expect 4 arguments.\n"; 
     return 1; // TCL_ERROR 
   }
-  TheAISContext()->CloseAllContexts();
 
   // There are all arguments
   if (argc == 6) 
   {
     // Get arguments
     TCollection_AsciiString aName(argv[1]);
-    Standard_Boolean isFilled = (Standard_Boolean)Draw::Atoi(argv[5]);
+    Standard_Boolean isFilled = Draw::Atoi(argv[5]) != 0;
 
     Handle(AIS_InteractiveObject) theShapeA;
     Handle(AIS_InteractiveObject) theShapeB;
@@ -2302,85 +2167,40 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
     // Get the name of the circle 
     TCollection_AsciiString aName(argv[1]);
 
-    TheAISContext()->OpenLocalContext();
-    myCurrentIndex = TheAISContext()->IndexOfCurrentLocal();
-
-    // Activate selection mode for vertices and faces
-    TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(1) );
-    TheAISContext()->ActivateStandardMode (AIS_Shape::SelectionType(4) );
-    std::cout << " Select a vertex or a face\n";
-
-    // Wait for picking
-    Standard_Integer argcc = 5;
-    const char *buff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-    const char **argvv = (const char **) buff;
-    while (ViewerMainLoop( argcc, argvv) ) { }
-    // end of the loop
-
-    TopoDS_Shape ShapeA;
-    for(TheAISContext()->InitSelected(); 
-      TheAISContext()->MoreSelected(); 
-      TheAISContext()->NextSelected() ) 
+    TopTools_ListOfShape aShapes;
+    ViewerTest::GetSelectedShapes (aShapes);
+    if (aShapes.Extent() != 3 && aShapes.Extent() != 2)
     {
-      ShapeA = TheAISContext()->SelectedShape();
+      std::cerr << "Error: Wrong number of selected shapes.\n";
+      return 1;
     }
 
-    // ShapeA is a Vertex
-    if (ShapeA.ShapeType() == TopAbs_VERTEX ) 
+    const TopoDS_Shape& aShapeA = aShapes.First();
+    if (aShapeA.ShapeType() == TopAbs_VERTEX ) 
     {
-      TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4) );
-      std::cout << " Select a different vertex\n";
-
-      TopoDS_Shape ShapeB;
-      do 
+      if (aShapes.Extent() != 3)
       {
-        // Wait for picking
-        Standard_Integer argccc = 5;
-        const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvv = (const char **) bufff;
-        while (ViewerMainLoop( argccc, argvvv) ) { }
-        // end of the loop
+        std::cerr << "Error: wrong number of selected shapes.\n";
+        return 1;
+      }
 
-        for(TheAISContext()->InitSelected(); 
-          TheAISContext()->MoreSelected(); 
-          TheAISContext()->NextSelected() ) 
-        {
-          ShapeB = TheAISContext()->SelectedShape();
-        }
-      } while(ShapeB.IsSame(ShapeA) );
+      TopTools_ListOfShape::Iterator anIter (aShapes);
 
-      // Selection of ShapeC
-      std::cout << " Select the last vertex\n";
-      TopoDS_Shape ShapeC;
-      do 
-      {
-        // Wait for picking
-        Standard_Integer argcccc = 5;
-        const char *buffff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-        const char **argvvvv = (const char **) buffff;
-        while (ViewerMainLoop( argcccc, argvvvv) ) { }
-        // end of the loop
+      anIter.Next();
+      const TopoDS_Shape& aShapeB = anIter.Value();
 
-        for(TheAISContext()->InitSelected(); 
-          TheAISContext()->MoreSelected(); 
-          TheAISContext()->NextSelected() ) 
-        {
-          ShapeC = TheAISContext()->SelectedShape();
-        }
-      } while(ShapeC.IsSame(ShapeA) || ShapeC.IsSame(ShapeB) );
+      anIter.Next();
+      const TopoDS_Shape& aShapeC = anIter.Value();
       
       // Get isFilled
       Standard_Boolean isFilled;
       std::cout << "Enter filled status (0 or 1)\n";
       cin >> isFilled;
 
-      // Close the local context
-      TheAISContext()->CloseLocalContext(myCurrentIndex);
-
       // Construction of the circle
-      gp_Pnt A = BRep_Tool::Pnt(TopoDS::Vertex(ShapeA));
-      gp_Pnt B = BRep_Tool::Pnt(TopoDS::Vertex(ShapeB));
-      gp_Pnt C = BRep_Tool::Pnt(TopoDS::Vertex(ShapeC));
+      gp_Pnt A = BRep_Tool::Pnt (TopoDS::Vertex (aShapeA));
+      gp_Pnt B = BRep_Tool::Pnt (TopoDS::Vertex (aShapeB));
+      gp_Pnt C = BRep_Tool::Pnt (TopoDS::Vertex (aShapeC));
 
       GC_MakeCircle Cir = GC_MakeCircle (A, B, C);
       Handle (Geom_Circle) theGeomCircle;
@@ -2397,26 +2217,9 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
       DisplayCircle(theGeomCircle, aName, isFilled);
 
     }
-    // Shape is a face
-    else
+    else if (aShapeA.ShapeType() == TopAbs_FACE)
     {
-      std::cout << " Select a vertex (in your face)\n";
-      TheAISContext()->DeactivateStandardMode (AIS_Shape::SelectionType(4) );
-
-      TopoDS_Shape ShapeB;
-      // Wait for picking
-      Standard_Integer argccc = 5;
-      const char *bufff[] = { "VPick", "X", "VPickY","VPickZ", "VPickShape" };
-      const char **argvvv = (const char **) bufff;
-      while (ViewerMainLoop( argccc, argvvv) ) { }
-      // end of the loop
-
-      for(TheAISContext()->InitSelected(); 
-        TheAISContext()->MoreSelected(); 
-        TheAISContext()->NextSelected() ) 
-      {
-        ShapeB = TheAISContext()->SelectedShape();
-      }
+      const TopoDS_Shape& aShapeB = aShapes.Last();
 
       // Recover the radius 
       Standard_Real theRad;
@@ -2431,12 +2234,8 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
       std::cout << "Enter filled status (0 or 1)\n";
       cin >> isFilled;
 
-      // Close the local context
-      TheAISContext()->CloseLocalContext(myCurrentIndex);
-      // Construction of the circle
-
       // Recover the normal to the plane. tag
-      TopoDS_Face myFace = TopoDS::Face(ShapeA);
+      TopoDS_Face myFace = TopoDS::Face(aShapeA);
       BRepAdaptor_Surface mySurface (myFace, Standard_False);
       gp_Pln myPlane = mySurface.Plane();
       Handle(Geom_Plane) theGeomPlane = new Geom_Plane (myPlane);
@@ -2445,7 +2244,7 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
       gp_Dir theDir = thegpAxe.Direction();
 
       // Recover the center
-      gp_Pnt theCenter = BRep_Tool::Pnt(TopoDS::Vertex(ShapeB));
+      gp_Pnt theCenter = BRep_Tool::Pnt (TopoDS::Vertex (aShapeB));
 
       // Construct the circle
       GC_MakeCircle Cir = GC_MakeCircle (theCenter, theDir ,theRad);
@@ -2461,9 +2260,12 @@ static int VCircleBuilder(Draw_Interpretor& /*di*/, Standard_Integer argc, const
       }
 
       DisplayCircle(theGeomCircle, aName, isFilled);
-      
     }
-
+    else
+    {
+      std::cerr << "Error: You should select face and vertex or three vertices.\n";
+      return 1;
+    }
   }
 
   return 0;
@@ -2496,22 +2298,23 @@ static int VDrawText (Draw_Interpretor& theDI,
   Handle(AIS_TextLabel)      aTextPrs;
   ViewerTest_AutoUpdater     anAutoUpdater (aContext, ViewerTest::CurrentView());
 
+  Standard_Boolean isNewPrs = Standard_False;
   if (GetMapOfAIS().IsBound2 (aName))
   {
-    aTextPrs  = Handle(AIS_TextLabel)::DownCast (GetMapOfAIS().Find2 (aName));
+    aTextPrs = Handle(AIS_TextLabel)::DownCast (GetMapOfAIS().Find2 (aName));
   }
-  else
+
+  if (aTextPrs.IsNull())
   {
+    isNewPrs = Standard_True;
     aTextPrs = new AIS_TextLabel();
     aTextPrs->SetFont ("Courier");
   }
 
   aTextPrs->SetText (aText);
 
-  Graphic3d_TransModeFlags aTrsfPersFlags = Graphic3d_TMF_None;
-  gp_Pnt aTPPosition;
+  Handle(Graphic3d_TransformPers) aTrsfPers;
   Aspect_TypeOfDisplayText aDisplayType = Aspect_TODT_NORMAL;
-
 
   Standard_Boolean aHasPlane = Standard_False;
   gp_Dir           aNormal;
@@ -2727,6 +2530,10 @@ static int VDrawText (Draw_Interpretor& theDI,
 
       aHasPlane = Standard_True;
     }
+    else if (aParam == "-flipping")
+    {
+      aTextPrs->SetFlipping (Standard_True);
+    }
     else if (aParam == "-disptype"
           || aParam == "-displaytype")
     {
@@ -2747,6 +2554,8 @@ static int VDrawText (Draw_Interpretor& theDI,
         aDisplayType = Aspect_TODT_DIMENSION;
       else if (aType == "normal")
         aDisplayType = Aspect_TODT_NORMAL;
+      else if (aType == "shadow")
+        aDisplayType = Aspect_TODT_SHADOW;
       else
       {
         std::cout << "Error: wrong display type '" << aType << "'.\n";
@@ -2795,7 +2604,7 @@ static int VDrawText (Draw_Interpretor& theDI,
     }
     else if (aParam == "-2d")
     {
-      aTrsfPersFlags = Graphic3d_TMF_2d;
+      aTrsfPers = new Graphic3d_TransformPers (Graphic3d_TMF_2d);
     }
     else if (aParam == "-trsfperspos"
           || aParam == "-perspos")
@@ -2824,7 +2633,8 @@ static int VDrawText (Draw_Interpretor& theDI,
           ++anArgIt;
         }
       }
-      aTPPosition.SetCoord (aX.IntegerValue(), aY.IntegerValue(), aZ.IntegerValue());
+
+      aTrsfPers = Graphic3d_TransformPers::FromDeprecatedParams (Graphic3d_TMF_2d, gp_Pnt (aX.IntegerValue(), aY.IntegerValue(), aZ.IntegerValue()));
     }
     else
     {
@@ -2838,22 +2648,30 @@ static int VDrawText (Draw_Interpretor& theDI,
     aTextPrs->SetOrientation3D (gp_Ax2 (aPos, aNormal, aDirection));
   }
 
-  if (aTrsfPersFlags != Graphic3d_TMF_None)
+  aTextPrs->SetDisplayType (aDisplayType);
+
+  if (!aTrsfPers.IsNull())
   {
-    aTextPrs->SetTransformPersistence (aTrsfPersFlags, aTPPosition);
-    aTextPrs->SetDisplayType (aDisplayType);
+    aContext->SetTransformPersistence (aTextPrs, aTrsfPers);
     aTextPrs->SetZLayer(Graphic3d_ZLayerId_TopOSD);
     if (aTextPrs->Position().Z() != 0)
     {
       aTextPrs->SetPosition (gp_Pnt(aTextPrs->Position().X(), aTextPrs->Position().Y(), 0));
     }
   }
-  else if (aTrsfPersFlags != aTextPrs->TransformPersistence().Flags)
+  else if (!aTextPrs->TransformPersistence().IsNull())
   {
-    aTextPrs->SetTransformPersistence (aTrsfPersFlags);
-    aTextPrs->SetDisplayType (Aspect_TODT_NORMAL);
+    aContext->SetTransformPersistence (aTextPrs, Handle(Graphic3d_TransformPers)());
   }
-  ViewerTest::Display (aName, aTextPrs, Standard_False);
+
+  if (isNewPrs)
+  {
+    ViewerTest::Display (aName, aTextPrs, Standard_False);
+  }
+  else
+  {
+    aContext->Redisplay (aTextPrs, Standard_False, Standard_True);
+  }
   return 0;
 }
 
@@ -3163,20 +2981,13 @@ static int VDrawSphere (Draw_Interpretor& /*di*/, Standard_Integer argc, const c
 
   // stupid initialization of Green color in RGBA space as integer
   // probably wrong for big-endian CPUs
-  Standard_Integer aRed    = 0;
-  Standard_Integer aGreen  = 255;
-  Standard_Integer aBlue   = 0;
-  Standard_Integer anAlpha = 0; // not used
-  Standard_Integer aColorInt = aRed;
-  aColorInt += aGreen  << 8;
-  aColorInt += aBlue   << 16;
-  aColorInt += anAlpha << 24;
+  const Graphic3d_Vec4ub aColor (0, 255, 0, 0);
 
   // setup colors array per vertex
   Handle(TColStd_HArray1OfInteger) aColorArray = new TColStd_HArray1OfInteger (1, aNumberPoints);
   for (Standard_Integer aNodeId = 1; aNodeId <= aNumberPoints; ++aNodeId)
   {
-    aColorArray->SetValue (aNodeId, aColorInt);
+    aColorArray->SetValue (aNodeId, *reinterpret_cast<const Standard_Integer*> (aColor.GetData()));
   }
   aShape->SetColors (aColorArray);
 
@@ -3204,8 +3015,8 @@ static int VDrawSphere (Draw_Interpretor& /*di*/, Standard_Integer argc, const c
 
   // Setting material properties, very important for desirable visual result!
   Graphic3d_MaterialAspect aMat (Graphic3d_NOM_PLASTIC);
-  aMat.SetAmbient (0.2);
-  aMat.SetSpecular (0.5);
+  aMat.SetAmbient  (0.2f);
+  aMat.SetSpecular (0.5f);
   Handle(Graphic3d_AspectFillArea3d) anAspect
     = new Graphic3d_AspectFillArea3d (Aspect_IS_SOLID,
                                       Quantity_NOC_RED,
@@ -3281,10 +3092,6 @@ static int VComputeHLR (Draw_Interpretor& di,
     return 1;
   }
 
-  // close local context
-  if (aContextAIS->HasOpenedContext ())
-    aContextAIS->CloseLocalContext ();
-
   Handle(HLRBRep_PolyAlgo) aPolyAlgo = new HLRBRep_PolyAlgo();
   HLRBRep_PolyHLRToShape aHLRToShape;
 
@@ -3357,7 +3164,7 @@ static int VComputeHLR (Draw_Interpretor& di,
   // create an AIS shape and display it
   Handle(AIS_Shape) anObject = new AIS_Shape (aHlrShape);
   GetMapOfAIS().Bind (anObject, aHlrName);
-  aContextAIS->Display (anObject);
+  aContextAIS->Display (anObject, Standard_False);
 
   aContextAIS->UpdateCurrentViewer ();
 
@@ -3558,6 +3365,8 @@ void MyPArrayObject::Compute (const Handle(PrsMgr_PresentationManager3d)& /*aPre
   {
     Prs3d_Root::CurrentGroup (aPresentation)->SetGroupPrimitivesAspect (myMarkerAspect);
   }
+  Prs3d_Root::CurrentGroup (aPresentation)->SetGroupPrimitivesAspect (myDrawer->LineAspect()->Aspect());
+  Prs3d_Root::CurrentGroup (aPresentation)->SetGroupPrimitivesAspect (myDrawer->ShadingAspect()->Aspect());
   Prs3d_Root::CurrentGroup (aPresentation)->AddPrimitiveArray (anArray);
 }
 
@@ -3706,12 +3515,47 @@ static int VDrawPArray (Draw_Interpretor& di, Standard_Integer argc, const char*
   return 0;
 }
 
+namespace
+{
+  //! Auxiliary function for parsing translation vector - either 2D or 3D.
+  static Standard_Integer parseTranslationVec (Standard_Integer theArgNb,
+                                               const char**     theArgVec,
+                                               gp_Vec&          theVec)
+  {
+    if (theArgNb < 2)
+    {
+      return 0;
+    }
+
+    TCollection_AsciiString anX (theArgVec[0]);
+    TCollection_AsciiString anY (theArgVec[1]);
+    if (!anX.IsRealValue()
+     || !anY.IsRealValue())
+    {
+      return 0;
+    }
+
+    theVec.SetX (anX.RealValue());
+    theVec.SetY (anY.RealValue());
+    if (theArgNb >= 3)
+    {
+      TCollection_AsciiString anZ (theArgVec[2]);
+      if (anZ.IsRealValue())
+      {
+        theVec.SetZ (anZ.RealValue());
+        return 3;
+      }
+    }
+    return 2;
+  }
+}
+
 //=======================================================================
 //function : VSetLocation
 //purpose  : Change location of AIS interactive object
 //=======================================================================
 
-static Standard_Integer VSetLocation (Draw_Interpretor& /*di*/,
+static Standard_Integer VSetLocation (Draw_Interpretor& theDI,
                                       Standard_Integer  theArgNb,
                                       const char**      theArgVec)
 {
@@ -3723,36 +3567,301 @@ static Standard_Integer VSetLocation (Draw_Interpretor& /*di*/,
     return 1;
   }
 
-  TCollection_AsciiString aName;
-  gp_Vec aLocVec;
-  Standard_Boolean isSetLoc = Standard_False;
-
-  Standard_Integer anArgIter = 1;
-  for (; anArgIter < theArgNb; ++anArgIter)
+  Standard_Boolean toPrintInfo = Standard_True;
+  Handle(AIS_InteractiveObject) anObj;
+  TCollection_AsciiString aCmdName (theArgVec[0]);
+  aCmdName.LowerCase();
+  for (Standard_Integer anArgIter = 1; anArgIter < theArgNb; ++anArgIter)
   {
-    Standard_CString anArg = theArgVec[anArgIter];
-    if (anUpdateTool.parseRedrawMode (theArgVec[anArgIter]))
+    TCollection_AsciiString anArg = theArgVec[anArgIter];
+    anArg.LowerCase();
+    if (anUpdateTool.parseRedrawMode (anArg))
     {
       continue;
     }
-    else if (aName.IsEmpty())
+    else if (anObj.IsNull())
     {
-      aName = anArg;
-    }
-    else if (!isSetLoc)
-    {
-      isSetLoc = Standard_True;
-      if (anArgIter + 1 >= theArgNb)
+      const TCollection_AsciiString aName (theArgVec[anArgIter]);
+      const ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
+      if (aMap.IsBound2 (aName))
       {
-        std::cout << "Error: syntax error at '" << anArg << "'\n";
+        anObj = Handle(AIS_InteractiveObject)::DownCast (aMap.Find2 (aName));
+      }
+      if (anObj.IsNull())
+      {
+        std::cout << "Error: object '" << aName << "' is not displayed!\n";
         return 1;
       }
-      aLocVec.SetX (Draw::Atof (theArgVec[anArgIter++]));
-      aLocVec.SetY (Draw::Atof (theArgVec[anArgIter]));
-      if (anArgIter + 1 < theArgNb)
+    }
+    else if (anArg == "-reset")
+    {
+      toPrintInfo = Standard_False;
+      aContext->SetLocation (anObj, gp_Trsf());
+    }
+    else if (anArg == "-copyfrom"
+          || anArg == "-copy")
+    {
+      if (anArgIter + 1 >= theArgNb)
       {
-        aLocVec.SetZ (Draw::Atof (theArgVec[++anArgIter]));
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
       }
+
+      const TCollection_AsciiString aName2 (theArgVec[anArgIter + 1]);
+      const ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
+      Handle(AIS_InteractiveObject) anObj2;
+      if (aMap.IsBound2 (aName2))
+      {
+        anObj2 = Handle(AIS_InteractiveObject)::DownCast (aMap.Find2 (aName2));
+      }
+      if (anObj2.IsNull())
+      {
+        std::cout << "Error: object '" << aName2 << "' is not displayed!\n";
+        return 1;
+      }
+
+      ++anArgIter;
+      aContext->SetLocation (anObj, anObj2->LocalTransformation());
+    }
+    else if (anArg == "-rotate")
+    {
+      toPrintInfo = Standard_False;
+      if (anArgIter + 7 >= theArgNb)
+      {
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
+      }
+
+      gp_Trsf aTrsf;
+      aTrsf.SetRotation (gp_Ax1 (gp_Pnt (Draw::Atof (theArgVec[anArgIter + 1]),
+                                         Draw::Atof (theArgVec[anArgIter + 2]),
+                                         Draw::Atof (theArgVec[anArgIter + 3])),
+                                 gp_Vec (Draw::Atof (theArgVec[anArgIter + 4]),
+                                         Draw::Atof (theArgVec[anArgIter + 5]),
+                                         Draw::Atof (theArgVec[anArgIter + 6]))),
+                                         Draw::Atof (theArgVec[anArgIter + 7]) * (M_PI / 180.0));
+      anArgIter += 7;
+
+      aTrsf = anObj->LocalTransformation() * aTrsf;
+      aContext->SetLocation (anObj, aTrsf);
+    }
+    else if (anArg == "-translate")
+    {
+      toPrintInfo = Standard_False;
+      gp_Vec aLocVec;
+      Standard_Integer aNbParsed = parseTranslationVec (theArgNb - anArgIter - 1, theArgVec + anArgIter + 1, aLocVec);
+      anArgIter += aNbParsed;
+      if (aNbParsed == 0)
+      {
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
+      }
+
+      gp_Trsf aTrsf;
+      aTrsf.SetTranslationPart (aLocVec);
+      aTrsf = anObj->LocalTransformation() * aTrsf;
+      aContext->SetLocation (anObj, aTrsf);
+    }
+    else if (anArg == "-scale"
+          || anArg == "-setscale")
+    {
+      toPrintInfo = Standard_False;
+      gp_XYZ aScaleLoc;
+      Standard_Real aScale = 1.0;
+      Standard_Boolean toPrintScale = Standard_True;
+      Standard_Boolean hasScaleLoc  = Standard_False;
+      if (anArgIter + 4 < theArgNb)
+      {
+        TCollection_AsciiString aScaleArgs[4] =
+        {
+          TCollection_AsciiString (theArgVec[anArgIter + 1]),
+          TCollection_AsciiString (theArgVec[anArgIter + 2]),
+          TCollection_AsciiString (theArgVec[anArgIter + 3]),
+          TCollection_AsciiString (theArgVec[anArgIter + 4])
+        };
+        Standard_Integer aScaleArgIter = 0;
+        for (; aScaleArgIter < 4; ++aScaleArgIter)
+        {
+          if (!aScaleArgs[aScaleArgIter].IsRealValue())
+          {
+            break;
+          }
+        }
+        if (aScaleArgIter == 4)
+        {
+          aScaleLoc.SetCoord (aScaleArgs[0].RealValue(), aScaleArgs[1].RealValue(), aScaleArgs[2].RealValue());
+          aScale = aScaleArgs[3].RealValue();
+          anArgIter += 4;
+          toPrintScale = Standard_False;
+          hasScaleLoc  = Standard_True;
+        }
+        else if (aScaleArgIter >= 1)
+        {
+          aScale = aScaleArgs[0].RealValue();
+          ++anArgIter;
+          toPrintScale = Standard_False;
+        }
+      }
+      else if (anArgIter + 1 < theArgNb)
+      {
+        TCollection_AsciiString aScaleArg (theArgVec[anArgIter + 1]);
+        if (aScaleArg.IsRealValue())
+        {
+          aScale = aScaleArg.RealValue();
+          ++anArgIter;
+          toPrintScale = Standard_False;
+        }
+      }
+
+      if (toPrintScale)
+      {
+        if (anArg == "-setscale")
+        {
+          std::cout << "Syntax error at '" << anArg << "'\n";
+          return 1;
+        }
+
+        char aText[1024];
+        Sprintf (aText, "%g ", anObj->LocalTransformation().ScaleFactor());
+        theDI << aText;
+        continue;
+      }
+
+      if (anArg == "-setscale")
+      {
+        gp_Trsf aTrsf = anObj->LocalTransformation();
+        if (hasScaleLoc)
+        {
+          aTrsf.SetScale (aScaleLoc, aScale);
+        }
+        else
+        {
+          aTrsf.SetScaleFactor (aScale);
+        }
+        aContext->SetLocation (anObj, aTrsf);
+      }
+      else
+      {
+        gp_Trsf aTrsf;
+        if (hasScaleLoc)
+        {
+          aTrsf.SetScale (aScaleLoc, aScale);
+          aTrsf = anObj->LocalTransformation() * aTrsf;
+        }
+        else
+        {
+          aTrsf = anObj->LocalTransformation();
+          aTrsf.SetScaleFactor (aTrsf.ScaleFactor() * aScale);
+        }
+        aContext->SetLocation (anObj, aTrsf);
+      }
+    }
+    else if (anArg == "-mirror")
+    {
+      toPrintInfo = Standard_False;
+      if (anArgIter + 6 >= theArgNb)
+      {
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
+      }
+
+      gp_Trsf aTrsf;
+      aTrsf.SetMirror (gp_Ax2 (gp_Pnt (Draw::Atof(theArgVec[theArgNb - 6]),
+                                       Draw::Atof(theArgVec[theArgNb - 5]),
+                                       Draw::Atof(theArgVec[theArgNb - 4])),
+                               gp_Vec (Draw::Atof(theArgVec[theArgNb - 3]),
+                                       Draw::Atof(theArgVec[theArgNb - 2]),
+                                       Draw::Atof(theArgVec[theArgNb - 1]))));
+      anArgIter += 6;
+      aTrsf = anObj->LocalTransformation() * aTrsf;
+      aContext->SetLocation (anObj, aTrsf);
+    }
+    else if (anArg == "-setrotation"
+          || anArg == "-rotation")
+    {
+      toPrintInfo = Standard_False;
+      if (anArgIter + 4 < theArgNb)
+      {
+        TCollection_AsciiString aQuatArgs[4] =
+        {
+          TCollection_AsciiString (theArgVec[anArgIter + 1]),
+          TCollection_AsciiString (theArgVec[anArgIter + 2]),
+          TCollection_AsciiString (theArgVec[anArgIter + 3]),
+          TCollection_AsciiString (theArgVec[anArgIter + 4])
+        };
+        Standard_Integer aQuatArgIter = 0;
+        for (; aQuatArgIter < 4; ++aQuatArgIter)
+        {
+          if (!aQuatArgs[aQuatArgIter].IsRealValue())
+          {
+            break;
+          }
+        }
+
+        if (aQuatArgIter == 4)
+        {
+          anArgIter += 4;
+          const gp_Quaternion aQuat (aQuatArgs[0].RealValue(),
+                                     aQuatArgs[1].RealValue(),
+                                     aQuatArgs[2].RealValue(),
+                                     aQuatArgs[3].RealValue());
+          gp_Trsf aTrsf = anObj->LocalTransformation();
+          aTrsf.SetRotation (aQuat);
+          aContext->SetLocation (anObj, aTrsf);
+          continue;
+        }
+        else if (anArg == "-setrotation")
+        {
+          std::cout << "Syntax error at '" << anArg << "'\n";
+          return 1;
+        }
+      }
+
+      char aText[1024];
+      const gp_Quaternion aQuat = anObj->LocalTransformation().GetRotation();
+      Sprintf (aText, "%g %g %g %g ", aQuat.X(), aQuat.Y(), aQuat.Z(), aQuat.W());
+      theDI << aText;
+    }
+    else if (anArg == "-setlocation"
+          || anArg == "-location")
+    {
+      toPrintInfo = Standard_False;
+      gp_Vec aLocVec;
+      Standard_Integer aNbParsed = parseTranslationVec (theArgNb - anArgIter - 1, theArgVec + anArgIter + 1, aLocVec);
+      anArgIter += aNbParsed;
+      if (aNbParsed != 0)
+      {
+        gp_Trsf aTrsf = anObj->LocalTransformation();
+        aTrsf.SetTranslationPart (aLocVec);
+        aContext->SetLocation (anObj, aTrsf);
+      }
+      else if (anArg == "-setlocation")
+      {
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
+      }
+
+      char aText[1024];
+      const gp_XYZ aLoc = anObj->LocalTransformation().TranslationPart();
+      Sprintf (aText, "%g %g %g ", aLoc.X(), aLoc.Y(), aLoc.Z());
+      theDI << aText;
+    }
+    else if (aCmdName == "vsetlocation")
+    {
+      // compatibility with old syntax
+      gp_Vec aLocVec;
+      Standard_Integer aNbParsed = parseTranslationVec (theArgNb - anArgIter, theArgVec + anArgIter, aLocVec);
+      if (aNbParsed == 0)
+      {
+        std::cout << "Syntax error at '" << anArg << "'\n";
+        return 1;
+      }
+      anArgIter = anArgIter + aNbParsed - 1;
+
+      gp_Trsf aTrsf;
+      aTrsf.SetTranslationPart (aLocVec);
+      aContext->SetLocation (anObj, aTrsf);
+      toPrintInfo = Standard_False;
     }
     else
     {
@@ -3761,183 +3870,27 @@ static Standard_Integer VSetLocation (Draw_Interpretor& /*di*/,
     }
   }
 
-  // find object
-  const ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
-  Handle(AIS_InteractiveObject) anIObj;
-  if (aMap.IsBound2 (aName))
+  if (anObj.IsNull())
   {
-    anIObj = Handle(AIS_InteractiveObject)::DownCast (aMap.Find2 (aName));
-  }
-  if (anIObj.IsNull())
-  {
-    std::cout << "Error: object '" << aName << "' is not displayed!\n";
+    std::cout << "Syntax error - wrong number of arguments\n";
     return 1;
   }
-
-  gp_Trsf aTrsf;
-  aTrsf.SetTranslation (aLocVec);
-  TopLoc_Location aLocation (aTrsf);
-  aContext->SetLocation (anIObj, aLocation);
-  return 0;
-}
-
-//=======================================================================
-//function : TransformPresentation
-//purpose  : Change transformation of AIS interactive object
-//=======================================================================
-static Standard_Integer LocalTransformPresentation (Draw_Interpretor& /*theDi*/,
-                                                    Standard_Integer theArgNb,
-                                                    const char** theArgVec)
-{
-  if (theArgNb <= 1)
+  else if (!toPrintInfo)
   {
-    std::cout << "Error: too few arguments.\n";
-    return 1;
+    return 0;
   }
 
-  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
-  ViewerTest_AutoUpdater anUpdateTool(aContext, ViewerTest::CurrentView());
-  if (aContext.IsNull())
-  {
-    std::cout << "Error: no active view!\n";
-    return 1;
-  }
-
-  gp_Trsf aTrsf;
-  Standard_Integer aLast = theArgNb;
-  const char* aName = theArgVec[0];
-
-  Standard_Boolean isReset = Standard_False;
-  Standard_Boolean isMove = Standard_False;
-
-  // Prefix 'vloc'
-  aName += 4;
-
-  if (!strcmp (aName, "reset"))
-  {
-    isReset = Standard_True;
-  }
-  else if (!strcmp (aName, "move"))
-  {
-    if (theArgNb < 3)
-    {
-      std::cout << "Error: too few arguments.\n";
-      return 1;
-    }
-
-    const ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
-
-    Handle(AIS_InteractiveObject) anIObj;
-    if (aMap.IsBound2 (theArgVec[theArgNb - 1]))
-    {
-      anIObj = Handle(AIS_InteractiveObject)::DownCast (aMap.Find2 (theArgVec[theArgNb - 1]));
-    }
-
-    if (anIObj.IsNull())
-    {
-      std::cout << "Error: object '" << theArgVec[theArgNb - 1] << "' is not displayed!\n";
-      return 1;
-    }
-
-    isMove = Standard_True;
-
-    aTrsf = anIObj->Transformation();
-    aLast = theArgNb - 1;
-  }
-  else if (!strcmp (aName, "translate"))
-  {
-    if (theArgNb < 5)
-    {
-      std::cout << "Error: too few arguments.\n";
-      return 1;
-    }
-    aTrsf.SetTranslation (gp_Vec (Draw::Atof (theArgVec[theArgNb - 3]),
-                                  Draw::Atof (theArgVec[theArgNb - 2]),
-                                  Draw::Atof (theArgVec[theArgNb - 1])));
-    aLast = theArgNb - 3;
-  }
-  else if (!strcmp (aName, "rotate"))
-  {
-    if (theArgNb < 9)
-    {
-      std::cout << "Error: too few arguments.\n";
-      return 1;
-    }
-
-    aTrsf.SetRotation (
-      gp_Ax1 (gp_Pnt (Draw::Atof (theArgVec[theArgNb - 7]),
-                      Draw::Atof (theArgVec[theArgNb - 6]),
-                      Draw::Atof (theArgVec[theArgNb - 5])),
-              gp_Vec (Draw::Atof (theArgVec[theArgNb - 4]),
-                      Draw::Atof (theArgVec[theArgNb - 3]),
-                      Draw::Atof (theArgVec[theArgNb - 2]))),
-      Draw::Atof (theArgVec[theArgNb - 1]) * (M_PI / 180.0));
-
-    aLast = theArgNb - 7;
-  }
-  else if (!strcmp (aName, "mirror"))
-  {
-    if (theArgNb < 8)
-    {
-      std::cout << "Error: too few arguments.\n";
-      return 1;
-    }
-
-    aTrsf.SetMirror (gp_Ax2 (gp_Pnt (Draw::Atof(theArgVec[theArgNb - 6]),
-                                     Draw::Atof(theArgVec[theArgNb - 5]),
-                                     Draw::Atof(theArgVec[theArgNb - 4])),
-                             gp_Vec (Draw::Atof(theArgVec[theArgNb - 3]),
-                                     Draw::Atof(theArgVec[theArgNb - 2]),
-                                     Draw::Atof(theArgVec[theArgNb - 1]))));
-    aLast = theArgNb - 6;
-  }
-  else if (!strcmp (aName, "scale"))
-  {
-    if (theArgNb < 6)
-    {
-      std::cout << "Error: too few arguments.\n";
-      return 1;
-    }
-
-    aTrsf.SetScale (gp_Pnt (Draw::Atof(theArgVec[theArgNb - 4]),
-                            Draw::Atof(theArgVec[theArgNb - 3]),
-                            Draw::Atof(theArgVec[theArgNb - 2])),
-                    Draw::Atof(theArgVec[theArgNb - 1]));
-    aLast = theArgNb - 4;
-  }
-
-  for (Standard_Integer anIdx = 1; anIdx < aLast; anIdx++)
-  {
-    // find object
-    const ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
-    Handle(AIS_InteractiveObject) anIObj;
-    if (aMap.IsBound2 (theArgVec[anIdx]))
-    {
-      anIObj = Handle(AIS_InteractiveObject)::DownCast (aMap.Find2 (theArgVec[anIdx]));
-    }
-    if (anIObj.IsNull())
-    {
-      std::cout << "Error: object '" << theArgVec[anIdx] << "' is not displayed!\n";
-      return 1;
-    }
-    
-    if (isReset)
-    {
-      // aTrsf already identity
-    }
-    else if (isMove)
-    {
-      aTrsf = anIObj->LocalTransformation() * anIObj->Transformation().Inverted() * aTrsf;
-    }
-    else
-    {
-      aTrsf = anIObj->LocalTransformation() * aTrsf;
-    }
-
-    TopLoc_Location aLocation (aTrsf);
-    aContext->SetLocation (anIObj, aLocation);
-  }
-
+  const gp_Trsf       aTrsf = anObj->LocalTransformation();
+  const gp_XYZ        aLoc  = aTrsf.TranslationPart();
+  const gp_Quaternion aRot  = aTrsf.GetRotation();
+  char aText[4096];
+  Sprintf (aText, "Location: %g %g %g\n"
+                  "Rotation: %g %g %g %g\n"
+                  "Scale:    %g\n",
+                  aLoc.X(), aLoc.Y(), aLoc.Z(),
+                  aRot.X(), aRot.Y(), aRot.Z(), aRot.W(),
+                  aTrsf.ScaleFactor());
+  theDI << aText;
   return 0;
 }
 
@@ -4055,7 +4008,7 @@ static Standard_Integer VConnect (Draw_Interpretor& /*di*/,
   GetMapOfAIS().Bind (anOriginObject, aName);
 
   // Display connected object
-  TheAISContext()->Display (anOriginObject);
+  TheAISContext()->Display (anOriginObject, Standard_True);
 
   return 0;
 }
@@ -4301,7 +4254,7 @@ static Standard_Integer VAddConnected (Draw_Interpretor& di,
   aTrsf.SetTranslation (gp_Vec (aX, aY, aZ));
  
   anAssembly->Connect (anIObj, aTrsf);
-  TheAISContext()->Display (anAssembly);
+  TheAISContext()->Display (anAssembly, Standard_False);
   TheAISContext()->RecomputeSelectionOnly (anAssembly);
   aContext->UpdateCurrentViewer();
 
@@ -4373,151 +4326,131 @@ static Standard_Integer VListConnected (Draw_Interpretor& /*di*/,
   return 0;
 }
 
-namespace
-{
-  //! Checks if theMode is already turned on for theObj.
-  static Standard_Boolean InList (const Handle(AIS_InteractiveContext)& theAISContext,
-                                  const Handle(AIS_InteractiveObject)&  theObj,
-                                  const Standard_Integer                theMode)
-  {
-    TColStd_ListOfInteger anActiveModes;
-    theAISContext->ActivatedModes (theObj, anActiveModes);
-    for (TColStd_ListIteratorOfListOfInteger aModeIt (anActiveModes); aModeIt.More(); aModeIt.Next())
-    {
-      if (aModeIt.Value() == theMode)
-      {
-        return Standard_True;
-      }
-    }
-    return Standard_False;
-  }
-}
-
 //===============================================================================================
 //function : VSetSelectionMode
-//purpose  : Sets input selection mode for input object or for all displayed objects 
-//Draw arg : vselmode [object] mode On/Off (1/0)
+//purpose  : vselmode
 //===============================================================================================
 static Standard_Integer VSetSelectionMode (Draw_Interpretor& /*di*/,
-                                           Standard_Integer  theArgc,
+                                           Standard_Integer  theNbArgs,
                                            const char**      theArgv)
 {
   // Check errors
   Handle(AIS_InteractiveContext) anAISContext = ViewerTest::GetAISContext();
   if (anAISContext.IsNull())
   {
-    std::cerr << "Call vinit before!" << std::endl;
+    std::cout << "Error: no active Viewer\n";
     return 1;
   }
 
-  // Check the arguments
-  if (theArgc < 3 && theArgc > 5)
+  NCollection_Sequence<TCollection_AsciiString> anObjNames;
+  Standard_Integer toOpenLocalCtx = -1;
+  Standard_Integer aSelectionMode = -1;
+  Standard_Boolean toTurnOn = Standard_True;
+  AIS_SelectionModesConcurrency aSelModeConcurrency = AIS_SelectionModesConcurrency_GlobalOrLocal;
+  for (Standard_Integer anArgIter = 1; anArgIter < theNbArgs; ++anArgIter)
   {
-    std::cerr << "vselmode error : expects at least 2 arguments.\n"
-              << "Type help "<< theArgv[0] <<" for more information." << std::endl;
-    return 1;
-  }
-
-  TCollection_AsciiString aLastArg (theArgv[theArgc - 1]);
-  aLastArg.LowerCase();
-  Standard_Boolean isToOpenLocalCtx = aLastArg == "-local";
-
-  // get objects to change selection mode
-  AIS_ListOfInteractive aTargetIOs;
-  Standard_Integer anArgNb = isToOpenLocalCtx ? theArgc - 1 : theArgc;
-  if (anArgNb == 3)
-  {
-    anAISContext->DisplayedObjects (aTargetIOs);
-  }
-  else
-  {
-    // Check if there is an object with given name in context
-    const TCollection_AsciiString aNameIO (theArgv[1]);
-    if (GetMapOfAIS().IsBound2 (aNameIO))
+    TCollection_AsciiString anArgCase (theArgv[anArgIter]);
+    anArgCase.LowerCase();
+    if (toOpenLocalCtx == -1
+     && anArgCase == "-local")
     {
-      Handle(AIS_InteractiveObject) anIO = Handle(AIS_InteractiveObject)::DownCast (GetMapOfAIS().Find2 (aNameIO));
-      if (anIO.IsNull())
-      {
-        std::cerr << "vselmode error : object name is used for non AIS viewer" << std::endl;
-        return 1;
-      }
-      aTargetIOs.Append (anIO);
+      toOpenLocalCtx = 1;
+    }
+    else if (anArgCase == "-set"
+          || anArgCase == "-replace"
+          || anArgCase == "-single"
+          || anArgCase == "-exclusive")
+    {
+      aSelModeConcurrency = AIS_SelectionModesConcurrency_Single;
+    }
+    else if (anArgCase == "-add"
+          || anArgCase == "-combine"
+          || anArgCase == "-combination"
+          || anArgCase == "-multiple")
+    {
+      aSelModeConcurrency = AIS_SelectionModesConcurrency_Multiple;
+    }
+    else if (anArgCase == "-globalorlocal"
+          || anArgCase == "-localorglobal")
+    {
+      aSelModeConcurrency = AIS_SelectionModesConcurrency_GlobalOrLocal;
+    }
+    else
+    {
+      anObjNames.Append (theArgv[anArgIter]);
+    }
+  }
+  if (anObjNames.Size() < 2
+  || !ViewerTest::ParseOnOff (anObjNames.Last().ToCString(), toTurnOn))
+  {
+    std::cout << "Syntax error: wrong number of arguments\n";
+    return 1;
+  }
+  anObjNames.Remove (anObjNames.Upper());
+  {
+    const TCollection_AsciiString aSelModeString = anObjNames.Last();
+    anObjNames.Remove (anObjNames.Upper());
+    TopAbs_ShapeEnum aShapeType = TopAbs_SHAPE;
+    if (aSelModeString.IsIntegerValue())
+    {
+      aSelectionMode = aSelModeString.IntegerValue();
+    }
+    else if (TopAbs::ShapeTypeFromString (aSelModeString.ToCString(), aShapeType))
+    {
+      aSelectionMode = AIS_Shape::SelectionMode (aShapeType);
+    }
+    else
+    {
+      std::cout << "Syntax error: unknown selection mode '" << aSelModeString  << "'\n";
+      return 1;
     }
   }
 
-  const Standard_Integer aSelectionMode = Draw::Atoi (anArgNb == 3 ? theArgv[1] : theArgv[2]);
-  const Standard_Boolean toTurnOn       = Draw::Atoi (anArgNb == 3 ? theArgv[2] : theArgv[3]);
+  AIS_ListOfInteractive aTargetIOs;
+  for (NCollection_Sequence<TCollection_AsciiString>::Iterator anObjIter (anObjNames); anObjIter.More(); anObjIter.Next())
+  {
+    const TCollection_AsciiString& aNameIO = anObjIter.Value();
+    Handle(AIS_InteractiveObject) anIO;
+    if (GetMapOfAIS().IsBound2 (aNameIO))
+    {
+      anIO = Handle(AIS_InteractiveObject)::DownCast (GetMapOfAIS().Find2 (aNameIO));
+    }
+
+    if (anIO.IsNull())
+    {
+      std::cout << "Syntax error: undefined presentable object " << aNameIO << "\n";
+      return 1;
+    }
+    aTargetIOs.Append (anIO);
+  }
+  if (aTargetIOs.IsEmpty())
+  {
+    anAISContext->DisplayedObjects (aTargetIOs);
+  }
+
+  Standard_DISABLE_DEPRECATION_WARNINGS
   if (aSelectionMode == 0 && anAISContext->HasOpenedContext())
   {
     anAISContext->CloseLocalContext();
   }
-
-  if (aSelectionMode == 0)
+  else if (aSelectionMode != 0 && toTurnOn)
   {
-    if (toTurnOn)
-    {
-      for (AIS_ListIteratorOfListOfInteractive aTargetIt (aTargetIOs); aTargetIt.More(); aTargetIt.Next())
-      {
-        const Handle(AIS_InteractiveObject)& anIO = aTargetIt.Value();
-        TColStd_ListOfInteger anActiveModes;
-        anAISContext->ActivatedModes (anIO, anActiveModes);
-        if (!anActiveModes.IsEmpty())
-        {
-          anAISContext->Deactivate (anIO);
-        }
-        if (!InList (anAISContext, anIO, aSelectionMode))
-        {
-          anAISContext->Activate (anIO);
-        }
-      }
-    }
-    else
-    {
-      for (AIS_ListIteratorOfListOfInteractive aTargetIt (aTargetIOs); aTargetIt.More(); aTargetIt.Next())
-      {
-        const Handle(AIS_InteractiveObject)& anIO = aTargetIt.Value();
-        if (InList (anAISContext, anIO, aSelectionMode))
-        {
-          anAISContext->Deactivate (anIO);
-        }
-      }
-    }
-  }
-
-  if (aSelectionMode != 0 && toTurnOn) // Turn on specified mode
-  {
-    if (!anAISContext->HasOpenedContext() && isToOpenLocalCtx)
+    if (!anAISContext->HasOpenedContext() && toOpenLocalCtx == 1)
     {
       anAISContext->OpenLocalContext (Standard_False);
     }
-
-    for (AIS_ListIteratorOfListOfInteractive aTargetIt (aTargetIOs); aTargetIt.More(); aTargetIt.Next())
-    {
-      const Handle(AIS_InteractiveObject)& anIO = aTargetIt.Value();
-      if (InList (anAISContext, anIO, 0))
-      {
-        anAISContext->Deactivate (anIO, 0);
-      }
-      if (!InList (anAISContext, anIO, aSelectionMode))
-      {
-        anAISContext->Load (anIO, -1, Standard_True);
-        anAISContext->Activate (anIO, aSelectionMode);
-      }
-    }
   }
+  Standard_ENABLE_DEPRECATION_WARNINGS
 
-  if (aSelectionMode != 0 && !toTurnOn) // Turn off specified mode
+  for (AIS_ListIteratorOfListOfInteractive aTargetIt (aTargetIOs); aTargetIt.More(); aTargetIt.Next())
   {
-    for (AIS_ListIteratorOfListOfInteractive aTargetIt (aTargetIOs); aTargetIt.More(); aTargetIt.Next())
+    const Handle(AIS_InteractiveObject)& anIO = aTargetIt.Value();
+    if (toOpenLocalCtx == 1 && toTurnOn && aSelectionMode != 0)
     {
-      const Handle(AIS_InteractiveObject)& anIO = aTargetIt.Value();
-      if (InList (anAISContext, anIO, aSelectionMode))
-      {
-        anAISContext->Deactivate (anIO, aSelectionMode);
-      }
+      anAISContext->Load (anIO, -1, Standard_True);
     }
+    anAISContext->SetSelectionModeActive (anIO, aSelectionMode, toTurnOn, aSelModeConcurrency);
   }
-
   return 0;
 }
 
@@ -4539,7 +4472,7 @@ static Standard_Integer VSelectionNext(Draw_Interpretor& /*theDI*/,
     return 1;
   }
 
-  anAISContext->HilightNextDetected(aView);
+  anAISContext->HilightNextDetected (aView);
   return 0;
 }
 
@@ -4561,7 +4494,7 @@ static Standard_Integer VSelectionPrevious(Draw_Interpretor& /*theDI*/,
     return 1;
   }
 
-  anAISContext->HilightPreviousDetected(aView);
+  anAISContext->HilightPreviousDetected (aView);
   return 0;
 }
 
@@ -4690,8 +4623,6 @@ static Standard_Integer VTriangle (Draw_Interpretor& /*di*/,
     return 1; // TCL_ERROR
   }
 
-  TheAISContext()->CloseAllContexts();
-
   // Get and check values
   TCollection_AsciiString aName(argv[1]);
 
@@ -4758,7 +4689,7 @@ static Standard_Integer VTriangle (Draw_Interpretor& /*di*/,
   GetMapOfAIS().Bind(aTriangle, aName);
 
   // Display triangle
-  TheAISContext()->Display(aTriangle);
+  TheAISContext()->Display (aTriangle, Standard_True);
   return 0;
 }
 
@@ -4832,8 +4763,6 @@ static Standard_Integer VSegment (Draw_Interpretor& /*di*/,
     return 1; // TCL_ERROR
   }
 
-  TheAISContext()->CloseAllContexts();
-
   // Get and check arguments
   TCollection_AsciiString aName(argv[1]);
   Handle(AIS_Point) aPoint1, aPoint2;
@@ -4875,7 +4804,7 @@ static Standard_Integer VSegment (Draw_Interpretor& /*di*/,
   GetMapOfAIS().Bind(aSegment, aName);
 
   // Display segment
-  TheAISContext()->Display(aSegment);
+  TheAISContext()->Display (aSegment, Standard_True);
   return 0;
 }
 
@@ -5067,11 +4996,11 @@ static Standard_Integer VShowFaceBoundary (Draw_Interpretor& /*di*/,
 
   TCollection_AsciiString aName (argv[1]);
 
-  Quantity_Parameter aRed      = 0.0;
-  Quantity_Parameter aGreen    = 0.0;
-  Quantity_Parameter aBlue     = 0.0;
-  Standard_Real      aWidth    = 1.0;
-  Aspect_TypeOfLine  aLineType = Aspect_TOL_SOLID;
+  Standard_Real aRed   = 0.0;
+  Standard_Real aGreen = 0.0;
+  Standard_Real aBlue  = 0.0;
+  Standard_Real aWidth = 1.0;
+  Aspect_TypeOfLine aLineType = Aspect_TOL_SOLID;
   
   // find object
   Handle(AIS_InteractiveObject) anInterObj;
@@ -5121,13 +5050,10 @@ static Standard_Integer VShowFaceBoundary (Draw_Interpretor& /*di*/,
   // select appropriate line type
   if (argc == 8)
   {
-    switch (Draw::Atoi (argv[7]))
+    if (!ViewerTest::ParseLineType (argv[7], aLineType))
     {
-      case 1: aLineType = Aspect_TOL_DASH;    break;
-      case 2: aLineType = Aspect_TOL_DOT;     break;
-      case 3: aLineType = Aspect_TOL_DOTDASH; break;
-      default:
-        aLineType = Aspect_TOL_SOLID;
+      std::cout << "Syntax error: unknown line type '" << argv[7] << "'\n";
+      return 1;
     }
   }
 
@@ -5138,7 +5064,7 @@ static Standard_Integer VShowFaceBoundary (Draw_Interpretor& /*di*/,
 
   aDrawer->SetFaceBoundaryAspect (aBoundaryAspect);
 
-  TheAISContext()->Redisplay (anInterObj);
+  TheAISContext()->Redisplay (anInterObj, Standard_True);
   
   return 0;
 }
@@ -5159,7 +5085,7 @@ public:
     myMarkerAspect = theMarkerAspect;
   }
 
-  DEFINE_STANDARD_RTTI_INLINE(MyPArrayObject,AIS_InteractiveObject);
+  DEFINE_STANDARD_RTTI_INLINE(ViewerTest_MarkersArrayObject,AIS_InteractiveObject);
 
 private:
 
@@ -5312,13 +5238,13 @@ static Standard_Integer VMarkersTest (Draw_Interpretor&,
       std::cerr << "Could not load image from file '" << aFileName << "'!\n";
       return 1;
     }
-    if (anImage->Format() == Image_PixMap::ImgGray)
+    if (anImage->Format() == Image_Format_Gray)
     {
-      anImage->SetFormat (Image_PixMap::ImgAlpha);
+      anImage->SetFormat (Image_Format_Alpha);
     }
-    else if (anImage->Format() == Image_PixMap::ImgGrayF)
+    else if (anImage->Format() == Image_Format_GrayF)
     {
-      anImage->SetFormat (Image_PixMap::ImgAlphaF);
+      anImage->SetFormat (Image_Format_AlphaF);
     }
     anAspect = new Graphic3d_AspectMarker3d (anImage);
   }
@@ -5658,26 +5584,37 @@ static int VFont (Draw_Interpretor& theDI,
     {
       if (++anArgIter >= theArgNb)
       {
-        std::cerr << "Wrong syntax at argument '" << anArg.ToCString() << "'!\n";
+        std::cerr << "Error: wrong syntax at argument '" << anArg << "'!\n";
         return 1;
       }
-      Standard_CString aFontPath   = theArgVec[anArgIter];
-      Standard_CString aFontName   = NULL;
+
+      Standard_CString aFontPath = theArgVec[anArgIter++];
+      TCollection_AsciiString aFontName;
       Font_FontAspect  aFontAspect = Font_FA_Undefined;
-      if (++anArgIter < theArgNb)
+      Standard_Integer isSingelStroke = -1;
+      for (; anArgIter < theArgNb; ++anArgIter)
       {
-        if (!parseFontStyle (anArgCase, aFontAspect))
+        anArgCase = theArgVec[anArgIter];
+        anArgCase.LowerCase();
+        if (aFontAspect == Font_FA_Undefined
+         && parseFontStyle (anArgCase, aFontAspect))
+        {
+          continue;
+        }
+        else if (anArgCase == "singlestroke"
+              || anArgCase == "singleline"
+              || anArgCase == "oneline")
+        {
+          isSingelStroke = 1;
+        }
+        else if (aFontName.IsEmpty())
         {
           aFontName = theArgVec[anArgIter];
         }
-        if (++anArgIter < theArgNb)
+        else
         {
-          anArgCase = theArgVec[anArgIter];
-          anArgCase.LowerCase();
-          if (!parseFontStyle (anArgCase, aFontAspect))
-          {
-            --anArgIter;
-          }
+          --anArgIter;
+          break;
         }
       }
 
@@ -5689,18 +5626,22 @@ static int VFont (Draw_Interpretor& theDI,
       }
 
       if (aFontAspect != Font_FA_Undefined
-       || aFontName   != NULL)
+      || !aFontName.IsEmpty())
       {
         if (aFontAspect == Font_FA_Undefined)
         {
           aFontAspect = aFont->FontAspect();
         }
         Handle(TCollection_HAsciiString) aName = aFont->FontName();
-        if (aFontName != NULL)
+        if (!aFontName.IsEmpty())
         {
           aName = new TCollection_HAsciiString (aFontName);
         }
         aFont = new Font_SystemFont (aName, aFontAspect, new TCollection_HAsciiString (aFontPath));
+      }
+      if (isSingelStroke != -1)
+      {
+        aFont->SetSingleStrokeFont (isSingelStroke == 1);
       }
 
       aMgr->RegisterFont (aFont, Standard_True);
@@ -5710,7 +5651,7 @@ static int VFont (Draw_Interpretor& theDI,
     }
     else
     {
-      std::cerr << "Warning! Unknown argument '" << anArg.ToCString() << "'\n";
+      std::cerr << "Warning! Unknown argument '" << anArg << "'\n";
     }
   }
 
@@ -5746,8 +5687,14 @@ static int VSetEdgeType (Draw_Interpretor& theDI,
   Handle(AIS_InteractiveObject) anObject = 
     Handle(AIS_InteractiveObject)::DownCast(GetMapOfAIS().Find2(aName));
   
-  // Enable trianle edge mode
-  anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeOn();
+  // Enable triangle edge mode
+  if (!anObject->Attributes()->HasOwnShadingAspect())
+  {
+    anObject->Attributes()->SetShadingAspect (new Prs3d_ShadingAspect());
+    *anObject->Attributes()->ShadingAspect()->Aspect() = *anObject->Attributes()->Link()->ShadingAspect()->Aspect();
+  }
+  const Handle(Prs3d_ShadingAspect)& aFillAreaAspect = anObject->Attributes()->ShadingAspect();
+  aFillAreaAspect->Aspect()->SetEdgeOn();
 
   // Parse parameters
   for (Standard_Integer anIt = 2; anIt < theArgNum; ++anIt)
@@ -5764,31 +5711,14 @@ static int VSetEdgeType (Draw_Interpretor& theDI,
           return 1;
         }
 
-        TCollection_AsciiString aType = theArgs[++anIt];
-        aType.UpperCase();
-
-        if (aType.IsEqual ("SOLID"))
+        ++anIt;
+        Aspect_TypeOfLine aTypeEnum = Aspect_TOL_SOLID;
+        if (!ViewerTest::ParseLineType (theArgs[anIt], aTypeEnum))
         {
-          anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeLineType(Aspect_TOL_SOLID);
-        }
-        else if (aType.IsEqual ("DASH"))
-        {
-          anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeLineType(Aspect_TOL_DASH);
-        }
-        else if (aType.IsEqual ("DOT"))
-        {
-          anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeLineType(Aspect_TOL_DOT);
-        }
-        else if (aType.IsEqual ("DOTDASH"))
-        {
-          anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeLineType(Aspect_TOL_DOTDASH);
-        }
-        else
-        {
-          theDI <<  theArgs[0] << " error: wrong line type: '" << aType.ToCString() << "'.\n";
+          std::cout << "Syntax error: wrong line type: '" << theArgs[anIt] << "'.\n";
           return 1;
         }
-        
+        anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeLineType (aTypeEnum);
       }
       else if (aParam.IsEqual ("-color"))
       {
@@ -5799,15 +5729,15 @@ static int VSetEdgeType (Draw_Interpretor& theDI,
           return 1;
         }
 
-        Quantity_Parameter aR = Draw::Atof(theArgs[++anIt]);
-        Quantity_Parameter aG = Draw::Atof(theArgs[++anIt]);
-        Quantity_Parameter aB = Draw::Atof(theArgs[++anIt]);
+        Standard_Real aR = Draw::Atof(theArgs[++anIt]);
+        Standard_Real aG = Draw::Atof(theArgs[++anIt]);
+        Standard_Real aB = Draw::Atof(theArgs[++anIt]);
         Quantity_Color aColor = Quantity_Color (aR > 1 ? aR / 255.0 : aR,
                                                 aG > 1 ? aG / 255.0 : aG,
                                                 aB > 1 ? aB / 255.0 : aB,
                                                 Quantity_TOC_RGB);
 
-        anObject->Attributes()->ShadingAspect()->Aspect()->SetEdgeColor (aColor);
+        aFillAreaAspect->Aspect()->SetEdgeColor (aColor);
       }
       else if (aParam.IsEqual ("-force"))
       {
@@ -5825,11 +5755,11 @@ static int VSetEdgeType (Draw_Interpretor& theDI,
   // Update shape presentation as aspect parameters were changed
   if (isForceRedisplay)
   {
-    ViewerTest::GetAISContext()->Redisplay (anObject);
+    ViewerTest::GetAISContext()->Redisplay (anObject, Standard_False);
   }
   else
   {
-    anObject->SetAspect (anObject->Attributes()->ShadingAspect());
+    anObject->SetAspect (aFillAreaAspect);
   }
 
   //Update view
@@ -5889,7 +5819,7 @@ static int VUnsetEdgeType (Draw_Interpretor& theDI,
   // Update shape presentation as aspect parameters were changed
   if (isForceRedisplay)
   {
-    ViewerTest::GetAISContext()->Redisplay (anObject);
+    ViewerTest::GetAISContext()->Redisplay (anObject, Standard_False);
   }
   else
   {
@@ -6295,6 +6225,217 @@ static int VPriority (Draw_Interpretor& theDI,
   return 0;
 }
 
+//! Auxiliary class for command vnormals.
+class MyShapeWithNormals : public AIS_Shape
+{
+  DEFINE_STANDARD_RTTI_INLINE(MyShapeWithNormals, AIS_Shape);
+public:
+
+  Standard_Real    NormalLength;
+  Standard_Integer NbAlongU;
+  Standard_Integer NbAlongV;
+  Standard_Boolean ToUseMesh;
+  Standard_Boolean ToOrient;
+
+public:
+
+  //! Main constructor.
+  MyShapeWithNormals (const TopoDS_Shape& theShape)
+  : AIS_Shape   (theShape),
+    NormalLength(10),
+    NbAlongU  (1),
+    NbAlongV  (1),
+    ToUseMesh (Standard_False),
+    ToOrient  (Standard_False) {}
+
+protected:
+
+  //! Comnpute presentation.
+  virtual void Compute (const Handle(PrsMgr_PresentationManager3d)& thePrsMgr,
+                        const Handle(Prs3d_Presentation)&           thePrs,
+                        const Standard_Integer                      theMode) Standard_OVERRIDE
+  {
+    AIS_Shape::Compute (thePrsMgr, thePrs, theMode);
+
+    NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > > aNormalMap;
+    if (ToUseMesh)
+    {
+      DBRep_DrawableShape::addMeshNormals (aNormalMap, myshape, NormalLength);
+    }
+    else
+    {
+      DBRep_DrawableShape::addSurfaceNormals (aNormalMap, myshape, NormalLength, NbAlongU, NbAlongV);
+    }
+
+    Handle(Graphic3d_Group) aPrsGroup = Prs3d_Root::NewGroup (thePrs);
+    aPrsGroup->SetGroupPrimitivesAspect (myDrawer->ArrowAspect()->Aspect());
+
+    const Standard_Real aArrowAngle  = myDrawer->ArrowAspect()->Angle();
+    const Standard_Real aArrowLength = myDrawer->ArrowAspect()->Length();
+    for (NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > >::Iterator aFaceIt (aNormalMap);
+         aFaceIt.More(); aFaceIt.Next())
+    {
+      const Standard_Boolean toReverse = ToOrient && aFaceIt.Key().Orientation() == TopAbs_REVERSED;
+      Handle(Graphic3d_ArrayOfSegments) aSegments = new Graphic3d_ArrayOfSegments (2 * aFaceIt.Value().Size());
+      for (NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >::Iterator aPntIt (aFaceIt.Value()); aPntIt.More(); aPntIt.Next())
+      {
+        std::pair<gp_Pnt, gp_Pnt> aPair = aPntIt.Value();
+        if (toReverse)
+        {
+          const gp_Vec aDir = aPair.first.XYZ() - aPair.second.XYZ();
+          aPair.second = aPair.first.XYZ() + aDir.XYZ();
+        }
+
+        aSegments->AddVertex (aPair.first);
+        aSegments->AddVertex (aPair.second);
+        Prs3d_Arrow::Draw (aPrsGroup, aPair.second, gp_Vec(aPair.first, aPair.second), aArrowAngle, aArrowLength);
+      }
+
+      aPrsGroup->AddPrimitiveArray (aSegments);
+    }
+  }
+
+};
+
+//=======================================================================
+//function : VNormals
+//purpose  : Displays/Hides normals calculated on shape geometry or retrieved from triangulation
+//=======================================================================
+static int VNormals (Draw_Interpretor& theDI,
+                     Standard_Integer  theArgNum,
+                     const char**      theArgs)
+{
+  Handle(AIS_InteractiveContext) aContext = ViewerTest::GetAISContext();
+  if (aContext.IsNull())
+  {
+    std::cout << "Error: no view available, call 'vinit' before!\n";
+    return 1;
+  }
+  else if (theArgNum < 2)
+  {
+    std::cout << "Error: wrong number of arguments! See usage:\n";
+    theDI.PrintHelp (theArgs[0]);
+    return 1;
+  }
+
+  Standard_Integer anArgIter = 1;
+  Standard_CString aShapeName = theArgs[anArgIter++];
+  TopoDS_Shape     aShape     = DBRep::Get (aShapeName);
+  Standard_Boolean isOn = Standard_True;
+  if (aShape.IsNull())
+  {
+    std::cout << "Error: shape with name '" << aShapeName << "' is not found\n";
+    return 1;
+  }
+
+  ViewerTest_DoubleMapOfInteractiveAndName& aMap = GetMapOfAIS();
+  Handle(MyShapeWithNormals) aShapePrs;
+  if (aMap.IsBound2 (aShapeName))
+  {
+    aShapePrs = Handle(MyShapeWithNormals)::DownCast (aMap.Find2 (aShapeName));
+  }
+
+  Standard_Boolean isUseMesh = Standard_False;
+  Standard_Real    aLength = 10.0;
+  Standard_Integer aNbAlongU = 1, aNbAlongV = 1;
+  Standard_Boolean isOriented = Standard_False;
+  for (; anArgIter < theArgNum; ++anArgIter)
+  {
+    TCollection_AsciiString aParam (theArgs[anArgIter]);
+    aParam.LowerCase();
+    if (anArgIter == 2
+     && ViewerTest::ParseOnOff (aParam.ToCString(), isOn))
+    {
+      continue;
+    }
+    else if (aParam == "-usemesh"
+          || aParam == "-mesh")
+    {
+      isUseMesh = Standard_True;
+    }
+    else if (aParam == "-length"
+          || aParam == "-len")
+    {
+      ++anArgIter;
+      aLength = anArgIter < theArgNum ? Draw::Atof (theArgs[anArgIter]) : 0.0;
+      if (Abs (aLength) <= gp::Resolution())
+      {
+        std::cout << "Syntax error: length should not be zero\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-orient"
+          || aParam == "-oriented")
+    {
+      isOriented = Standard_True;
+      if (anArgIter + 1 < theArgNum
+        && ViewerTest::ParseOnOff (theArgs[anArgIter + 1], isOriented))
+      {
+        ++anArgIter;
+      }
+    }
+    else if (aParam == "-nbalongu"
+          || aParam == "-nbu")
+    {
+      ++anArgIter;
+      aNbAlongU = anArgIter < theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      if (aNbAlongU < 1)
+      {
+        std::cout << "Syntax error: NbAlongU should be >=1\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-nbalongv"
+          || aParam == "-nbv")
+    {
+      ++anArgIter;
+      aNbAlongV = anArgIter < theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      if (aNbAlongV < 1)
+      {
+        std::cout << "Syntax error: NbAlongV should be >=1\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-nbalong"
+          || aParam == "-nbuv")
+    {
+      ++anArgIter;
+      aNbAlongU = anArgIter < theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      aNbAlongV = aNbAlongU;
+      if (aNbAlongU < 1)
+      {
+        std::cout << "Syntax error: NbAlong should be >=1\n";
+        return 1;
+      }
+    }
+    else
+    {
+      std::cout << "Syntax error: unknwon argument '" << aParam << "'\n";
+      return 1;
+    }
+  }
+
+  if (isOn)
+  {
+    if (aShapePrs.IsNull())
+    {
+      aShapePrs = new MyShapeWithNormals (aShape);
+    }
+    aShapePrs->ToUseMesh    = isUseMesh;
+    aShapePrs->ToOrient     = isOriented;
+    aShapePrs->NormalLength = aLength;
+    aShapePrs->NbAlongU     = aNbAlongU;
+    aShapePrs->NbAlongV     = aNbAlongV;
+    VDisplayAISObject (aShapeName, aShapePrs);
+  }
+  else if (!aShapePrs.IsNull())
+  {
+    VDisplayAISObject (aShapeName, new AIS_Shape (aShape));
+  }
+
+  return 0;
+}
+
 //=======================================================================
 //function : ObjectsCommands
 //purpose  :
@@ -6303,11 +6444,50 @@ static int VPriority (Draw_Interpretor& theDI,
 void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
 {
   const char *group ="AISObjects";
-  theCommands.Add("vtrihedron",
-    "vtrihedron         : vtrihedron name [ -origin x y z ] [ -zaxis u v w -xaxis u v w ] [ -hidelabels ]"
-    "\n\t\t: Creates a new *AIS_Trihedron* object. If no argument is set, the default trihedron (0XYZ) is created."
-     "\n\t\t: -hidelabels allows to draw trihedron without axes labels. By default, they are displayed.",
-    __FILE__,VTrihedron,group);
+
+  theCommands.Add ("vtrihedron",
+                   "vtrihedron : vtrihedron name"
+                   "\n\t\t: [-dispMode {wireframe|shading} ]"
+                   "\n\t\t: [-origin x y z ]"
+                   "\n\t\t: [-zaxis u v w -xaxis u v w ]"
+                   "\n\t\t: [-drawAxes {X|Y|Z|XY|YZ|XZ|XYZ}]"
+                   "\n\t\t: [-hideLabels {on|off}]"
+                   "\n\t\t: [-hideArrows {on|off}]"
+                   "\n\t\t: [-label {XAxis|YAxis|ZAxis} value]"
+                   "\n\t\t: [-attribute {XAxisLength|YAxisLength|ZAxisLength"
+                   "\n\t\t:             |TubeRadiusPercent|ConeRadiusPercent"
+                   "\n\t\t:             |ConeLengthPercent|OriginRadiusPercent"
+                   "\n\t\t:             |ShadingNumberOfFacettes} value]"
+                   "\n\t\t: [-color {Origin|XAxis|YAxis|ZAxis|XOYAxis|YOZAxis"
+                   "\n\t\t:         |XOZAxis|Whole} {r g b | colorName}]"
+                   "\n\t\t: [-textColor {r g b | colorName}]"
+                   "\n\t\t: [-arrowColor {r g b | colorName}]"
+                   "\n\t\t: [-priority {Origin|XAxis|YAxis|ZAxis|XArrow"
+                   "\n\t\t:            |YArrow|ZArrow|XOYAxis|YOZAxis"
+                   "\n\t\t:            |XOZAxis|Whole} value]"
+                   "\n\t\t:"
+                   "\n\t\t: Creates a new *AIS_Trihedron* object or changes parameters of "
+                   "\n\t\t: existing trihedron. If no argument is set,"
+                   "\n\t\t: the default trihedron (0XYZ) is created."
+                   "\n\t\t: -dispMode mode of visualization: wf - wireframe,"
+                   "\n\t\t:                                  sh - shading."
+                   "\n\t\t:               Default value is wireframe."
+                   "\n\t\t: -origin allows to set trihedron location."
+                   "\n\t\t: -zaxis/-xaxis allows to set trihedron X and Z"
+                   "\n\t\t:               directions. The directions should"
+                   "\n\t\t:               be orthogonal. Y direction is calculated."
+                   "\n\t\t: -drawAxes allows to set what axes are drawn in the"
+                   "\n\t\t:           trihedron, default state is XYZ"
+                   "\n\t\t: -hideLabels allows to show/hide trihedron labels"
+                   "\n\t\t: -hideArrows allows to show/hide trihedron arrows"
+                   "\n\t\t: -labels allows to change default X/Y/Z titles of axes"
+                   "\n\t\t: -attribute sets parameters of trihedron"
+                   "\n\t\t: -color sets color properties of parts of trihedron"
+                   "\n\t\t: -textColor sets color properties of trihedron labels"
+                   "\n\t\t: -arrowColor sets color properties of trihedron arrows"
+                   "\n\t\t: -priority allows to change default selection priority"
+                   "\n\t\t: of trihedron components",
+                   __FILE__,VTrihedron,group);
 
   theCommands.Add("vtri2d",
     "vtri2d Name"
@@ -6406,10 +6586,11 @@ void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
                    "\n\t\t X and Y define the coordinate origin in 2d space relative to the view window"
                    "\n\t\t Example: X=0 Y=0 is center, X=1 Y=1 is upper right corner etc..."
                    "\n\t\t Z coordinate defines the gap from border of view window (except center position)."
-                   "\n\t\t: [-disptype {blend|decal|subtitle|dimension|normal}=normal}"
+                   "\n\t\t: [-disptype {blend|decal|shadow|subtitle|dimension|normal}=normal}"
                    "\n\t\t: [-subcolor {R G B|name}=white]"
                    "\n\t\t: [-noupdate]"
                    "\n\t\t: [-plane NormX NormY NormZ DirX DirY DirZ]"
+                   "\n\t\t: [-flipping]"
                    "\n\t\t: Display text label at specified position.",
     __FILE__, VDrawText, group);
 
@@ -6417,9 +6598,29 @@ void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
     "vdrawsphere: vdrawsphere shapeName Fineness [X=0.0 Y=0.0 Z=0.0] [Radius=100.0] [ToShowEdges=0] [ToPrintInfo=1]\n",
     __FILE__,VDrawSphere,group);
 
+  theCommands.Add ("vlocation",
+                "vlocation name"
+      "\n\t\t:   [-reset]"
+      "\n\t\t:   [-copyFrom otherName]"
+      "\n\t\t:   [-translate X Y [Z]]"
+      "\n\t\t:   [-rotate x y z dx dy dz angle]"
+      "\n\t\t:   [-scale [X Y Z] scale]"
+      "\n\t\t:   [-mirror x y z dx dy dz]"
+      "\n\t\t:   [-setLocation X Y [Z]]"
+      "\n\t\t:   [-setRotation QX QY QZ QW]"
+      "\n\t\t:   [-setScale [X Y Z] scale]"
+      "\n\t\t: Object local transformation management:"
+      "\n\t\t:   -reset       reset transformation to identity"
+      "\n\t\t:   -translate   translate object"
+      "\n\t\t:   -rotate      applies rotation to local transformation"
+      "\n\t\t:   -scale       applies scale    to local transformation"
+      "\n\t\t:   -mirror      applies mirror   to local transformation"
+      "\n\t\t:   -setLocation assign object location"
+      "\n\t\t:   -setRotation assign object rotation (quaternion)"
+      "\n\t\t:   -setScale    assign object scale factor",
+        __FILE__, VSetLocation, group);
   theCommands.Add ("vsetlocation",
-                   "vsetlocation [-noupdate|-update] name x y z"
-                   "\n\t\t: Set new location for an interactive object.",
+                   "alias for vlocation",
         __FILE__, VSetLocation, group);
 
   theCommands.Add (
@@ -6459,24 +6660,19 @@ void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
 
 
   theCommands.Add("vselmode", 
-    "vselmode : [object] mode_number is_turned_on=(1|0)\n"
-    "  switches selection mode for the determined object or\n"
-    "  for all objects in context.\n"
-    "  mode_number is non-negative integer that has different\n"
-    "    meaning for different interactive object classes.\n"
-    "    For shapes the following mode_number values are allowed:\n"
-    "      0 - shape\n"
-    "      1 - vertex\n"
-    "      2 - edge\n"
-    "      3 - wire\n"
-    "      4 - face\n"
-    "      5 - shell\n"
-    "      6 - solid\n"
-    "      7 - compsolid\n"
-    "      8 - compound\n"
-    "  is_turned_on is:\n"
-    "    1 if mode is to be switched on\n"
-    "    0 if mode is to be switched off\n", 
+                "vselmode [object] selectionMode {on|off}"
+      "\n\t\t:            [{-add|-set|-globalOrLocal}=-globalOrLocal]"
+      "\n\t\t: Switches selection mode for the specified object or for all objects in context."
+      "\n\t\t: Selection mode is either an integer number specific to Interactive Object,"
+      "\n\t\t: or sub-shape type in case of AIS_Shape:"
+      "\n\t\t:   Shape, Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound"
+      "\n\t\t: The integer mode 0 (Shape in case of AIS_Shape) is reserved for selecting object as whole."
+      "\n\t\t: Additional options:"
+      "\n\t\t:  -add           already activated selection modes will be left activated"
+      "\n\t\t:  -set           already activated selection modes will be deactivated"
+      "\n\t\t:  -globalOrLocal (default) if new mode is Global selection mode,"
+      "\n\t\t:                 then active local selection modes will be deactivated"
+      "\n\t\t:                 and the samthen active local selection modes will be deactivated",
     __FILE__, VSetSelectionMode, group);
 
   theCommands.Add("vselnext",
@@ -6527,7 +6723,7 @@ void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
                    "\n\t\t: [-plane NormX NormY NormZ DirX DirY DirZ]",
                    __FILE__, TextToBRep, group);
   theCommands.Add ("vfont",
-                            "vfont [add pathToFont [fontName] [regular,bold,italic,bolditalic=undefined]]"
+                            "vfont [add pathToFont [fontName] [regular,bold,italic,bolditalic=undefined] [singleStroke]]"
                    "\n\t\t:        [find fontName [regular,bold,italic,bolditalic=undefined]]",
                    __FILE__, VFont, group);
   
@@ -6568,38 +6764,15 @@ void ViewerTest::ObjectCommands(Draw_Interpretor& theCommands)
                    "\n",
                    __FILE__, VPointCloud, group);
 
-  theCommands.Add("vlocreset",
-    "vlocreset name1 name2 ...\n\t\t  remove object local transformation",
-    __FILE__,
-    LocalTransformPresentation, group);
-
-  theCommands.Add("vlocmove",
-    "vlocmove name1 name2 ... name\n\t\t  set local transform to match transform of 'name'",
-    __FILE__,
-    LocalTransformPresentation, group);
-
-  theCommands.Add("vloctranslate",
-    "vloctranslate name1 name2 ... dx dy dz\n\t\t  applies translation to local transformation",
-    __FILE__,
-    LocalTransformPresentation, group);
-
-  theCommands.Add("vlocrotate",
-    "vlocrotate name1 name2 ... x y z dx dy dz angle\n\t\t  applies rotation to local transformation",
-    __FILE__,
-    LocalTransformPresentation, group);
-
-  theCommands.Add("vlocmirror",
-    "vlocmirror name x y z dx dy dz\n\t\t  applies mirror to local transformation",
-    __FILE__,
-    LocalTransformPresentation, group);
-
-  theCommands.Add("vlocscale",
-    "vlocscale name x y z scale\n\t\t  applies scale to local transformation",
-    __FILE__,
-    LocalTransformPresentation, group);
-
   theCommands.Add("vpriority",
     "vpriority [-noupdate|-update] name [value]\n\t\t  prints or sets the display priority for an object",
     __FILE__,
     VPriority, group);
+
+  theCommands.Add ("vnormals",
+                   "vnormals usage:\n"
+                   "vnormals Shape [{on|off}=on] [-length {10}] [-nbAlongU {1}] [-nbAlongV {1}] [-nbAlong {1}]"
+                   "\n\t\t:        [-useMesh] [-oriented {0}1}=0]"
+                   "\n\t\t:  Displays/Hides normals calculated on shape geometry or retrieved from triangulation",
+                   __FILE__, VNormals, group);
 }

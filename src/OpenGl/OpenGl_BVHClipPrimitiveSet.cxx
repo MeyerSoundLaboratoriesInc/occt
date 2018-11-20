@@ -18,13 +18,15 @@
 #include <BVH_BinnedBuilder.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 
+IMPLEMENT_STANDARD_RTTIEXT(OpenGl_BVHClipPrimitiveSet, BVH_PrimitiveSet3d)
+
 // =======================================================================
 // function : OpenGl_BVHClipPrimitiveSet
 // purpose  :
 // =======================================================================
 OpenGl_BVHClipPrimitiveSet::OpenGl_BVHClipPrimitiveSet()
 {
-  myBuilder = new BVH_BinnedBuilder<Standard_ShortReal, 4> (1, 32);
+  myBuilder = new BVH_BinnedBuilder<Standard_Real, 3> (BVH_Constants_LeafNodeSizeSingle, BVH_Constants_MaxTreeDepth);
 }
 
 // =======================================================================
@@ -40,7 +42,7 @@ Standard_Integer OpenGl_BVHClipPrimitiveSet::Size() const
 // function : Box
 // purpose  :
 // =======================================================================
-Graphic3d_BndBox4f OpenGl_BVHClipPrimitiveSet::Box (const Standard_Integer theIdx) const
+Graphic3d_BndBox3d OpenGl_BVHClipPrimitiveSet::Box (const Standard_Integer theIdx) const
 {
   return myStructs.FindKey (theIdx + 1)->BoundingBox();
 }
@@ -49,13 +51,15 @@ Graphic3d_BndBox4f OpenGl_BVHClipPrimitiveSet::Box (const Standard_Integer theId
 // function : Center
 // purpose  :
 // =======================================================================
-Standard_ShortReal OpenGl_BVHClipPrimitiveSet::Center (const Standard_Integer theIdx,
-                                                       const Standard_Integer theAxis) const
+Standard_Real OpenGl_BVHClipPrimitiveSet::Center (const Standard_Integer theIdx,
+                                                  const Standard_Integer theAxis) const
 {
-  Graphic3d_BndBox4f aBndBox = myStructs.FindKey (theIdx + 1)->BoundingBox();
+  Graphic3d_BndBox3d aBndBox = myStructs.FindKey (theIdx + 1)->BoundingBox();
 
-  return (aBndBox.CornerMin()[theAxis] +
-          aBndBox.CornerMax()[theAxis]) * 0.5f;
+  const Standard_Real aMin = aBndBox.CornerMin()[theAxis];
+  const Standard_Real aMax = aBndBox.CornerMax()[theAxis];
+  const Standard_Real aCenter = (aMin + aMax) * 0.5;
+  return aCenter;
 }
 
 // =======================================================================

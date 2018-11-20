@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -72,15 +74,13 @@
 			<Add library="TKG3d" />
 			<Add library="TKTopAlgo" />
 		</Linker>
-		<Unit filename="../../../src/Aspect/Aspect_AspectFillArea.cxx" />
-		<Unit filename="../../../src/Aspect/Aspect_AspectLine.cxx" />
-		<Unit filename="../../../src/Aspect/Aspect_AspectMarker.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_Background.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_CircularGrid.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_DisplayConnection.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_GenId.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_GradientBackground.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_Grid.cxx" />
+		<Unit filename="../../../src/Aspect/Aspect_NeutralWindow.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_RectangularGrid.cxx" />
 		<Unit filename="../../../src/Aspect/Aspect_Window.cxx" />
 		<Unit filename="../../../src/SelectBasics/SelectBasics.cxx" />
@@ -90,6 +90,7 @@
 		<Unit filename="../../../src/Image/Image_AlienPixMap.cxx" />
 		<Unit filename="../../../src/Image/Image_Diff.cxx" />
 		<Unit filename="../../../src/Image/Image_PixMap.cxx" />
+		<Unit filename="../../../src/Image/Image_VideoRecorder.cxx" />
 		<Unit filename="../../../src/Font/Font_BRepFont.cxx" />
 		<Unit filename="../../../src/Font/Font_BRepTextBuilder.cxx" />
 		<Unit filename="../../../src/Font/Font_FTFont.cxx" />

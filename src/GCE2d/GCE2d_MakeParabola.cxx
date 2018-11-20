@@ -51,14 +51,6 @@ GCE2d_MakeParabola::GCE2d_MakeParabola(const gp_Ax22d&     Axis ,
   }
 }
 
-GCE2d_MakeParabola::GCE2d_MakeParabola(const gp_Ax22d&     Axis ,
-				       const gp_Pnt2d&     F    )
-{
-  TheError = gce_Done;
-  gp_Parab2d para(Axis,F);
-  TheParabola = new Geom2d_Parabola(para);
-}
-
 GCE2d_MakeParabola::GCE2d_MakeParabola(const gp_Ax2d&         D     ,
 				       const gp_Pnt2d&        F     ,
 				       const Standard_Boolean Sense )
@@ -80,6 +72,7 @@ GCE2d_MakeParabola::GCE2d_MakeParabola(const gp_Pnt2d& S1 ,
 
 const Handle(Geom2d_Parabola)& GCE2d_MakeParabola::Value() const
 { 
-  StdFail_NotDone_Raise_if(TheError != gce_Done,"");
+  StdFail_NotDone_Raise_if (TheError != gce_Done,
+                            "GCE2d_MakeParabola::Value() - no result");
   return TheParabola;
 }

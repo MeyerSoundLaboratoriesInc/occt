@@ -33,6 +33,7 @@
 #include <OSD_Timer.hxx>
 #include <ShapeAnalysis_ShapeTolerance.hxx>
 #include <ShapeExtend_Explorer.hxx>
+#include <ShapeProcess_ShapeContext.hxx>
 #include <Standard_Type.hxx>
 #include <StepBasic_ApplicationProtocolDefinition.hxx>
 #include <StepBasic_HArray1OfProduct.hxx>
@@ -269,6 +270,34 @@ Handle(StepShape_NonManifoldSurfaceShapeRepresentation) STEPControl_ActorWrite::
   return aResult;
 }
 
+//=======================================================================
+//function : mergeInfoForNM
+//purpose  : bind already written shared faces to STEP entity for non-manifold
+//=======================================================================
+void STEPControl_ActorWrite::mergeInfoForNM(const Handle(Transfer_FinderProcess)& theFP,
+                                            const Handle(Standard_Transient) &theInfo) const
+{
+  Handle(ShapeProcess_ShapeContext) aContext = Handle(ShapeProcess_ShapeContext)::DownCast ( theInfo );
+  if ( aContext.IsNull() ) return;
+
+  const TopTools_DataMapOfShapeShape &aMap = aContext->Map();
+  TopTools_DataMapIteratorOfDataMapOfShapeShape aShapeShapeIt(aMap);
+
+  for ( ; aShapeShapeIt.More(); aShapeShapeIt.Next() ) {
+    TopoDS_Shape anOrig = aShapeShapeIt.Key(), aRes = aShapeShapeIt.Value();
+    if (anOrig.ShapeType() != TopAbs_FACE)
+      continue;
+
+    Handle(TransferBRep_ShapeMapper) anOrigMapper= TransferBRep::ShapeMapper ( theFP, anOrig);
+    Handle(Transfer_Binder) anOrigBinder = theFP->Find ( anOrigMapper );
+    if (anOrigBinder.IsNull())
+      continue;
+
+    Handle(TransferBRep_ShapeMapper) aResMapper = TransferBRep::ShapeMapper ( theFP, aRes );
+    theFP->Bind(aResMapper, anOrigBinder);
+  }
+}
+
 
 //=======================================================================
 //function : SetMode
@@ -283,8 +312,8 @@ void STEPControl_ActorWrite::SetMode (const STEPControl_StepModelType M)
   case STEPControl_BrepWithVoids :     ModeTrans() = 5; break;
   case STEPControl_FacetedBrep :       ModeTrans() = 1; break;
   case STEPControl_FacetedBrepAndBrepWithVoids : ModeTrans() = 6; break;
-  case STEPControl_ShellBasedSurfaceModel :      ModeTrans() = 2;
-  case STEPControl_GeometricCurveSet :           ModeTrans() = 4;
+  case STEPControl_ShellBasedSurfaceModel :      ModeTrans() = 2; break;
+  case STEPControl_GeometricCurveSet :           ModeTrans() = 4; break;
   case STEPControl_Hybrid : ModeTrans() = 0; break;  // PAS IMPLEMENTE !!
     default: break;
   }
@@ -614,7 +643,7 @@ Handle(Transfer_Binder) STEPControl_ActorWrite::TransferShape (const Handle(Tran
     return TransferCompound(start, SDR0, FP);
 
   // [BEGIN] Separate manifold topology from non-manifold in group mode 0 (ssv; 18.11.2010)
-  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold");
+  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold") != 0;
   Handle(Transfer_Binder) aNMBinder;
   if (isNMMode && !GroupMode() && theShape.ShapeType() == TopAbs_COMPOUND) {
     TopoDS_Compound aNMCompound;
@@ -867,16 +896,15 @@ Handle(Transfer_Binder) STEPControl_ActorWrite::TransferShape (const Handle(Tran
     Handle(Standard_Transient) info;
     Standard_Real maxTol = Interface_Static::RVal("read.maxprecision.val");
 
-    // Fix only manifold shapes, do nothing with non-manifold topology as it is processed separately (ssv; 13.11.2010)
     TopoDS_Shape aShape;
-    if (isManifold)
-      aShape = XSAlgo::AlgoContainer()->ProcessShape(xShape, Tol, maxTol, 
-                                                    "write.step.resource.name", 
-                                                    "write.step.sequence", info,
-                                                    FP->GetProgress() );
-    else
-      aShape = xShape;
-    
+    aShape = XSAlgo::AlgoContainer()->ProcessShape(xShape, Tol, maxTol, 
+                                                  "write.step.resource.name", 
+                                                  "write.step.sequence", info,
+                                                  FP->GetProgress() );
+    if (!isManifold) {
+      mergeInfoForNM(FP, info);
+    }
+
     // create a STEP entity corresponding to shape
     Handle(StepGeom_GeometricRepresentationItem) item;
     switch (trmode)
@@ -1250,7 +1278,7 @@ Handle(Transfer_Binder) STEPControl_ActorWrite::TransferCompound (const Handle(T
   TopoDS_Shape theShape = mapper->Value();
 
   // Inspect non-manifold topology case (ssv; 10.11.2010)
-  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold");
+  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold") != 0;
   Standard_Boolean isManifold;
   if (isNMMode)
     isManifold = IsManifoldShape(theShape);

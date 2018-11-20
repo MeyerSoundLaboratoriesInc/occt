@@ -272,27 +272,70 @@ Interface_CheckStatus Interface_CheckIterator::Status () const
 
 //=======================================================================
 //function : Complies
-//purpose  : 
+//purpose  :
 //=======================================================================
 
 Standard_Boolean Interface_CheckIterator::Complies
   (const Interface_CheckStatus stat) const
 {
-  Standard_Boolean res = Standard_False;
-  if (stat == Interface_CheckNoFail) res = Standard_True;
-  Standard_Integer i, nb = thelist->Length();
-  for (i = 1; i <= nb; i ++) {
+  Standard_Boolean res = (stat == Interface_CheckNoFail);
+  Standard_Integer nb = thelist->Length();
+  for (Standard_Integer i = 1; i <= nb; ++i)
+  {
     const Handle(Interface_Check) ach = thelist->Value(i);
     Standard_Integer nbf = ach->NbFails(), nbw = ach->NbWarnings();
-    switch (stat) {
-    case Interface_CheckOK      : if (nbf + nbw > 0) return Standard_False; break;
-    case Interface_CheckWarning : if (nbf > 0) return Standard_False;
-			          if (nbw > 0) res  = Standard_True;  break;
-    case Interface_CheckFail    : if (nbf > 0) return Standard_True;  break;
-    case Interface_CheckAny     : return Standard_True;
-    case Interface_CheckMessage : if (nbf + nbw > 0) return Standard_True;  break;
-    case Interface_CheckNoFail  : if (nbf > 0) return Standard_False;  break;
-    default : break;
+    switch (stat)
+    {
+      case Interface_CheckOK:
+      {
+        if (nbf + nbw > 0)
+        {
+          return Standard_False;
+        }
+        break;
+      }
+      case Interface_CheckWarning:
+      {
+        if (nbf > 0)
+        {
+          return Standard_False;
+        }
+        if (nbw > 0)
+        {
+          res  = Standard_True;
+        }
+        break;
+      }
+      case Interface_CheckFail:
+      {
+        if (nbf > 0)
+        {
+          return Standard_True;
+        }
+        break;
+      }
+      case Interface_CheckAny:
+      {
+        return Standard_True;
+      }
+      case Interface_CheckMessage:
+      {
+        if (nbf + nbw > 0)
+        {
+          return Standard_True;
+        }
+        break;
+      }
+      case Interface_CheckNoFail:
+      {
+        if (nbf > 0)
+        {
+          return Standard_False;
+        }
+        break;
+      }
+      default:
+        break;
     }
   }
   return res;
@@ -436,8 +479,7 @@ void Interface_CheckIterator::Next () const
 
 const Handle(Interface_Check)& Interface_CheckIterator::Value () const 
 {
-  if (thecurr->Value() > thelist->Length()) Standard_NoSuchObject::Raise
-    ("Interface Check Iterator : Value");
+  if (thecurr->Value() > thelist->Length()) throw Standard_NoSuchObject("Interface Check Iterator : Value");
   return thelist->Value(thecurr->Value());
 }
 
@@ -449,8 +491,7 @@ const Handle(Interface_Check)& Interface_CheckIterator::Value () const
 
 Standard_Integer Interface_CheckIterator::Number () const 
 {
-  if (thecurr->Value() > thenums->Length()) Standard_NoSuchObject::Raise
-    ("Interface Check Iterator : Value");
+  if (thecurr->Value() > thenums->Length()) throw Standard_NoSuchObject("Interface Check Iterator : Value");
   return thenums->Value(thecurr->Value());
 }
 

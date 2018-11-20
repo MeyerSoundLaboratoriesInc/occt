@@ -328,7 +328,7 @@ void BRepFill_Filling::AddConstraints( const BRepFill_SequenceOfEdgeFaceAndOrder
 	  Standard_Real f, l;
 	  BRep_Tool::CurveOnSurface( CurEdge, C2d, Surface, loc, f, l);
 	  if (Surface.IsNull()) {
-	    Standard_Failure::Raise( "Add" );
+	    throw Standard_Failure( "Add" );
 	    return;
 	  }
 	  Surface = Handle(Geom_Surface)::DownCast(Surface->Copy());
@@ -479,11 +479,20 @@ void BRepFill_Filling::FindExtremitiesOfHoles(const TopTools_ListOfShape& WireLi
   theWire = TopoDS::Wire(WireSeq(1));
   WireSeq.Remove(1);
 
-  if (theWire.Closed())
+  if (BRep_Tool::IsClosed(theWire))
     return;
 
   TopoDS_Vertex Vfirst, Vlast;
   TopExp::Vertices( theWire, Vfirst, Vlast );
+
+  if (Vfirst.IsSame(Vlast))
+  {
+    // The Wire is closed indeed despite its 
+    // being not detected earlier.
+
+    return;
+  }
+
   gp_Vec FinVec = MakeFinVec( theWire, Vlast );
   TopoDS_Vertex theVertex = Vlast;
   VerSeq.Append( Vlast );
@@ -567,7 +576,7 @@ void BRepFill_Filling::Build()
   for (j = 1; j <= myFreeConstraints.Length(); j++)
     {
       GeomAPI_ProjectPointOnSurf Projector;
-      Quantity_Parameter U1, V1, U2, V2;
+      Standard_Real U1, V1, U2, V2;
 
       CurFace = myFreeConstraints(j).myFace;
       Handle( BRepAdaptor_HSurface ) HSurf = new BRepAdaptor_HSurface();
@@ -699,7 +708,7 @@ void BRepFill_Filling::Build()
   
   TopoDS_Wire FinalWire = WireFromList(FinalEdges);
   if (!(FinalWire.Closed()))
-    Standard_Failure::Raise("Wire is not closed");
+    throw Standard_Failure("Wire is not closed");
   
   myFace = BRepLib_MakeFace( Surface, FinalWire );
 }

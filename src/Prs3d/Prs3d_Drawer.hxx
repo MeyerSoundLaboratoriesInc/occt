@@ -20,13 +20,15 @@
 
 #include <Standard_Integer.hxx>
 #include <Standard_Boolean.hxx>
-#include <Quantity_Length.hxx>
 #include <Aspect_TypeOfDeflection.hxx>
+#include <Graphic3d_GroupAspect.hxx>
+#include <Graphic3d_PresentationAttributes.hxx>
+#include <Graphic3d_ShaderProgram.hxx>
 #include <Standard_Real.hxx>
 #include <Prs3d_VertexDrawMode.hxx>
 #include <Prs3d_DimensionUnits.hxx>
 #include <Prs3d_TypeOfHLR.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 
 class Prs3d_IsoAspect;
 class Prs3d_LineAspect;
@@ -39,15 +41,14 @@ class Prs3d_DatumAspect;
 class Prs3d_DimensionAspect;
 class TCollection_AsciiString;
 
-class Prs3d_Drawer;
-DEFINE_STANDARD_HANDLE(Prs3d_Drawer, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(Prs3d_Drawer, Graphic3d_PresentationAttributes)
 
 //! A graphic attribute manager which governs how
 //! objects such as color, width, line thickness and deflection are displayed.
 //! A drawer includes an instance of the Aspect classes with particular default values.
-class Prs3d_Drawer : public MMgt_TShared
+class Prs3d_Drawer : public Graphic3d_PresentationAttributes
 {
-
+  DEFINE_STANDARD_RTTIEXT(Prs3d_Drawer, Graphic3d_PresentationAttributes)
 public:
 
   //! Default constructor.
@@ -74,11 +75,11 @@ public:
   //!   Prs3d_DeflectionCurve
   //!   Prs3d_WFDeflectionSurface
   //!   Prs3d_WFDeflectionRestrictedFace
-  Standard_EXPORT void SetMaximalChordialDeviation (const Quantity_Length theChordialDeviation);
+  Standard_EXPORT void SetMaximalChordialDeviation (const Standard_Real theChordialDeviation);
 
   //! Returns the maximal chordal deviation. The default value is 0.1.
   //! Drawings of curves or patches are made with respect to an absolute maximal chordal deviation.
-  Quantity_Length MaximalChordialDeviation() const
+  Standard_Real MaximalChordialDeviation() const
   {
     return HasOwnMaximalChordialDeviation() || myLink.IsNull()
          ? myChordialDeviation
@@ -202,6 +203,15 @@ public:
          : 0.0;
   }
 
+  //! Updates the previous value used for the chordal deviation coefficient to the current state.
+  void UpdatePreviousDeviationCoefficient()
+  {
+    if (myHasOwnDeviationCoefficient)
+    {
+      myPreviousDeviationCoefficient = DeviationCoefficient();
+    }
+  }
+
   //! Sets the deviation coefficient aCoefficient for removal
   //! of hidden lines created by different viewpoints in
   //! different presentations. The Default value is 0.02.
@@ -280,6 +290,15 @@ public:
     return myHasOwnDeviationAngle
          ? myPreviousDeviationAngle
          : 0.0;
+  }
+
+  //! Updates the previous deviation angle to the current value
+  void UpdatePreviousDeviationAngle()
+  {
+    if (myHasOwnDeviationAngle)
+    {
+      myPreviousDeviationAngle = DeviationAngle();
+    }
   }
 
   //! Sets anAngle, the angle of maximum chordal deviation for removal of hidden lines created by
@@ -467,24 +486,6 @@ public:
   //! Returns true if the drawer has its own attribute for
   //! shading aspect that overrides the one in the link.
   Standard_Boolean HasOwnShadingAspect() const { return myHasOwnShadingAspect; }
-
-  //! Returns True if the ShadingAspect is applied
-  //! to the whole presentation.
-  Standard_Boolean ShadingAspectGlobal() const
-  {
-    return HasOwnShadingAspectGlobal() || myLink.IsNull()
-         ? myShadingAspectGlobal
-         : myLink->ShadingAspectGlobal();
-  }
-
-  //! Indicates that the ShadingAspect will be apply
-  //! to the whole presentation. This allows to modify
-  //! the aspect without recomputing the content of the presentation.
-  Standard_EXPORT void SetShadingAspectGlobal (const Standard_Boolean theValue);
-
-  //! Returns true if the drawer has its own attribute for
-  //! ShadingAspectGlobal flag that overrides the one in the link.
-  Standard_Boolean HasOwnShadingAspectGlobal() const { return myHasOwnShadingAspectGlobal; }
 
   //! Returns settings for seen line aspects.
   //! These settings can be edited. The default values are:
@@ -828,13 +829,27 @@ public:
   Standard_Boolean HasLink() const { return !myLink.IsNull(); }
 
   //! Sets theDrawer as a link to which the current object references.
-  void Link (const Handle(Prs3d_Drawer)& theDrawer)
-  {
-    myLink = theDrawer;
-  }
+  void Link (const Handle(Prs3d_Drawer)& theDrawer) { SetLink (theDrawer); }
+
+  //! Sets theDrawer as a link to which the current object references.
+  void SetLink (const Handle(Prs3d_Drawer)& theDrawer) { myLink = theDrawer; }
 
   //! Removes local attributes. 
   Standard_EXPORT void ClearLocalAttributes();
+
+  //! Assign shader program for specified type of primitives.
+  //! @param theProgram new program to set (might be NULL)
+  //! @param theAspect  the type of primitives
+  //! @param theToOverrideDefaults if true then non-overridden attributes using defaults will be allocated and copied from the Link;
+  //!                              otherwise, only already customized attributes will be changed
+  //! @return TRUE if presentation should be recomputed after creating aspects not previously customized (if theToOverrideDefaults is also TRUE)
+  Standard_EXPORT bool SetShaderProgram (const Handle(Graphic3d_ShaderProgram)& theProgram,
+                                         const Graphic3d_GroupAspect            theAspect,
+                                         const bool                             theToOverrideDefaults = false);
+
+  //! Sets Shading Model type for the shading aspect.
+  Standard_EXPORT bool SetShadingModel (Graphic3d_TypeOfShadingModel theModel,
+                                        bool theToOverrideDefaults = false);
 
 protected:
 
@@ -844,7 +859,7 @@ protected:
   Standard_Boolean              myHasOwnNbPoints;
   Standard_Real                 myMaximalParameterValue;
   Standard_Boolean              myHasOwnMaximalParameterValue;
-  Quantity_Length               myChordialDeviation;
+  Standard_Real                 myChordialDeviation;
   Standard_Boolean              myHasOwnChordialDeviation;
   Aspect_TypeOfDeflection       myTypeOfDeflection;
   Standard_Boolean              myHasOwnTypeOfDeflection;
@@ -884,8 +899,6 @@ protected:
   Standard_Boolean              myHasOwnTextAspect;
   Handle(Prs3d_ShadingAspect)   myShadingAspect;
   Standard_Boolean              myHasOwnShadingAspect;
-  Standard_Boolean              myShadingAspectGlobal;
-  Standard_Boolean              myHasOwnShadingAspectGlobal;
   Handle(Prs3d_PlaneAspect)     myPlaneAspect;
   Standard_Boolean              myHasOwnPlaneAspect;
   Handle(Prs3d_LineAspect)      mySeenLineAspect;
@@ -928,10 +941,9 @@ protected:
   Standard_Boolean              myHasOwnDimLengthDisplayUnits;
   Standard_Boolean              myHasOwnDimAngleDisplayUnits;
 
-public:
-
-  DEFINE_STANDARD_RTTIEXT(Prs3d_Drawer,MMgt_TShared)
-
 };
+
+Standard_DEPRECATED("Class name is deprecated - use Prs3d_Drawer instead")
+typedef Prs3d_Drawer Graphic3d_HighlightStyle;
 
 #endif // _Prs3d_Drawer_HeaderFile

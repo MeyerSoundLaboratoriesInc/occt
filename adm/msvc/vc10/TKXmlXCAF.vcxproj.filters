@@ -2,13 +2,13 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{AF80A492-14A2-169D-161A-645B9DBAC2FB}</UniqueIdentifier>
+      <UniqueIdentifier>{421F1D00-11F9-102E-09E4-0A255F1B88B6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XmlXCAFDrivers">
-      <UniqueIdentifier>{5727123C-112C-0A65-15D3-BB03E4FC6F22}</UniqueIdentifier>
+      <UniqueIdentifier>{AC7DEA07-0A33-0347-1212-F27151EDB9D9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XmlMXCAFDoc">
-      <UniqueIdentifier>{E4440CE2-082B-1594-0933-88A2E87F69A0}</UniqueIdentifier>
+      <UniqueIdentifier>{44698686-1749-1960-15A1-9811DDBD0288}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,7 +27,13 @@
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_AreaDriver.cxx">
       <Filter>Source files\XmlMXCAFDoc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_AssemblyItemRefDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_CentroidDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_ClippingPlaneToolDriver.cxx">
       <Filter>Source files\XmlMXCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_ColorDriver.cxx">
@@ -63,7 +69,25 @@
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_MaterialToolDriver.cxx">
       <Filter>Source files\XmlMXCAFDoc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_NoteBalloonDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_NoteBinDataDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_NoteCommentDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_NoteDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_NotesToolDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_ShapeToolDriver.cxx">
+      <Filter>Source files\XmlMXCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_ViewToolDriver.cxx">
       <Filter>Source files\XmlMXCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XmlMXCAFDoc\XmlMXCAFDoc_VolumeDriver.cxx">

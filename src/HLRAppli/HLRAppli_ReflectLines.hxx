@@ -22,6 +22,8 @@
 #include <Standard_Handle.hxx>
 
 #include <HLRAlgo_Projector.hxx>
+#include <HLRBRep_Algo.hxx>
+#include <HLRBRep_TypeOfResultingEdge.hxx>
 #include <TopoDS_Shape.hxx>
 #include <Standard_Real.hxx>
 class TopoDS_Shape;
@@ -51,6 +53,12 @@ public:
   //! represented by edges in 3d
   Standard_EXPORT TopoDS_Shape GetResult() const;
 
+  //! returns resulting compound of lines
+  //! of specified type and visibility
+  //! represented by edges in 3d or 2d
+  Standard_EXPORT TopoDS_Shape GetCompoundOf3dEdges(const HLRBRep_TypeOfResultingEdge type,
+                                                    const Standard_Boolean            visible,
+                                                    const Standard_Boolean            In3d) const;
 
 
 
@@ -65,8 +73,9 @@ private:
 
 
   HLRAlgo_Projector myProjector;
+  Handle(HLRBRep_Algo) myHLRAlgo;
   TopoDS_Shape myShape;
-  TopoDS_Shape myCompound;
+  //TopoDS_Shape myCompound;
 
 
 };

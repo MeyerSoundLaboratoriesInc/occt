@@ -31,7 +31,7 @@ void pointLight (in int  theId,
   vec3 aLight = occLight_Position (theId).xyz;
   if (occLight_IsHeadlight (theId) == 0)
   {
-    aLight = vec3 (occWorldViewMatrix * occModelWorldMatrix * vec4 (aLight, 1.0));
+    aLight = vec3 (occWorldViewMatrix * vec4 (aLight, 1.0));
   }
   aLight -= thePoint;
 
@@ -67,8 +67,8 @@ void spotLight (in int  theId,
   vec3 aSpotDir = occLight_SpotDirection (theId).xyz;
   if (occLight_IsHeadlight (theId) == 0)
   {
-    aLight   = vec3 (occWorldViewMatrix * occModelWorldMatrix * vec4 (aLight,   1.0));
-    aSpotDir = vec3 (occWorldViewMatrix * occModelWorldMatrix * vec4 (aSpotDir, 0.0));
+    aLight   = vec3 (occWorldViewMatrix * vec4 (aLight,   1.0));
+    aSpotDir = vec3 (occWorldViewMatrix * vec4 (aSpotDir, 0.0));
   }
   aLight -= thePoint;
 
@@ -116,7 +116,7 @@ void directionalLight (in int  theId,
   vec3 aLight = normalize (occLight_Position (theId).xyz);
   if (occLight_IsHeadlight (theId) == 0)
   {
-    aLight = vec3 (occWorldViewMatrix * occModelWorldMatrix * vec4 (aLight, 0.0));
+    aLight = vec3 (occWorldViewMatrix * vec4 (aLight, 0.0));
   }
 
   vec3 aHalf = normalize (aLight + theView);
@@ -166,10 +166,11 @@ vec4 computeLighting (in vec3 theNormal,
   vec4 aMaterialDiffuse  = gl_FrontFacing ? occFrontMaterial_Diffuse()  : occBackMaterial_Diffuse();
   vec4 aMaterialSpecular = gl_FrontFacing ? occFrontMaterial_Specular() : occBackMaterial_Specular();
   vec4 aMaterialEmission = gl_FrontFacing ? occFrontMaterial_Emission() : occBackMaterial_Emission();
-  return vec4 (Ambient,  1.0) * aMaterialAmbient
-       + vec4 (Diffuse,  1.0) * aMaterialDiffuse
-       + vec4 (Specular, 1.0) * aMaterialSpecular
-                              + aMaterialEmission;
+  vec3 aColor = Ambient  * aMaterialAmbient.rgb
+              + Diffuse  * aMaterialDiffuse.rgb
+              + Specular * aMaterialSpecular.rgb
+                         + aMaterialEmission.rgb;
+  return vec4 (aColor, aMaterialDiffuse.a);
 }
 
 //! Entry point to the Fragment Shader
@@ -179,24 +180,12 @@ void main()
   for (int anIndex = 0; anIndex < occClipPlaneCount; ++anIndex)
   {
     vec4 aClipEquation = occClipPlaneEquations[anIndex];
-    int  aClipSpace    = occClipPlaneSpaces[anIndex];
-    if (aClipSpace == OccEquationCoords_World)
+    if (dot (aClipEquation.xyz, PositionWorld.xyz / PositionWorld.w) + aClipEquation.w < 0.0)
     {
-      if (dot (aClipEquation.xyz, PositionWorld.xyz) + aClipEquation.w < 0.0)
-      {
-        discard;
-      }
-    }
-    else if (aClipSpace == OccEquationCoords_View)
-    {
-      if (dot (aClipEquation.xyz, Position.xyz) + aClipEquation.w < 0.0)
-      {
-        discard;
-      }
+      discard;
     }
   }
 
-  gl_FragColor = computeLighting (normalize (Normal),
-                                  normalize (View),
-                                  Position);
+  vec4 aColor = computeLighting (normalize (Normal), normalize (View), Position);
+  occSetFragColor (aColor);
 }

@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{1EA21262-1274-0FC4-045F-B0768E378B74}</UniqueIdentifier>
+      <UniqueIdentifier>{3DFB2413-1199-1312-0257-592C1C5EF779}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\ViewerTest">
-      <UniqueIdentifier>{A484608E-0FDE-1606-125E-FC5ABAA89E28}</UniqueIdentifier>
+      <UniqueIdentifier>{C937FF87-0BB6-052B-17F0-32B95124A62E}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -13,9 +13,6 @@
       <Filter>Source files\ViewerTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ViewerTest\ViewerTest_AutoUpdater.cxx">
-      <Filter>Source files\ViewerTest</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\ViewerTest\ViewerTest_AviCommands.cxx">
       <Filter>Source files\ViewerTest</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\ViewerTest\ViewerTest_CmdParser.cxx">

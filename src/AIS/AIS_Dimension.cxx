@@ -99,8 +99,9 @@ namespace
 AIS_Dimension::AIS_Dimension (const AIS_KindOfDimension theType)
 : AIS_InteractiveObject  (),
   mySelToleranceForText2d(0.0),
+  myValueType            (ValueType_Computed),
   myCustomValue          (0.0),
-  myIsValueCustom        (Standard_False),
+  myCustomStringValue    (),
   myIsTextPositionFixed  (Standard_False), 
   mySpecialSymbol        (' '),
   myDisplaySpecialSymbol (AIS_DSS_No),
@@ -118,16 +119,41 @@ AIS_Dimension::AIS_Dimension (const AIS_KindOfDimension theType)
 //=======================================================================
 void AIS_Dimension::SetCustomValue (const Standard_Real theValue)
 {
-  if (myIsValueCustom && myCustomValue == theValue)
+  if (myValueType == ValueType_CustomReal && myCustomValue == theValue)
   {
     return;
   }
 
-  myIsValueCustom = Standard_True;
-
+  myValueType = ValueType_CustomReal;
   myCustomValue = theValue;
 
   SetToUpdate();
+}
+
+//=======================================================================
+//function : SetCustomValue
+//purpose  : 
+//=======================================================================
+void AIS_Dimension::SetCustomValue (const TCollection_ExtendedString& theValue)
+{
+  if (myValueType == ValueType_CustomText && myCustomStringValue == theValue)
+  {
+    return;
+  }
+
+  myValueType = ValueType_CustomText;
+  myCustomStringValue = theValue;
+
+  SetToUpdate();
+}
+
+//=======================================================================
+//function : GetCustomValue
+//purpose  : 
+//=======================================================================
+const TCollection_ExtendedString& AIS_Dimension::GetCustomValue () const
+{
+  return myCustomStringValue;
 }
 
 //=======================================================================
@@ -271,12 +297,20 @@ Standard_Real AIS_Dimension::ValueToDisplayUnits() const
 //=======================================================================
 TCollection_ExtendedString AIS_Dimension::GetValueString (Standard_Real& theWidth) const
 {
-  // format value string using "sprintf"
-  TCollection_AsciiString aFormatStr = myDrawer->DimensionAspect()->ValueStringFormat();
+  TCollection_ExtendedString aValueStr;
+  if (myValueType == ValueType_CustomText)
+  {
+    aValueStr = myCustomStringValue;
+  }
+  else
+  {
+    // format value string using "sprintf"
+    TCollection_AsciiString aFormatStr = myDrawer->DimensionAspect()->ValueStringFormat();
 
-  char aFmtBuffer[256];
-  sprintf (aFmtBuffer, aFormatStr.ToCString(), ValueToDisplayUnits());
-  TCollection_ExtendedString aValueStr = TCollection_ExtendedString (aFmtBuffer);
+    char aFmtBuffer[256];
+    sprintf (aFmtBuffer, aFormatStr.ToCString(), ValueToDisplayUnits());
+    aValueStr = TCollection_ExtendedString (aFmtBuffer);
+  }
 
   // add units to values string
   if (myDrawer->DimensionAspect()->IsUnitsDisplayed())
@@ -293,22 +327,17 @@ TCollection_ExtendedString AIS_Dimension::GetValueString (Standard_Real& theWidt
   }
 
   // Get text style parameters
-  Quantity_Color aColor; 
-  Standard_CString aFontName;
-  Standard_Real aFactor;
-  Standard_Real aSpace;
-  myDrawer->DimensionAspect()->TextAspect()->Aspect()->Values (aColor, aFontName, aFactor, aSpace);
-  Font_FontAspect aFontAspect = myDrawer->DimensionAspect()->TextAspect()->Aspect()->GetTextFontAspect();
-  Standard_Real   aFontHeight = myDrawer->DimensionAspect()->TextAspect()->Height();
-
-  NCollection_Utf8String anUTFString = (Standard_Utf16Char* )aValueStr.ToExtString();
+  Handle(Prs3d_TextAspect) aTextAspect = myDrawer->DimensionAspect()->TextAspect();
+  NCollection_Utf8String anUTFString (aValueStr.ToExtString());
 
   theWidth = 0.0;
 
   if (myDrawer->DimensionAspect()->IsText3d())
   {
     // text width produced by BRepFont
-    Font_BRepFont aFont (aFontName, aFontAspect, aFontHeight);
+    Font_BRepFont aFont (aTextAspect->Aspect()->Font().ToCString(),
+                         aTextAspect->Aspect()->GetTextFontAspect(),
+                         aTextAspect->Height());
 
     for (NCollection_Utf8Iter anIter = anUTFString.Iterator(); *anIter != 0; )
     {
@@ -321,7 +350,10 @@ TCollection_ExtendedString AIS_Dimension::GetValueString (Standard_Real& theWidt
   {
     // Text width for 1:1 scale 2D case
     Handle(Font_FTFont) aFont = new Font_FTFont();
-    aFont->Init (aFontName, aFontAspect, (const unsigned int)aFontHeight, THE_2D_TEXT_RESOLUTION);
+    aFont->Init (aTextAspect->Aspect()->Font().ToCString(),
+                 aTextAspect->Aspect()->GetTextFontAspect(),
+                 (const unsigned int)aTextAspect->Height(),
+                 THE_2D_TEXT_RESOLUTION);
 
     for (NCollection_Utf8Iter anIter = anUTFString.Iterator(); *anIter != 0; )
     {
@@ -342,18 +374,19 @@ void AIS_Dimension::DrawArrow (const Handle(Prs3d_Presentation)& thePresentation
                                const gp_Pnt& theLocation,
                                const gp_Dir& theDirection)
 {
-  Prs3d_Root::NewGroup (thePresentation);
+  Handle(Graphic3d_Group) aGroup = Prs3d_Root::NewGroup (thePresentation);
 
-  Quantity_Length aLength = myDrawer->DimensionAspect()->ArrowAspect()->Length();
-  Standard_Real   anAngle = myDrawer->DimensionAspect()->ArrowAspect()->Angle();
+  Standard_Real aLength = myDrawer->DimensionAspect()->ArrowAspect()->Length();
+  Standard_Real anAngle = myDrawer->DimensionAspect()->ArrowAspect()->Angle();
 
   if (myDrawer->DimensionAspect()->IsArrows3d())
   {
-    Prs3d_Arrow::Draw (thePresentation,
+    Prs3d_Arrow::Draw (aGroup,
                        theLocation,
                        theDirection,
                        anAngle,
                        aLength);
+    aGroup->SetGroupPrimitivesAspect (myDrawer->DimensionAspect()->ArrowAspect()->Aspect());
   }
   else
   {
@@ -370,21 +403,17 @@ void AIS_Dimension::DrawArrow (const Handle(Prs3d_Presentation)& thePresentation
     anArrow->AddVertex (aRightPoint);
 
     // Set aspect for arrow triangles
-    Quantity_Color aColor;
-    Aspect_TypeOfLine aTOL;
-    Standard_Real aWidth;
-    myDrawer->DimensionAspect()->ArrowAspect()->Aspect()->Values (aColor, aTOL, aWidth);
     Graphic3d_MaterialAspect aShadeMat (Graphic3d_NOM_DEFAULT);
     aShadeMat.SetReflectionModeOff (Graphic3d_TOR_AMBIENT);
     aShadeMat.SetReflectionModeOff (Graphic3d_TOR_DIFFUSE);
     aShadeMat.SetReflectionModeOff (Graphic3d_TOR_SPECULAR);
 
     Handle(Prs3d_ShadingAspect) aShadingStyle = new Prs3d_ShadingAspect();
-    aShadingStyle->SetColor (aColor);
+    aShadingStyle->SetColor (myDrawer->DimensionAspect()->ArrowAspect()->Aspect()->Color());
     aShadingStyle->SetMaterial (aShadeMat);
 
-    Prs3d_Root::CurrentGroup (thePresentation)->SetPrimitivesAspect (aShadingStyle->Aspect());
-    Prs3d_Root::CurrentGroup (thePresentation)->AddPrimitiveArray (anArrow);
+    aGroup->SetPrimitivesAspect (aShadingStyle->Aspect());
+    aGroup->AddPrimitiveArray (anArrow);
   }
 
   SelectionGeometry::Arrow& aSensitiveArrow = mySelectionGeom.NewArrow();
@@ -405,17 +434,15 @@ void AIS_Dimension::drawText (const Handle(Prs3d_Presentation)& thePresentation,
   if (myDrawer->DimensionAspect()->IsText3d())
   {
     // getting font parameters
-    Quantity_Color aColor;
-    Standard_CString aFontName;
-    Standard_Real anExpansionFactor;
-    Standard_Real aSpace;
-    myDrawer->DimensionAspect()->TextAspect()->Aspect()->Values (aColor, aFontName, anExpansionFactor, aSpace);
-    Font_FontAspect aFontAspect = myDrawer->DimensionAspect()->TextAspect()->Aspect()->GetTextFontAspect();
-    Standard_Real aFontHeight = myDrawer->DimensionAspect()->TextAspect()->Height();
+    Handle(Prs3d_TextAspect) aTextAspect = myDrawer->DimensionAspect()->TextAspect();
+    Quantity_Color  aColor      = aTextAspect->Aspect()->Color();
+    Font_FontAspect aFontAspect = aTextAspect->Aspect()->GetTextFontAspect();
+    Standard_Real   aFontHeight = aTextAspect->Height();
 
     // creating TopoDS_Shape for text
-    Font_BRepFont aFont (aFontName, aFontAspect, aFontHeight);
-    NCollection_Utf8String anUTFString = (Standard_Utf16Char* )theText.ToExtString();
+    Font_BRepFont aFont (aTextAspect->Aspect()->Font().ToCString(),
+                         aFontAspect, aFontHeight);
+    NCollection_Utf8String anUTFString (theText.ToExtString());
 
     Font_BRepTextBuilder aBuilder;
     TopoDS_Shape aTextShape = aBuilder.Perform (aFont, anUTFString);
@@ -538,7 +565,7 @@ void AIS_Dimension::drawText (const Handle(Prs3d_Presentation)& thePresentation,
   // generate primitives for 2D text
   myDrawer->DimensionAspect()->TextAspect()->Aspect()->SetDisplayType (Aspect_TODT_DIMENSION);
 
-  Prs3d_Text::Draw (thePresentation,
+  Prs3d_Text::Draw (Prs3d_Root::CurrentGroup (thePresentation),
                     myDrawer->DimensionAspect()->TextAspect(),
                     theText,
                     theTextPos);
@@ -629,14 +656,14 @@ void AIS_Dimension::DrawLinearDimension (const Handle(Prs3d_Presentation)& thePr
   // do not build any dimension for equal points
   if (theFirstPoint.IsEqual (theSecondPoint, Precision::Confusion()))
   {
-    Standard_ProgramError::Raise ("Can not build presentation for equal points.");
+    throw Standard_ProgramError("Can not build presentation for equal points.");
   }
 
   Handle(Prs3d_DimensionAspect) aDimensionAspect = myDrawer->DimensionAspect();
 
   // For extensions we need to know arrow size, text size and extension size: get it from aspect
-  Quantity_Length anArrowLength   = aDimensionAspect->ArrowAspect()->Length();
-  Standard_Real   anExtensionSize = aDimensionAspect->ExtensionSize();
+  Standard_Real anArrowLength   = aDimensionAspect->ArrowAspect()->Length();
+  Standard_Real anExtensionSize = aDimensionAspect->ExtensionSize();
   // prepare label string and compute its geometrical width
   Standard_Real aLabelWidth;
   TCollection_ExtendedString aLabelString = GetValueString (aLabelWidth);
@@ -657,28 +684,16 @@ void AIS_Dimension::DrawLinearDimension (const Handle(Prs3d_Presentation)& thePr
     if (!AdjustParametersForLinear (myFixedTextPosition, theFirstPoint, theSecondPoint,
                                     anExtensionSize, aHorisontalTextPos, myFlyout, myPlane, myIsPlaneCustom))
     {
-      Standard_ProgramError::Raise ("Can not adjust plane to the custom label position.");
+      throw Standard_ProgramError("Can not adjust plane to the custom label position.");
     }
   }
 
   FitTextAlignmentForLinear (theFirstPoint, theSecondPoint, theIsOneSide, aHorisontalTextPos,
                              aLabelPosition, isArrowsExternal);
 
-    // compute dimension line points
-  gp_Ax1 aPlaneNormal = GetPlane().Axis();
-  gp_Dir aTargetPointsVector = gce_MakeDir (theFirstPoint, theSecondPoint);
-
-  // compute flyout direction vector
-  gp_Dir aFlyoutVector = aPlaneNormal.Direction() ^ aTargetPointsVector;
-
-  // create lines for layouts
-  gp_Lin aLine1 (theFirstPoint, aFlyoutVector);
-  gp_Lin aLine2 (theSecondPoint, aFlyoutVector);
-
-  // Get flyout end points
-  gp_Pnt aLineBegPoint = ElCLib::Value (ElCLib::Parameter (aLine1, theFirstPoint)  + GetFlyout(), aLine1);
-  gp_Pnt aLineEndPoint = ElCLib::Value (ElCLib::Parameter (aLine2, theSecondPoint) + GetFlyout(), aLine2);
-
+  // compute dimension line points
+  gp_Pnt aLineBegPoint, aLineEndPoint;
+  ComputeFlyoutLinePoints (theFirstPoint, theSecondPoint, aLineBegPoint, aLineEndPoint);
   gp_Lin aDimensionLine = gce_MakeLin (aLineBegPoint, aLineEndPoint);
 
   // compute arrows positions and directions
@@ -967,6 +982,27 @@ void AIS_Dimension::DrawLinearDimension (const Handle(Prs3d_Presentation)& thePr
   }
 
   mySelectionGeom.IsComputed = Standard_True;
+}
+
+//=======================================================================
+//function : ComputeFlyoutLinePoints
+//purpose  :
+//=======================================================================
+void AIS_Dimension::ComputeFlyoutLinePoints (const gp_Pnt& theFirstPoint, const gp_Pnt& theSecondPoint,
+                                             gp_Pnt& theLineBegPoint, gp_Pnt& theLineEndPoint)
+{
+  // compute dimension line points
+  gp_Ax1 aPlaneNormal = GetPlane().Axis();
+  // compute flyout direction vector
+  gp_Dir aTargetPointsVector = gce_MakeDir (theFirstPoint, theSecondPoint);
+  gp_Dir aFlyoutVector = aPlaneNormal.Direction() ^ aTargetPointsVector;
+  // create lines for layouts
+  gp_Lin aLine1 (theFirstPoint, aFlyoutVector);
+  gp_Lin aLine2 (theSecondPoint, aFlyoutVector);
+
+  // Get flyout end points
+  theLineBegPoint = ElCLib::Value (ElCLib::Parameter (aLine1, theFirstPoint)  + GetFlyout(), aLine1);
+  theLineEndPoint = ElCLib::Value (ElCLib::Parameter (aLine2, theSecondPoint) + GetFlyout(), aLine2);
 }
 
 //=======================================================================
@@ -1281,8 +1317,8 @@ void AIS_Dimension::ComputeSelection (const Handle(SelectMgr_Selection)& theSele
       aGroupOfSensitives->Add (new Select3D_SensitiveCurve (aSensitiveOwner, aSensitivePnts));
     }
 
-    Quantity_Length anArrowLength = myDrawer->DimensionAspect()->ArrowAspect()->Length();
-    Standard_Real   anArrowAngle  = myDrawer->DimensionAspect()->ArrowAspect()->Angle();
+    Standard_Real anArrowLength = myDrawer->DimensionAspect()->ArrowAspect()->Length();
+    Standard_Real anArrowAngle  = myDrawer->DimensionAspect()->ArrowAspect()->Angle();
 
     // sensitives for arrows
     SelectionGeometry::SeqOfArrows::Iterator anArrowIt (mySelectionGeom.Arrows);
@@ -1583,7 +1619,7 @@ void AIS_Dimension::FitTextAlignmentForLinear (const gp_Pnt& theFirstPoint,
   Handle(Prs3d_DimensionAspect) aDimensionAspect = myDrawer->DimensionAspect();
 
   // For extensions we need to know arrow size, text size and extension size: get it from aspect
-  Quantity_Length anArrowLength = aDimensionAspect->ArrowAspect()->Length();
+  Standard_Real anArrowLength = aDimensionAspect->ArrowAspect()->Length();
 
   // prepare label string and compute its geometrical width
   Standard_Real aLabelWidth;

@@ -28,11 +28,14 @@
 
 #include <OpenGl_GlCore32.hxx>
 
+#include "../Shaders/Shaders_DeclarationsImpl_glsl.pxx"
+#include "../Shaders/Shaders_Declarations_glsl.pxx"
+
 #ifdef _WIN32
   #include <malloc.h> // for alloca()
 #endif
 
-IMPLEMENT_STANDARD_RTTIEXT(OpenGl_ShaderProgram,OpenGl_Resource)
+IMPLEMENT_STANDARD_RTTIEXT(OpenGl_ShaderProgram, OpenGl_NamedResource)
 
 OpenGl_VariableSetterSelector OpenGl_ShaderProgram::mySetterSelector = OpenGl_VariableSetterSelector();
 
@@ -53,7 +56,6 @@ Standard_CString OpenGl_ShaderProgram::PredefinedKeywords[] =
   "occProjectionMatrixInverseTranspose", // OpenGl_OCC_PROJECTION_MATRIX_INVERSE_TRANSPOSE
 
   "occClipPlaneEquations", // OpenGl_OCC_CLIP_PLANE_EQUATIONS
-  "occClipPlaneSpaces",    // OpenGl_OCC_CLIP_PLANE_SPACES
   "occClipPlaneCount",     // OpenGl_OCC_CLIP_PLANE_COUNT
 
   "occLightSourcesCount",  // OpenGl_OCC_LIGHT_SOURCE_COUNT
@@ -61,17 +63,37 @@ Standard_CString OpenGl_ShaderProgram::PredefinedKeywords[] =
   "occLightSources",       // OpenGl_OCC_LIGHT_SOURCE_PARAMS
   "occLightAmbient",       // OpenGl_OCC_LIGHT_AMBIENT
 
-  "occActiveSampler",      // OpenGl_OCCT_ACTIVE_SAMPLER
   "occTextureEnable",      // OpenGl_OCCT_TEXTURE_ENABLE
   "occDistinguishingMode", // OpenGl_OCCT_DISTINGUISH_MODE
   "occFrontMaterial",      // OpenGl_OCCT_FRONT_MATERIAL
   "occBackMaterial",       // OpenGl_OCCT_BACK_MATERIAL
+  "occAlphaCutoff",        // OpenGl_OCCT_ALPHA_CUTOFF
   "occColor",              // OpenGl_OCCT_COLOR
+
+  "occOitOutput",          // OpenGl_OCCT_OIT_OUTPUT
+  "occOitDepthFactor",     // OpenGl_OCCT_OIT_DEPTH_FACTOR
 
   "occTexTrsf2d",          // OpenGl_OCCT_TEXTURE_TRSF2D
   "occPointSize"           // OpenGl_OCCT_POINT_SIZE
-
 };
+
+namespace
+{
+  //! Convert Graphic3d_TypeOfShaderObject enumeration into OpenGL enumeration.
+  static GLenum shaderTypeToGl (Graphic3d_TypeOfShaderObject theType)
+  {
+    switch (theType)
+    {
+      case Graphic3d_TOS_VERTEX:          return GL_VERTEX_SHADER;
+      case Graphic3d_TOS_FRAGMENT:        return GL_FRAGMENT_SHADER;
+      case Graphic3d_TOS_GEOMETRY:        return GL_GEOMETRY_SHADER;
+      case Graphic3d_TOS_TESS_CONTROL:    return GL_TESS_CONTROL_SHADER;
+      case Graphic3d_TOS_TESS_EVALUATION: return GL_TESS_EVALUATION_SHADER;
+      case Graphic3d_TOS_COMPUTE:         return GL_COMPUTE_SHADER;
+    }
+    return 0;
+  }
+}
 
 // =======================================================================
 // function : OpenGl_VariableSetterSelector
@@ -124,9 +146,16 @@ void OpenGl_VariableSetterSelector::Set (const Handle(OpenGl_Context)&          
 // purpose  : Creates uninitialized shader program
 // =======================================================================
 OpenGl_ShaderProgram::OpenGl_ShaderProgram (const Handle(Graphic3d_ShaderProgram)& theProxy)
-: myProgramID (NO_PROGRAM),
+: OpenGl_NamedResource (!theProxy.IsNull() ? theProxy->GetId() : ""),
+  myProgramID (NO_PROGRAM),
   myProxy     (theProxy),
-  myShareCount(1)
+  myShareCount(1),
+  myNbLightsMax (0),
+  myNbClipPlanesMax (0),
+  myNbFragOutputs (1),
+  myHasAlphaTest (false),
+  myHasWeightOitOutput (false),
+  myHasTessShader (false)
 {
   memset (myCurrentState, 0, sizeof (myCurrentState));
   for (GLint aVar = 0; aVar < OpenGl_OCCT_NUMBER_OF_STATE_VARIABLES; ++aVar)
@@ -142,133 +171,223 @@ OpenGl_ShaderProgram::OpenGl_ShaderProgram (const Handle(Graphic3d_ShaderProgram
 Standard_Boolean OpenGl_ShaderProgram::Initialize (const Handle(OpenGl_Context)&     theCtx,
                                                    const Graphic3d_ShaderObjectList& theShaders)
 {
+  myHasTessShader = false;
   if (theCtx.IsNull() || !Create (theCtx))
   {
     return Standard_False;
   }
 
-  OSD_File aDeclFile     (Graphic3d_ShaderProgram::ShadersFolder() + "/Declarations.glsl");
-  OSD_File aDeclImplFile (Graphic3d_ShaderProgram::ShadersFolder() + "/DeclarationsImpl.glsl");
-  if (!aDeclFile.Exists()
-   || !aDeclImplFile.Exists())
+  TCollection_AsciiString aHeaderVer = !myProxy.IsNull() ? myProxy->Header() : TCollection_AsciiString();
+  int aShaderMask = 0;
+  for (Graphic3d_ShaderObjectList::Iterator anIter (theShaders); anIter.More(); anIter.Next())
   {
-    const TCollection_ExtendedString aMsg = "Error! Failed to load OCCT shader declarations file";
-    theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                         GL_DEBUG_TYPE_ERROR,
-                         0,
-                         GL_DEBUG_SEVERITY_HIGH,
-                         aMsg);
-    return Standard_False;
+    aShaderMask |= anIter.Value()->Type();
   }
+  myHasTessShader = (aShaderMask & (Graphic3d_TOS_TESS_CONTROL | Graphic3d_TOS_TESS_EVALUATION)) != 0;
+  myNbFragOutputs = !myProxy.IsNull() ? myProxy->NbFragmentOutputs() : 1;
+  myHasAlphaTest  = !myProxy.IsNull() && myProxy->HasAlphaTest();
+  myHasWeightOitOutput = !myProxy.IsNull() ? myProxy->HasWeightOitOutput() && myNbFragOutputs >= 2 : 1;
 
-  TCollection_AsciiString aHeader = !myProxy.IsNull() && !myProxy->Header().IsEmpty()
-                                  ? (myProxy->Header() + "\n")
-                                  : TCollection_AsciiString();
+  // detect the minimum GLSL version required for defined Shader Objects
+#if defined(GL_ES_VERSION_2_0)
+  if (myHasTessShader
+  || (aShaderMask & Graphic3d_TOS_GEOMETRY) != 0)
+  {
+    if (!theCtx->IsGlGreaterEqual (3, 2))
+    {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error! Geometry and Tessellation shaders require OpenGL ES 3.2+");
+      return false;
+    }
+    else if (aHeaderVer.IsEmpty())
+    {
+      aHeaderVer = "#version 320 es";
+    }
+  }
+  else if ((aShaderMask & Graphic3d_TOS_COMPUTE) != 0)
+  {
+    if (!theCtx->IsGlGreaterEqual (3, 1))
+    {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error! Compute shaders require OpenGL ES 3.1+");
+      return false;
+    }
+    else if (aHeaderVer.IsEmpty())
+    {
+      aHeaderVer = "#version 310 es";
+    }
+  }
+#else
+  if ((aShaderMask & Graphic3d_TOS_COMPUTE) != 0)
+  {
+    if (!theCtx->IsGlGreaterEqual (4, 3))
+    {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error! Compute shaders require OpenGL 4.3+");
+      return 0;
+    }
+    else if (aHeaderVer.IsEmpty())
+    {
+      aHeaderVer = "#version 430";
+    }
+  }
+  else if (myHasTessShader)
+  {
+    if (!theCtx->IsGlGreaterEqual (4, 0))
+    {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error! Tessellation shaders require OpenGL 4.0+");
+      return 0;
+    }
+    else if (aHeaderVer.IsEmpty())
+    {
+      aHeaderVer = "#version 400";
+    }
+  }
+  else if ((aShaderMask & Graphic3d_TOS_GEOMETRY) != 0)
+  {
+    if (!theCtx->IsGlGreaterEqual (3, 2))
+    {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                           "Error! Geometry shaders require OpenGL 3.2+");
+      return 0;
+    }
+    else if (aHeaderVer.IsEmpty())
+    {
+      aHeaderVer = "#version 150";
+    }
+  }
+#endif
 
-  TCollection_AsciiString aDeclarations;
-  aDeclFile.Open (OSD_ReadOnly, OSD_Protection());
-  aDeclFile.Read (aDeclarations, (int)aDeclFile.Size());
-  aDeclFile.Close();
-
-  TCollection_AsciiString aDeclImpl;
-  aDeclImplFile.Open (OSD_ReadOnly, OSD_Protection());
-  aDeclImplFile.Read (aDeclImpl, (int)aDeclImplFile.Size());
-  aDeclImplFile.Close();
-  aDeclarations += aDeclImpl;
-
-  for (Graphic3d_ShaderObjectList::Iterator anIter (theShaders);
-       anIter.More(); anIter.Next())
+  for (Graphic3d_ShaderObjectList::Iterator anIter (theShaders); anIter.More(); anIter.Next())
   {
     if (!anIter.Value()->IsDone())
     {
       const TCollection_ExtendedString aMsg = "Error! Failed to get shader source";
-      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                           GL_DEBUG_TYPE_ERROR,
-                           0,
-                           GL_DEBUG_SEVERITY_HIGH,
-                           aMsg);
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, aMsg);
       return Standard_False;
     }
 
-    Handle(OpenGl_ShaderObject) aShader;
-
-    // Note: Add support of other shader types here
-    switch (anIter.Value()->Type())
+    const GLenum aShaderType = shaderTypeToGl (anIter.Value()->Type());
+    if (aShaderType == 0)
     {
-      case Graphic3d_TOS_VERTEX:
-        aShader = new OpenGl_ShaderObject (GL_VERTEX_SHADER);
-        break;
-      case Graphic3d_TOS_FRAGMENT:
-        aShader = new OpenGl_ShaderObject (GL_FRAGMENT_SHADER);
-        break;
-    }
-
-    // Is unsupported shader type?
-    if (aShader.IsNull())
-    {
-      TCollection_ExtendedString aMsg = "Error! Unsupported shader type";
-      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                           GL_DEBUG_TYPE_ERROR,
-                           0,
-                           GL_DEBUG_SEVERITY_HIGH,
-                           aMsg);
       return Standard_False;
     }
 
+    Handle(OpenGl_ShaderObject) aShader = new OpenGl_ShaderObject (aShaderType);
     if (!aShader->Create (theCtx))
     {
       aShader->Release (theCtx.operator->());
       return Standard_False;
     }
 
-    TCollection_AsciiString aSource = aDeclarations + anIter.Value()->Source();
-    switch (anIter.Value()->Type())
+    TCollection_AsciiString anExtensions = "// Enable extensions used in OCCT GLSL programs\n";
+    if (myNbFragOutputs > 1)
     {
-      case Graphic3d_TOS_VERTEX:
+      if (theCtx->hasDrawBuffers)
       {
-        aSource = aHeader + TCollection_AsciiString ("#define VERTEX_SHADER\n") + aSource;
-        break;
+        anExtensions += "#define OCC_ENABLE_draw_buffers\n";
+        if (myHasWeightOitOutput)
+        {
+          anExtensions += "#define OCC_WRITE_WEIGHT_OIT_COVERAGE\n";
+        }
       }
-      case Graphic3d_TOS_FRAGMENT:
+      else
       {
-      #if defined(GL_ES_VERSION_2_0)
-        TCollection_AsciiString aPrefix (theCtx->hasHighp
-                                       ? "precision highp float;\n"
-                                         "precision highp int;\n"
-                                       : "precision mediump float;\n"
-                                         "precision mediump int;\n");
-        aSource = aHeader + aPrefix + aSource;
-      #else
-        aSource = aHeader + aSource;
-      #endif
-        break;
+        theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
+                             "Error! Multiple draw buffers required by the program, but aren't supported by OpenGL");
+        return Standard_False;
+      }
+
+      if (theCtx->hasDrawBuffers == OpenGl_FeatureInExtensions)
+      {
+        if (theCtx->arbDrawBuffers)
+        {
+          anExtensions += "#extension GL_ARB_draw_buffers : enable\n";
+        }
+        else if (theCtx->extDrawBuffers)
+        {
+          anExtensions += "#extension GL_EXT_draw_buffers : enable\n";
+        }
       }
     }
+    if (myHasAlphaTest)
+    {
+      anExtensions += "#define OCC_ALPHA_TEST\n";
+    }
 
+    if (theCtx->hasSampleVariables == OpenGl_FeatureInExtensions)
+    {
+#if defined(GL_ES_VERSION_2_0)
+      if (theCtx->oesSampleVariables)
+      {
+        anExtensions += "#extension GL_OES_sample_variables : enable\n";
+      }
+#else
+      if (theCtx->arbSampleShading)
+      {
+        anExtensions += "#extension GL_ARB_sample_shading : enable\n";
+      }
+#endif
+    }
+
+    TCollection_AsciiString aPrecisionHeader;
+    if (anIter.Value()->Type() == Graphic3d_TOS_FRAGMENT)
+    {
+    #if defined(GL_ES_VERSION_2_0)
+      aPrecisionHeader = theCtx->hasHighp
+                       ? "precision highp float;\n"
+                         "precision highp int;\n"
+                       : "precision mediump float;\n"
+                         "precision mediump int;\n";
+    #endif
+    }
+
+    TCollection_AsciiString aHeaderType;
+    switch (anIter.Value()->Type())
+    {
+      case Graphic3d_TOS_COMPUTE:         { aHeaderType = "#define COMPUTE_SHADER\n";         break; }
+      case Graphic3d_TOS_VERTEX:          { aHeaderType = "#define VERTEX_SHADER\n";          break; }
+      case Graphic3d_TOS_TESS_CONTROL:    { aHeaderType = "#define TESS_CONTROL_SHADER\n";    break; }
+      case Graphic3d_TOS_TESS_EVALUATION: { aHeaderType = "#define TESS_EVALUATION_SHADER\n"; break; }
+      case Graphic3d_TOS_GEOMETRY:        { aHeaderType = "#define GEOMETRY_SHADER\n";        break; }
+      case Graphic3d_TOS_FRAGMENT:        { aHeaderType = "#define FRAGMENT_SHADER\n";        break; }
+    }
+
+    TCollection_AsciiString aHeaderConstants;
+    myNbLightsMax     = !myProxy.IsNull() ? myProxy->NbLightsMax() : 0;
+    myNbClipPlanesMax = !myProxy.IsNull() ? myProxy->NbClipPlanesMax() : 0;
+    aHeaderConstants += TCollection_AsciiString("#define THE_MAX_LIGHTS ") + myNbLightsMax + "\n";
+    aHeaderConstants += TCollection_AsciiString("#define THE_MAX_CLIP_PLANES ") + myNbClipPlanesMax + "\n";
+    aHeaderConstants += TCollection_AsciiString("#define THE_NB_FRAG_OUTPUTS ") + myNbFragOutputs + "\n";
+
+    const TCollection_AsciiString aSource = aHeaderVer                     // #version   - header defining GLSL version, should be first
+                                          + (!aHeaderVer.IsEmpty() ? "\n" : "")
+                                          + anExtensions                   // #extension - list of enabled extensions,   should be second
+                                          + aPrecisionHeader               // precision  - default precision qualifiers, should be before any code
+                                          + aHeaderType                    // auxiliary macros defining a shader stage (type)
+                                          + aHeaderConstants
+                                          + Shaders_Declarations_glsl      // common declarations (global constants and Vertex Shader inputs)
+                                          + Shaders_DeclarationsImpl_glsl
+                                          + anIter.Value()->Source();      // the source code itself (defining main() function)
     if (!aShader->LoadSource (theCtx, aSource))
     {
-      const TCollection_ExtendedString aMsg = "Error! Failed to set shader source";
-      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                           GL_DEBUG_TYPE_ERROR,
-                           0,
-                           GL_DEBUG_SEVERITY_HIGH,
-                           aMsg);
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, aSource);
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, "Error! Failed to set shader source");
       aShader->Release (theCtx.operator->());
       return Standard_False;
     }
 
     if (!aShader->Compile (theCtx))
     {
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH, aSource);
       TCollection_AsciiString aLog;
       aShader->FetchInfoLog (theCtx, aLog);
       if (aLog.IsEmpty())
       {
         aLog = "Compilation log is empty.";
       }
-      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                           GL_DEBUG_TYPE_ERROR,
-                           0,
-                           GL_DEBUG_SEVERITY_HIGH,
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
                            TCollection_ExtendedString ("Failed to compile shader object. Compilation log:\n") + aLog);
       aShader->Release (theCtx.operator->());
       return Standard_False;
@@ -280,10 +399,7 @@ Standard_Boolean OpenGl_ShaderProgram::Initialize (const Handle(OpenGl_Context)&
       if (!aLog.IsEmpty()
        && !aLog.IsEqual ("No errors.\n"))
       {
-        theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                             GL_DEBUG_TYPE_PORTABILITY,
-                             0,
-                             GL_DEBUG_SEVERITY_LOW,
+        theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_LOW,
                              TCollection_ExtendedString ("Shader compilation log:\n") + aLog);
       }
     }
@@ -319,10 +435,7 @@ Standard_Boolean OpenGl_ShaderProgram::Initialize (const Handle(OpenGl_Context)&
     {
       aLog = "Linker log is empty.";
     }
-    theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                         GL_DEBUG_TYPE_ERROR,
-                         0,
-                         GL_DEBUG_SEVERITY_HIGH,
+    theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_ERROR, 0, GL_DEBUG_SEVERITY_HIGH,
                          TCollection_ExtendedString ("Failed to link program object! Linker log:\n") + aLog);
     return Standard_False;
   }
@@ -333,14 +446,42 @@ Standard_Boolean OpenGl_ShaderProgram::Initialize (const Handle(OpenGl_Context)&
     if (!aLog.IsEmpty()
      && !aLog.IsEqual ("No errors.\n"))
     {
-      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION,
-                           GL_DEBUG_TYPE_PORTABILITY,
-                           0,
-                           GL_DEBUG_SEVERITY_LOW,
+      theCtx->PushMessage (GL_DEBUG_SOURCE_APPLICATION, GL_DEBUG_TYPE_PORTABILITY, 0, GL_DEBUG_SEVERITY_LOW,
                            TCollection_ExtendedString ("GLSL linker log:\n") + aLog);
     }
   }
 
+  // set uniform defaults
+  const Handle(OpenGl_ShaderProgram)& anOldProgram = theCtx->ActiveProgram();
+  theCtx->core20fwd->glUseProgram (myProgramID);
+  {
+    const GLint aLocTexEnable = GetStateLocation (OpenGl_OCCT_TEXTURE_ENABLE);
+    if (aLocTexEnable != INVALID_LOCATION)
+    {
+      SetUniform (theCtx, aLocTexEnable, 0); // Off
+    }
+  }
+  {
+    const GLint aLocSampler = GetUniformLocation (theCtx, "occActiveSampler");
+    if (aLocSampler != INVALID_LOCATION)
+    {
+      SetUniform (theCtx, aLocSampler, GLint(Graphic3d_TextureUnit_0));
+    }
+  }
+
+  const TCollection_AsciiString aSamplerNamePrefix ("occSampler");
+  const Standard_Integer aNbUnitsMax = Max (theCtx->MaxCombinedTextureUnits(), Graphic3d_TextureUnit_NB);
+  for (GLint aUnitIter = 0; aUnitIter < aNbUnitsMax; ++aUnitIter)
+  {
+    const TCollection_AsciiString aName = aSamplerNamePrefix + aUnitIter;
+    const GLint aLocSampler = GetUniformLocation (theCtx, aName.ToCString());
+    if (aLocSampler != INVALID_LOCATION)
+    {
+      SetUniform (theCtx, aLocSampler, aUnitIter);
+    }
+  }
+
+  theCtx->core20fwd->glUseProgram (!anOldProgram.IsNull() ? anOldProgram->ProgramId() : OpenGl_ShaderProgram::NO_PROGRAM);
   return Standard_True;
 }
 
@@ -480,32 +621,6 @@ Standard_Boolean OpenGl_ShaderProgram::ApplyVariables(const Handle(OpenGl_Contex
 
   myProxy->ClearVariables();
   return Standard_True;
-}
-
-// =======================================================================
-// function : ActiveState
-// purpose  : Returns index of last modification for specified state type
-// =======================================================================
-Standard_Size OpenGl_ShaderProgram::ActiveState (const OpenGl_UniformStateType theType) const
-{
-  if (theType < MaxStateTypes)
-  {
-    return myCurrentState[theType];
-  }
-  return 0;
-}
-
-// =======================================================================
-// function : UpdateState
-// purpose  : Updates index of last modification for specified state type
-// =======================================================================
-void OpenGl_ShaderProgram::UpdateState (const OpenGl_UniformStateType theType,
-                                        const Standard_Size           theIndex)
-{
-  if (theType < MaxStateTypes)
-  {
-    myCurrentState[theType] = theIndex;
-  }
 }
 
 // =======================================================================
@@ -1278,7 +1393,7 @@ Standard_Boolean OpenGl_ShaderProgram::SetUniform (const Handle(OpenGl_Context)&
 // =======================================================================
 Standard_Boolean OpenGl_ShaderProgram::SetSampler (const Handle(OpenGl_Context)& theCtx,
                                                    const GLchar*                 theName,
-                                                   const GLenum                  theTextureUnit)
+                                                   const Graphic3d_TextureUnit   theTextureUnit)
 {
   return SetSampler (theCtx, GetUniformLocation (theCtx, theName), theTextureUnit);
 }
@@ -1289,7 +1404,7 @@ Standard_Boolean OpenGl_ShaderProgram::SetSampler (const Handle(OpenGl_Context)&
 // =======================================================================
 Standard_Boolean OpenGl_ShaderProgram::SetSampler (const Handle(OpenGl_Context)& theCtx,
                                                    GLint                         theLocation,
-                                                   const GLenum                  theTextureUnit)
+                                                   const Graphic3d_TextureUnit   theTextureUnit)
 {
   if (myProgramID == NO_PROGRAM || theLocation == INVALID_LOCATION)
   {

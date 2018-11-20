@@ -96,6 +96,13 @@ public:
   //! Notice that altering this flag clears currently accumulated cache!
   Standard_EXPORT void SetCompositeCurveMode (const Standard_Boolean theToConcatenate);
 
+  //! Setup glyph scaling along X-axis.
+  //! By default glyphs are not scaled (scaling factor = 1.0)
+  void SetWidthScaling (const float theScaleFactor)
+  {
+    myWidthScaling = theScaleFactor;
+  }
+
 public:
 
   //! @return vertical distance from the horizontal baseline to the highest character coordinate.
@@ -182,12 +189,6 @@ private:
   bool to3d (const Handle(Geom2d_Curve)& theCurve2d,
              const GeomAbs_Shape        theContinuity,
              Handle(Geom_Curve)&        theCurve3d);
-
-  //! Auxiliary method to convert FT_Vector to gp_XY
-  gp_XY readFTVec (const FT_Vector& theVec) const
-  {
-    return gp_XY (myScaleUnits * Standard_Real(theVec.x) / 64.0, myScaleUnits * Standard_Real(theVec.y) / 64.0);
-  }
 
 protected: //! @name Protected fields
 

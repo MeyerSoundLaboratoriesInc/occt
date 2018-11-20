@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <LDOM_MemManager.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_ExtStringList.hxx>
@@ -29,12 +29,13 @@ IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_ExtStringListDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (FirstIndexString, "first")
 IMPLEMENT_DOMSTRING (LastIndexString,  "last")
 IMPLEMENT_DOMSTRING (ExtString,        "string")
+IMPLEMENT_DOMSTRING (AttributeIDString, "extstrlistattguid")
 
 //=======================================================================
 //function : XmlMDataStd_ExtStringListDriver
 //purpose  : Constructor
 //=======================================================================
-XmlMDataStd_ExtStringListDriver::XmlMDataStd_ExtStringListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+XmlMDataStd_ExtStringListDriver::XmlMDataStd_ExtStringListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : XmlMDF_ADriver (theMsgDriver, NULL)
 {
 
@@ -54,8 +55,8 @@ Handle(TDF_Attribute) XmlMDataStd_ExtStringListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean XmlMDataStd_ExtStringListDriver::Paste(const XmlObjMgt_Persistent&  theSource,
-							const Handle(TDF_Attribute)& theTarget,
-							XmlObjMgt_RRelocationTable&  ) const
+                                                        const Handle(TDF_Attribute)& theTarget,
+                                                        XmlObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aFirstInd, aLastInd;
   const XmlObjMgt_Element& anElement = theSource;
@@ -70,7 +71,7 @@ Standard_Boolean XmlMDataStd_ExtStringListDriver::Paste(const XmlObjMgt_Persiste
       TCollection_ExtendedString("Cannot retrieve the first index"
                                  " for ExtStringList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -81,34 +82,43 @@ Standard_Boolean XmlMDataStd_ExtStringListDriver::Paste(const XmlObjMgt_Persiste
       TCollection_ExtendedString("Cannot retrieve the last index"
                                  " for ExtStringList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
-  if(aLastInd == 0) return Standard_True;
   const Handle(TDataStd_ExtStringList) anExtStringList = Handle(TDataStd_ExtStringList)::DownCast(theTarget);
-  
-  if (!anElement.hasChildNodes())
-  {
-    TCollection_ExtendedString aMessageString = 
-      TCollection_ExtendedString("Cannot retrieve a list of extended strings");
-    WriteMessage (aMessageString);
-    return Standard_False;
-  }
+  // attribute id
+  Standard_GUID aGUID;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_ExtStringList::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
 
-  LDOM_Node aCurNode = anElement.getFirstChild();
-  LDOM_Element* aCurElement = (LDOM_Element*)&aCurNode;
-  TCollection_ExtendedString aValueStr;
-  while (*aCurElement != anElement.getLastChild())
-  {
+  anExtStringList->SetID(aGUID);
+
+  if(aLastInd > 0) {
+    if (!anElement.hasChildNodes())
+    {
+      TCollection_ExtendedString aMessageString = 
+        TCollection_ExtendedString("Cannot retrieve a list of extended strings");
+      myMessageDriver->Send (aMessageString, Message_Warning);
+    }
+
+    LDOM_Node aCurNode = anElement.getFirstChild();
+    LDOM_Element* aCurElement = (LDOM_Element*)&aCurNode;
+    TCollection_ExtendedString aValueStr;
+    while (*aCurElement != anElement.getLastChild())
+    {
+      XmlObjMgt::GetExtendedString( *aCurElement, aValueStr );
+      anExtStringList->Append(aValueStr);
+      aCurNode = aCurElement->getNextSibling();
+      aCurElement = (LDOM_Element*)&aCurNode;
+    }
+
     XmlObjMgt::GetExtendedString( *aCurElement, aValueStr );
     anExtStringList->Append(aValueStr);
-    aCurNode = aCurElement->getNextSibling();
-    aCurElement = (LDOM_Element*)&aCurNode;
   }
-
-  XmlObjMgt::GetExtendedString( *aCurElement, aValueStr );
-  anExtStringList->Append(aValueStr);
 
   return Standard_True;
 }
@@ -118,8 +128,8 @@ Standard_Boolean XmlMDataStd_ExtStringListDriver::Paste(const XmlObjMgt_Persiste
 //purpose  : transient -> persistent (store)
 //=======================================================================
 void XmlMDataStd_ExtStringListDriver::Paste(const Handle(TDF_Attribute)& theSource,
-				       XmlObjMgt_Persistent&        theTarget,
-				       XmlObjMgt_SRelocationTable&  ) const
+                                            XmlObjMgt_Persistent&        theTarget,
+                                            XmlObjMgt_SRelocationTable&  ) const
 {
   const Handle(TDataStd_ExtStringList) anExtStringList = Handle(TDataStd_ExtStringList)::DownCast(theSource);
 
@@ -136,5 +146,13 @@ void XmlMDataStd_ExtStringListDriver::Paste(const Handle(TDF_Attribute)& theSour
     XmlObjMgt_Element aCurTarget = aDoc.createElement( ::ExtString() );
     XmlObjMgt::SetExtendedString( aCurTarget, aValueStr );
     anElement.appendChild( aCurTarget );
+  }
+
+  if(anExtStringList->ID() != TDataStd_ExtStringList::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    anExtStringList->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
   }
 }

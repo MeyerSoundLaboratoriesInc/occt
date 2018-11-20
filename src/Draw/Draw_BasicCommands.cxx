@@ -25,6 +25,7 @@
 #include <Message_Messenger.hxx>
 #include <OSD.hxx>
 #include <OSD_Chronometer.hxx>
+#include <OSD_Environment.hxx>
 #include <OSD_Exception_CTRL_BREAK.hxx>
 #include <OSD_MAllocHook.hxx>
 #include <OSD_MemInfo.hxx>
@@ -99,20 +100,49 @@ static Standard_Integer chronom(Draw_Interpretor& di,
       C->Timer().Reset();
     }
     else {
-      if (!strcasecmp(a[2],"reset"))
-	C->Timer().Reset();
-      if (!strcasecmp(a[2],"start"))
-	C->Timer().Start();
-      if (!strcasecmp(a[2],"stop"))
-	C->Timer().Stop();
-      if (!strcasecmp(a[2],"show"))
-	C->Timer().Show();
+      for (Standard_Integer anIter = 2; anIter < n; ++anIter)
+      {
+        TCollection_AsciiString anArg (a[anIter]);
+        anArg.LowerCase();
+
+        if (anArg == "reset")
+        {
+          C->Timer().Reset();
+        }
+        else if (anArg == "restart")
+        {
+          C->Timer().Restart();
+        }
+        else if (anArg == "start")
+        {
+          C->Timer().Start();
+        }
+        else if (anArg == "stop")
+        {
+          C->Timer().Stop();
+        }
+        else if (anArg == "show")
+        {
+          C->Timer().Show();
+        }
+        else if (anArg == "counter")
+        {
+          Standard_Real aSeconds,aCPUtime;
+          Standard_Integer aMinutes, aHours;
+          C->Timer().Show(aSeconds,aMinutes,aHours,aCPUtime);
+          std::cout << "COUNTER " << a[++anIter] << ": " << aCPUtime << "\n";
+        }
+        else
+        {
+          std::cerr << "Unknown argument '" << a[anIter] << "'!\n";
+        }
+      }
     }
   }
   return 0;
 }
 
-static Standard_Integer dchronom(Draw_Interpretor& I,
+static Standard_Integer dchronom(Draw_Interpretor& theDI,
 				 Standard_Integer n,const char** a)
 {
   if ((n == 1) || (*a[1] == '0') || (*a[1] == '1')) {
@@ -121,8 +151,8 @@ static Standard_Integer dchronom(Draw_Interpretor& I,
     else
       Draw_Chrono = (*a[1] == '1');
 
-    if (Draw_Chrono) I << "Chronometers activated.\n";
-    else I << "Chronometers desactivated.\n";
+    if (Draw_Chrono) theDI << "Chronometers activated.\n";
+    else theDI << "Chronometers desactivated.\n";
   }
   else {
     Handle(Draw_Drawable3D) D = Draw::Get(a[1]);
@@ -132,22 +162,50 @@ static Standard_Integer dchronom(Draw_Interpretor& I,
     }
     if (C.IsNull()) {
       C = new Draw_Chronometer();
-    Draw::Set(a[1],C,Standard_False);
+      Draw::Set(a[1],C,Standard_False);
     }
     if (n <= 2) {
       C->Timer().Reset();
     }
     else {
-      if (!strcasecmp(a[2],"reset"))
-	C->Timer().Reset();
-      if (!strcasecmp(a[2],"start"))
-	C->Timer().Start();
-      if (!strcasecmp(a[2],"stop"))
-	C->Timer().Stop();
-      if (!strcasecmp(a[2],"show")) {
-	Standard_SStream ss;
-	C->Timer().Show(ss);
-	I << ss;
+      for (Standard_Integer anIter = 2; anIter < n; ++anIter)
+      {
+        TCollection_AsciiString anArg (a[anIter]);
+        anArg.LowerCase();
+
+        if (anArg == "reset")
+        {
+          C->Timer().Reset();
+        }
+        else if (anArg == "restart")
+        {
+          C->Timer().Restart();
+        }
+        else if (anArg == "start")
+        {
+          C->Timer().Start();
+        }
+        else if (anArg == "stop")
+        {
+          C->Timer().Stop();
+        }
+        else if (anArg == "show")
+        {
+          Standard_SStream ss;
+          C->Timer().Show(ss);
+          theDI << ss;
+        }
+        else if (anArg == "counter")
+        {
+          Standard_Real aSeconds,aCPUtime;
+          Standard_Integer aMinutes, aHours;
+          C->Timer().Show(aSeconds,aMinutes,aHours,aCPUtime);
+          theDI << "COUNTER " << a[++anIter] << ": " << aCPUtime << "\n";
+        }
+        else
+        {
+          theDI << "Unknown argument '" << a[anIter] << "'!\n";
+        }
       }
     }
   }
@@ -292,10 +350,15 @@ static Standard_Integer dversion(Draw_Interpretor& di, Standard_Integer, const c
 #else
   di << "FreeImage disabled\n";
 #endif
-#ifdef HAVE_OPENCL
-  di << "OpenCL enabled (HAVE_OPENCL)\n";
+#ifdef HAVE_FFMPEG
+  di << "FFmpeg enabled (HAVE_FFMPEG)\n";
 #else
-  di << "OpenCL disabled\n";
+  di << "FFmpeg disabled\n";
+#endif
+#ifdef HAVE_GLES2
+  di << "OpenGL: ES2\n";
+#else
+  di << "OpenGL: desktop\n";
 #endif
 #ifdef HAVE_VTK
   di << "VTK enabled (HAVE_VTK)\n";
@@ -322,7 +385,11 @@ static Standard_Integer dversion(Draw_Interpretor& di, Standard_Integer, const c
 #elif defined(__SUNPRO_C)
   di << "Compiler: Sun Studio (__SUNPRO_C = " << __SUNPROC_C << ")\n";
 #elif defined(_MSC_VER)
-  di << "Compiler: MS Visual C++ " << (int)(_MSC_VER/100-6) << "." << (int)((_MSC_VER/10)-60-10*(int)(_MSC_VER/100-6)) << " (_MSC_FULL_VER = " << _MSC_FULL_VER << ")\n";
+  #if _MSC_VER < 1900
+    di << "Compiler: MS Visual C++ " << (int)(_MSC_VER/100-6) << "." << (int)((_MSC_VER/10)-60-10*(int)(_MSC_VER/100-6)) << " (_MSC_FULL_VER = " << _MSC_FULL_VER << ")\n";
+  #else
+    di << "Compiler: MS Visual C++ " << (int)(_MSC_VER/100-5) << "." << (int)((_MSC_VER/10)-50-10*(int)(_MSC_VER/100-5)) << " (_MSC_FULL_VER = " << _MSC_FULL_VER << ")\n";
+  #endif
 #elif defined(__GNUC__)
   di << "Compiler: GCC " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__ << "\n";
 #else
@@ -741,6 +808,31 @@ static int dperf (Draw_Interpretor& theDI, Standard_Integer theArgNb, const char
 }
 
 //==============================================================================
+//function : dsetsignal
+//purpose  :
+//==============================================================================
+
+static int dsetsignal (Draw_Interpretor& theDI, Standard_Integer theArgNb, const char** theArgVec)
+{
+  // arm FPE handler if argument is provided and its first symbol is not '0'
+  // or if environment variable CSF_FPE is set and its first symbol is not '0'
+  bool setFPE = false;
+  if (theArgNb > 1)
+  {
+    setFPE = (theArgVec[1][0] == '1' || theArgVec[1][0] == 't');
+  }
+  else
+  {
+    OSD_Environment aEnv ("CSF_FPE");
+    TCollection_AsciiString aEnvStr = aEnv.Value();
+    setFPE = (! aEnvStr.IsEmpty() && aEnvStr.Value(1) != '0');
+  }
+  OSD::SetSignal (setFPE);
+  theDI << "Signal handlers are set, with FPE " << (setFPE ? "armed" : "disarmed"); 
+  return 0;
+}
+
+//==============================================================================
 //function : dtracelevel
 //purpose  :
 //==============================================================================
@@ -851,9 +943,11 @@ void Draw::BasicCommands(Draw_Interpretor& theCommands)
 		  __FILE__,Draw_wait,g);
   theCommands.Add("cpulimit","cpulimit [nbseconds], no args remove limits",
 		  __FILE__,cpulimit,g);
-  theCommands.Add("chrono","chrono [ name start/stop/reset/show]",
+  theCommands.Add("chrono","chrono [name action [action...]] \n  Operates named timer.\n"
+                           "  Supported actions: reset, start, stop, restart, show, counter [text].\n"
+                           "  Without arguments enables / disables global timer for all DRAW commands.",
 		  __FILE__,chronom,g);
-  theCommands.Add("dchrono","dchrono [ name start/stop/reset/show]",
+  theCommands.Add("dchrono","see help of chrono command",
 		  __FILE__,dchronom,g);
   theCommands.Add("mallochook",
                   "debug memory allocation/deallocation, w/o args for help",
@@ -864,6 +958,8 @@ void Draw::BasicCommands(Draw_Interpretor& theCommands)
 	  __FILE__, dmeminfo, g);
   theCommands.Add("dperf","dperf [reset] -- show performance counters, reset if argument is provided",
 		  __FILE__,dperf,g);
+  theCommands.Add("dsetsignal","dsetsignal [fpe=0] -- set OSD signal handler, with FPE option if argument is given",
+		  __FILE__,dsetsignal,g);
 
   // Logging commands; note that their names are hard-coded in the code
   // of Draw_Interpretor, thus should not be changed without update of that code!

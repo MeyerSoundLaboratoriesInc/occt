@@ -17,30 +17,7 @@
 #ifndef _HLRAlgo_HeaderFile
 #define _HLRAlgo_HeaderFile
 
-#include <Standard.hxx>
-#include <Standard_DefineAlloc.hxx>
-#include <Standard_Handle.hxx>
-
-#include <Standard_Real.hxx>
-#include <Standard_Address.hxx>
-class HLRAlgo_BiPoint;
-class HLRAlgo_PolyShellData;
-class HLRAlgo_PolyInternalData;
-class HLRAlgo_PolyInternalSegment;
-class HLRAlgo_PolyInternalNode;
-class HLRAlgo_PolyData;
-class HLRAlgo_PolyHidingData;
-class HLRAlgo_TriangleData;
-class HLRAlgo_PolyAlgo;
-class HLRAlgo_EdgeStatus;
-class HLRAlgo_Projector;
-class HLRAlgo_Intersection;
-class HLRAlgo_Coincidence;
-class HLRAlgo_Interference;
-class HLRAlgo_EdgesBlock;
-class HLRAlgo_WiresBlock;
-class HLRAlgo_EdgeIterator;
-
+#include <HLRAlgo_WiresBlock.hxx>
 
 //! In order to have the precision required in
 //! industrial design, drawings need to offer the
@@ -70,63 +47,28 @@ public:
 
   DEFINE_STANDARD_ALLOC
 
-  
   //! Iterator  on the  visible or  hidden  parts of  an
   //! EdgeStatus.
-  Standard_EXPORT static void UpdateMinMax (const Standard_Real x, const Standard_Real y, const Standard_Real z, const Standard_Address Min, const Standard_Address Max);
+  Standard_EXPORT static void UpdateMinMax (const Standard_Real x, const Standard_Real y, const Standard_Real z, Standard_Real Min[16], Standard_Real Max[16]);
   
-  Standard_EXPORT static void EnlargeMinMax (const Standard_Real tol, const Standard_Address Min, const Standard_Address Max);
+  Standard_EXPORT static void EnlargeMinMax (const Standard_Real tol, Standard_Real Min[16], Standard_Real Max[16]);
   
-  Standard_EXPORT static void InitMinMax (const Standard_Real Big, const Standard_Address Min, const Standard_Address Max);
+  Standard_EXPORT static void InitMinMax (const Standard_Real Big, Standard_Real Min[16], Standard_Real Max[16]);
   
-  Standard_EXPORT static void EncodeMinMax (const Standard_Address Min, const Standard_Address Max, const Standard_Address MinMax);
+  Standard_EXPORT static void EncodeMinMax (HLRAlgo_EdgesBlock::MinMaxIndices& Min, HLRAlgo_EdgesBlock::MinMaxIndices& Max, HLRAlgo_EdgesBlock::MinMaxIndices& MinMax);
   
-  Standard_EXPORT static Standard_Real SizeBox (const Standard_Address Min, const Standard_Address Max);
+  Standard_EXPORT static Standard_Real SizeBox (HLRAlgo_EdgesBlock::MinMaxIndices& Min, HLRAlgo_EdgesBlock::MinMaxIndices& Max);
   
-  Standard_EXPORT static void DecodeMinMax (const Standard_Address MinMax, const Standard_Address Min, const Standard_Address Max);
+  Standard_EXPORT static void DecodeMinMax (const HLRAlgo_EdgesBlock::MinMaxIndices& MinMax, HLRAlgo_EdgesBlock::MinMaxIndices& Min, HLRAlgo_EdgesBlock::MinMaxIndices& Max);
   
-  Standard_EXPORT static void CopyMinMax (const Standard_Address IMin, const Standard_Address IMax, const Standard_Address OMin, const Standard_Address OMax);
+  static void CopyMinMax (HLRAlgo_EdgesBlock::MinMaxIndices& IMin, HLRAlgo_EdgesBlock::MinMaxIndices& IMax, HLRAlgo_EdgesBlock::MinMaxIndices& OMin, HLRAlgo_EdgesBlock::MinMaxIndices& OMax)
+  {
+    OMin = IMin;
+    OMax = IMax;
+  }
   
-  Standard_EXPORT static void AddMinMax (const Standard_Address IMin, const Standard_Address IMax, const Standard_Address OMin, const Standard_Address OMax);
-
-
-
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
-friend class HLRAlgo_BiPoint;
-friend class HLRAlgo_PolyShellData;
-friend class HLRAlgo_PolyInternalData;
-friend class HLRAlgo_PolyInternalSegment;
-friend class HLRAlgo_PolyInternalNode;
-friend class HLRAlgo_PolyData;
-friend class HLRAlgo_PolyHidingData;
-friend class HLRAlgo_TriangleData;
-friend class HLRAlgo_PolyAlgo;
-friend class HLRAlgo_EdgeStatus;
-friend class HLRAlgo_Projector;
-friend class HLRAlgo_Intersection;
-friend class HLRAlgo_Coincidence;
-friend class HLRAlgo_Interference;
-friend class HLRAlgo_EdgesBlock;
-friend class HLRAlgo_WiresBlock;
-friend class HLRAlgo_EdgeIterator;
+  Standard_EXPORT static void AddMinMax (HLRAlgo_EdgesBlock::MinMaxIndices& IMin, HLRAlgo_EdgesBlock::MinMaxIndices& IMax, HLRAlgo_EdgesBlock::MinMaxIndices& OMin, HLRAlgo_EdgesBlock::MinMaxIndices& OMax);
 
 };
-
-
-
-
-
-
 
 #endif // _HLRAlgo_HeaderFile

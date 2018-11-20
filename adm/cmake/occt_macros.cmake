@@ -60,20 +60,27 @@ endmacro()
 # COMPILER variable
 macro (OCCT_MAKE_COMPILER_SHORT_NAME)
   if (MSVC)
-    if (MSVC70)
+    if ((MSVC_VERSION EQUAL 1300) OR (MSVC_VERSION EQUAL 1310))
       set (COMPILER vc7)
-    elseif (MSVC80)
+    elseif (MSVC_VERSION EQUAL 1400)
       set (COMPILER vc8)
-    elseif (MSVC90)
+    elseif (MSVC_VERSION EQUAL 1500)
       set (COMPILER vc9)
-    elseif (MSVC10)
+    elseif (MSVC_VERSION EQUAL 1600)
       set (COMPILER vc10)
-    elseif (MSVC11)
+    elseif (MSVC_VERSION EQUAL 1700)
       set (COMPILER vc11)
-    elseif (MSVC12)
+    elseif (MSVC_VERSION EQUAL 1800)
       set (COMPILER vc12)
-    elseif (MSVC14)
+    elseif (MSVC_VERSION EQUAL 1900)
       set (COMPILER vc14)
+    elseif ((MSVC_VERSION GREATER 1900) AND (MSVC_VERSION LESS 2000))
+      # Since Visual Studio 15 (2017), its version diverged from version of
+      # compiler which is 14.1; as that compiler uses the same run-time as 14.0,
+      # we keep its id as "vc14" to be compatibille
+      set (COMPILER vc14)
+    else()
+      message (FATAL_ERROR "Unrecognized MSVC_VERSION")
     endif()
   elseif (DEFINED CMAKE_COMPILER_IS_GNUCC)
     set (COMPILER gcc)
@@ -99,6 +106,34 @@ function (SUBDIRECTORY_NAMES MAIN_DIRECTORY RESULT)
     endif()
   endforeach()
   set (${RESULT} ${LOCAL_RESULT} PARENT_SCOPE)
+endfunction()
+
+function (FIND_SUBDIRECTORY ROOT_DIRECTORY DIRECTORY_SUFFIX SUBDIRECTORY_NAME)
+  #message("Trying to find directory with suffix ${DIRECTORY_SUFFIX} in ${ROOT_DIRECTORY}")
+  SUBDIRECTORY_NAMES ("${ROOT_DIRECTORY}" SUBDIR_NAME_LIST)
+  #message("Subdirectories: ${SUBDIR_NAME_LIST}")
+
+  #set(${SUBDIRECTORY_NAME} "${SUBDIR_NAME_LIST}" PARENT_SCOPE)
+
+  foreach (SUBDIR_NAME ${SUBDIR_NAME_LIST})
+    #message("Subdir: ${SUBDIR_NAME}, ${DIRECTORY_SUFFIX}")
+    # REGEX failed if the directory name contains '++' combination, so we replace it
+    string(REPLACE "+" "\\+" SUBDIR_NAME_ESCAPED ${SUBDIR_NAME})
+    string (REGEX MATCH "${SUBDIR_NAME_ESCAPED}" DOES_PATH_CONTAIN "${DIRECTORY_SUFFIX}")
+    if (DOES_PATH_CONTAIN)
+      set(${SUBDIRECTORY_NAME} "${ROOT_DIRECTORY}/${SUBDIR_NAME}" PARENT_SCOPE)
+      #message("Subdirectory is found: ${SUBDIRECTORY_NAME}")
+      BREAK()
+    else()
+      #message("Check directory: ${ROOT_DIRECTORY}/${SUBDIR_NAME}")
+      FIND_SUBDIRECTORY ("${ROOT_DIRECTORY}/${SUBDIR_NAME}" "${DIRECTORY_SUFFIX}" SUBDIR_REC_NAME)
+      if (NOT "${SUBDIR_REC_NAME}" STREQUAL "")
+        set(${SUBDIRECTORY_NAME} "${SUBDIR_REC_NAME}" PARENT_SCOPE)
+        #message("Subdirectory is found: ${SUBDIRECTORY_NAME}")
+        BREAK()
+      endif()
+    endif()
+  endforeach()
 endfunction()
 
 function (OCCT_ORIGIN_AND_PATCHED_FILES RELATIVE_PATH SEARCH_TEMPLATE RESULT)
@@ -189,7 +224,7 @@ macro (OCCT_CONFIGURE_AND_INSTALL BEING_CONGIRUGED_FILE BUILD_NAME INSTALL_NAME 
   install(FILES "${OCCT_BINARY_DIR}/${BUILD_NAME}" DESTINATION  "${DESTINATION_PATH}" RENAME ${INSTALL_NAME})
 endmacro()
 
-macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOOLKITS)
+macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOOLKITS OCCT_COLLECT_SOURCE_DIR OCCT_INSTALL_DIR_PREFIX)
   set (OCCT_USED_PACKAGES)
 
   # consider patched header.in template
@@ -205,8 +240,8 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
     set (OCCT_TOOLKIT_PACKAGES)
     if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/src/${OCCT_USED_TOOLKIT}/PACKAGES")
       file (STRINGS "${BUILD_PATCH}/src/${OCCT_USED_TOOLKIT}/PACKAGES" OCCT_TOOLKIT_PACKAGES)
-    elseif (EXISTS "${CMAKE_SOURCE_DIR}/src/${OCCT_USED_TOOLKIT}/PACKAGES")
-      file (STRINGS "${CMAKE_SOURCE_DIR}/src/${OCCT_USED_TOOLKIT}/PACKAGES" OCCT_TOOLKIT_PACKAGES)
+    elseif (EXISTS "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_USED_TOOLKIT}/PACKAGES")
+      file (STRINGS "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_USED_TOOLKIT}/PACKAGES" OCCT_TOOLKIT_PACKAGES)
     endif()
 
     list (APPEND OCCT_USED_PACKAGES ${OCCT_TOOLKIT_PACKAGES})
@@ -224,10 +259,10 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
   foreach (OCCT_PACKAGE ${OCCT_USED_PACKAGES})
     if (BUILD_PATCH AND EXISTS "${BUILD_PATCH}/src/${OCCT_PACKAGE}/FILES")
       file (STRINGS "${BUILD_PATCH}/src/${OCCT_PACKAGE}/FILES" OCCT_ALL_FILE_NAMES)
-    elseif (EXISTS "${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}/FILES")
-      file (STRINGS "${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}/FILES" OCCT_ALL_FILE_NAMES)
+    elseif (EXISTS "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}/FILES")
+      file (STRINGS "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}/FILES" OCCT_ALL_FILE_NAMES)
     else()
-      message (WARNING "FILES has not been found in ${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}")
+      message (WARNING "FILES has not been found in ${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}")
       continue()
     endif()
 
@@ -235,13 +270,13 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
     math (EXPR ALL_FILES_NB "${ALL_FILES_NB} - 1" )
 
     # emit warnings if there is unprocessed headers
-    file (GLOB OCCT_ALL_FILES_IN_DIR "${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}/*.*")
+    file (GLOB OCCT_ALL_FILES_IN_DIR "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}/*.*")
     file (GLOB OCCT_ALL_FILES_IN_PATCH_DIR "${BUILD_PATCH}/src/${OCCT_PACKAGE}/*.*")
 
     # use patched header files
     foreach (OCCT_FILE_IN_PATCH_DIR ${OCCT_ALL_FILES_IN_PATCH_DIR})
       get_filename_component (OCCT_FILE_IN_PATCH_DIR_NAME ${OCCT_FILE_IN_PATCH_DIR} NAME)
-      list (REMOVE_ITEM OCCT_ALL_FILES_IN_DIR "${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}/${OCCT_FILE_IN_PATCH_DIR_NAME}")
+      list (REMOVE_ITEM OCCT_ALL_FILES_IN_DIR "${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}/${OCCT_FILE_IN_PATCH_DIR_NAME}")
       list (APPEND OCCT_ALL_FILES_IN_DIR "${OCCT_FILE_IN_PATCH_DIR}")
     endforeach()
 
@@ -256,6 +291,8 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
 
       foreach (FILE_INDEX RANGE ${ALL_FILES_NB})
         list (GET OCCT_ALL_FILE_NAMES ${FILE_INDEX} OCCT_FILE_NAME)
+
+        string (REGEX REPLACE "[^:]+:+" "" OCCT_FILE_NAME "${OCCT_FILE_NAME}")
 
         if ("${OCCT_FILE_IN_DIR_NAME}" STREQUAL "${OCCT_FILE_NAME}")
           set (OCCT_FILE_IN_DIR_STATUS ON)
@@ -280,7 +317,7 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
       endforeach()
 
       if (NOT OCCT_FILE_IN_DIR_STATUS)
-        message (STATUS "Warning. File ${OCCT_FILE_IN_DIR} is not listed in ${CMAKE_SOURCE_DIR}/src/${OCCT_PACKAGE}/FILES")
+        message (STATUS "Warning. File ${OCCT_FILE_IN_DIR} is not listed in ${OCCT_COLLECT_SOURCE_DIR}/${OCCT_PACKAGE}/FILES")
 
         string (REGEX MATCH ".+\\.[hlg]xx|.+\\.h$" IS_HEADER_FOUND "${OCCT_FILE_NAME}")
         if (IS_HEADER_FOUND)
@@ -296,22 +333,23 @@ macro (COLLECT_AND_INSTALL_OCCT_HEADER_FILES ROOT_TARGET_OCCT_DIR OCCT_BUILD_TOO
 
   foreach (OCCT_HEADER_FILE ${OCCT_HEADER_FILES_COMPLETE})
     get_filename_component (HEADER_FILE_NAME ${OCCT_HEADER_FILE} NAME)
-    configure_file ("${TEMPLATE_HEADER_PATH}" "${ROOT_TARGET_OCCT_DIR}/inc/${HEADER_FILE_NAME}" @ONLY)
+    set (OCCT_HEADER_FILE_CONTENT "#include \"${OCCT_HEADER_FILE}\"")
+    configure_file ("${TEMPLATE_HEADER_PATH}" "${ROOT_TARGET_OCCT_DIR}/${OCCT_INSTALL_DIR_PREFIX}/${HEADER_FILE_NAME}" @ONLY)
   endforeach()
   
-  install (FILES ${OCCT_HEADER_FILES_COMPLETE} DESTINATION "${INSTALL_DIR}/${INSTALL_DIR_INCLUDE}")
+  install (FILES ${OCCT_HEADER_FILES_COMPLETE} DESTINATION "${INSTALL_DIR}/${OCCT_INSTALL_DIR_PREFIX}")
   
   string(TIMESTAMP CURRENT_TIME "%H:%M:%S")
   message (STATUS "Info: \(${CURRENT_TIME}\) Checking headers in inc folder...")
     
-  file (GLOB OCCT_HEADER_FILES_OLD "${ROOT_TARGET_OCCT_DIR}/inc/*")
+  file (GLOB OCCT_HEADER_FILES_OLD "${ROOT_TARGET_OCCT_DIR}/${OCCT_INSTALL_DIR_PREFIX}/*")
   foreach (OCCT_HEADER_FILE_OLD ${OCCT_HEADER_FILES_OLD})
     get_filename_component (HEADER_FILE_NAME ${OCCT_HEADER_FILE_OLD} NAME)
     string (REGEX MATCH "^[a-zA-Z0-9]+" PACKAGE_NAME "${HEADER_FILE_NAME}")
     
     list (FIND OCCT_USED_PACKAGES ${PACKAGE_NAME} IS_HEADER_FOUND)
     if (NOT ${IS_HEADER_FOUND} EQUAL -1)
-      if (NOT EXISTS "${CMAKE_SOURCE_DIR}/src/${PACKAGE_NAME}/${HEADER_FILE_NAME}")
+      if (NOT EXISTS "${OCCT_COLLECT_SOURCE_DIR}/${PACKAGE_NAME}/${HEADER_FILE_NAME}")
         message (STATUS "Warning. ${OCCT_HEADER_FILE_OLD} is not presented in the sources and will be removed from ${ROOT_TARGET_OCCT_DIR}/inc")
         file (REMOVE "${OCCT_HEADER_FILE_OLD}")
       else()
@@ -421,7 +459,7 @@ function (OCCT_TOOLKIT_DEP TOOLKIT_NAME TOOLKIT_DEPS)
   set (LOCAL_TOOLKIT_DEPS)
   foreach (FILE_CONTENT_LINE ${FILE_CONTENT})
     string (REGEX MATCH "^TK" TK_FOUND ${FILE_CONTENT_LINE})
-    if ("${FILE_CONTENT_LINE}" STREQUAL "DRAWEXE" OR NOT "${TK_FOUND}" STREQUAL "")
+    if ("x${FILE_CONTENT_LINE}" STREQUAL "xDRAWEXE" OR NOT "${TK_FOUND}" STREQUAL "")
       list (APPEND LOCAL_TOOLKIT_DEPS ${FILE_CONTENT_LINE})
     endif()
   endforeach()
@@ -464,11 +502,11 @@ function (OCCT_TOOLKIT_FULL_DEP TOOLKIT_NAME TOOLKIT_FULL_DEPS)
   set (${TOOLKIT_FULL_DEPS} ${LOCAL_TOOLKIT_FULL_DEPS} PARENT_SCOPE)
 endfunction()
 
-# Function to get list of modules and toolkits from file adm/MODULES.
+# Function to get list of modules/toolkits/samples from file adm/${FILE_NAME}.
 # Creates list <$MODULE_LIST> to store list of MODULES and
-# <NAME_OF_MODULE>_TOOLKITS foreach module to store its toolkits.
-function (OCCT_MODULES_AND_TOOLKITS MODULE_LIST)
-  FILE_TO_LIST ("adm/MODULES" FILE_CONTENT)
+# <NAME_OF_MODULE>_TOOLKITS foreach module to store its toolkits, where "TOOLKITS" is defined by TOOLKITS_NAME_SUFFIX.
+function (OCCT_MODULES_AND_TOOLKITS FILE_NAME TOOLKITS_NAME_SUFFIX MODULE_LIST)
+  FILE_TO_LIST ("adm/${FILE_NAME}" FILE_CONTENT)
 
   foreach (CONTENT_LINE ${FILE_CONTENT})
     string (REPLACE " " ";" CONTENT_LINE ${CONTENT_LINE})
@@ -476,7 +514,7 @@ function (OCCT_MODULES_AND_TOOLKITS MODULE_LIST)
     list (REMOVE_AT CONTENT_LINE 0)
     list (APPEND ${MODULE_LIST} ${MODULE_NAME})
     # (!) REMOVE THE LINE BELOW (implicit variables)
-    set (${MODULE_NAME}_TOOLKITS ${CONTENT_LINE} PARENT_SCOPE)
+    set (${MODULE_NAME}_${TOOLKITS_NAME_SUFFIX} ${CONTENT_LINE} PARENT_SCOPE)
   endforeach()
 
   set (${MODULE_LIST} ${${MODULE_LIST}} PARENT_SCOPE)
@@ -547,7 +585,7 @@ endmacro()
 # prior to version 3.3 not supporting per-configuration install paths
 # for install target files (see https://cmake.org/Bug/view.php?id=14317)
 macro (OCCT_UPDATE_TARGET_FILE)
-  if (NOT SINGLE_GENERATOR)
+  if (MSVC)
     OCCT_INSERT_CODE_FOR_TARGET ()
   endif()
 
@@ -575,4 +613,27 @@ macro (OCCT_INSERT_CODE_FOR_TARGET)
   elseif (\"\${CMAKE_INSTALL_CONFIG_NAME}\" MATCHES \"^([Dd][Ee][Bb][Uu][Gg])$\")
     set (OCCT_INSTALL_BIN_LETTER \"d\")
   endif()")
+endmacro()
+
+macro (OCCT_UPDATE_DRAW_DEFAULT_FILE)
+  install(CODE "cmake_policy(PUSH)
+  cmake_policy(SET CMP0007 NEW)
+  set (DRAW_DEFAULT_FILE_NAME \"${INSTALL_DIR}/${INSTALL_DIR_RESOURCE}/DrawResources/DrawPlugin\")
+  file (STRINGS \"\${DRAW_DEFAULT_FILE_NAME}\" DRAW_DEFAULT_CONTENT)
+  file (REMOVE \"\${DRAW_DEFAULT_FILE_NAME}\")
+  foreach (line IN LISTS DRAW_DEFAULT_CONTENT)
+    string (REGEX MATCH \": TK\([a-zA-Z]+\)$\" IS_TK_LINE \"\${line}\")
+    string (REGEX REPLACE \": TK\([a-zA-Z]+\)$\" \": TK\${CMAKE_MATCH_1}${BUILD_SHARED_LIBRARY_NAME_POSTFIX}\" line \"\${line}\")
+    file (APPEND \"\${DRAW_DEFAULT_FILE_NAME}\" \"\${line}\\n\")
+  endforeach()
+  cmake_policy(POP)")
+endmacro()
+
+macro (OCCT_CREATE_SYMLINK_TO_FILE LIBRARY_NAME LINK_NAME)
+  if (NOT WIN32)
+    install (CODE "if (EXISTS \"${LIBRARY_NAME}\")
+        execute_process (COMMAND ln -s \"${LIBRARY_NAME}\" \"${LINK_NAME}\")
+      endif()
+    ")
+  endif()
 endmacro()

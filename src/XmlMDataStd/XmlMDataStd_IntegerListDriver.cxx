@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <NCollection_LocalArray.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
@@ -27,13 +27,14 @@
 IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_IntegerListDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (FirstIndexString, "first")
 IMPLEMENT_DOMSTRING (LastIndexString,  "last")
+IMPLEMENT_DOMSTRING (AttributeIDString, "intlistattguid")
 
 //=======================================================================
 //function : XmlMDataStd_IntegerListDriver
 //purpose  : Constructor
 //=======================================================================
-XmlMDataStd_IntegerListDriver::XmlMDataStd_IntegerListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
-     : XmlMDF_ADriver (theMsgDriver, NULL)
+XmlMDataStd_IntegerListDriver::XmlMDataStd_IntegerListDriver(const Handle(Message_Messenger)& theMsgDriver)
+: XmlMDF_ADriver (theMsgDriver, NULL)
 {
 
 }
@@ -52,8 +53,8 @@ Handle(TDF_Attribute) XmlMDataStd_IntegerListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean XmlMDataStd_IntegerListDriver::Paste(const XmlObjMgt_Persistent&  theSource,
-						      const Handle(TDF_Attribute)& theTarget,
-						      XmlObjMgt_RRelocationTable&  ) const
+                                                      const Handle(TDF_Attribute)& theTarget,
+                                                      XmlObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aFirstInd, aLastInd, aValue, ind;
   const XmlObjMgt_Element& anElement = theSource;
@@ -68,7 +69,7 @@ Standard_Boolean XmlMDataStd_IntegerListDriver::Paste(const XmlObjMgt_Persistent
       TCollection_ExtendedString("Cannot retrieve the first index"
                                  " for IntegerList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -79,24 +80,34 @@ Standard_Boolean XmlMDataStd_IntegerListDriver::Paste(const XmlObjMgt_Persistent
       TCollection_ExtendedString("Cannot retrieve the last index"
                                  " for IntegerList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
   const Handle(TDataStd_IntegerList) anIntList = Handle(TDataStd_IntegerList)::DownCast(theTarget);
+  
+  // attribute id
+  Standard_GUID aGUID;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_IntegerList::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
+
+  anIntList->SetID(aGUID);
+
   if(aLastInd == 0) aFirstInd = 0;
   if (aFirstInd == aLastInd && aLastInd > 0) 
   {
-    Standard_Integer anInteger;
-    if (!XmlObjMgt::GetStringValue(anElement).GetInteger(anInteger)) 
+    if (!XmlObjMgt::GetStringValue(anElement).GetInteger(aValue)) 
     {
       TCollection_ExtendedString aMessageString =
         TCollection_ExtendedString("Cannot retrieve integer member"
                                    " for IntegerList attribute as \"");
-      WriteMessage (aMessageString);
-      return Standard_False;
+      myMessageDriver->Send (aMessageString, Message_Warning);
+      aValue = 0;
     }
-    anIntList->Append(anInteger);
+    anIntList->Append(aValue);
   }
   else if(aLastInd >= 1)
   {
@@ -109,13 +120,13 @@ Standard_Boolean XmlMDataStd_IntegerListDriver::Paste(const XmlObjMgt_Persistent
           TCollection_ExtendedString("Cannot retrieve integer member"
                                      " for IntegerList attribute as \"")
             + aValueStr + "\"";
-        WriteMessage (aMessageString);
-        return Standard_False;
+        myMessageDriver->Send (aMessageString, Message_Warning);
+        aValue = 0;
       }
       anIntList->Append(aValue);
     }
   }
-  
+
   return Standard_True;
 }
 
@@ -124,8 +135,8 @@ Standard_Boolean XmlMDataStd_IntegerListDriver::Paste(const XmlObjMgt_Persistent
 //purpose  : transient -> persistent (store)
 //=======================================================================
 void XmlMDataStd_IntegerListDriver::Paste(const Handle(TDF_Attribute)& theSource,
-					  XmlObjMgt_Persistent&        theTarget,
-					  XmlObjMgt_SRelocationTable&  ) const
+                                          XmlObjMgt_Persistent&        theTarget,
+                                          XmlObjMgt_SRelocationTable&  ) const
 {
   const Handle(TDataStd_IntegerList) anIntList = Handle(TDataStd_IntegerList)::DownCast(theSource);
 
@@ -148,4 +159,12 @@ void XmlMDataStd_IntegerListDriver::Paste(const Handle(TDF_Attribute)& theSource
   }
   // No occurrence of '&', '<' and other irregular XML characters
   XmlObjMgt::SetStringValue (theTarget, (Standard_Character*)str, Standard_True);
+
+  if(anIntList->ID() != TDataStd_IntegerList::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    anIntList->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
+  }
 }

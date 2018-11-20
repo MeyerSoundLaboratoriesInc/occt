@@ -145,17 +145,17 @@ static void DrawCurve (const Adaptor3d_Curve&        aCurve,
 // purpose:
 //==================================================================
 static Standard_Boolean MatchCurve (
-		       const Quantity_Length  X,
-		       const Quantity_Length  Y,
-		       const Quantity_Length  Z,
-		       const Quantity_Length  aDistance,
+		       const Standard_Real  X,
+		       const Standard_Real  Y,
+		       const Standard_Real  Z,
+		       const Standard_Real  aDistance,
 		       const Adaptor3d_Curve&   aCurve,
-		       const Quantity_Length  TheDeflection,
+		       const Standard_Real  TheDeflection,
 		       const Standard_Integer NbP,
 		       const Standard_Real    U1,
 		       const Standard_Real    U2)
 {
-  Quantity_Length retdist;
+  Standard_Real retdist;
   switch (aCurve.GetType())
   {
     case GeomAbs_Line:
@@ -232,7 +232,7 @@ void StdPrs_Curve::Add (const Handle (Prs3d_Presentation)& aPresentation,
     gp_Pnt Location;
     gp_Vec Direction;
     aCurve.D1(aCurve.LastParameter(),Location,Direction);
-    Prs3d_Arrow::Draw (aPresentation,Location,gp_Dir(Direction),
+    Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), Location, gp_Dir(Direction),
                        aDrawer->ArrowAspect()->Angle(),
                        aDrawer->ArrowAspect()->Length());
   }
@@ -298,7 +298,7 @@ void StdPrs_Curve::Add (const Handle (Prs3d_Presentation)& aPresentation,
     gp_Pnt Location;
     gp_Vec Direction;
     aCurve.D1(aCurve.LastParameter(),Location,Direction);
-    Prs3d_Arrow::Draw (aPresentation,Location,gp_Dir(Direction),
+    Prs3d_Arrow::Draw (Prs3d_Root::CurrentGroup (aPresentation), Location, gp_Dir(Direction),
                        aDrawer->ArrowAspect()->Angle(),
                        aDrawer->ArrowAspect()->Length());
   }
@@ -310,10 +310,10 @@ void StdPrs_Curve::Add (const Handle (Prs3d_Presentation)& aPresentation,
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_Curve::Match 
-		      (const Quantity_Length        X,
-		       const Quantity_Length        Y,
-		       const Quantity_Length        Z,
-		       const Quantity_Length        aDistance,
+		      (const Standard_Real        X,
+		       const Standard_Real        Y,
+		       const Standard_Real        Z,
+		       const Standard_Real        aDistance,
 		       const Adaptor3d_Curve&       aCurve,
 		       const Handle (Prs3d_Drawer)& aDrawer)
 {
@@ -332,12 +332,12 @@ Standard_Boolean StdPrs_Curve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_Curve::Match 
-		      (const Quantity_Length  X,
-		       const Quantity_Length  Y,
-		       const Quantity_Length  Z,
-		       const Quantity_Length  aDistance,
+		      (const Standard_Real  X,
+		       const Standard_Real  Y,
+		       const Standard_Real  Z,
+		       const Standard_Real  aDistance,
 		       const Adaptor3d_Curve&   aCurve,
-		       const Quantity_Length  aDeflection,
+		       const Standard_Real  aDeflection,
 		       const Standard_Real    aLimit,
 		       const Standard_Integer NbPoints)
 {
@@ -354,10 +354,10 @@ Standard_Boolean StdPrs_Curve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_Curve::Match 
-			(const Quantity_Length        X,
-			 const Quantity_Length        Y,
-			 const Quantity_Length        Z,
-			 const Quantity_Length        aDistance,
+			(const Standard_Real        X,
+			 const Standard_Real        Y,
+			 const Standard_Real        Z,
+			 const Standard_Real        aDistance,
 			 const Adaptor3d_Curve&         aCurve,
 			 const Standard_Real          U1,
 			 const Standard_Real          U2,
@@ -380,14 +380,14 @@ Standard_Boolean StdPrs_Curve::Match
 // purpose:
 //==================================================================
 Standard_Boolean StdPrs_Curve::Match 
-			(const Quantity_Length  X,
-			 const Quantity_Length  Y,
-			 const Quantity_Length  Z,
-			 const Quantity_Length  aDistance,
+			(const Standard_Real  X,
+			 const Standard_Real  Y,
+			 const Standard_Real  Z,
+			 const Standard_Real  aDistance,
 			 const Adaptor3d_Curve&   aCurve,
 			 const Standard_Real    U1,
 			 const Standard_Real    U2,
-			 const Quantity_Length  aDeflection,
+			 const Standard_Real  aDeflection,
 			 const Standard_Integer aNbPoints) 
 {
   return MatchCurve(X,Y,Z,aDistance,aCurve,aDeflection,aNbPoints,U1,U2);

@@ -48,7 +48,7 @@
 #include <TopTools_ListIteratorOfListOfShape.hxx>
 #include <TopTools_MapIteratorOfMapOfShape.hxx>
 #include <TopTools_MapOfShape.hxx>
-#include <TopTools_SequenceOfShape.hxx>
+
 
 //#include <LocOpe_ProjectedWires.hxx>
 //  Modified by skv - Mon May 31 13:00:30 2004 OCC5865 Begin
@@ -72,7 +72,7 @@ static void Select(const TopoDS_Edge&,
 void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
 {
   if (myShape.IsNull()) {
-    Standard_NullObject::Raise();
+    throw Standard_NullObject();
   }
   myDone = Standard_False;
   myMap.Clear();
@@ -100,6 +100,8 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
       if (!mapV.Contains(vtx)) {
 	if (PW->OnVertex(vtx,Vb)) {
 	  mapV.Add(vtx);
+          if (vtx.IsSame(Vb))
+            continue;
 	  lsubs.Clear();
 	  TopoDS_Vertex vsub = TopoDS::Vertex(vtx.Oriented(TopAbs_FORWARD));
 	  gp_Pnt p1 = BRep_Tool::Pnt(vsub), p2 = BRep_Tool::Pnt(Vb);
@@ -124,7 +126,7 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
 	const TopTools_ListOfShape& lsub = theSubs.Copy(itdesc.Key());
 #ifdef OCCT_DEBUG
 	if (lsub.Extent() != 1) {
-	  Standard_ConstructionError::Raise();
+	  throw Standard_ConstructionError();
 	}
 #endif
 	myMap(itdesc.Key()).Clear(); 
@@ -143,7 +145,7 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
 
   TopTools_MapOfShape theFacesWithSection;
   for (PW->InitEdgeIterator(); PW->MoreEdge(); PW->NextEdge()) {
-    const TopoDS_Edge& edg = PW->Edge();
+    TopoDS_Edge edg = PW->Edge();
     for (exp.Init(edg,TopAbs_VERTEX); exp.More(); exp.Next()) {
       const TopoDS_Vertex& vtx = TopoDS::Vertex(exp.Current());
       if (!mapV.Contains(vtx)) {
@@ -286,7 +288,7 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
       TopoDS_Shape ebase = lsubs.First();
       lsubs.Clear();
       lsubs.Append(e1.Oriented(ebase.Orientation()));
-      theSubs.Substitute(ebase.Oriented(TopAbs_FORWARD),lsubs);
+      theSubs.Substitute(ebase,lsubs);
     }
     else {
 #ifdef OCCT_DEBUG
@@ -305,7 +307,7 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
 	const TopTools_ListOfShape& lsub = theSubs.Copy(itl.Value());
 #ifdef OCCT_DEBUG
 	if (lsub.Extent() != 1) {
-	  Standard_ConstructionError::Raise();
+	  throw Standard_ConstructionError();
 	}
 #endif
 	newdesc.Append(lsub.First());
@@ -500,7 +502,7 @@ void LocOpe_Spliter::Perform(const Handle(LocOpe_WiresOnShape)& PW)
 const TopTools_ListOfShape& LocOpe_Spliter::
    DescendantShapes(const TopoDS_Shape& F)
 {
-  if (!myDone) {StdFail_NotDone::Raise();}
+  if (!myDone) {throw StdFail_NotDone();}
   if (myMap.IsBound(F))
     return myMap(F);
   else {
@@ -517,7 +519,7 @@ const TopTools_ListOfShape& LocOpe_Spliter::
 
 const TopTools_ListOfShape& LocOpe_Spliter::DirectLeft() const
 {
-  if (!myDone) {StdFail_NotDone::Raise();}
+  if (!myDone) {throw StdFail_NotDone();}
   return myDLeft;
 
 }
@@ -530,7 +532,7 @@ const TopTools_ListOfShape& LocOpe_Spliter::DirectLeft() const
 
 const TopTools_ListOfShape& LocOpe_Spliter::Left() const
 {
-  if (!myDone) {StdFail_NotDone::Raise();}
+  if (!myDone) {throw StdFail_NotDone();}
   return myLeft;
 
 }
@@ -549,7 +551,7 @@ static void RebuildWires(TopTools_ListOfShape& ledge,
   LocOpe_BuildWires theBuild(ledge, PW);
 //  Modified by skv - Mon May 31 12:31:40 2004 OCC5865 End
   if (!theBuild.IsDone()) {
-    Standard_ConstructionError::Raise();
+    throw Standard_ConstructionError();
   }
   ledge = theBuild.Result();
 

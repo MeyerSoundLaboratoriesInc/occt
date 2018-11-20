@@ -23,6 +23,7 @@
 #include <GeomAbs_SurfaceType.hxx>
 #include <GeomLib.hxx>
 #include <gp_XYZ.hxx>
+#include <Poly.hxx>
 #include <Poly_Connect.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Precision.hxx>
@@ -131,55 +132,46 @@ Standard_Boolean StdPrs_ToolTriangulatedShape::IsClosed (const TopoDS_Shape& the
 }
 
 //=======================================================================
-//function : Normal
+//function : ComputeNormals
 //purpose  :
 //=======================================================================
-void StdPrs_ToolTriangulatedShape::Normal (const TopoDS_Face&  theFace,
-                                           Poly_Connect&       thePolyConnect,
-                                           TColgp_Array1OfDir& theNormals)
+void StdPrs_ToolTriangulatedShape::ComputeNormals (const TopoDS_Face& theFace,
+                                                   const Handle(Poly_Triangulation)& theTris,
+                                                   Poly_Connect& thePolyConnect)
 {
-  const Handle(Poly_Triangulation)& aPolyTri = thePolyConnect.Triangulation();
-  const TColgp_Array1OfPnt&         aNodes   = aPolyTri->Nodes();
-  if (aPolyTri->HasNormals())
+  if (theTris.IsNull()
+   || theTris->HasNormals())
   {
-    // normals pre-computed in triangulation structure
-    const TShort_Array1OfShortReal& aNormals = aPolyTri->Normals();
-    const Standard_ShortReal*       aNormArr = &(aNormals.Value (aNormals.Lower()));
-    for (Standard_Integer aNodeIter = aNodes.Lower(); aNodeIter <= aNodes.Upper(); ++aNodeIter)
-    {
-      const Standard_Integer anId = 3 * (aNodeIter - aNodes.Lower());
-      const gp_Dir aNorm (aNormArr[anId + 0],
-                          aNormArr[anId + 1],
-                          aNormArr[anId + 2]);
-      theNormals (aNodeIter) = aNorm;
-    }
-
-    if (theFace.Orientation() == TopAbs_REVERSED)
-    {
-      for (Standard_Integer aNodeIter = aNodes.Lower(); aNodeIter <= aNodes.Upper(); ++aNodeIter)
-      {
-        theNormals.ChangeValue (aNodeIter).Reverse();
-      }
-    }
     return;
   }
 
   // take in face the surface location
-  const TopoDS_Face      aZeroFace = TopoDS::Face (theFace.Located (TopLoc_Location()));
-  Handle(Geom_Surface)   aSurf     = BRep_Tool::Surface (aZeroFace);
-  const Standard_Real    aTol      = Precision::Confusion();
-  Handle(TShort_HArray1OfShortReal) aNormals = new TShort_HArray1OfShortReal (1, aPolyTri->NbNodes() * 3);
-  const Poly_Array1OfTriangle& aTriangles = aPolyTri->Triangles();
-  const TColgp_Array1OfPnt2d*  aNodesUV   = aPolyTri->HasUVNodes() && !aSurf.IsNull()
-                                          ? &aPolyTri->UVNodes()
-                                          : NULL;
+  const TopoDS_Face    aZeroFace = TopoDS::Face (theFace.Located (TopLoc_Location()));
+  Handle(Geom_Surface) aSurf     = BRep_Tool::Surface (aZeroFace);
+  const Poly_Array1OfTriangle& aTriangles = theTris->Triangles();
+  if (!theTris->HasUVNodes() || aSurf.IsNull())
+  {
+    // compute normals by averaging triangulation normals sharing the same vertex
+    Poly::ComputeNormals (theTris);
+    return;
+  }
+
+  const Standard_Real aTol = Precision::Confusion();
+  Handle(TShort_HArray1OfShortReal) aNormals = new TShort_HArray1OfShortReal (1, theTris->NbNodes() * 3);
+  const TColgp_Array1OfPnt2d& aNodesUV = theTris->UVNodes();
   Standard_Integer aTri[3];
+  const TColgp_Array1OfPnt& aNodes = theTris->Nodes();
+  gp_Dir aNorm;
   for (Standard_Integer aNodeIter = aNodes.Lower(); aNodeIter <= aNodes.Upper(); ++aNodeIter)
   {
     // try to retrieve normal from real surface first, when UV coordinates are available
-    if (aNodesUV == NULL
-     || GeomLib::NormEstim (aSurf, aNodesUV->Value (aNodeIter), aTol, theNormals (aNodeIter)) > 1)
+    if (GeomLib::NormEstim (aSurf, aNodesUV.Value (aNodeIter), aTol, aNorm) > 1)
     {
+      if (thePolyConnect.Triangulation() != theTris)
+      {
+        thePolyConnect.Load (theTris);
+      }
+
       // compute flat normals
       gp_XYZ eqPlan (0.0, 0.0, 0.0);
       for (thePolyConnect.Initialize (aNodeIter); thePolyConnect.More(); thePolyConnect.Next())
@@ -195,15 +187,42 @@ void StdPrs_ToolTriangulatedShape::Normal (const TopoDS_Face&  theFace,
         }
       }
       const Standard_Real aModMax = eqPlan.Modulus();
-      theNormals (aNodeIter) = (aModMax > aTol) ? gp_Dir (eqPlan) : gp::DZ();
+      aNorm = (aModMax > aTol) ? gp_Dir (eqPlan) : gp::DZ();
     }
 
     const Standard_Integer anId = (aNodeIter - aNodes.Lower()) * 3;
-    aNormals->SetValue (anId + 1, (Standard_ShortReal )theNormals (aNodeIter).X());
-    aNormals->SetValue (anId + 2, (Standard_ShortReal )theNormals (aNodeIter).Y());
-    aNormals->SetValue (anId + 3, (Standard_ShortReal )theNormals (aNodeIter).Z());
+    aNormals->SetValue (anId + 1, (Standard_ShortReal )aNorm.X());
+    aNormals->SetValue (anId + 2, (Standard_ShortReal )aNorm.Y());
+    aNormals->SetValue (anId + 3, (Standard_ShortReal )aNorm.Z());
   }
-  aPolyTri->SetNormals (aNormals);
+  theTris->SetNormals (aNormals);
+}
+
+//=======================================================================
+//function : Normal
+//purpose  :
+//=======================================================================
+void StdPrs_ToolTriangulatedShape::Normal (const TopoDS_Face&  theFace,
+                                           Poly_Connect&       thePolyConnect,
+                                           TColgp_Array1OfDir& theNormals)
+{
+  const Handle(Poly_Triangulation)& aPolyTri = thePolyConnect.Triangulation();
+  if (!aPolyTri->HasNormals())
+  {
+    ComputeNormals (theFace, aPolyTri, thePolyConnect);
+  }
+
+  const TColgp_Array1OfPnt&       aNodes   = aPolyTri->Nodes();
+  const TShort_Array1OfShortReal& aNormals = aPolyTri->Normals();
+  const Standard_ShortReal*       aNormArr = &aNormals.First();
+  for (Standard_Integer aNodeIter = aNodes.Lower(); aNodeIter <= aNodes.Upper(); ++aNodeIter)
+  {
+    const Standard_Integer anId = 3 * (aNodeIter - aNodes.Lower());
+    const gp_Dir aNorm (aNormArr[anId + 0],
+                        aNormArr[anId + 1],
+                        aNormArr[anId + 2]);
+    theNormals (aNodeIter) = aNorm;
+  }
 
   if (theFace.Orientation() == TopAbs_REVERSED)
   {
@@ -251,4 +270,38 @@ Standard_Boolean StdPrs_ToolTriangulatedShape::Tessellate (const TopoDS_Shape&  
   }
 
   return wasRecomputed;
+}
+
+// =======================================================================
+// function : ClearOnOwnDeflectionChange
+// purpose  :
+// =======================================================================
+void StdPrs_ToolTriangulatedShape::ClearOnOwnDeflectionChange (const TopoDS_Shape&         theShape,
+                                                               const Handle(Prs3d_Drawer)& theDrawer,
+                                                               const Standard_Boolean      theToResetCoeff)
+{
+  if (!theDrawer->IsAutoTriangulation()
+    || theShape.IsNull())
+  {
+    return;
+  }
+
+  const Standard_Boolean isOwnDeviationAngle       = theDrawer->HasOwnDeviationAngle();
+  const Standard_Boolean isOwnDeviationCoefficient = theDrawer->HasOwnDeviationCoefficient();
+  const Standard_Real anAngleNew  = theDrawer->DeviationAngle();
+  const Standard_Real anAnglePrev = theDrawer->PreviousDeviationAngle();
+  const Standard_Real aCoeffNew   = theDrawer->DeviationCoefficient();
+  const Standard_Real aCoeffPrev  = theDrawer->PreviousDeviationCoefficient();
+  if ((!isOwnDeviationAngle       || Abs (anAngleNew - anAnglePrev) <= Precision::Angular())
+   && (!isOwnDeviationCoefficient || Abs (aCoeffNew  - aCoeffPrev)  <= Precision::Confusion()))
+  {
+    return;
+  }
+
+  BRepTools::Clean (theShape);
+  if (theToResetCoeff)
+  {
+    theDrawer->UpdatePreviousDeviationAngle();
+    theDrawer->UpdatePreviousDeviationCoefficient();
+  }
 }

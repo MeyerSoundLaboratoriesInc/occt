@@ -2,34 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{4DF23CE5-1241-0F28-172C-307BBC0B9E4F}</UniqueIdentifier>
+      <UniqueIdentifier>{6619192F-09CB-11A4-1879-70C75B3052AC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Aspect">
-      <UniqueIdentifier>{C65ED107-1537-099A-161F-20912719CEE6}</UniqueIdentifier>
+      <UniqueIdentifier>{83B705D6-1763-04AF-0C9B-7CA2C3A1DD97}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\SelectBasics">
-      <UniqueIdentifier>{5E86190B-0803-0976-104F-D753A6B4BFED}</UniqueIdentifier>
+      <UniqueIdentifier>{DB150AA4-0D9C-02C1-1775-6A2DC7E36BB9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Image">
-      <UniqueIdentifier>{A4757BE1-08AA-16A5-00DE-1D7B3082A373}</UniqueIdentifier>
+      <UniqueIdentifier>{B540AD8A-088D-181F-18DC-97A7666F565D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\WNT">
-      <UniqueIdentifier>{B909A642-0625-067C-17EE-43E7C52572A8}</UniqueIdentifier>
+      <UniqueIdentifier>{8F241AB8-060D-09BA-09E3-62142D1AC640}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Font">
-      <UniqueIdentifier>{8A92F4CB-01E2-08CA-1225-381A995A56D3}</UniqueIdentifier>
+      <UniqueIdentifier>{CDBDDCB6-1172-0F23-07D5-37A2F5AB97F7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\Aspect\Aspect_AspectFillArea.cxx">
-      <Filter>Source files\Aspect</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Aspect\Aspect_AspectLine.cxx">
-      <Filter>Source files\Aspect</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Aspect\Aspect_AspectMarker.cxx">
-      <Filter>Source files\Aspect</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Aspect\Aspect_Background.cxx">
       <Filter>Source files\Aspect</Filter>
     </ClCompile>
@@ -46,6 +37,9 @@
       <Filter>Source files\Aspect</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Aspect\Aspect_Grid.cxx">
+      <Filter>Source files\Aspect</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Aspect\Aspect_NeutralWindow.cxx">
       <Filter>Source files\Aspect</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Aspect\Aspect_RectangularGrid.cxx">
@@ -70,6 +64,9 @@
       <Filter>Source files\Image</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Image\Image_PixMap.cxx">
+      <Filter>Source files\Image</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Image\Image_VideoRecorder.cxx">
       <Filter>Source files\Image</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\WNT\WNT_WClass.cxx">

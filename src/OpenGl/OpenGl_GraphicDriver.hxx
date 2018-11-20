@@ -23,9 +23,7 @@
 #include <Aspect_GradientFillMethod.hxx>
 #include <Aspect_FillMethod.hxx>
 #include <Aspect_TypeOfTriedronPosition.hxx>
-#include <Aspect_TypeOfTriedronEcho.hxx>
 #include <Aspect_Handle.hxx>
-#include <Aspect_PrintAlgo.hxx>
 #include <Aspect_RenderingContext.hxx>
 #include <gp_Ax2.hxx>
 #include <Graphic3d_CView.hxx>
@@ -37,13 +35,10 @@
 #include <Graphic3d_TypeOfComposition.hxx>
 #include <Graphic3d_ExportFormat.hxx>
 #include <Graphic3d_SortType.hxx>
-#include <Graphic3d_Array1OfVertex.hxx>
-#include <Graphic3d_Array2OfVertex.hxx>
 #include <Graphic3d_BufferType.hxx>
 #include <NCollection_DataMap.hxx>
 #include <OpenGl_Context.hxx>
 #include <OpenGl_MapOfZLayerSettings.hxx>
-#include <Quantity_PlaneAngle.hxx>
 #include <Quantity_NameOfColor.hxx>
 #include <Standard_CString.hxx>
 #include <TColStd_Array1OfInteger.hxx>
@@ -53,7 +48,6 @@
 #include <TColStd_MapOfInteger.hxx>
 
 class Aspect_Window;
-class Graphic3d_Vector;
 class Quantity_Color;
 class Graphic3d_Vertex;
 class TCollection_ExtendedString;
@@ -79,13 +73,10 @@ private:
   Standard_Size myCounter;
 };
 
-class OpenGl_GraphicDriver;
-
-DEFINE_STANDARD_HANDLE(OpenGl_GraphicDriver,Graphic3d_GraphicDriver)
-
 //! This class defines an OpenGl graphic driver
 class OpenGl_GraphicDriver : public Graphic3d_GraphicDriver
 {
+  DEFINE_STANDARD_RTTIEXT(OpenGl_GraphicDriver, Graphic3d_GraphicDriver)
 public:
 
   //! Constructor.
@@ -103,7 +94,7 @@ public:
   //! Perform initialization of default OpenGL context.
   Standard_EXPORT Standard_Boolean InitContext();
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__)
   //! Initialize default OpenGL context using existing one.
   //! @param theEglDisplay EGL connection to the Display
   //! @param theEglContext EGL rendering context
@@ -113,8 +104,8 @@ public:
                                                    void*                   theEglConfig);
 #endif
 
-  Standard_EXPORT Standard_Integer InquireLightLimit () Standard_OVERRIDE;
-  Standard_EXPORT Standard_Integer InquireViewLimit () Standard_OVERRIDE;
+  //! Request limit of graphic resource of specific type.
+  Standard_EXPORT virtual Standard_Integer InquireLimit (const Graphic3d_TypeOfLimit theType) const Standard_OVERRIDE;
 
 public:
 
@@ -136,8 +127,6 @@ public:
                                  Standard_ShortReal&            theWidth,
                                  Standard_ShortReal&            theAscent,
                                  Standard_ShortReal&            theDescent) const Standard_OVERRIDE;
-
-  Standard_EXPORT Standard_Integer InquirePlaneLimit() Standard_OVERRIDE;
 
   Standard_EXPORT Standard_ShortReal DefaultTextHeight() const Standard_OVERRIDE;
 
@@ -163,7 +152,7 @@ public:
   Standard_EXPORT void SetZLayerSettings (const Graphic3d_ZLayerId theLayerId, const Graphic3d_ZLayerSettings& theSettings) Standard_OVERRIDE;
 
   //! Returns the settings of a single Z layer.
-  Standard_EXPORT virtual Graphic3d_ZLayerSettings ZLayerSettings (const Graphic3d_ZLayerId theLayerId) Standard_OVERRIDE;
+  Standard_EXPORT virtual const Graphic3d_ZLayerSettings& ZLayerSettings (const Graphic3d_ZLayerId theLayerId) const Standard_OVERRIDE;
 
 public:
 
@@ -198,34 +187,17 @@ public:
   //! Could return NULL-handle if no window created by this driver.
   Standard_EXPORT const Handle(OpenGl_Context)& GetSharedContext() const;
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__)
   Aspect_Display          getRawGlDisplay() const { return myEglDisplay; }
   Aspect_RenderingContext getRawGlContext() const { return myEglContext;  }
   void*                   getRawGlConfig()  const { return myEglConfig; }
 #endif
 
-public:
+  //! Insert index layer at proper position.
+  Standard_EXPORT void addZLayerIndex (const Graphic3d_ZLayerId theLayerId);
 
-  DEFINE_STANDARD_RTTIEXT(OpenGl_GraphicDriver,Graphic3d_GraphicDriver)
-
-protected:
-
-  Standard_Boolean        myIsOwnContext; //!< indicates that shared context has been created within OpenGl_GraphicDriver
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
-  Aspect_Display          myEglDisplay;   //!< EGL connection to the Display : EGLDisplay
-  Aspect_RenderingContext myEglContext;   //!< EGL rendering context         : EGLContext
-  void*                   myEglConfig;    //!< EGL configuration             : EGLConfig
-#endif
-
-  Handle(OpenGl_Caps)                                             myCaps;
-  NCollection_Map<Handle(OpenGl_View)>                            myMapOfView;
-  NCollection_DataMap<Standard_Integer, OpenGl_Structure*>        myMapOfStructure;
-
-public:
-
-  TColStd_MapOfInteger       myLayerIds;
-  TColStd_SequenceOfInteger  myLayerSeq;
-  OpenGl_MapOfZLayerSettings myMapOfZLayerSettings;
+  //! Set device lost flag for redrawn views.
+  Standard_EXPORT void setDeviceLost();
 
 public:
 
@@ -237,9 +209,26 @@ public:
 
 protected:
 
+  Standard_Boolean        myIsOwnContext; //!< indicates that shared context has been created within OpenGl_GraphicDriver
+#if defined(HAVE_EGL) || defined(HAVE_GLES2) || defined(OCCT_UWP) || defined(__ANDROID__) || defined(__QNX__)
+  Aspect_Display          myEglDisplay;   //!< EGL connection to the Display : EGLDisplay
+  Aspect_RenderingContext myEglContext;   //!< EGL rendering context         : EGLContext
+  void*                   myEglConfig;    //!< EGL configuration             : EGLConfig
+#endif
+
+  Handle(OpenGl_Caps)                                      myCaps;
+  NCollection_Map<Handle(OpenGl_View)>                     myMapOfView;
+  NCollection_DataMap<Standard_Integer, OpenGl_Structure*> myMapOfStructure;
+
+  TColStd_MapOfInteger       myLayerIds;
+  TColStd_SequenceOfInteger  myLayerSeq;
+  OpenGl_MapOfZLayerSettings myMapOfZLayerSettings;
+
   mutable OpenGl_StateCounter myStateCounter; //!< State counter for OpenGl structures.
   mutable OpenGl_StateCounter myUIDGenerator; //!< Unique ID counter for primitive arrays.
 
 };
+
+DEFINE_STANDARD_HANDLE(OpenGl_GraphicDriver, Graphic3d_GraphicDriver)
 
 #endif //_OpenGl_GraphicDriver_HeaderFile

@@ -35,7 +35,8 @@ BRepMesh_DataStructureOfDelaun::BRepMesh_DataStructureOfDelaun(
   const Handle(NCollection_IncAllocator)& theAllocator,
   const Standard_Integer                  theReservedNodeSize)
   : myAllocator       (theAllocator),
-    myNodes           (new BRepMesh_VertexTool(theReservedNodeSize, myAllocator)),
+    myNodes           (new BRepMesh_VertexTool(myAllocator)),
+    myNodeLinks       (theReservedNodeSize * 3, myAllocator),
     myLinks           (theReservedNodeSize * 3, myAllocator),
     myDelLinks        (myAllocator),
     myElements        (theReservedNodeSize * 2, myAllocator),
@@ -570,9 +571,9 @@ Standard_CString BRepMesh_Dump(void*            theMeshHandlePtr,
     if (!BRepTools::Write(aMesh, theFileNameStr))
       return "Error: write failed";
   }
-  catch (Standard_Failure)
+  catch (Standard_Failure const& anException)
   {
-    return Standard_Failure::Caught()->GetMessageString();
+    return anException.GetMessageString();
   }
 
   return theFileNameStr;

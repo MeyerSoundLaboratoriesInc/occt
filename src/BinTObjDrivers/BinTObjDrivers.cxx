@@ -26,6 +26,7 @@
 #include <BinTObjDrivers_ReferenceDriver.hxx>
 #include <BinTObjDrivers_XYZDriver.hxx>
 #include <Plugin_Macro.hxx>
+#include <TDocStd_Application.hxx>
 
 static Standard_GUID BinStorageDriver  ("f78ff4a2-a779-11d5-aab4-0050044b1af1");
 static Standard_GUID BinRetrievalDriver("f78ff4a3-a779-11d5-aab4-0050044b1af1");
@@ -56,11 +57,22 @@ const Handle(Standard_Transient)& BinTObjDrivers::Factory(const Standard_GUID& a
 }
 
 //=======================================================================
+//function : DefineFormat
+//purpose  : 
+//=======================================================================
+void BinTObjDrivers::DefineFormat (const Handle(TDocStd_Application)& theApp)
+{
+  theApp->DefineFormat ("TObjBin", "Binary TObj OCAF Document", "cbf",
+                        new BinTObjDrivers_DocumentRetrievalDriver, 
+                        new BinTObjDrivers_DocumentStorageDriver);
+}
+
+//=======================================================================
 //function : AddDrivers
 //purpose  : 
 //=======================================================================
 void BinTObjDrivers::AddDrivers (const Handle(BinMDF_ADriverTable)& aDriverTable,
-                                 const Handle(CDM_MessageDriver)&   aMsgDrv)
+                                 const Handle(Message_Messenger)&   aMsgDrv)
 {
   aDriverTable -> AddDriver (new BinTObjDrivers_ModelDriver      (aMsgDrv));
   aDriverTable -> AddDriver (new BinTObjDrivers_ObjectDriver     (aMsgDrv));

@@ -20,39 +20,30 @@
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
-#include <Quantity_PlaneAngle.hxx>
-#include <Quantity_Length.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_Boolean.hxx>
 #include <Aspect_GridDrawMode.hxx>
-#include <MMgt_TShared.hxx>
-class Quantity_Color;
+#include <Standard_Transient.hxx>
 
-
-class Aspect_Grid;
-DEFINE_STANDARD_HANDLE(Aspect_Grid, MMgt_TShared)
-
-
-class Aspect_Grid : public MMgt_TShared
+class Aspect_Grid : public Standard_Transient
 {
-
+  DEFINE_STANDARD_RTTIEXT(Aspect_Grid, Standard_Transient)
 public:
 
-  
   //! defines the x Origin of the grid.
-  Standard_EXPORT void SetXOrigin (const Quantity_Length anOrigin);
+  Standard_EXPORT void SetXOrigin (const Standard_Real anOrigin);
   
   //! defines the y Origin of the grid.
-  Standard_EXPORT void SetYOrigin (const Quantity_Length anOrigin);
+  Standard_EXPORT void SetYOrigin (const Standard_Real anOrigin);
   
-  //! defines the orientation of the the grid.
-  Standard_EXPORT void SetRotationAngle (const Quantity_PlaneAngle anAngle);
+  //! defines the orientation of the grid.
+  Standard_EXPORT void SetRotationAngle (const Standard_Real anAngle);
   
   //! Rotate the grid from a relative angle.
-  Standard_EXPORT void Rotate (const Quantity_PlaneAngle anAngle);
+  Standard_EXPORT void Rotate (const Standard_Real anAngle);
   
   //! Translate the grid from a relative distance.
-  Standard_EXPORT void Translate (const Quantity_Length aDx, const Quantity_Length aDy);
+  Standard_EXPORT void Translate (const Standard_Real aDx, const Standard_Real aDy);
   
   //! Change the colors of the grid
   Standard_EXPORT virtual void SetColors (const Quantity_Color& aColor, const Quantity_Color& aTenthColor);
@@ -60,31 +51,31 @@ public:
   //! returns the point of the grid the closest to the point X,Y
   //! if the grid is active. If the grid is not active returns
   //! X,Y.
-  Standard_EXPORT void Hit (const Quantity_Length X, const Quantity_Length Y, Quantity_Length& gridX, Quantity_Length& gridY) const;
+  Standard_EXPORT void Hit (const Standard_Real X, const Standard_Real Y, Standard_Real& gridX, Standard_Real& gridY) const;
   
   //! returns the point of the grid the closest to the point X,Y
-  Standard_EXPORT virtual void Compute (const Quantity_Length X, const Quantity_Length Y, Quantity_Length& gridX, Quantity_Length& gridY) const = 0;
+  Standard_EXPORT virtual void Compute (const Standard_Real X, const Standard_Real Y, Standard_Real& gridX, Standard_Real& gridY) const = 0;
   
   //! activates the grid. The Hit method will return
   //! gridx and gridx computed according to the steps
   //! of the grid.
-  Standard_EXPORT void Activate();
+  void Activate() { myIsActive = Standard_True; }
   
   //! deactivates the grid. The hit method will return
   //! gridx and gridx as the enter value X & Y.
-  Standard_EXPORT void Deactivate();
+  void Deactivate() { myIsActive = Standard_False; }
   
   //! returns the x Origin of the grid.
-  Standard_EXPORT Quantity_Length XOrigin() const;
+  Standard_Real XOrigin() const { return myXOrigin; }
   
   //! returns the x Origin of the grid.
-  Standard_EXPORT Quantity_Length YOrigin() const;
+  Standard_Real YOrigin() const { return myYOrigin; }
   
   //! returns the x Angle of the grid.
-  Standard_EXPORT Quantity_PlaneAngle RotationAngle() const;
+  Standard_Real RotationAngle() const { return myRotationAngle; }
   
   //! Returns TRUE when the grid is active.
-  Standard_EXPORT Standard_Boolean IsActive() const;
+  Standard_Boolean IsActive() const { return myIsActive; }
   
   //! Returns the colors of the grid.
   Standard_EXPORT void Colors (Quantity_Color& aColor, Quantity_Color& aTenthColor) const;
@@ -93,54 +84,43 @@ public:
   Standard_EXPORT void SetDrawMode (const Aspect_GridDrawMode aDrawMode);
   
   //! Returns the grid aspect.
-  Standard_EXPORT Aspect_GridDrawMode DrawMode() const;
-  
+  Aspect_GridDrawMode DrawMode() const { return myDrawMode; }
+
   //! Display the grid at screen.
-  Standard_EXPORT virtual void Display();
+  Standard_EXPORT virtual void Display() = 0;
   
   //! Erase the grid from screen.
-  Standard_EXPORT virtual void Erase() const;
+  Standard_EXPORT virtual void Erase() const = 0;
   
   //! Returns TRUE when the grid is displayed at screen.
-  Standard_EXPORT virtual Standard_Boolean IsDisplayed() const;
+  Standard_EXPORT virtual Standard_Boolean IsDisplayed() const = 0;
   
   Standard_EXPORT virtual void Init() = 0;
 
+protected:
 
-
-
-  DEFINE_STANDARD_RTTIEXT(Aspect_Grid,MMgt_TShared)
+  //! Creates a new grid. By default this grid is not active.
+  Standard_EXPORT Aspect_Grid (const Standard_Real theXOrigin = 0.0,
+                               const Standard_Real theYOrigin = 0.0,
+                               const Standard_Real theRotationAngle = 0,
+                               const Quantity_Color& theColor = Quantity_NOC_GRAY50,
+                               const Quantity_Color& theTenthColor = Quantity_NOC_GRAY70);
+  
+  //! Updates the grid parameters.
+  Standard_EXPORT virtual void UpdateDisplay() = 0;
 
 protected:
 
-  
-  //! creates a new grid. By default this grid is not
-  //! active.
-  Standard_EXPORT Aspect_Grid(const Quantity_Length anXOrigin = 0.0, const Quantity_Length anYOrigin = 0.0, const Quantity_PlaneAngle aRotationAngle = 0, const Quantity_Color& aColor = Quantity_NOC_GRAY50, const Quantity_Color& aTenthColor = Quantity_NOC_GRAY70);
-  
-  //! Updates the grid parameters.
-  Standard_EXPORT virtual void UpdateDisplay();
-
-  Quantity_PlaneAngle myRotationAngle;
-  Quantity_Length myXOrigin;
-  Quantity_Length myYOrigin;
+  Standard_Real myRotationAngle;
+  Standard_Real myXOrigin;
+  Standard_Real myYOrigin;
   Quantity_Color myColor;
   Quantity_Color myTenthColor;
-
-
-private:
-
-
   Standard_Boolean myIsActive;
   Aspect_GridDrawMode myDrawMode;
 
-
 };
 
-
-
-
-
-
+DEFINE_STANDARD_HANDLE(Aspect_Grid, Standard_Transient)
 
 #endif // _Aspect_Grid_HeaderFile

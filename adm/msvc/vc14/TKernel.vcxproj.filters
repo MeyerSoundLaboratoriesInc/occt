@@ -2,52 +2,46 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{700F7470-07E1-05CB-05A1-F3F0F650C3B0}</UniqueIdentifier>
+      <UniqueIdentifier>{0439FD47-0221-029A-16C7-25C2AB0F7EAE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\FSD">
-      <UniqueIdentifier>{5F63C568-0963-0E27-0036-F7ABF13988D8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\MMgt">
-      <UniqueIdentifier>{47546A6F-16CB-055B-010C-3D3A5CC2ABAF}</UniqueIdentifier>
+      <UniqueIdentifier>{45F0503A-004E-0149-1293-35BF0890BC61}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\OSD">
-      <UniqueIdentifier>{95ADA35B-18E7-0C3A-0060-7C5CEFB96D6B}</UniqueIdentifier>
+      <UniqueIdentifier>{3FB02A24-064D-0A47-07FD-800406883FD0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Plugin">
-      <UniqueIdentifier>{BEBDECAA-0097-009E-1796-F26541D59BB5}</UniqueIdentifier>
+      <UniqueIdentifier>{15AB6E9A-0F32-17EE-1040-BCEA9BCE93A0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Quantity">
-      <UniqueIdentifier>{E1C60D19-097E-12D2-146E-2CFA03D20935}</UniqueIdentifier>
+      <UniqueIdentifier>{3E1BF369-072A-0EEF-0B1B-BBA22F94EF53}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Resource">
-      <UniqueIdentifier>{5A96CB96-0EC4-047D-15CB-EDA2A450BD75}</UniqueIdentifier>
+      <UniqueIdentifier>{EC609ACB-14E0-1684-15DB-EF15004BE227}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Standard">
-      <UniqueIdentifier>{C68671DA-1944-14FC-050F-F76051D47535}</UniqueIdentifier>
+      <UniqueIdentifier>{EC85ACA3-098E-0A36-144E-B2EAEB5CF905}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Storage">
-      <UniqueIdentifier>{5B19ACBF-02E6-1805-12F1-2417F6A13CFD}</UniqueIdentifier>
+      <UniqueIdentifier>{E0CAF042-1160-0171-0FCA-35324F79E855}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TColStd">
-      <UniqueIdentifier>{AB379AFC-0D4A-0D06-09C6-FD89B75C8C76}</UniqueIdentifier>
+      <UniqueIdentifier>{845C99BD-1764-051A-0EDC-0C6C108AA58B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TCollection">
-      <UniqueIdentifier>{09A502B3-15A4-1311-0E82-ABEE04977E4B}</UniqueIdentifier>
+      <UniqueIdentifier>{7A4E1529-01FA-0FCC-18A6-DA975204BC38}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Units">
-      <UniqueIdentifier>{E4A72989-051B-191A-0074-17A60E971BA6}</UniqueIdentifier>
+      <UniqueIdentifier>{E127024C-04D2-0F55-1048-B7C95E0559F9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\UnitsAPI">
-      <UniqueIdentifier>{9868030D-16BC-0482-04E1-B3EFD7474AAD}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source files\Dico">
-      <UniqueIdentifier>{77AE41A5-0F2B-14C7-0CCC-C8577EE830E2}</UniqueIdentifier>
+      <UniqueIdentifier>{562259FE-092D-03CB-13D5-8156CE6A042F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\NCollection">
-      <UniqueIdentifier>{E15BF335-0A04-07F8-0CD8-EFC92F81650C}</UniqueIdentifier>
+      <UniqueIdentifier>{38B29785-0B08-1499-0292-4D6A5E82536D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Message">
-      <UniqueIdentifier>{1103E8F1-0ACE-03C6-1518-00D523A91661}</UniqueIdentifier>
+      <UniqueIdentifier>{3331792F-08A9-03CB-1954-D10CB89A05FD}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -59,9 +53,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\FSD\FSD_File.cxx">
       <Filter>Source files\FSD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\MMgt\MMgt_TShared.cxx">
-      <Filter>Source files\MMgt</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\OSD\OSD.cxx">
       <Filter>Source files\OSD</Filter>
@@ -108,13 +99,16 @@
     <ClCompile Include="..\..\..\src\OSD\OSD_Parallel.cxx">
       <Filter>Source files\OSD</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\OSD\OSD_Parallel_TBB.cxx">
+      <Filter>Source files\OSD</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\OSD\OSD_Parallel_Threads.cxx">
+      <Filter>Source files\OSD</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\OSD\OSD_Path.cxx">
       <Filter>Source files\OSD</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\OSD\OSD_PerfMeter.cxx">
-      <Filter>Source files\OSD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\OSD\OSD_Printer.cxx">
       <Filter>Source files\OSD</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\OSD\OSD_Process.cxx">
@@ -138,16 +132,10 @@
     <ClCompile Include="..\..\..\src\OSD\OSD_signal.cxx">
       <Filter>Source files\OSD</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\OSD\OSD_signal_WNT.cxx">
-      <Filter>Source files\OSD</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\Plugin\Plugin.cxx">
       <Filter>Source files\Plugin</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Quantity\Quantity_Color.cxx">
-      <Filter>Source files\Quantity</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Quantity\Quantity_Convert.cxx">
       <Filter>Source files\Quantity</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Quantity\Quantity_Date.cxx">
@@ -171,6 +159,9 @@
     <ClCompile Include="..\..\..\src\Standard\Standard.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Standard\Standard_ArrayStreamBuffer.cxx">
+      <Filter>Source files\Standard</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_CLocaleSentry.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
@@ -178,9 +169,6 @@
       <Filter>Source files\Standard</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_ErrorHandler.cxx">
-      <Filter>Source files\Standard</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Standard\Standard_ErrorHandlerCallback.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_ExtString.cxx">
@@ -216,19 +204,16 @@
     <ClCompile Include="..\..\..\src\Standard\Standard_Real.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Standard\Standard_SStream.cxx">
+    <ClCompile Include="..\..\..\src\Standard\Standard_ShortReal.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Standard\Standard_ShortReal.cxx">
+    <ClCompile Include="..\..\..\src\Standard\Standard_Strtod.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_Transient.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_Type.cxx">
-      <Filter>Source files\Standard</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Standard\Standard_UUID.cxx">
       <Filter>Source files\Standard</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Standard\Standard_math.cxx">
@@ -270,13 +255,7 @@
     <ClCompile Include="..\..\..\src\Storage\Storage_TypedCallBack.cxx">
       <Filter>Source files\Storage</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Storage\Storage_stCONSTclCOM.cxx">
-      <Filter>Source files\Storage</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\TColStd\TColStd_HPackedMapOfInteger.cxx">
-      <Filter>Source files\TColStd</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TColStd\TColStd_MapIteratorOfPackedMapOfInteger.cxx">
       <Filter>Source files\TColStd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TColStd\TColStd_PackedMapOfInteger.cxx">
@@ -363,24 +342,6 @@
     <ClCompile Include="..\..\..\src\UnitsAPI\UnitsAPI.cxx">
       <Filter>Source files\UnitsAPI</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_DictionaryOfInteger_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_DictionaryOfTransient_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_IteratorOfDictionaryOfInteger_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_IteratorOfDictionaryOfTransient_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_StackItemOfDictionaryOfInteger_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\Dico\Dico_StackItemOfDictionaryOfTransient_0.cxx">
-      <Filter>Source files\Dico</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\NCollection\NCollection_AccAllocator.cxx">
       <Filter>Source files\NCollection</Filter>
     </ClCompile>
@@ -420,6 +381,9 @@
     <ClCompile Include="..\..\..\src\Message\Message.cxx">
       <Filter>Source files\Message</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\Message\Message_Alert.cxx">
+      <Filter>Source files\Message</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\Message\Message_Algorithm.cxx">
       <Filter>Source files\Message</Filter>
     </ClCompile>
@@ -445,6 +409,9 @@
       <Filter>Source files\Message</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\Message\Message_ProgressSentry.cxx">
+      <Filter>Source files\Message</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\Message\Message_Report.cxx">
       <Filter>Source files\Message</Filter>
     </ClCompile>
   </ItemGroup>

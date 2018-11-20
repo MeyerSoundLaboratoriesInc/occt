@@ -4,8 +4,7 @@
 @tableofcontents
 
 @htmlonly<center>@endhtmlonly 
-@image html /resources/occt_logo.png
-@image latex /resources/occt_logo.png
+@figure{/resources/occt_logo.png}
 @htmlonly</center>@endhtmlonly
 
 @section OCCT_OVW_SECTION_1 Welcome
@@ -19,24 +18,32 @@ modeling (CAD), manufacturing / measuring (CAM) or numerical simulation (CAE).
 @section OCCT_OVW_SECTION_2 Copyrights
 
 Open CASCADE Technology and all materials, including this documentation, is 
-Copyright (c) 1999-2016 by OPEN CASCADE S.A.S. All rights reserved.
+Copyright (c) 1999-2018 by OPEN CASCADE S.A.S. All rights reserved.
 
 @htmlonly<center>@endhtmlonly
-http://www.opencascade.com
-@image html /resources/occ_logo.png
-@image latex /resources/occ_logo.png
+https://www.opencascade.com
+@figure{/resources/occ_logo.png}
 @htmlonly</center>@endhtmlonly
 
  License
 --------
 
-Open CASCADE Technology is free software; you can redistribute it and / or 
-modify it under the terms of the 
-@ref license_lgpl_21 "GNU Lesser General Public License (LGPL) version 2.1", 
-with additional @ref occt_lgpl_exception "exception".
+Open CASCADE Technology is free software; you can redistribute it and / or modify it under the terms of the 
+@ref license_lgpl_21 "GNU Lesser General Public License (LGPL) version 2.1", with additional @ref occt_lgpl_exception "exception".
 
-Alternatively, Open CASCADE Technology may be used under the terms of Open 
-CASCADE commercial license or contractual agreement.
+Note that LGPL imposes some obligations on the application linked with Open CASCADE Technology.
+If you wish to use OCCT in a proprietary application, please, pay special attention to address the requirements of LGPL section 6.
+At minimum the following should be considered:
+1. Add the notice visible to the users of your application clearly stating that Open CASCADE Technology is used in this application, and that they have rights in this regard according to LGPL. 
+   Such notice can be added in About dialog box (this is mandatory if this box contains copyright statements) or a similar place and/or in the documentation. 
+   The text of LGPL license should be accessible to the user.
+2. Make the copy of OCCT sources used by the application available to its users, and if necessary provide instructions on how to build it in a way compatible with the application.
+3. Ensure that the user actually can exercise the right to run your application with a modified version of OCCT. 
+   If the application is distributed in a form that does not allow the user to modify OCCT part (e.g. the application is linked to OCCT statically or is distributed via AppStore on iOS, GooglePlay on Android, Windows Store, etc.), 
+   the application should be provided separately in a modifiable form, with all materials needed for the user to be able to run the application with a modified version of OCCT.
+
+If you want to use Open CASCADE Technology without being bound by LGPL requirements, 
+please <a href="https://www.opencascade.com/contact">contact Open CASCADE company</a> for a commercial license.
 
 Note that Open CASCADE Technology is provided on an "AS IS" basis, WITHOUT 
 WARRANTY OF ANY KIND. The entire risk related to any use of the OCCT code and 
@@ -73,7 +80,7 @@ and, in case you need any further information, directly contact their authors.
 **Qt** is a cross-platform application framework that is widely used for developing application software 
 with graphical user interface (GUI). Qt is free and open source software distributed under 
 the terms of the GNU Lesser General Public License. In OCCT Qt is used for programming samples. 
-If you need further information on Qt, please, refer to Qt Homepage (http://www.qt.io/)
+If you need further information on Qt, please, refer to Qt Homepage (https://www.qt.io/)
 
 **Tcl** is a high-level programming language. Tk is a graphical user interface (GUI) toolkit, 
 with buttons, menus, listboxes, scrollbars, and so on. Taken together Tcl and Tk provide a solution 
@@ -81,29 +88,29 @@ to develop cross-platform graphical user interfaces with a native look and feel.
 Scriptics Corp., Sun Microsystems, and other companies. However, Tcl/Tk is an open source, and 
 the copyright allows you to use, modify, and redistribute Tcl/Tk for any purpose, without an 
 explicit license agreement and without paying any license fees or royalties. 
-To use Tcl/Tk, please refer to the Licensing Terms (http://www.tcl.tk/software/tcltk/license.html).
+To use Tcl/Tk, please refer to the Licensing Terms (https://www.tcl.tk/software/tcltk/license.html).
 
 **GL2PS** is developed by Christophe Geuzaine and others. It is optionally used by OCCT to
 export content of OpenGL scene to vector graphics formats (PS, PDF, EMF, SVG). 
-The library is licensed under GL2PS LICENSE http://www.geuz.org/gl2ps/COPYING.GL2PS Version 2, November 2003.
+The library is licensed under GL2PS license (http://www.geuz.org/gl2ps/COPYING.GL2PS).
 
 **FreeType 2** is developed by Antoine Leca, David Turner, Werner Lemberg and others. 
 It is a software font engine that is designed to be small, efficient, highly customizable and 
 portable while capable of producing high-quality output (glyph images). This product 
 can be used in graphic libraries, display servers, font conversion tools, 
 text image generation tools, and many other products.
-
-FreeType 2 is released under two open-source licenses: BSD-like FreeType License and the GPL.
+FreeType 2 is released under two open-source licenses: BSD-like FreeType License and the GPL (https://www.freetype.org/license.html).
 
 **Intel(R) Threading Building Blocks (TBB)** offers a rich and complete approach to expressing parallelism in a C++ program. 
 It is a library that helps you to take advantage of multi-core processor performance without having to be a threading expert. 
 Threading Building Blocks is not just a threads-replacement library. It represents a higher-level, task-based parallelism that 
 abstracts platform details and threading mechanisms for scalability and performance. 
-TBB is available under GPLv2 license with the runtime exception.
+TBB version 2017 is available under Apache 2.0 license, while older versions 
+until 4.4 are available under GPLv2 license with the runtime exception (https://www.threadingbuildingblocks.org).
 
 **OpenGL** is an industry standard API for 3D graphics used by OCCT for 
 implementation of 3D viewer. OpenGL specification is developed by the
-Khronos group, http://www.khronos.org/opengl/. OCCT code includes header 
+Khronos group, https://www.khronos.org/opengl/. OCCT code includes header 
 file *glext.h* obtained from Khronos web site.
 
 **VTK** -- The **Visualization Toolkit (VTK)** is an open-source, freely available software system for 3D computer graphics, image processing and visualization. OCCT VIS component provides adaptation functionality for visualization of OCCT topological shapes by means of VTK library. If you need further information on VTK, please, refer to VTK Homepage http://www.vtk.org/.
@@ -111,7 +118,7 @@ file *glext.h* obtained from Khronos web site.
 **Doxygen** developed by Dimitri van Heesch is open source documentation system for 
 C++, C, Java, Objective-C, Python, IDL, PHP and C#. This product is used in Open CASCADE Technology 
 for automatic creation of Technical Documentation from C++ header files. 
-If you need further information on Doxygen, please refer to http://www.stack.nl/~dimitri/doxygen/index.html.
+If you need further information on Doxygen, please refer to https://www.stack.nl/~dimitri/doxygen/index.html.
 
 **Graphviz** is open source graph visualization software developed by John Ellson, Emden Gansner, Yifan Hu and Arif Bilgin. 
 Graph visualization is representiation of structured information as diagrams of abstract graphs and networks. 
@@ -129,8 +136,22 @@ FreeImage is easy to use, fast, multithreading safe, compatible with all 32-bit 
 and cross-platform (works both with Linux and Mac OS X). FreeImage is optionally used by OCCT to work
 with images, on conditions of the FreeImage Public License (FIPL) (http://freeimage.sourceforge.net/freeimage-license.txt).
 
+**David M. Gay's floating point routines** (dtoa.c) are used for fast reading of floating point values from text strings.
+These routines are available under MIT-like license (see http://www.netlib.org/fp/).
+
+**CMake** is an open-source, cross-platform family of tools designed to build, test and package software. CMake is used to control the software compilation process using simple platform and compiler independent configuration files, and generate native makefiles and workspaces that can be used in the compiler environment of your choice. 
+OCCT uses CMake as a build system. CMake is available under BSD 3-Clause license. See more at https://cmake.org/
+
+**Cotire** (compile time reducer) is a CMake module that speeds up the build process of CMake based build systems 
+by fully automating techniques as precompiled header usage and single compilation unit builds for C and C++.
+Cotire is included in OCCT repository and used optionally by OCCT CMake scripts to accelerate builds by use of precompiled headers.
+Cotire is licensed under the MIT license (https://github.com/sakra/cotire/blob/master/license).
+
+**FFmpeg** is an Open Source framework supporting various image, video and audio codecs.
+FFmpeg is optionally used by OCCT for video recording, on LGPL conditions (https://www.ffmpeg.org/legal.html).
+
 **MikTEX** is up-to-date implementation of TeX/LaTeX and related programs for Windows. It is used 
-for generation of User and Developer Guides in PDF format. See http://miktex.org for information
+for generation of User and Developer Guides in PDF format. See https://miktex.org for information
 on this tool.
 
 Adobe Systems, Inc. provides **Adobe Reader**, which can be used to view files in Portable Document Format (PDF). 
@@ -175,30 +196,21 @@ Run this command without arguments to get help on supported options.
 @section OCCT_OVW_SECTION_5 Requirements
 
 Open CASCADE Technology is designed to be highly portable and is known to 
-work on wide range of platforms (UNIX, Linux, Windows, Mac OS X, Android). 
+work on wide range of platforms. 
 Current version is officially certified on Windows (IA-32 and x86-64), 
-Linux (x86-64), MAC OS X (x86-64) and Android (4.0.4 armv7) platforms. 
+Linux (x86-64), OS X / macOS (x86-64), Android (armv7 and x86), and 
+iOS (armv7, arm64) platforms. 
 
-The tables below describe the recommended hardware and software configurations
+The tables below describe the recommended software configurations
 for which OCCT is certified to work.
-
-@subsection overview_req_os Operating System
-
-| OS        | Versions |
-| --------- | ----------- |
-| Windows   | 10, 8.1, 7 SP1, Vista SP2 |
-| Linux     | Mandriva 2010, CentOS 6.3, Fedora 18, Ubuntu 14.10 - 15.10, Debian 6.0, Debian 7.0 |
-| OS X      | 10.10 Yosemite / 10.9 Mavericks / 10.8 Mountain Lion / 10.7 Lion |
-| Android   | 6.x, 5.x, 4.0.4+ |
-| iOS       | iOS 7 |
 
 @subsection overview_req_cpp C++ Compiler / IDE
 
 | OS        | Compiler |
 | --------- | ----------- |
-| Windows   | Microsoft Visual Studio: 2010 SP1<sup>1</sup>, 2012 Update 4, 2013 Update 5, 2015 <br> Intel C++ Composer XE 2013 SP1 <br> GCC 4.3+ (Mingw-w64)|
+| Windows   | Microsoft Visual Studio: 2008 SP1, 2010 SP1<sup>1</sup>, 2012 Update 4, 2013 Update 5, 2015, 2017 <br> GCC 4.3+ (Mingw-w64)|
 | Linux     | GNU gcc 4.3+ <br> LLVM CLang 3.6+ |
-| OS X      | XCode 6 or newer |
+| OS X / macOS | XCode 6 or newer |
 | Android   | NDK r10, GNU gcc 4.8 or newer |
 
 1) VC++ 10 64-bit is used for regular testing and for building 
@@ -209,14 +221,15 @@ for which OCCT is certified to work.
 | Component | Requirement |
 | --------- | ----------- |
 | Graphic library | OpenGL 3.3+, OpenGL ES 2.0+ <br> Direct3D 9 |
-| Qt (for samples and demos) | Desktop: Qt 4.8.6+ http://www.qt.io/download/ <br> Android: Qt 5.3.2+ http://www.qt.io/download/ |
-| TCL (for testing tools)    | Tcl/Tk 8.6.3+ http://www.tcl.tk/software/tcltk/download.html <br> or ActiveTcl 8.6 http://www.activestate.com/activetcl/downloads (for Windows)| 
-| Freetype (for text rendering) | FreeType 2.4.11-2.5.5 http://sourceforge.net/projects/freetype/files/ |
-| FreeImage (optional, for support of common 2D graphic formats) | FreeImage 3.17.0+ http://sourceforge.net/projects/freeimage/files |
+| Qt (for samples and demos) | Desktop: Qt 4.8.6+ https://www.qt.io/download/ <br> Android: Qt 5.3.2+ https://www.qt.io/download/ |
+| TCL (for testing tools)    | Tcl/Tk 8.6.3+ https://www.tcl.tk/software/tcltk/download.html <br> or ActiveTcl 8.6 https://www.activestate.com/activetcl/downloads (for Windows)| 
+| Freetype (for text rendering) | FreeType 2.4.11-2.7.1 https://sourceforge.net/projects/freetype/files/ |
+| FreeImage (optional, for support of common 2D graphic formats) | FreeImage 3.17.0+ https://sourceforge.net/projects/freeimage/files |
+| FFmpeg (optional, for video recording) | FFmpeg 3.1+ https://www.ffmpeg.org/download.html |
 | gl2ps (optional, for export contents of OCCT viewer to vector formats) | gl2ps-1.3.8+  http://geuz.org/gl2ps/ |
-| Intel TBB (optional, for multithreaded algorithms) | TBB 4.x or 5.x http://www.threadingbuildingblocks.org/ |
-| VTK (for VTK Integration Services | VTK 6.1+ http://www.vtk.org/VTK/resources/software.html |
-| Doxygen (optional for building documentation) | Doxygen 1.8.5+ http://www.stack.nl/~dimitri/doxygen/download.html |
+| Intel TBB (optional, for multithreaded algorithms) | TBB 4.x or 5.x https://www.threadingbuildingblocks.org/ |
+| VTK (for VTK Integration Services | VTK 6.1+ http://www.vtk.org/download/ |
+| Doxygen (optional for building documentation) | Doxygen 1.8.5+ https://www.stack.nl/~dimitri/doxygen/download.html |
 
 @subsection overview_req_hw Hardware
 
@@ -229,19 +242,14 @@ On desktop, 3D viewer for optimal performance requires graphics processing unit 
 Ray tracing requires OpenGL 4.0+ or OpenGL 3.3+ with *GL_ARB_texture_buffer_object_rgb32* extension.
 Textures within ray tracing will be available only when *GL_ARB_bindless_texture extension* is provided by driver.
 
-On mobile platforms, OpenGL ES 2.0+ is required for 3D viewer. The ray tracing is not yet available on mobile platforms.
+On mobile platforms, OpenGL ES 2.0+ is required for 3D viewer (OpenGL ES 3.1+ is recommended).
+The ray tracing is not yet available on mobile platforms.
 Some old hardware might be unable to execute complex GLSL programs (e.g. with high number of light sources, clipping planes).
 
-The following table lists graphic cards tested to work with OCCT.
-
-| Graphic card  | Driver | OS | OpenGL (fixed pipeline) | OpenGL (shaders) | OpenGL (ray tracing) |
-| ---- | ---- | ---- | :----: | :----: | :----: |
-| NVIDIA GeForce GTX 650     | Driver 340.52, OpenGL 4.4        | Windows 7 64 bit           | OK | OK  | OK |
-| AMD/ATI RadeOn HD 7870     | Driver 14.100, OpenGL 4.4        | Windows 7 64-bit           | OK | OK  | OK |
-| Intel(R) HD Graphics 2500  | Driver 10.18.10.3621, OpenGL 4.0 | Windows 7 64 bit           | OK | OK  | limited (no textures) |
-| NVIDIA GeForce 320         | N/A                              | Mac OS X 10.6 / OS X 10.10 | OK | OK  | not yet supported by OCCT |
-| Apple software OpenGL      | N/A                              | Mac OS X 10.6 / OS X 10.10 | OK | OK  | N/A |
-| Mesa 10.2.4 (software emulator) | "Gallium 0.4 on llvmpipe (LLVM 3.4, 256 bits)" OpenGL 3.0 | Windows 7 64 bit   | OK | OK  | unsupported by software |
+OCCT 3D Viewer, in general, supports wide range of graphics hardware - from very old to new.
+Therefore, if you observe some unexpected visual issues - first check for OpenGL driver update (or firmware update in case of mobile platforms);
+but beware that driver update might also come with new bugs.
+Don't forget to report these bugs to vendors.
 
 @section OCCT_OVW_SECTION_4 Installation
 
@@ -276,17 +284,15 @@ OCCT are included into binary distribution (built with Visual C++ 2010).
 When the installation is complete, you will find the directories for 3rd party products 
 (some might be absent in case of custom installation) and the main **OCCT** directory:
 
-@image html /overview/images/overview_3rdparty.png 
-@image latex /overview/images/overview_3rdparty.png 
+@figure{/overview/images/overview_3rdparty.png}
 
-The contents of the OCCT-7.0.0 directory (called further "OCCT root", or $CASROOT) are as follows:
+The contents of the OCCT-7.3.0 directory (called further "OCCT root", or $CASROOT) are as follows:
 
-@image html /overview/images/overview_installation.png "The directory tree"
-@image latex /overview/images/overview_installation.png "The directory tree"
+@figure{/overview/images/overview_installation.png, "The directory tree"}
 
   * **adm**   This folder contains administration files, which allow rebuilding OCCT;
   * **adm/cmake**  This folder contains files of CMake building procedure;
-  * **adm/msvc**  This folder contains Visual Studio projects for Visual C++  2005, 2008, 2010, 2012 and 2013 which allow rebuilding OCCT under Windows platform in 32 and 64-bit mode;
+  * **adm/msvc**  This folder contains Visual Studio projects for Visual C++ 2010, 2012, 2013, 2015 and 2017 which allow rebuilding OCCT under Windows platform in 32 and 64-bit mode;
   * **data**  This folder contains CAD files in different formats, which can be used to test the OCCT functionality;
   * **doc**  This folder contains OCCT documentation in HTML and PDF format;
   * **dox**  This folder contains sources of OCCT documentation in plain text (MarkDown) format;
@@ -294,6 +300,7 @@ The contents of the OCCT-7.0.0 directory (called further "OCCT root", or $CASROO
   * **samples**  This folder contains sample applications.
   * **src**  This folder contains OCCT source files. They are organized in folders, one per development unit;
   * **tests**  This folder contains scripts for OCCT testing.
+  * **tools**  This folder contains sources of Inspector tool.
   * **win64/vc10**  This folder contains executable and library files built in optimize mode for Windows platform by Visual C++  2010;
 
 @section OCCT_OVW_SECTION_4_2 Environment Variables
@@ -304,7 +311,7 @@ To run any Open CASCADE Technology application you need to set the environment v
 
 You can define the environment variables with env.bat script located in the 
 $CASROOT folder. This script accepts two arguments to be used: 
-the version of Visual Studio (vc8 -- vc12) and the architecture (win32 or win64).
+the version of Visual Studio (vc10 -- vc141) and the architecture (win32 or win64).
 
 The additional environment settings necessary for compiling OCCT libraries and samples 
 by Microsoft Visual Studio can be set using script custom.bat located in the same folder. 
@@ -346,10 +353,9 @@ The scripts are located in the OCCT root folder.
   * **CSF_DEBUG** (optional, Windows only): if defined then a diagnostic message is displayed in case of an exception;
   * **CSF_DEBUG_BOP** (optional): if defined then it should specify directory where diagnostic data on problems occured in Boolean operations will be saved;
   * **CSF_MDTVTexturesDirectory** defines the directory for available textures when using texture mapping;
-  * **CSF_ShadersDirectory** defines the directory for GLSL programs (required for 3D viewer to work);
-  * **CSF_UnitsDefinition** and **CSF_UnitsLexicon** should define paths to resource files Lexi_Expr.dat and Units.dat, respectively (required for support of measurement units);
-  * **CSF_SHMessage** defines the path to the messages file for *ShapeHealing*;
-  * **CSF_XSMessage** defines the path to the messages file for **STEP** and **IGES** translators;
+  * **CSF_ShadersDirectory** (optional) defines the directory for GLSL programs for Ray Tracing renderer (embedded resources are used when variable is undefined);
+  * **CSF_SHMessage** (optional) defines the path to the messages file for *ShapeHealing*;
+  * **CSF_XSMessage** (optional) defines the path to the messages file for **STEP** and **IGES** translators;
   * **CSF_StandardDefaults**, **CSF_StandardLiteDefaults*, **CSF_XCAFDefaults**, and **CSF_PluginDefaults** define paths to directory where configuration files for OCAF persistence are located (required for open/save operations with OCAF documents);
   * **CSF_IGESDefaults** and **CSF_STEPDefaults** (optional) define paths to directory where resource files of **IGES** and **STEP** translators are located;
   * **CSF_XmlOcafResource** is required in order to set the path to **XSD** resources, which defines XML grammar.
@@ -363,8 +369,7 @@ Draw is a command interpreter based on TCL and a graphical system used for testi
 
 Draw can be used interactively to create, display and modify objects such as curves, surfaces and topological shapes.
 
-@image html /overview/images/overview_draw.png
-@image latex /overview/images/overview_draw.png
+@figure{/overview/images/overview_draw.png}
 
 Scripts can be written to customize Draw and perform tests. 
 New types of objects and new commands can be added using C++ programming language.
@@ -482,8 +487,7 @@ The list of MFC samples:
   * Animation
   * Convert
 
-@image html /overview/images/overview_mvc.png
-@image latex /overview/images/overview_mvc.png
+@figure{/overview/images/overview_mvc.png}
 
 **Remarks:**
 
@@ -502,8 +506,7 @@ OCCT contains three samples based on Qt application framework
 
  Import Export programming sample contains 3D Viewer and Import / Export functionality.
 
-@image html /overview/images/overview_qt.png
-@image latex /overview/images/overview_qt.png
+@figure{/overview/images/overview_qt.png}
 
  Tutorial
 ---------
@@ -528,8 +531,7 @@ The combination of these resources allows creating substantial applications.
 
 C# sample demonstrates integration of OCCT 3D Viewer and Import / Export functionality into .NET applications (using Windows Forms and WPF front ends).
 
-@image html /overview/images/overview_c__ie.png
-@image latex /overview/images/overview_c__ie.png
+@figure{/overview/images/overview_c__ie.png}
 
 Import:
 
@@ -545,22 +547,28 @@ Export:
   * Stl
   * Vrml
 
-See \subpage samples_csharp_occt "Readme" for details.
+See \subpage samples_csharp_occt "C# sample Readme" for details.
 
 There is also another C# example with the same functionality, which demonstrates the integration of Direct3D Viewer into .NET applications using WPF front end.
 
-See \subpage samples_csharp_direct3d "Readme" for details.
+See \subpage samples_csharp_direct3d "Direct3D C# sample Readme" for details.
 
 @subsubsection OCCT_OVW_SECTION_7_3_4 Android
 
 There are two samples are representing usage OCCT framework on Android mobile platform. They represent an OCCT-based 3D-viewer with CAD import support in formats BREP, STEP and IGES: jniviewer (java) and AndroidQt (qt+qml)
 
 jniviewer
-@image html /overview/images/samples_java_android_occt.jpg
-@image latex /overview/images/samples_java_android_occt.jpg
-Java -- See \subpage samples_java_android_occt "Readme" for details.
+@figure{/overview/images/samples_java_android_occt.jpg}
+Java -- See \subpage samples_java_android_occt "Android Java sample Readme" for details.
 
 AndroidQt
-@image html /overview/images/samples_qml_android_occt.jpg
-@image latex /overview/images/samples_qml_android_occt.jpg
-Qt -- See \subpage samples_qml_android_occt "Readme" for details.
+@figure{/overview/images/samples_qml_android_occt.jpg}
+Qt -- See \subpage samples_qml_android_occt "Android Qt sample Readme" for details.
+
+@subsubsection OCCT_OVW_SECTION_7_3_5 iOS
+
+There is a sample demonstrating usage of OCCT on iOS with Apple UIKit framework.
+
+@figure{/overview/images/sample_ios_uikit.png}
+
+See \subpage occt_samples_ios_uikit "iOS sample Readme" for details.

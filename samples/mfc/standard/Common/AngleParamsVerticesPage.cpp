@@ -6,7 +6,6 @@
 #include "DimensionDlg.h"
 
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_LocalContext.hxx>
 #include <AIS_LengthDimension.hxx>
 #include <AIS_AngleDimension.hxx>
 #include <BRep_Tool.hxx>
@@ -63,28 +62,21 @@ END_MESSAGE_MAP()
 
 void CAngleParamsVerticesPage::OnBnClickedVertex1Btn()
 {
-  // Open local context and choose the vertex for angle dimensions
-  if (!myAISContext->HasOpenedContext())
-  {
-    myAISContext->OpenLocalContext();
-    myAISContext->ActivateStandardMode(TopAbs_VERTEX);
-    AfxMessageBox (_T ("Local context was not opened. Choose the edge and press the button again"),
-                       MB_ICONINFORMATION | MB_OK);
-    return;
-  }
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_VERTEX));
 
-  // Now it's ok, local context is opened and edge selection mode is activated
+  // Now it's ok, edge selection mode is activated
   // Check if some vertex is selected
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_VERTEX)
   {
     AfxMessageBox (_T ("Choose the vertex and press the button again"),
                        MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  myFirstVertex = TopoDS::Vertex (myAISContext->LocalContext()->SelectedShape());
-  myAISContext->LocalContext()->ClearSelected();
+  myFirstVertex = TopoDS::Vertex (myAISContext->SelectedShape());
+  myAISContext->ClearSelected (Standard_True);
 }
 
 //=======================================================================
@@ -94,16 +86,17 @@ void CAngleParamsVerticesPage::OnBnClickedVertex1Btn()
 
 void CAngleParamsVerticesPage::OnBnClickedVertex2Btn()
 {
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_VERTEX)
   {
     AfxMessageBox ( _T("Choose the vertex and press the button again"), MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  mySecondVertex = TopoDS::Vertex (myAISContext->LocalContext()->SelectedShape());
+  mySecondVertex = TopoDS::Vertex (myAISContext->SelectedShape());
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_True);
 }
 
 //=======================================================================
@@ -113,15 +106,15 @@ void CAngleParamsVerticesPage::OnBnClickedVertex2Btn()
 
 void CAngleParamsVerticesPage::OnBnClickedVertex3Btn()
 {
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected())
   {
     AfxMessageBox (_T ("Choose the vertex and press the button again"), MB_ICONINFORMATION | MB_OK);
     return;
   }
 
-  myThirdVertex = TopoDS::Vertex (myAISContext->LocalContext()->SelectedShape());
-  myAISContext->LocalContext()->ClearSelected();
+  myThirdVertex = TopoDS::Vertex (myAISContext->SelectedShape());
+  myAISContext->ClearSelected (Standard_False);
 
   //Build dimension here
   TopoDS_Edge anEdge12 = BRepBuilderAPI_MakeEdge (myFirstVertex, mySecondVertex);
@@ -157,8 +150,6 @@ void CAngleParamsVerticesPage::OnBnClickedVertex3Btn()
     }
   }
   anAngleDim->SetDimensionAspect (anAspect);
-  myAISContext->CloseAllContexts();
-  myAISContext->Display (anAngleDim);
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_VERTEX);
+  myAISContext->Display (anAngleDim, Standard_True);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_VERTEX));
 }

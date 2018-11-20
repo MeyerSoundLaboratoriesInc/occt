@@ -2,50 +2,38 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{AB10CF6D-076F-0124-0D8B-6F4A4E776E99}</UniqueIdentifier>
+      <UniqueIdentifier>{11D0F52A-00D5-13C3-07EF-DFF4481EA36A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopoDS">
-      <UniqueIdentifier>{FE227048-0A5A-14D0-0018-488A0E5FCC77}</UniqueIdentifier>
+      <UniqueIdentifier>{7ABD2481-0CC8-0F3E-160F-E895ECCAF04C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopExp">
-      <UniqueIdentifier>{68A8354F-0F3A-096C-139B-65A81AFF55A1}</UniqueIdentifier>
+      <UniqueIdentifier>{664874D1-0DBB-1810-0DA3-16FDA967676B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopTools">
-      <UniqueIdentifier>{4EC434E3-1030-03FF-03C1-3C9A67BD2173}</UniqueIdentifier>
+      <UniqueIdentifier>{B6D8E3A5-13DE-1286-038E-E048A4C11F07}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRep">
-      <UniqueIdentifier>{DF382D2E-093B-109E-02A2-C6C68012354A}</UniqueIdentifier>
+      <UniqueIdentifier>{DC0807E9-10B5-04BC-04C8-F0CEDA9C6871}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepLProp">
-      <UniqueIdentifier>{68C5BAD8-07D4-0765-03BA-7086758BA47B}</UniqueIdentifier>
+      <UniqueIdentifier>{8CDED337-0970-0726-077C-F34CD03828B2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepAdaptor">
-      <UniqueIdentifier>{DBAA6558-0F46-0098-0E16-0D75C7AF8770}</UniqueIdentifier>
+      <UniqueIdentifier>{F7EEF4B6-0379-1078-0A71-8CC159E9D68C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepTools">
-      <UniqueIdentifier>{E4FEBB10-0B2C-0AFE-027D-9314DE3F164C}</UniqueIdentifier>
+      <UniqueIdentifier>{04BFDBCC-0E49-0831-1600-5C83A5C6EF5E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinTools">
-      <UniqueIdentifier>{D0FE2C3D-1061-1061-0F98-87F7D29F319B}</UniqueIdentifier>
+      <UniqueIdentifier>{8D0CECE4-084F-005A-0197-2177CC402906}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS.cxx">
+    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_AlertWithShape.cxx">
       <Filter>Source files\TopoDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Builder.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_CompSolid.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Compound.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Edge.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Face.cxx">
       <Filter>Source files\TopoDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopoDS\TopoDS_HShape.cxx">
@@ -55,12 +43,6 @@
       <Filter>Source files\TopoDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Shape.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Shell.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Solid.cxx">
       <Filter>Source files\TopoDS</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopoDS\TopoDS_TCompSolid.cxx">
@@ -90,12 +72,6 @@
     <ClCompile Include="..\..\..\src\TopoDS\TopoDS_TWire.cxx">
       <Filter>Source files\TopoDS</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Vertex.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopoDS\TopoDS_Wire.cxx">
-      <Filter>Source files\TopoDS</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\TopExp\TopExp.cxx">
       <Filter>Source files\TopExp</Filter>
     </ClCompile>
@@ -109,12 +85,6 @@
       <Filter>Source files\TopTools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopTools\TopTools_MutexForShapeProvider.cxx">
-      <Filter>Source files\TopTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopTools\TopTools_OrientedShapeMapHasher.cxx">
-      <Filter>Source files\TopTools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TopTools\TopTools_ShapeMapHasher.cxx">
       <Filter>Source files\TopTools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TopTools\TopTools_ShapeSet.cxx">
@@ -229,6 +199,9 @@
       <Filter>Source files\BRepTools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTools\BRepTools_GTrsfModification.cxx">
+      <Filter>Source files\BRepTools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BRepTools\BRepTools_History.cxx">
       <Filter>Source files\BRepTools</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepTools\BRepTools_Modification.cxx">

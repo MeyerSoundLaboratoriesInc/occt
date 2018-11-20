@@ -17,7 +17,7 @@
 
 #include <HLRBRep_ShapeBounds.hxx>
 #include <HLRTopoBRep_OutLiner.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 
 //=======================================================================
 //function : HLRBRep_ShapeBounds
@@ -25,7 +25,7 @@
 //=======================================================================
 HLRBRep_ShapeBounds::
 HLRBRep_ShapeBounds (const Handle(HLRTopoBRep_OutLiner)& S,
-		     const Handle(MMgt_TShared)& SData,
+		     const Handle(Standard_Transient)& SData,
 		     const Standard_Integer nbIso,
 		     const Standard_Integer V1,
 		     const Standard_Integer V2,
@@ -111,15 +111,4 @@ void HLRBRep_ShapeBounds::Bounds (Standard_Integer& V1,
   E2 = myEdgeEnd;
   F1 = myFaceStart;
   F2 = myFaceEnd;
-}
-
-//=======================================================================
-//function : UpdateMinMax
-//purpose  : 
-//=======================================================================
-
-void HLRBRep_ShapeBounds::UpdateMinMax (const Standard_Address TotMinMax)
-{
-  for (Standard_Integer i = 0; i <= 15; i++)
-    myMinMax[i] = ((Standard_Integer*)TotMinMax)[i];
 }

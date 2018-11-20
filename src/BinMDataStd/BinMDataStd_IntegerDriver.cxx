@@ -16,10 +16,11 @@
 
 #include <BinMDataStd_IntegerDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_Integer.hxx>
 #include <TDF_Attribute.hxx>
+#include <BinMDataStd.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_IntegerDriver,BinMDF_ADriver)
 
@@ -28,7 +29,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_IntegerDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataStd_IntegerDriver::BinMDataStd_IntegerDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_Integer)->Name())
 {
 }
@@ -58,6 +59,19 @@ Standard_Boolean BinMDataStd_IntegerDriver::Paste
   Standard_Boolean ok = theSource >> aValue;
   if (ok)
     anAtt->Set(aValue);
+  if(BinMDataStd::DocumentVersion() > 8) { // process user defined guid
+	const Standard_Integer& aPos = theSource.Position();
+	Standard_GUID aGuid;
+	ok = theSource >> aGuid;	
+	if (!ok) {
+	  theSource.SetPosition(aPos);	  
+	  anAtt->SetID(TDataStd_Integer::GetID());
+	  ok = Standard_True;
+	} else {	  
+	  anAtt->SetID(aGuid);
+	}
+  } else 
+	anAtt->SetID(TDataStd_Integer::GetID());
   return ok;
 }
 
@@ -72,4 +86,7 @@ void BinMDataStd_IntegerDriver::Paste (const Handle(TDF_Attribute)& theSource,
 {
   Handle(TDataStd_Integer) anAtt = Handle(TDataStd_Integer)::DownCast(theSource);
   theTarget << anAtt->Get();
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_Integer::GetID()) 
+	theTarget << anAtt->ID();
 }

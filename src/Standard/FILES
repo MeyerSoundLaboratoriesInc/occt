@@ -2,6 +2,8 @@ Standard.cxx
 Standard.hxx
 Standard_AbortiveTransaction.hxx
 Standard_Address.hxx
+Standard_ArrayStreamBuffer.hxx
+Standard_ArrayStreamBuffer.cxx
 Standard_Assert.hxx
 Standard_Atomic.hxx
 Standard_Boolean.hxx
@@ -22,8 +24,6 @@ Standard_DivideByZero.hxx
 Standard_DomainError.hxx
 Standard_ErrorHandler.cxx
 Standard_ErrorHandler.hxx
-Standard_ErrorHandlerCallback.cxx
-Standard_ErrorHandlerCallback.hxx
 Standard_ExtCharacter.hxx
 Standard_ExtString.cxx
 Standard_ExtString.hxx
@@ -79,9 +79,9 @@ Standard_Real.hxx
 Standard_ShortReal.cxx
 Standard_ShortReal.hxx
 Standard_Size.hxx
-Standard_SStream.cxx
 Standard_SStream.hxx
 Standard_Stream.hxx
+Standard_Strtod.cxx
 Standard_ThreadId.hxx
 Standard_Time.hxx
 Standard_TooManyUsers.hxx
@@ -92,7 +92,8 @@ Standard_Type.hxx
 Standard_TypeDef.hxx
 Standard_TypeMismatch.hxx
 Standard_Underflow.hxx
-Standard_UUID.cxx
 Standard_UUID.hxx
 Standard_values.h
 Standard_Version.hxx
+Standard_WarningsDisable.hxx
+Standard_WarningsRestore.hxx

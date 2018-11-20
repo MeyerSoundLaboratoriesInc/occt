@@ -35,6 +35,7 @@
 #include <VrmlData_ShapeNode.hxx>
 
 #include <XSControl_WorkSession.hxx>
+#include <XSControl_TransferReader.hxx>
 #include <STEPConstruct_Styles.hxx>
 #include <TColStd_HSequenceOfTransient.hxx>
 #include <STEPConstruct.hxx>
@@ -55,7 +56,7 @@ Handle(TopTools_HSequenceOfShape) CImportExport::BuildSequenceFromContext(const 
                                                                           Handle(TColStd_HArray1OfReal)&        anArrayOfTransparencies) 
 {
     Handle(TopTools_HSequenceOfShape) aSequence;
-    Standard_Integer nb = anInteractiveContext->NbCurrents(), i = 1;
+    Standard_Integer nb = anInteractiveContext->NbSelected(), i = 1;
     if (!nb)
         return aSequence;
 
@@ -64,10 +65,10 @@ Handle(TopTools_HSequenceOfShape) CImportExport::BuildSequenceFromContext(const 
     anArrayOfTransparencies = new TColStd_HArray1OfReal  (1, nb);
 
     Handle(AIS_InteractiveObject) picked;
-    for(anInteractiveContext->InitCurrent();anInteractiveContext->MoreCurrent();anInteractiveContext->NextCurrent())
+    for (anInteractiveContext->InitSelected(); anInteractiveContext->MoreSelected(); anInteractiveContext->NextSelected())
       {
-        picked = anInteractiveContext->Current();
-        if (anInteractiveContext->Current()->IsKind(STANDARD_TYPE(AIS_Shape)))
+        picked = anInteractiveContext->SelectedInteractive();
+        if (picked->IsKind (STANDARD_TYPE (AIS_Shape)))
 	     {
             Handle(AIS_Shape) aisShape = Handle(AIS_Shape)::DownCast(picked);
 	        TopoDS_Shape aShape = aisShape->Shape();
@@ -102,7 +103,8 @@ int CImportExport::ReadBREP (const Handle(AIS_InteractiveContext)& anInteractive
 		aShape = new AIS_Shape(aSequence->Value(i));
 		anInteractiveContext->SetDisplayMode(aShape, 1, Standard_False);
 		anInteractiveContext->Display(aShape, Standard_False);
-		anInteractiveContext->SetCurrentObject(aShape, Standard_False);
+		const Handle(AIS_InteractiveObject)& aPrs = aShape; // A small trick to avoid compiler error (C2668).
+		anInteractiveContext->SetSelected (aPrs, Standard_False);
 	} 
 	return 0;
 }
@@ -166,8 +168,8 @@ Standard_Boolean CImportExport::ReadBREP(CString      aFileName,
 
 void CImportExport::SaveBREP(const Handle(AIS_InteractiveContext)& anInteractiveContext)
 {
-	anInteractiveContext->InitCurrent();
-	if (anInteractiveContext->NbCurrents() == 0){
+	anInteractiveContext->InitSelected();
+	if (anInteractiveContext->NbSelected() == 0){
 		AfxMessageBox (L"No shape selected for export!");
 		return;
 	}
@@ -249,8 +251,8 @@ void CImportExport::ReadIGES(const Handle(AIS_InteractiveContext)& anInteractive
 {
     Handle(TopTools_HSequenceOfShape) aSequence = CImportExport::ReadIGES();
     for(int i=1;i<= aSequence->Length();i++)
-        anInteractiveContext->Display(new AIS_Shape(aSequence->Value(i)));
-
+        anInteractiveContext->Display (new AIS_Shape (aSequence->Value (i)), Standard_False);
+    anInteractiveContext->UpdateCurrentViewer();
 }
 
 Handle(TopTools_HSequenceOfShape) CImportExport::ReadIGES()// not by reference --> the sequence is created here !!
@@ -272,8 +274,7 @@ dlg.m_ofn.lpstrInitialDir = initdir;
   if (dlg.DoModal() == IDOK) 
   {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
-    TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )dlg.GetPathName());
-    TCollection_AsciiString    aFileName  (aFileNameW, '?');
+    TCollection_AsciiString aFileName ((const wchar_t* )dlg.GetPathName());
     Standard_Integer status = ReadIGES (aFileName.ToCString(), aSequence);
     if (status != IFSelect_RetDone)
     {
@@ -305,8 +306,8 @@ Standard_Integer CImportExport::ReadIGES(const Standard_CString& aFileName,
 
 void CImportExport::SaveIGES(const Handle(AIS_InteractiveContext)& anInteractiveContext)
 {
-	anInteractiveContext->InitCurrent();
-	if (anInteractiveContext->NbCurrents() == 0){
+	anInteractiveContext->InitSelected();
+	if (anInteractiveContext->NbSelected() == 0){
 		AfxMessageBox (L"No shape selected for export!");
 		return;
 	}
@@ -337,8 +338,7 @@ dlg.m_ofn.lpstrInitialDir = initdir;
   { 
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT)); 
 
-    TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )dlg.GetPathName());
-    TCollection_AsciiString    aFileName  (aFileNameW, '?');
+    TCollection_AsciiString aFileName ((const wchar_t* )dlg.GetPathName());
 
     result = SaveIGES (aFileName.ToCString(), aHSequenceOfShape);
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
@@ -399,8 +399,7 @@ dlg.m_ofn.lpstrInitialDir = initdir;
   if (dlg.DoModal() == IDOK) 
   {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
-    TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )dlg.GetPathName());
-    TCollection_AsciiString    aFileName  (aFileNameW, '?');
+    TCollection_AsciiString aFileName ((const wchar_t* )dlg.GetPathName());
 	IFSelect_ReturnStatus ReturnStatus = ReadSTEP (aFileName.ToCString(), aSequence);
     switch (ReturnStatus) 
     {
@@ -430,7 +429,7 @@ IFSelect_ReturnStatus CImportExport::ReadSTEP(const Standard_CString& aFileName,
   if (status != IFSelect_RetDone)
     return status;
 
-  aReader.WS()->MapReader()->SetTraceLevel(2); // increase default trace level
+  aReader.WS()->TransferReader()->TransientProcess()->SetTraceLevel(2); // increase default trace level
 
   Standard_Boolean failsonly = Standard_False;
   aReader.PrintCheckLoad(failsonly, IFSelect_ItemsByEntity);
@@ -458,8 +457,8 @@ IFSelect_ReturnStatus CImportExport::ReadSTEP(const Standard_CString& aFileName,
 //----------------------------------------------------------------------
 void CImportExport::SaveSTEP(const Handle(AIS_InteractiveContext)& anInteractiveContext)
 {
-	anInteractiveContext->InitCurrent();
-	if (anInteractiveContext->NbCurrents() == 0){
+	anInteractiveContext->InitSelected();
+	if (anInteractiveContext->NbSelected() == 0){
 		AfxMessageBox (L"No shape selected for export!");
 		return;
 	}
@@ -517,8 +516,7 @@ IFSelect_ReturnStatus CImportExport::SaveSTEP(const Handle(TopTools_HSequenceOfS
 
 	if (aDlg.DoModal() == IDOK) {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT)); 
-    TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )aDlg.GetPathName());
-    TCollection_AsciiString    aFileName  (aFileNameW, '?');
+    TCollection_AsciiString aFileName ((const wchar_t* )aDlg.GetPathName());
 
 		STEPControl_StepModelType selection = aDlg.m_Cc1ModelType;
 
@@ -579,8 +577,8 @@ const STEPControl_StepModelType aValue /* =TopoDSToCc1Act_ManifoldSolidBrep */ )
 
 void CImportExport::SaveSTL(const Handle(AIS_InteractiveContext)& anInteractiveContext)
 {
-    anInteractiveContext->InitCurrent();
-	if (anInteractiveContext->NbCurrents() == 0){
+  anInteractiveContext->InitSelected();
+	if (anInteractiveContext->NbSelected() == 0){
 		AfxMessageBox (L"No shape selected for export!");
 		return;
 	}
@@ -604,11 +602,10 @@ dlg.m_ofn.lpstrInitialDir = initdir;
 
 	if (dlg.DoModal() == IDOK) {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT)); 
-        TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )dlg.GetPathName());
-        TCollection_AsciiString    aFileName  (aFileNameW, '?');
+        TCollection_AsciiString aFileName ((const wchar_t* )dlg.GetPathName());
         TCollection_AsciiString Message;
         result = SaveSTL (aFileName.ToCString(), aHSequenceOfShape, Message);
-        CString aMsg (Message.ToCString());
+        CString aMsg (TCollection_ExtendedString (Message).ToWideString());
         MessageBoxW (AfxGetApp()->m_pMainWnd->m_hWnd, aMsg, result ? L"CasCade" : L"CasCade Error", result ? MB_OK : MB_ICONERROR);
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW)); 
     } 
@@ -667,8 +664,8 @@ Standard_Boolean CImportExport::SaveSTL(const Standard_CString& aFileName,
 
 void CImportExport::SaveVRML(const Handle(AIS_InteractiveContext)& anInteractiveContext)
 {
-   anInteractiveContext->InitCurrent();
-	if (anInteractiveContext->NbCurrents() == 0){
+  anInteractiveContext->InitSelected();
+	if (anInteractiveContext->NbSelected() == 0){
 		AfxMessageBox (L"No shape selected for export!");
 		return;
 	}
@@ -695,11 +692,10 @@ dlg.m_ofn.lpstrInitialDir = initdir;
 
 	if (dlg.DoModal() == IDOK) {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT)); 
-        TCollection_ExtendedString aFileNameW ((Standard_ExtString )(const wchar_t* )dlg.GetPathName());
-        TCollection_AsciiString    aFileName  (aFileNameW, '?');
+        TCollection_AsciiString aFileName ((const wchar_t* )dlg.GetPathName());
         TCollection_AsciiString Message;
         result = SaveVRML (aFileName.ToCString(), aHSequenceOfShape, anArrayOfColors, anArrayOfTransparencies, Message);
-        CString aMsg (Message.ToCString());
+        CString aMsg (TCollection_ExtendedString(Message).ToWideString());
         MessageBoxW (AfxGetApp()->m_pMainWnd->m_hWnd, aMsg, result ? L"CasCade" : L"CasCade Error", result ? MB_OK : MB_ICONERROR);
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW)); 
     } 

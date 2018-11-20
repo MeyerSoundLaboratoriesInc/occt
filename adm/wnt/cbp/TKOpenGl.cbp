@@ -17,7 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__OpenGl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKOpenGl_obj.link" />
@@ -36,7 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__OpenGl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKOpenGl_objd.link" />
@@ -59,23 +57,18 @@
 		</Compiler>
 		<Linker>
 			<Add option="-Wl,--export-all-symbols" />
-			<Add library="opengl32" />
 			<Add library="freetype" />
 			<Add library="gl2ps" />
+			<Add library="opengl32" />
 			<Add library="user32" />
 			<Add library="comdlg32" />
 			<Add library="gdi32" />
-			<Add library="ws2_32" />
-			<Add library="vfw32" />
 			<Add library="TKernel" />
 			<Add library="TKService" />
 			<Add library="TKMath" />
 			<Add library="TKV3d" />
 		</Linker>
-		<Unit filename="../../../src/OpenGl/OpenGl_AVIWriter.cxx" />
-		<Unit filename="../../../src/OpenGl/OpenGl_AspectFace.cxx">
-			<Option link="0" />
-		</Unit>
+		<Unit filename="../../../src/OpenGl/OpenGl_AspectFace.cxx" />
 		<Unit filename="../../../src/OpenGl/OpenGl_AspectLine.cxx">
 			<Option link="0" />
 		</Unit>
@@ -112,12 +105,6 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_Context.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_Cylinder.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_Disk.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_Element.cxx">
 			<Option link="0" />
 		</Unit>
@@ -128,6 +115,12 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_FrameBuffer.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/OpenGl/OpenGl_FrameStats.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/OpenGl/OpenGl_FrameStatsPrs.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_GraduatedTrihedron.cxx">
@@ -157,12 +150,6 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_PrimitiveArray.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_PrinterContext.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_Quadric.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_RenderFilter.cxx">
 			<Option link="0" />
 		</Unit>
@@ -187,9 +174,6 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_ShaderStates.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_Sphere.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_StencilTest.cxx">
 			<Option link="0" />
 		</Unit>
@@ -211,7 +195,10 @@
 		<Unit filename="../../../src/OpenGl/OpenGl_TextureBufferArb.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_Trihedron.cxx">
+		<Unit filename="../../../src/OpenGl/OpenGl_TextureSet.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/OpenGl/OpenGl_TileSampler.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_VertexBuffer.cxx">
@@ -221,9 +208,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_View.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/OpenGl/OpenGl_View_Print.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OpenGl/OpenGl_View_Raytrace.cxx">

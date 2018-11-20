@@ -14,6 +14,8 @@
 // commercial license or contractual agreement.
 
 #include <BVH_Geometry.hxx>
+#include <BVH_QuickSorter.hxx>
+#include <BVH_RadixSorter.hxx>
 #include <BVH_Triangulation.hxx>
 #include <BVH_DistanceField.hxx>
 #include <BVH_LinearBuilder.hxx>
@@ -22,6 +24,10 @@
 #include <BVH_SpatialMedianBuilder.hxx>
 
 #include <Standard_Real.hxx>
+
+IMPLEMENT_STANDARD_RTTIEXT(BVH_BuilderTransient,  Standard_Transient)
+IMPLEMENT_STANDARD_RTTIEXT(BVH_TreeBaseTransient, Standard_Transient)
+IMPLEMENT_STANDARD_RTTIEXT(BVH_ObjectTransient,   Standard_Transient)
 
 // Specific instantiations of struct templates to avoid compilation warnings
 
@@ -92,6 +98,18 @@ template class BVH_BinnedBuilder<Standard_Real, 4>;
 template class BVH_BinnedBuilder<Standard_ShortReal, 2>;
 template class BVH_BinnedBuilder<Standard_ShortReal, 3>;
 template class BVH_BinnedBuilder<Standard_ShortReal, 4>;
+
+template class BVH_QuickSorter<Standard_Real, 3>;
+template class BVH_QuickSorter<Standard_Real, 4>;
+
+template class BVH_QuickSorter<Standard_ShortReal, 3>;
+template class BVH_QuickSorter<Standard_ShortReal, 4>;
+
+template class BVH_RadixSorter<Standard_Real, 3>;
+template class BVH_RadixSorter<Standard_Real, 4>;
+
+template class BVH_RadixSorter<Standard_ShortReal, 3>;
+template class BVH_RadixSorter<Standard_ShortReal, 4>;
 
 template class BVH_LinearBuilder<Standard_Real, 3>;
 template class BVH_LinearBuilder<Standard_Real, 4>;

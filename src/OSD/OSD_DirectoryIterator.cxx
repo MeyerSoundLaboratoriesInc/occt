@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 
 OSD_DirectoryIterator::OSD_DirectoryIterator() 
-: myFlag(0),
+: myFlag(false),
   myDescr(0),
   myEntry(0),
   myInit(0)
@@ -36,7 +36,7 @@ OSD_DirectoryIterator::OSD_DirectoryIterator()
 
 OSD_DirectoryIterator::OSD_DirectoryIterator(const OSD_Path& where,
                                              const TCollection_AsciiString& Mask)
-: myFlag(0),
+: myFlag(false),
   myDescr(0),
   myEntry(0),
   myInit(0)
@@ -74,7 +74,7 @@ Standard_Boolean OSD_DirectoryIterator::More(){
      Next();          // Now find first entry
    }
  }
- return (myFlag);
+ return myFlag;
 }
 
 // Private :  See if directory name matches with a mask (like "*.c")
@@ -100,13 +100,11 @@ static int strcmp_joker(const char *Mask,const char *Name)
 void OSD_DirectoryIterator::Next(){
 int again = 1;
 struct stat stat_buf;
-char full_name[255];
-
- myFlag = 0;   // Initialize to nothing found
+ myFlag = false;   // Initialize to nothing found
 
  do{
     myEntry = readdir((DIR *)myDescr);
-   
+
     if (!myEntry){   // No file found
      myEntry = NULL;              // Keep pointer clean
      myFlag = Standard_False;   // No more files/directory
@@ -119,10 +117,8 @@ char full_name[255];
 //     if (!strcmp(entry->d_name,"..")) continue;         2 directories.
 
      // Is it a directory ?
-
-     sprintf(full_name,"%s/%s",myPlace.ToCString(),
-	     ((struct dirent *)myEntry)->d_name);		 // LD debug
-     stat(full_name, &stat_buf);
+     const TCollection_AsciiString aFullName = myPlace + "/" + ((struct dirent* )myEntry)->d_name;
+     stat(aFullName.ToCString(), &stat_buf);
      if (S_ISDIR(stat_buf.st_mode))   // Ensure me it's not a file
       if (strcmp_joker(myMask.ToCString(), ((struct dirent *)myEntry)->d_name)){
 							 // Does it follow mask ?
@@ -185,7 +181,6 @@ Standard_Integer OSD_DirectoryIterator::Error()const{
 //------------------------------------------------------------------------
 
 
-#define STRICT
 #include <windows.h>
 
 
@@ -239,7 +234,7 @@ Standard_Boolean OSD_DirectoryIterator :: More () {
 
   // make wchar_t string from UTF-8
   TCollection_ExtendedString wcW(wc);
-  myHandle = FindFirstFileW ((const wchar_t*)wcW.ToExtString(), (PWIN32_FIND_DATAW)myData);
+  myHandle = FindFirstFileExW (wcW.ToWideString(), FindExInfoStandard, (PWIN32_FIND_DATAW)myData, FindExSearchNameMatch, NULL, 0);
 
   if ( myHandle == INVALID_HANDLE_VALUE )
 

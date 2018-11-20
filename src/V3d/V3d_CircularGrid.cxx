@@ -11,19 +11,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-/***********************************************************************
-     FONCTION :
-     ----------
-        Classe V3d_CircularGrid :
-     VERSION HISTORY  :
-     --------------------------------
-************************************************************************/
-/*----------------------------------------------------------------------*/
-/*
- * Includes
- */
+#include <V3d_CircularGrid.hxx>
 
-#include <Graphic3d_Array1OfVertex.hxx>
 #include <Graphic3d_ArrayOfPoints.hxx>
 #include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_ArrayOfSegments.hxx>
@@ -31,42 +20,66 @@
 #include <Graphic3d_AspectMarker3d.hxx>
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_Structure.hxx>
-#include <Graphic3d_Vertex.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_Type.hxx>
 #include <TColgp_SequenceOfPnt.hxx>
 #include <TColStd_Array2OfReal.hxx>
-#include <V3d_CircularGrid.hxx>
 #include <V3d_Viewer.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(V3d_CircularGrid,Aspect_CircularGrid)
 
-/*----------------------------------------------------------------------*/
-/*
- * Constant
- */
 #define DIVISION 8
-#define MYMINMAX 25.
 #define MYFACTOR 50.
+
+//! Dummy implementation of Graphic3d_Structure overriding ::Compute() method for handling Device Lost.
+class V3d_CircularGrid::CircularGridStructure : public Graphic3d_Structure
+{
+public:
+  //! Main constructor.
+  CircularGridStructure (const Handle(Graphic3d_StructureManager)& theManager, V3d_CircularGrid* theGrid)
+  : Graphic3d_Structure (theManager), myGrid (theGrid) {}
+
+  //! Override method initiating recomputing in V3d_CircularGrid.
+  virtual void Compute() Standard_OVERRIDE
+  {
+    GraphicClear (Standard_False);
+    myGrid->myGroup = NewGroup();
+    myGrid->myCurAreDefined = Standard_False;
+    myGrid->UpdateDisplay();
+  }
+
+private:
+  V3d_CircularGrid* myGrid;
+};
 
 /*----------------------------------------------------------------------*/
 
 V3d_CircularGrid::V3d_CircularGrid (const V3d_ViewerPointer& aViewer, const Quantity_Color& aColor, const Quantity_Color& aTenthColor)
 : Aspect_CircularGrid (1.,8),
-  myStructure (new Graphic3d_Structure (aViewer->StructureManager())),
-  myGroup (myStructure->NewGroup()),
   myViewer (aViewer),
-  myCurAreDefined (Standard_False)
+  myCurAreDefined (Standard_False),
+  myToComputePrs (Standard_False)
 {
   myColor = aColor;
   myTenthColor = aTenthColor;
 
+  myStructure = new CircularGridStructure (aViewer->StructureManager(), this);
+  myGroup = myStructure->NewGroup();
   myStructure->SetInfiniteState (Standard_True);
 
   const Standard_Real step = 10.;
   const Standard_Real size = 0.5*myViewer->DefaultViewSize();
   SetGraphicValues (size, step/MYFACTOR);
   SetRadiusStep (step);
+}
+
+V3d_CircularGrid::~V3d_CircularGrid()
+{
+  myGroup.Nullify();
+  if (!myStructure.IsNull())
+  {
+    myStructure->Erase();
+  }
 }
 
 void V3d_CircularGrid::SetColors (const Quantity_Color& aColor, const Quantity_Color& aTenthColor)
@@ -83,6 +96,7 @@ void V3d_CircularGrid::Display ()
 {
   myStructure->SetDisplayPriority (1);
   myStructure->Display();
+  UpdateDisplay();
 }
 
 void V3d_CircularGrid::Erase () const
@@ -134,50 +148,31 @@ void V3d_CircularGrid::UpdateDisplay ()
   {
     const Standard_Real CosAlpha = Cos (RotationAngle ());
     const Standard_Real SinAlpha = Sin (RotationAngle ());
-    TColStd_Array2OfReal Trsf (1, 4, 1, 4);
-    Trsf (4, 4) = 1.0;
-    Trsf (4, 1) = Trsf (4, 2) = Trsf (4, 3) = 0.0;
+
+    gp_Trsf aTrsf;
     // Translation
-    Trsf (1, 4) = xl,
-    Trsf (2, 4) = yl,
-    Trsf (3, 4) = zl;
-    // Transformation  change of marker
-    Trsf (1, 1) = xdx,
-    Trsf (2, 1) = xdy,
-    Trsf (3, 1) = xdz,
-    Trsf (1, 2) = ydx,
-    Trsf (2, 2) = ydy,
-    Trsf (3, 2) = ydz,
-    Trsf (1, 3) = dx,
-    Trsf (2, 3) = dy,
-    Trsf (3, 3) = dz;
-    myStructure->SetTransform (Trsf, Graphic3d_TOC_REPLACE);
+    // Transformation of change of marker
+    aTrsf.SetValues (xdx, ydx, dx, xl,
+                     xdy, ydy, dy, yl,
+                     xdz, ydz, dz, zl);
 
     // Translation of the origin
-    Trsf (1, 4) = -XOrigin (),
-    Trsf (2, 4) = -YOrigin (),
-    Trsf (3, 4) = 0.0;
     // Rotation Alpha around axis -Z
-    Trsf (1, 1) = CosAlpha,
-    Trsf (2, 1) = -SinAlpha,
-    Trsf (3, 1) = 0.0,
-    Trsf (1, 2) = SinAlpha,
-    Trsf (2, 2) = CosAlpha,
-    Trsf (3, 2) = 0.0,
-    Trsf (1, 3) = 0.0,
-    Trsf (2, 3) = 0.0,
-    Trsf (3, 3) = 1.0;
-    myStructure->SetTransform (Trsf,Graphic3d_TOC_POSTCONCATENATE);
+    gp_Trsf aTrsf2;
+    aTrsf2.SetValues ( CosAlpha, SinAlpha, 0.0, -XOrigin(),
+                      -SinAlpha, CosAlpha, 0.0, -YOrigin(),
+                            0.0,      0.0, 1.0, 0.0);
+    aTrsf.Multiply (aTrsf2);
+    myStructure->SetTransformation (new Geom_Transformation (aTrsf));
 
     myCurAngle = RotationAngle ();
     myCurXo = XOrigin (), myCurYo = YOrigin ();
     myCurViewPlane = ThePlane;
   }
 
-  switch (DrawMode())
+  switch (myDrawMode)
   {
-    default:
-    //case Aspect_GDM_Points:
+    case Aspect_GDM_Points:
       DefinePoints ();
       myCurDrawMode = Aspect_GDM_Points;
       break;
@@ -185,11 +180,9 @@ void V3d_CircularGrid::UpdateDisplay ()
       DefineLines ();
       myCurDrawMode = Aspect_GDM_Lines;
       break;
-#ifdef IMP210100
     case Aspect_GDM_None:
       myCurDrawMode = Aspect_GDM_None;
       break;
-#endif
   }
   myCurAreDefined = Standard_True;
 }
@@ -202,25 +195,27 @@ void V3d_CircularGrid::DefineLines ()
                                   || myCurDrawMode != Aspect_GDM_Lines
                                   || aDivision != myCurDivi
                                   || aStep     != myCurStep;
-  if (!toUpdate)
+  if (!toUpdate
+   && !myToComputePrs)
   {
     return;
   }
+  else if (!myStructure->IsDisplayed())
+  {
+    myToComputePrs = Standard_True;
+    return;
+  }
 
+  myToComputePrs = Standard_False;
   myGroup->Clear ();
-
-  Handle(Graphic3d_AspectLine3d) LineAttrib = new Graphic3d_AspectLine3d ();
-  LineAttrib->SetColor (myColor);
-  LineAttrib->SetType (Aspect_TOL_SOLID);
-  LineAttrib->SetWidth (1.0);
 
   const Standard_Integer Division = (Standard_Integer )( (aDivision >= DIVISION ? aDivision : DIVISION));
 
   Standard_Integer nbpnts = 2 * Division;
   // diametres
   Standard_Real alpha = M_PI / aDivision;
-  LineAttrib->SetColor (myTenthColor);
-  myGroup->SetGroupPrimitivesAspect (LineAttrib);
+
+  myGroup->SetGroupPrimitivesAspect (new Graphic3d_AspectLine3d (myTenthColor, Aspect_TOL_SOLID, 1.0));
   Handle(Graphic3d_ArrayOfSegments) aPrims1 = new Graphic3d_ArrayOfSegments(2*nbpnts);
   const gp_Pnt p0(0., 0., -myOffSet);
   for (Standard_Integer i=1; i<=nbpnts; i++) {
@@ -243,8 +238,7 @@ void V3d_CircularGrid::DefineLines ()
   }
   if (aSeqTenth.Length())
   {
-    LineAttrib->SetColor (myTenthColor);
-    myGroup->SetGroupPrimitivesAspect (LineAttrib);
+    myGroup->SetGroupPrimitivesAspect (new Graphic3d_AspectLine3d (myTenthColor, Aspect_TOL_SOLID, 1.0));
     Standard_Integer n, np;
     const Standard_Integer nbl = aSeqTenth.Length() / nbpnts;
     Handle(Graphic3d_ArrayOfPolylines) aPrims2 = new Graphic3d_ArrayOfPolylines(aSeqTenth.Length(),nbl);
@@ -257,8 +251,7 @@ void V3d_CircularGrid::DefineLines ()
   }
   if (aSeqLines.Length())
   {
-    LineAttrib->SetColor (myColor);
-    myGroup->SetPrimitivesAspect (LineAttrib);
+    myGroup->SetPrimitivesAspect (new Graphic3d_AspectLine3d (myColor, Aspect_TOL_SOLID, 1.0));
     Standard_Integer n, np;
     const Standard_Integer nbl = aSeqLines.Length() / nbpnts;
     Handle(Graphic3d_ArrayOfPolylines) aPrims3 = new Graphic3d_ArrayOfPolylines(aSeqLines.Length(),nbl);
@@ -272,6 +265,10 @@ void V3d_CircularGrid::DefineLines ()
 
   myGroup->SetMinMaxValues(-myRadius, -myRadius, 0.0, myRadius, myRadius, 0.0);
   myCurStep = aStep, myCurDivi = (Standard_Integer ) aDivision;
+
+  // update bounding box
+  myStructure->CalculateBoundBox();
+  myViewer->StructureManager()->Update (myStructure->GetZLayer());
 }
 
 void V3d_CircularGrid::DefinePoints ()
@@ -282,11 +279,18 @@ void V3d_CircularGrid::DefinePoints ()
                                   || myCurDrawMode != Aspect_GDM_Points
                                   || aDivision != myCurDivi
                                   || aStep     != myCurStep;
-  if (!toUpdate)
+  if (!toUpdate
+   && !myToComputePrs)
   {
     return;
   }
+  else if (!myStructure->IsDisplayed())
+  {
+    myToComputePrs = Standard_True;
+    return;
+  }
 
+  myToComputePrs = Standard_False;
   myGroup->Clear ();
 
   Handle(Graphic3d_AspectMarker3d) MarkerAttrib = new Graphic3d_AspectMarker3d ();
@@ -320,6 +324,10 @@ void V3d_CircularGrid::DefinePoints ()
   myGroup->SetMinMaxValues(-myRadius, -myRadius, 0.0, myRadius, myRadius, 0.0);
 
   myCurStep = aStep, myCurDivi = (Standard_Integer ) aDivision;
+
+  // update bounding box
+  myStructure->CalculateBoundBox();
+  myViewer->StructureManager()->Update (myStructure->GetZLayer());
 }
 
 void V3d_CircularGrid::GraphicValues (Standard_Real& theRadius, Standard_Real& theOffSet) const

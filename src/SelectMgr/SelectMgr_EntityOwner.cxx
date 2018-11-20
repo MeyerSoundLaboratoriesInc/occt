@@ -14,10 +14,9 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
+#include <SelectMgr_EntityOwner.hxx>
 
 #include <PrsMgr_PresentationManager.hxx>
-#include <SelectMgr_EntityOwner.hxx>
-#include <SelectMgr_SelectableObject.hxx>
 #include <Standard_NoSuchObject.hxx>
 #include <Standard_Type.hxx>
 #include <TopLoc_Location.hxx>
@@ -25,88 +24,101 @@
 IMPLEMENT_STANDARD_RTTIEXT(SelectMgr_EntityOwner,SelectBasics_EntityOwner)
 
 //==================================================
-// Function: 
+// Function: SelectMgr_EntityOwner
 // Purpose :
 //==================================================
-SelectMgr_EntityOwner::SelectMgr_EntityOwner(const Standard_Integer aPriority):
-SelectBasics_EntityOwner(aPriority),
-mySelectable(NULL),
-myIsSelected (Standard_False)
+SelectMgr_EntityOwner::SelectMgr_EntityOwner (const Standard_Integer thePriority)
+: SelectBasics_EntityOwner (thePriority),
+  mySelectable (NULL),
+  myIsSelected (Standard_False),
+  myFromDecomposition (Standard_False)
 {
+  //
 }
 
-SelectMgr_EntityOwner::SelectMgr_EntityOwner(const Handle(SelectMgr_SelectableObject)& aSO,
-					     const Standard_Integer aPriority):
-SelectBasics_EntityOwner(aPriority),
-myIsSelected (Standard_False)
+//==================================================
+// Function: SelectMgr_EntityOwner
+// Purpose :
+//==================================================
+SelectMgr_EntityOwner::SelectMgr_EntityOwner (const Handle(SelectMgr_SelectableObject)& theSelObj,
+                                              const Standard_Integer thePriority)
+: SelectBasics_EntityOwner (thePriority),
+  mySelectable (theSelObj.operator->()),
+  myIsSelected (Standard_False),
+  myFromDecomposition (Standard_False)
 {
-  mySelectable = aSO.operator->();
+  //
 }
 
-SelectMgr_EntityOwner::SelectMgr_EntityOwner (const Handle(SelectMgr_EntityOwner)& theOwner, const Standard_Integer aPriority)
-:
-  SelectBasics_EntityOwner(aPriority),
-  mySelectable (theOwner->mySelectable)
+//==================================================
+// Function: SelectMgr_EntityOwner
+// Purpose :
+//==================================================
+SelectMgr_EntityOwner::SelectMgr_EntityOwner (const Handle(SelectMgr_EntityOwner)& theOwner,
+                                              const Standard_Integer thePriority)
+: SelectBasics_EntityOwner (thePriority),
+  mySelectable (theOwner->mySelectable),
+  myIsSelected (Standard_False),
+  myFromDecomposition (Standard_False)
 {
+  //
 }
-
 
 //=======================================================================
-//function : About Selectable...
-//purpose  : 
+//function : SetSelectable
+//purpose  :
 //=======================================================================
-void SelectMgr_EntityOwner::Set(const Handle(SelectMgr_SelectableObject)& aSO)
+void SelectMgr_EntityOwner::SetSelectable (const Handle(SelectMgr_SelectableObject)& theSelObj)
 {
-  mySelectable = aSO.operator->();
+  mySelectable = theSelObj.operator->();
 }
 
-Standard_Boolean SelectMgr_EntityOwner::HasSelectable() const
-{
-  return mySelectable != NULL;
-}
-
+//=======================================================================
+//function : Selectable
+//purpose  :
+//=======================================================================
 Handle(SelectMgr_SelectableObject) SelectMgr_EntityOwner::Selectable() const
 {  
   return mySelectable;
 }
 
 //=======================================================================
-//function : about Hilight
-//purpose  : 
+//function : IsHilighted
+//purpose  :
 //=======================================================================
-Standard_Boolean SelectMgr_EntityOwner::IsHilighted(const Handle(PrsMgr_PresentationManager)& PM,
-						    const Standard_Integer aMode) const 
-{if(HasSelectable())
-   return PM->IsHighlighted(mySelectable,aMode);
- return Standard_False;
-}
-void SelectMgr_EntityOwner::Hilight(const Handle(PrsMgr_PresentationManager)& PM,
-				    const Standard_Integer aMode)
-{if(HasSelectable())
-   PM->Highlight(mySelectable,aMode);
+Standard_Boolean SelectMgr_EntityOwner::IsHilighted (const Handle(PrsMgr_PresentationManager)& thePrsMgr,
+                                                     const Standard_Integer theMode) const
+{
+  return mySelectable != NULL
+      && thePrsMgr->IsHighlighted (mySelectable, theMode);
 }
 
-void SelectMgr_EntityOwner::HilightWithColor(const Handle(PrsMgr_PresentationManager3d)& PM,
-					     const Quantity_NameOfColor aColor,
-					     const Standard_Integer aMode)
+void SelectMgr_EntityOwner::HilightWithColor (const Handle(PrsMgr_PresentationManager3d)& thePM,
+                                              const Handle(Prs3d_Drawer)& theStyle,
+                                              const Standard_Integer theMode)
 {
-  if( HasSelectable() ) {
-    if( IsAutoHilight() )
-    {
-      const Graphic3d_ZLayerId aLayerId = mySelectable->GlobalSelOwner().get() == this ?
-        Graphic3d_ZLayerId_Top : Graphic3d_ZLayerId_Topmost;
-      PM->Color(mySelectable,aColor,aMode, NULL, aLayerId);
-    }
-    else
-      mySelectable->HilightOwnerWithColor( PM, aColor, this );
+  if (!HasSelectable())
+  {
+    return;
+  }
+
+  if (IsAutoHilight())
+  {
+    const Graphic3d_ZLayerId aHiLayer = theStyle->ZLayer() != Graphic3d_ZLayerId_UNKNOWN ? theStyle->ZLayer() : mySelectable->ZLayer();
+    thePM->Color (mySelectable, theStyle, theMode, NULL, aHiLayer);
+  }
+  else
+  {
+    mySelectable->HilightOwnerWithColor (thePM, theStyle, this);
   }
 }
 
-void SelectMgr_EntityOwner::Unhilight(const Handle(PrsMgr_PresentationManager)& PM,
-	const Standard_Integer aMode)
+void SelectMgr_EntityOwner::Unhilight (const Handle(PrsMgr_PresentationManager)& thePrsMgr, const Standard_Integer )
 {
-  if(HasSelectable())
-    PM->Unhighlight(mySelectable,aMode);
+  if (HasSelectable())
+  {
+    thePrsMgr->Unhighlight (mySelectable);
+  }
 }
 
 void SelectMgr_EntityOwner::Clear(const Handle(PrsMgr_PresentationManager)&,
@@ -114,11 +126,6 @@ void SelectMgr_EntityOwner::Clear(const Handle(PrsMgr_PresentationManager)&,
 {
 // nothing done on the selectable here...
 }
-
-
-void SelectMgr_EntityOwner::
-Hilight(){}
-
 
 //=======================================================================
 //function : about Transformation
@@ -145,10 +152,8 @@ void SelectMgr_EntityOwner::ResetLocation()
 
 Standard_Boolean SelectMgr_EntityOwner::IsAutoHilight () const
 {
-  if ( mySelectable==0 )
-    return Standard_True;
-  else
-    return mySelectable->IsAutoHilight();
+  return mySelectable == NULL
+      || mySelectable->IsAutoHilight();
 }
 
 Standard_Boolean SelectMgr_EntityOwner::IsForcedHilight () const

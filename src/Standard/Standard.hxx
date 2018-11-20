@@ -22,9 +22,7 @@
 #include <Standard_Size.hxx>
 #include <Standard_Integer.hxx>
 
-class Standard_ErrorHandlerCallback;
 class Standard_ErrorHandler;
-class Standard_GUID;
 class Standard_Persistent;
 class Standard_Transient;
 class Standard_Failure;

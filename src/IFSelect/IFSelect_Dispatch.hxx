@@ -20,7 +20,7 @@
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Boolean.hxx>
 #include <Standard_Integer.hxx>
 class TCollection_HAsciiString;
@@ -34,7 +34,7 @@ class IFGraph_SubPartsIterator;
 
 
 class IFSelect_Dispatch;
-DEFINE_STANDARD_HANDLE(IFSelect_Dispatch, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(IFSelect_Dispatch, Standard_Transient)
 
 //! This class allows to describe how a set of Entities has to be
 //! dispatched into resulting Packets : a Packet is a sub-set of
@@ -51,7 +51,7 @@ DEFINE_STANDARD_HANDLE(IFSelect_Dispatch, MMgt_TShared)
 //! The input set is read from a specified Selection, attached to
 //! the Dispatch : the Final Selection of the Dispatch. The input
 //! is the Unique Root Entities list of the Final Selection
-class IFSelect_Dispatch : public MMgt_TShared
+class IFSelect_Dispatch : public Standard_Transient
 {
 
 public:
@@ -105,17 +105,7 @@ public:
   //! input Graph
   //! This the starting step for an Evaluation (Packets - Remainder)
   Standard_EXPORT Interface_EntityIterator GetEntities (const Interface_Graph& G) const;
-  
-  //! Returns True if Count of Packets is actually known, and the
-  //! value of the count in argument "count". Returns False if
-  //! this count is unknown. Input is given as a Graph.
-  //! This method is intended to be quick (used for file names)
-  //! hence if this count is long to compute (that is, as a result
-  //! of complete evaluation made by method Packets), it is
-  //! preferable to answer "unknown" by returning False
-  //! Default answer if False. Can be redefined.
-  Standard_EXPORT virtual Standard_Boolean PacketsCount (const Interface_Graph& G, Standard_Integer& count) const;
-  
+
   //! Returns the list of produced Packets into argument <pack>.
   //! Each Packet corresponds to a Part, the Entities listed are the
   //! Roots given by the Selection. Input is given as a Graph.
@@ -138,7 +128,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(IFSelect_Dispatch,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(IFSelect_Dispatch,Standard_Transient)
 
 protected:
 

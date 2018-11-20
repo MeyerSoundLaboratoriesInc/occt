@@ -23,8 +23,7 @@
 #include <Draw_Interpretor.hxx>
 class BOPTest_Objects;
 class BOPTest_DrawableShape;
-
-
+class Message_Report;
 
 class BOPTest 
 {
@@ -53,34 +52,25 @@ public:
   
   Standard_EXPORT static void Factory (Draw_Interpretor& aDI);
 
-  Standard_EXPORT static void HistoryCommands  (Draw_Interpretor& aDI);
-
   Standard_EXPORT static void DebugCommands  (Draw_Interpretor& aDI);
 
   Standard_EXPORT static void CellsCommands  (Draw_Interpretor& aDI);
   
   Standard_EXPORT static void UtilityCommands (Draw_Interpretor& aDI);
-  
+
+  Standard_EXPORT static void RemoveFeaturesCommands (Draw_Interpretor& aDI);
+
+  //! Prints errors and warnings if any and draws attached shapes 
+  //! if flag BOPTest_Objects::DrawWarnShapes() is set
+  Standard_EXPORT static void ReportAlerts (const Handle(Message_Report)& theReport);
+
 protected:
 
-
-
-
-
 private:
-
-
-
 
 friend class BOPTest_Objects;
 friend class BOPTest_DrawableShape;
 
 };
-
-
-
-
-
-
 
 #endif // _BOPTest_HeaderFile

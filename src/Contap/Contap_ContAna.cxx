@@ -28,7 +28,7 @@
 #include <Standard_OutOfRange.hxx>
 #include <StdFail_NotDone.hxx>
 
-#define Tolpetit 1.e-8
+static const Standard_Real Tolpetit = 1.e-8;
 
 Contap_ContAna::Contap_ContAna (): done(Standard_False) {}
 
@@ -438,9 +438,9 @@ void Contap_ContAna::Perform (const gp_Cone& C,
 
 gp_Lin Contap_ContAna::Line (const Standard_Integer Index) const
 {
-  if (!done) {StdFail_NotDone::Raise();}
-  if (typL != GeomAbs_Line || nbSol == 0) {Standard_DomainError::Raise();}
-  if (Index <=0 || Index > nbSol) {Standard_OutOfRange::Raise();}
+  if (!done) {throw StdFail_NotDone();}
+  if (typL != GeomAbs_Line || nbSol == 0) {throw Standard_DomainError();}
+  if (Index <=0 || Index > nbSol) {throw Standard_OutOfRange();}
   switch (Index) {
   case 1:
     return gp_Lin(pt1,dir1);
@@ -451,6 +451,5 @@ gp_Lin Contap_ContAna::Line (const Standard_Integer Index) const
   case 4:
     return gp_Lin(pt4,dir4);
   }
-  Standard_OutOfRange::Raise("Program error in Contap_ContAna");
-  return gp_Lin();
+  throw Standard_OutOfRange("Program error in Contap_ContAna");
 }

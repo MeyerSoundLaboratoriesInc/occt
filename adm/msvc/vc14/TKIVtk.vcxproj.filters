@@ -2,19 +2,19 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{764A5AA0-074C-1631-08D7-60F6B5E50511}</UniqueIdentifier>
+      <UniqueIdentifier>{36988C65-0876-0721-053C-41462764EBB6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\IVtk">
-      <UniqueIdentifier>{AFC81187-0168-0C1B-12E4-20CFAE22E8AF}</UniqueIdentifier>
+      <UniqueIdentifier>{AF053677-17ED-0E38-0D13-BC68C181898B}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\IVtkOCC">
-      <UniqueIdentifier>{DA753D84-0D92-0248-1890-2AB777731EA5}</UniqueIdentifier>
+      <UniqueIdentifier>{6D253FAA-0E63-02A7-0DD4-7D8F4C4AFBA8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\IVtkVTK">
-      <UniqueIdentifier>{E1129168-12AD-158D-12BE-5CA2BBBFD570}</UniqueIdentifier>
+      <UniqueIdentifier>{D00608E3-0D32-1670-0E54-C7713DDB6466}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\IVtkTools">
-      <UniqueIdentifier>{55C48DBD-03F2-0E6F-1621-B4A4CBAF4748}</UniqueIdentifier>
+      <UniqueIdentifier>{9C6FBFE6-15CB-1580-08DE-12754AD285BA}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

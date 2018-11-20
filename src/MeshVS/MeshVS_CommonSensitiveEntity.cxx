@@ -88,6 +88,22 @@ MeshVS_CommonSensitiveEntity::MeshVS_CommonSensitiveEntity (const Handle(SelectB
 }
 
 //=======================================================================
+//function : Constructor
+//purpose  :
+//=======================================================================
+MeshVS_CommonSensitiveEntity::MeshVS_CommonSensitiveEntity (const MeshVS_CommonSensitiveEntity& theOther)
+: Select3D_SensitiveSet (theOther.myOwnerId),
+  myDataSource (theOther.myDataSource),
+  myItemIndexes (theOther.myItemIndexes),
+  mySelMethod (theOther.mySelMethod),
+  myMaxFaceNodes (theOther.myMaxFaceNodes),
+  myCOG (theOther.myCOG),
+  myBndBox (theOther.myBndBox)
+{
+  //
+}
+
+//=======================================================================
 //function : Destructor
 //purpose  :
 //=======================================================================
@@ -320,4 +336,13 @@ Standard_Real MeshVS_CommonSensitiveEntity::distanceToCOG (SelectBasics_Selectin
 Select3D_BndBox3d MeshVS_CommonSensitiveEntity::BoundingBox()
 {
   return myBndBox;
+}
+
+//=======================================================================
+//function : CenterOfGeometry
+//purpose  :
+//=======================================================================
+gp_Pnt MeshVS_CommonSensitiveEntity::CenterOfGeometry() const
+{
+  return myCOG;
 }

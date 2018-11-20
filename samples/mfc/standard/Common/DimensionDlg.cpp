@@ -11,11 +11,8 @@
 #include "RadiusParamsPage.h"
 #include "ParamsFacesPage.h"
 #include <Standard_Macro.hxx>
-#include <AIS_InteractiveContext.hxx>
 #include <TColStd_ListIteratorOfListOfInteger.hxx>
 #include <TColStd_ListOfInteger.hxx>
-#include <AIS_LocalContext.hxx>
-#include <AIS_Selection.hxx>
 #include <Quantity_Color.hxx>
 
 BEGIN_MESSAGE_MAP(CDimensionDlg, CDialog)
@@ -141,11 +138,6 @@ void CDimensionDlg::DoDataExchange (CDataExchange* pDX)
 
 void CDimensionDlg::OnBnClickedOk()
 {
- if (myAISContext->HasOpenedContext())
- {
-   myAISContext->CloseAllContexts();
- }
-
  OnOK();
 }
 
@@ -299,8 +291,6 @@ void CDimensionDlg::CreateDiameterParamsTab()
 void CDimensionDlg::UpdateStandardModeForAngle()
 {
   int aTabNum = ((CTabCtrl*) GetDlgItem (IDC_AngleTab))->GetCurSel();
-  myAISContext->CloseAllContexts();
-  myAISContext->OpenLocalContext();
   TopAbs_ShapeEnum aMode;
 
   if (aTabNum == 1)
@@ -316,7 +306,7 @@ void CDimensionDlg::UpdateStandardModeForAngle()
    aMode = TopAbs_EDGE;
   }
 
-  myAISContext->ActivateStandardMode (aMode);
+  myAISContext->Activate (AIS_Shape::SelectionMode (aMode));
 }
 
 //=======================================================================
@@ -327,8 +317,7 @@ void CDimensionDlg::UpdateStandardModeForAngle()
 void CDimensionDlg::UpdateStandardModeForLength()
 {
   int aTabNum = ((CTabCtrl*) GetDlgItem (IDC_LengthTab))->GetCurSel();
-  myAISContext->CloseAllContexts();
-  myAISContext->OpenLocalContext();
+
   TopAbs_ShapeEnum aMode;
 
   if (aTabNum == 1)
@@ -343,7 +332,7 @@ void CDimensionDlg::UpdateStandardModeForLength()
   {
    aMode = TopAbs_EDGE;
   }
-  myAISContext->ActivateStandardMode (aMode);
+  myAISContext->Activate (AIS_Shape::SelectionMode (aMode));
 }
 
 //=======================================================================
@@ -365,8 +354,7 @@ void CDimensionDlg::UpdateStandardMode()
   case IDC_DimRadius:
   case IDC_DimDiameter:
     {
-      myAISContext->OpenLocalContext();
-      myAISContext->ActivateStandardMode (TopAbs_EDGE);
+      myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
     }
     break;
   }
@@ -416,9 +404,7 @@ void CDimensionDlg::OnBnClickedDimAngle()
 void CDimensionDlg::OnBnClickedDimDiameter()
 {
   // Update parameters
-  myAISContext->CloseAllContexts();
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_EDGE);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
 
   GetDlgItem (IDC_LengthTab)->ShowWindow (SW_HIDE);
   GetDlgItem (IDC_AngleTab)->ShowWindow (SW_HIDE);
@@ -437,9 +423,7 @@ void CDimensionDlg::OnBnClickedDimDiameter()
 void CDimensionDlg::OnBnClickedDimRadius()
 {
   // Update parameters
-  myAISContext->CloseAllContexts();
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_EDGE);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
   GetDlgItem (IDC_LengthTab)->ShowWindow (SW_HIDE);
   GetDlgItem (IDC_AngleTab)->ShowWindow (SW_HIDE);
   GetDlgItem (IDC_RadiusTab)->ShowWindow (SW_SHOW);
@@ -532,16 +516,7 @@ void CDimensionDlg::OnTcnSelChangingAngleTab (NMHDR * /*pNMHDR*/, LRESULT *pResu
 
 void CDimensionDlg::DeactivateAllStandardModes()
 {
-  if (myAISContext->HasOpenedContext())
-  {
-    myAISContext->CloseAllContexts();
-    for (TColStd_ListIteratorOfListOfInteger anIt (myAISContext->LocalContext()->StandardModes());
-      anIt.More();
-      anIt.Next())
-    {
-      myAISContext->LocalContext()->DeactivateStandardMode ((TopAbs_ShapeEnum)anIt.Value());
-    }
-  }
+  myAISContext->Deactivate();
 }
 
 //=======================================================================
@@ -551,10 +526,6 @@ void CDimensionDlg::DeactivateAllStandardModes()
 
 void CDimensionDlg::OnDestroy()
 {
-  if (myAISContext->HasOpenedContext())
-  {
-    myAISContext->CloseAllContexts();
-  }
   CWnd *aWnd;
   TC_ITEM anItem;
   anItem.mask = TCIF_PARAM;
@@ -604,7 +575,7 @@ void CDimensionDlg::OnDestroy()
 const Standard_Boolean CDimensionDlg::GetTextType() const
 {
   CButton* a3DButton = (CButton*)GetDlgItem (IDC_3DText);
-  return a3DButton->GetCheck();
+  return a3DButton->GetCheck() != 0;
 }
 
 //=======================================================================
@@ -717,8 +688,7 @@ const TCollection_AsciiString CDimensionDlg::GetUnits() const
     return TCollection_AsciiString();
   CString aStr;
   GetDlgItem (IDC_DisplayUnits)->GetWindowText (aStr);
-  TCollection_ExtendedString aCharsW ((Standard_ExtString )(const wchar_t* )aStr);
-  return TCollection_AsciiString (aCharsW, '?');
+  return TCollection_AsciiString ((const wchar_t* )aStr);
 }
 
 //=======================================================================
@@ -757,17 +727,5 @@ const Quantity_Color CDimensionDlg::GetDimensionColor() const
 
 void CDimensionDlg::OnClose()
 {
-  if (myAISContext->HasOpenedContext())
-  {
-    myAISContext->CloseAllContexts();
-  }
   CDialog::OnClose();
-}
-
-TopoDS_Shape CDimensionDlg::SelectedShape()
-{
-  Handle(Standard_Transient) aSelection = AIS_Selection::CurrentSelection()->Value();
-  Handle(SelectMgr_EntityOwner) anOwner = Handle(SelectMgr_EntityOwner)::DownCast (aSelection);
-  Handle(StdSelect_BRepOwner) aBrepOwner = Handle(StdSelect_BRepOwner)::DownCast(anOwner);
-  return aBrepOwner->Shape().Located (aBrepOwner->Location() * aBrepOwner->Shape().Location());
 }

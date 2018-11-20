@@ -21,9 +21,8 @@
 #include <Standard_Type.hxx>
 
 #include <Standard_Integer.hxx>
-#include <Aspect_DisplayConnection.hxx>
 #include <Standard_Boolean.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Graphic3d_CView.hxx>
 #include <Graphic3d_CStructure.hxx>
 #include <Aspect_GradientFillMethod.hxx>
@@ -33,23 +32,24 @@
 #include <Quantity_NameOfColor.hxx>
 #include <Standard_Real.hxx>
 #include <Aspect_TypeOfTriedronPosition.hxx>
-#include <Aspect_TypeOfTriedronEcho.hxx>
 #include <Graphic3d_GraduatedTrihedron.hxx>
 #include <Graphic3d_Vec3.hxx>
 #include <Standard_ShortReal.hxx>
 #include <Standard_Address.hxx>
 #include <Image_PixMap.hxx>
 #include <Graphic3d_BufferType.hxx>
+#include <Aspect_GenId.hxx>
 #include <Aspect_Handle.hxx>
-#include <Aspect_PrintAlgo.hxx>
 #include <Graphic3d_ExportFormat.hxx>
 #include <Graphic3d_SortType.hxx>
 #include <Graphic3d_ZLayerId.hxx>
 #include <Graphic3d_ZLayerSettings.hxx>
 #include <Graphic3d_CLight.hxx>
+#include <Graphic3d_TypeOfLimit.hxx>
 #include <TColStd_Array2OfReal.hxx>
 #include <TColStd_SequenceOfInteger.hxx>
 
+class Aspect_DisplayConnection;
 class Graphic3d_CView;
 class Graphic3d_GraphicDriver;
 class Graphic3d_TransformError;
@@ -59,25 +59,29 @@ class Graphic3d_ViewManager;
 class Quantity_Color;
 class TCollection_AsciiString;
 
-DEFINE_STANDARD_HANDLE(Graphic3d_GraphicDriver, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(Graphic3d_GraphicDriver, Standard_Transient)
 
 //! This class allows the definition of a graphic driver
 //! for 3d interface (currently only OpenGl driver is used).
-class Graphic3d_GraphicDriver : public MMgt_TShared
+class Graphic3d_GraphicDriver : public Standard_Transient
 {
 
 public:
 
-  
-  //! call_togl_inquirelight
-  virtual Standard_Integer InquireLightLimit() = 0;
-  
-  //! call_togl_inquireplane
-  virtual Standard_Integer InquirePlaneLimit() = 0;
-  
-  //! call_togl_inquireview
-  virtual Standard_Integer InquireViewLimit() = 0;
-  
+  //! Request limit of graphic resource of specific type.
+  virtual Standard_Integer InquireLimit (const Graphic3d_TypeOfLimit theType) const = 0;
+
+  //! Request maximum number of active light sources supported by driver and hardware.
+  Standard_Integer InquireLightLimit() const { return InquireLimit (Graphic3d_TypeOfLimit_MaxNbLights); }
+
+  //! Request maximum number of active clipping planes supported by driver and hardware.
+  Standard_Integer InquirePlaneLimit() const { return InquireLimit (Graphic3d_TypeOfLimit_MaxNbClipPlanes); }
+
+  //! Request maximum number of views supported by driver.
+  Standard_Integer InquireViewLimit() const { return InquireLimit (Graphic3d_TypeOfLimit_MaxNbViews); }
+
+public:
+
   //! Creates new empty graphic structure
   virtual Handle(Graphic3d_CStructure) CreateStructure (const Handle(Graphic3d_StructureManager)& theManager) = 0;
   
@@ -126,7 +130,7 @@ public:
   virtual void SetZLayerSettings (const Graphic3d_ZLayerId theLayerId, const Graphic3d_ZLayerSettings& theSettings) = 0;
 
   //! Returns the settings of a single Z layer.
-  virtual Graphic3d_ZLayerSettings ZLayerSettings (const Graphic3d_ZLayerId theLayerId) = 0;
+  virtual const Graphic3d_ZLayerSettings& ZLayerSettings (const Graphic3d_ZLayerId theLayerId) const = 0;
 
   //! Returns view associated with the window if it is exists and is activated.
   //! Returns Standard_True if the view associated to the window exists.
@@ -134,34 +138,25 @@ public:
 
   //! returns Handle to display connection
   Standard_EXPORT const Handle(Aspect_DisplayConnection)& GetDisplayConnection() const;
-  
-  Standard_EXPORT Standard_Boolean IsDeviceLost() const;
-  
-  Standard_EXPORT void ResetDeviceLostFlag();
 
-  DEFINE_STANDARD_RTTIEXT(Graphic3d_GraphicDriver,MMgt_TShared)
+  //! Returns a new identification number for a new structure.
+  Standard_EXPORT Standard_Integer NewIdentification();
+
+  //! Frees the identifier of a structure.
+  Standard_EXPORT void RemoveIdentification(const Standard_Integer theId);
+
+  DEFINE_STANDARD_RTTIEXT(Graphic3d_GraphicDriver,Standard_Transient)
 
 protected:
-
   
   //! Initializes the Driver
   Standard_EXPORT Graphic3d_GraphicDriver(const Handle(Aspect_DisplayConnection)& theDisp);
 
+protected:
+
   Handle(Aspect_DisplayConnection) myDisplayConnection;
-  Standard_Boolean myDeviceLostFlag;
-
-
-private:
-
-
-
+  Aspect_GenId myStructGenId;
 
 };
-
-
-
-
-
-
 
 #endif // _Graphic3d_GraphicDriver_HeaderFile

@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TDataXtd_Geometry.hxx>
 #include <TDF_Attribute.hxx>
@@ -31,18 +31,21 @@ static Standard_Boolean           GeometryTypeEnum
 
 IMPLEMENT_DOMSTRING (TypeString,        "geomtype")
 
-IMPLEMENT_DOMSTRING (GeomAnyString,     "any")
-IMPLEMENT_DOMSTRING (GeomPointString,   "point")
-IMPLEMENT_DOMSTRING (GeomLineString,    "line")
-IMPLEMENT_DOMSTRING (GeomCircleString,  "circle")
-IMPLEMENT_DOMSTRING (GeomEllipseString, "ellipse")
+IMPLEMENT_DOMSTRING (GeomAnyString,      "any")
+IMPLEMENT_DOMSTRING (GeomPointString,    "point")
+IMPLEMENT_DOMSTRING (GeomLineString,     "line")
+IMPLEMENT_DOMSTRING (GeomCircleString,   "circle")
+IMPLEMENT_DOMSTRING (GeomEllipseString,  "ellipse")
+IMPLEMENT_DOMSTRING (GeomSplineString,   "slpine")
+IMPLEMENT_DOMSTRING (GeomPlaneString,    "plane")
+IMPLEMENT_DOMSTRING (GeomCylinderString, "cylinder")
 
 //=======================================================================
 //function : XmlMDataXtd_GeometryDriver
 //purpose  : Constructor
 //=======================================================================
 XmlMDataXtd_GeometryDriver::XmlMDataXtd_GeometryDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
       : XmlMDF_ADriver (theMsgDriver, NULL)
 {}
 
@@ -70,8 +73,8 @@ Standard_Boolean XmlMDataXtd_GeometryDriver::Paste
   XmlObjMgt_DOMString aType = theSource.Element().getAttribute(::TypeString());
   TDataXtd_GeometryEnum aTypeEnum;
   if (GeometryTypeEnum (aType, aTypeEnum) == Standard_False) {
-    WriteMessage ("TDataXtd_GeometryEnum; "
-                  "string value without enum term equivalence");
+    myMessageDriver->Send ("TDataXtd_GeometryEnum; "
+                  "string value without enum term equivalence", Message_Fail);
     return Standard_False;
   }
 
@@ -110,6 +113,12 @@ static Standard_Boolean GeometryTypeEnum (const XmlObjMgt_DOMString& theString,
       aResult = TDataXtd_CIRCLE;
     else if (theString.equals (::GeomEllipseString()))
       aResult = TDataXtd_ELLIPSE;
+    else if (theString.equals(::GeomSplineString()))
+      aResult = TDataXtd_SPLINE;
+    else if (theString.equals(::GeomPlaneString()))
+      aResult = TDataXtd_PLANE;
+    else if (theString.equals(::GeomCylinderString()))
+      aResult = TDataXtd_CYLINDER;
     else
       return Standard_False;
   }
@@ -131,10 +140,11 @@ static const XmlObjMgt_DOMString& GeometryTypeString
   case TDataXtd_LINE     : return ::GeomLineString();
   case TDataXtd_CIRCLE   : return ::GeomCircleString();
   case TDataXtd_ELLIPSE  : return ::GeomEllipseString();
-    
+  case TDataXtd_SPLINE   : return ::GeomSplineString();
+  case TDataXtd_PLANE    : return ::GeomPlaneString();
+  case TDataXtd_CYLINDER : return ::GeomCylinderString();
+
   default:
-    Standard_DomainError::Raise("TDataXtd_GeometryEnum; enum term unknown");
+    throw Standard_DomainError("TDataXtd_GeometryEnum; enum term unknown");
   }
-  static XmlObjMgt_DOMString aNullString;
-  return aNullString; // To avoid compilation error message.
 }

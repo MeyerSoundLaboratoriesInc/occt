@@ -18,9 +18,24 @@ set (BUILD_YACCLEX_DESCR
 ExprIntrp functionality are generated automatically with Flex/Bison. Checking this options
 leads to automatic search of Flex/Bison binaries and regeneration of the mentioned files")
 
+set (BUILD_RESOURCES_DESCR "Enables regeneration of OCCT resource files")
+
 set (BUILD_WITH_DEBUG_DESCR
-"Enables extended messages of many OCCT algorithms, usually printed to cout. 
-These include messages on internal errors and special cases encountered, timing etc")
+"Enables extended messages of many OCCT algorithms, usually printed to cout.
+These include messages on internal errors and special cases encountered, timing etc.
+Applies only for Debug configuration.")
+
+set (BUILD_SHARED_LIBRARY_NAME_POSTFIX_DESCR
+"Append the postfix to names of output libraries")
+
+set (BUILD_ENABLE_FPE_SIGNAL_HANDLER_DESCR
+"Enable/Disable the floating point exceptions (FPE) during DRAW execution only.
+Corresponding environment variable (CSF_FPE) can be changed manually
+in custom.bat/sh scripts without regeneration by CMake.")
+
+set (BUILD_USE_PCH_DESCR
+"Use precompiled headers to accelerate the build.
+Precompiled headers are generated automatically by Cotire tool.")
 
 # install variables
 set (INSTALL_DIR_DESCR 
@@ -67,15 +82,17 @@ endmacro()
 INSTALL_MESSAGE (INSTALL_SAMPLES          "OCCT samples")
 INSTALL_MESSAGE (INSTALL_TEST_CASES       "non-regression OCCT test scripts")
 INSTALL_MESSAGE (INSTALL_DOC_Overview     "OCCT overview documentation (HTML format)")
+INSTALL_MESSAGE (INSTALL_FFMPEG           "FFmpeg binaries")
 INSTALL_MESSAGE (INSTALL_FREEIMAGE        "FreeImage binaries")
-INSTALL_MESSAGE (INSTALL_FREEIMAGEPLUS    "FreeImagePlus binaries")
+INSTALL_MESSAGE (INSTALL_EIGEN            "EIGEN header files")
+INSTALL_MESSAGE (INSTALL_EGL              "EGL binaries")
+INSTALL_MESSAGE (INSTALL_GLES2            "OpenGL ES 2.0 binaries")
 INSTALL_MESSAGE (INSTALL_FREETYPE         "FreeType binaries")
 INSTALL_MESSAGE (INSTALL_GL2PS            "GL2PS binaries")
 INSTALL_MESSAGE (INSTALL_TBB              "TBB binaries")
 INSTALL_MESSAGE (INSTALL_TCL              "TCL binaries")
 INSTALL_MESSAGE (INSTALL_TK               "TK binaries")
-
-#INSTALL_MESSAGE (INSTALL_VTK              "VTK binaries ")
+INSTALL_MESSAGE (INSTALL_VTK              "VTK binaries ")
 
 # build variables
 macro (BUILD_MODULE_MESSAGE BUILD_MODULE_TARGET_VARIABLE BUILD_MODULE_TARGET_STRING)
@@ -100,10 +117,25 @@ want to build some particular libraries (toolkits) only, then you may uncheck
 all modules in the corresponding BUILD_MODUE_* options and provide the list of
 necessary libraries here. Of course, all dependencies will be resolved automatically")
 
-set (BUILD_MODULE_MfcSamples_DESCR
+set (BUILD_SAMPLES_MFC_DESCR
 "Indicates whether OCCT MFC samples should be built together with OCCT.
 These samples show some possibilities of using OCCT and they can be executed
 with script samples.bat from the installation directory (INSTALL_DIR)")
+
+set (BUILD_SAMPLES_QT_DESCR
+"Indicates whether OCCT Qt samples should be built together with OCCT.
+These samples show some possibilities of using OCCT and they can be executed
+with script samples.bat from the installation directory (INSTALL_DIR)")
+
+set (BUILD_Inspector_DESCR
+"Indicates whether OCCT inspector should be built together with OCCT.
+This inspector provides functionality to interactively inspect low-level content
+of the OCAF data model, OCCT viewer, etc. have been introduced in OCCT.
+It can be executed with script inspector.bat from the installation directory (INSTALL_DIR) or
+using 'tinspector' command in DRAW interpretator")
+
+set (BUILD_MODULE_UwpSample_DESCR
+"Indicates whether OCCT UWP sample should be built together with OCCT.")
 
 set (BUILD_DOC_Overview_DESCR
 "Indicates whether OCCT overview documentation project (Markdown format) should be
@@ -117,9 +149,21 @@ set (3RDPARTY_DIR_DESCR
 third-party product have been found - corresponding CMake variables will be specified
 (VTK: 3RDPARTY_VTK_DIR, 3RDPARTY_VTK_INCLUDE_DIR, 3RDPARTY_VTK_LIBRARY_DIR)")
 
+set (USE_FFMPEG_DESCR
+"Indicates whether FFmpeg framework is used or not. FFmpeg stands for
+multimedia data handling, open-source software libraries used for video encoding and decoding.")
+
 set (USE_FREEIMAGE_DESCR
 "Indicates whether Freeimage product should be used in OCCT visualization
 module for support of popular graphics image formats (PNG, BMP etc)")
+
+set (USE_EGL_DESCR
+"Indicates whether EGL should be used in OCCT visualization
+module instead of conventional OpenGL context creation APIs")
+
+set (USE_GLES2_DESCR
+"Indicates whether OpenGL ES 2.0 should be used in OCCT visualization
+module instead of desktop OpenGL")
 
 set (USE_GL2PS_DESCR
 "Indicates whether GL2PS product should be used in OCCT visualization
@@ -141,5 +185,6 @@ set (USE_GLX_DESCR "Indicates whether X11 OpenGl on OSX is used or not")
 set (USE_D3D_DESCR "Indicates whether optional Direct3D wrapper in OCCT visualization module should be build or not")
 
 macro (BUILD_MODULE MODULE_NAME)
-  set (BUILD_MODULE_${MODULE_NAME} ON CACHE BOOL "${BUILD_MODULE_${MODULE_NAME}_DESCR}")
+  set (ENABLE_MODULE TRUE)
+  set (BUILD_MODULE_${MODULE_NAME} ${ENABLE_MODULE} CACHE BOOL "${BUILD_MODULE_${MODULE_NAME}_DESCR}")
 endmacro()

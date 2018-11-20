@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{8CE37F8A-188F-0F0C-103D-669E422035A0}</UniqueIdentifier>
+      <UniqueIdentifier>{A2EDEA9B-0B76-02EC-1069-4BDBBA46AAA5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XDEDRAW">
-      <UniqueIdentifier>{A0D879CE-125B-0E4C-13F1-A991DAA6ADB6}</UniqueIdentifier>
+      <UniqueIdentifier>{6D54039A-13EA-0D57-18AC-EE5972324DE5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -24,10 +24,16 @@
     <ClCompile Include="..\..\..\src\XDEDRAW\XDEDRAW_Layers.cxx">
       <Filter>Source files\XDEDRAW</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XDEDRAW\XDEDRAW_Notes.cxx">
+      <Filter>Source files\XDEDRAW</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XDEDRAW\XDEDRAW_Props.cxx">
       <Filter>Source files\XDEDRAW</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XDEDRAW\XDEDRAW_Shapes.cxx">
+      <Filter>Source files\XDEDRAW</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XDEDRAW\XDEDRAW_Views.cxx">
       <Filter>Source files\XDEDRAW</Filter>
     </ClCompile>
   </ItemGroup>

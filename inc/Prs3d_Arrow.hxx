@@ -17,66 +17,70 @@
 #ifndef _Prs3d_Arrow_HeaderFile
 #define _Prs3d_Arrow_HeaderFile
 
-#include <Standard.hxx>
-#include <Standard_DefineAlloc.hxx>
-#include <Standard_Handle.hxx>
-
 #include <Prs3d_Root.hxx>
-#include <Quantity_PlaneAngle.hxx>
-#include <Quantity_Length.hxx>
-class Prs3d_Presentation;
+
+#include <Graphic3d_ArrayOfTriangles.hxx>
+#include <Graphic3d_ArrayOfSegments.hxx>
+
+class gp_Ax1;
 class gp_Pnt;
 class gp_Dir;
 
-
-//! provides class methods to draw an arrow at a given
-//! location, along a given direction and using a given
-//! angle.
-class Prs3d_Arrow  : public Prs3d_Root
+//! Provides class methods to draw an arrow at a given location, along a given direction and using a given angle.
+class Prs3d_Arrow : public Prs3d_Root
 {
 public:
 
-  DEFINE_STANDARD_ALLOC
+  //! Defines the representation of the arrow as shaded triangulation.
+  //! @param theAxis       axis definition (arrow origin and direction)
+  //! @param theTubeRadius tube (cylinder) radius
+  //! @param theAxisLength overall arrow length (cylinder + cone)
+  //! @param theConeRadius cone radius (arrow tip)
+  //! @param theConeLength cone length (arrow tip)
+  //! @param theNbFacettes tessellation quality for each part
+  Standard_EXPORT static Handle(Graphic3d_ArrayOfTriangles) DrawShaded (const gp_Ax1&          theAxis,
+                                                                        const Standard_Real    theTubeRadius,
+                                                                        const Standard_Real    theAxisLength,
+                                                                        const Standard_Real    theConeRadius,
+                                                                        const Standard_Real    theConeLength,
+                                                                        const Standard_Integer theNbFacettes);
 
-  
-  //! Defines the representation of the arrow defined by
-  //! the location point aLocation, the direction
-  //! aDirection and the length aLength.
-  //! The angle anAngle defines the angle of opening of the arrow head.
-  //! The presentation object aPresentation stores the
-  //! information defined in this framework.
-  Standard_EXPORT static void Draw (const Handle(Prs3d_Presentation)& aPresentation, const gp_Pnt& aLocation, const gp_Dir& aDirection, const Quantity_PlaneAngle anAngle, const Quantity_Length aLength);
-  
-  //! Defines the representation of the arrow defined by
-  //! the location point aLocation, the direction vector
-  //! aDirection and the length aLength.
-  //! The angle anAngle defines the angle of opening of
-  //! the arrow head, and the drawer aDrawer specifies
-  //! the display attributes which arrows will have.
-  //! With this syntax, no presentation object is created.
-  Standard_EXPORT static void Fill (const Handle(Prs3d_Presentation)& aPresentation, const gp_Pnt& aLocation, const gp_Dir& aDirection, const Quantity_PlaneAngle anAngle, const Quantity_Length aLength);
+  //! Defines the representation of the arrow as a container of segments.
+  //! @param theLocation   location of the arrow tip
+  //! @param theDir        direction of the arrow
+  //! @param theAngle      angle of opening of the arrow head
+  //! @param theLength     length of the arrow (from the tip)
+  //! @param theNbSegments count of points on polyline where location is connected
+  Standard_EXPORT static Handle(Graphic3d_ArrayOfSegments) DrawSegments (const gp_Pnt& theLocation,
+                                                                         const gp_Dir& theDir,
+                                                                         const Standard_Real theAngle,
+                                                                         const Standard_Real theLength,
+                                                                         const Standard_Integer theNbSegments);
 
+  //! Defines the representation of the arrow.
+  //! Note that this method does NOT assign any presentation aspects to the primitives group!
+  //! @param theGroup     presentation group to add primitives
+  //! @param theLocation  location of the arrow tip
+  //! @param theDirection direction of the arrow
+  //! @param theAngle     angle of opening of the arrow head
+  //! @param theLength    length of the arrow (from the tip)
+  Standard_EXPORT static void Draw (const Handle(Graphic3d_Group)& theGroup,
+                                    const gp_Pnt& theLocation,
+                                    const gp_Dir& theDirection,
+                                    const Standard_Real theAngle,
+                                    const Standard_Real theLength);
 
-
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
+  //! Alias to another method Draw() for backward compatibility.
+  Standard_DEPRECATED("Prs3d_Arrow::Draw() taking Graphic3d_Group should be used instead")
+  static void Draw (const Handle(Prs3d_Presentation)& thePrs,
+                    const gp_Pnt& theLocation,
+                    const gp_Dir& theDirection,
+                    const Standard_Real theAngle,
+                    const Standard_Real theLength)
+  {
+    Draw (Prs3d_Root::CurrentGroup (thePrs), theLocation, theDirection, theAngle, theLength);
+  }
 
 };
-
-
-
-
-
-
 
 #endif // _Prs3d_Arrow_HeaderFile

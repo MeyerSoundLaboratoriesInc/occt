@@ -42,7 +42,7 @@ GeomToStep_MakeConicalSurface::GeomToStep_MakeConicalSurface
   aRadius = CS->RefRadius();
   aSemiAngle = CS->SemiAngle();
   if (aSemiAngle < 0. || aSemiAngle > M_PI/2.) {
-    Standard_DomainError::Raise("Conicalsurface not STEP conformant");
+    throw Standard_DomainError("Conicalsurface not STEP conformant");
   }
   
   Handle(TCollection_HAsciiString) name = new TCollection_HAsciiString("");
@@ -58,6 +58,6 @@ GeomToStep_MakeConicalSurface::GeomToStep_MakeConicalSurface
 const Handle(StepGeom_ConicalSurface) &
       GeomToStep_MakeConicalSurface::Value() const
 {
-  StdFail_NotDone_Raise_if(!done, "");
+  StdFail_NotDone_Raise_if (!done, "GeomToStep_MakeConicalSurface::Value() - no result");
   return theConicalSurface;
 }

@@ -2,31 +2,34 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{A7510FDB-18D0-0FDC-0F7D-BBC05F52A06D}</UniqueIdentifier>
+      <UniqueIdentifier>{2ECA085D-1441-0C4E-05F0-1EC6E9950951}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Geom">
-      <UniqueIdentifier>{A25C7A46-01F4-100D-050C-4B1A059966EE}</UniqueIdentifier>
+      <UniqueIdentifier>{96D6E3FF-05CB-1753-1550-A21518170380}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\GeomAdaptor">
-      <UniqueIdentifier>{34BA088A-0B56-17FB-07E7-A0B0DCBB55FE}</UniqueIdentifier>
+      <UniqueIdentifier>{E6D5E1BE-01DC-0A5C-0F05-AC2A70162A2D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\AdvApprox">
-      <UniqueIdentifier>{0AD5A545-1674-1067-0F80-6907CE7F8EA0}</UniqueIdentifier>
+      <UniqueIdentifier>{2B1E8FCE-0943-1319-0055-02F166367F58}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\GeomLProp">
-      <UniqueIdentifier>{6CBA87D4-0337-04B6-0378-C14404586FD1}</UniqueIdentifier>
+      <UniqueIdentifier>{E284AC77-091E-0FC5-1548-4B16B2BF097F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Adaptor3d">
-      <UniqueIdentifier>{15333E4D-0DB2-0663-1060-15C8DA358F71}</UniqueIdentifier>
+      <UniqueIdentifier>{08B25EAF-0FF4-045D-0442-483299F1F59F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\LProp3d">
-      <UniqueIdentifier>{5C51286D-091A-0AE3-0867-6168F7325B68}</UniqueIdentifier>
+      <UniqueIdentifier>{34D323E1-097C-18CE-0D67-6E36A1C4A40C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopAbs">
-      <UniqueIdentifier>{0F2D5C76-061C-12B0-132A-34CD4C924374}</UniqueIdentifier>
+      <UniqueIdentifier>{EE2B6806-02C4-0274-01B7-604661AC9F7F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\GeomEvaluator">
-      <UniqueIdentifier>{8A944090-1310-0A8E-0CBE-E8C579FCC976}</UniqueIdentifier>
+      <UniqueIdentifier>{1B842057-10AD-14AC-0C40-1C7F13DAF600}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\GProp">
+      <UniqueIdentifier>{4C85B90D-03F1-17ED-0598-8D4F2446D197}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -278,6 +281,30 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\GeomEvaluator\GeomEvaluator_SurfaceOfRevolution.cxx">
       <Filter>Source files\GeomEvaluator</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_CelGProps.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_GProps.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_PEquation.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_PGProps.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_PrincipalProps.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_SelGProps.cxx">
+      <Filter>Source files\GProp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\GProp\GProp_VelGProps.cxx">
+      <Filter>Source files\GProp</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

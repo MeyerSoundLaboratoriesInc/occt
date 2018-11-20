@@ -23,7 +23,7 @@
 #include <TopOpeBRepDS_DataStructure.hxx>
 #include <Standard_Boolean.hxx>
 #include <TCollection_AsciiString.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <TopAbs_ShapeEnum.hxx>
 #include <Standard_Integer.hxx>
 #include <TopTools_ListIteratorOfListOfShape.hxx>
@@ -44,10 +44,10 @@ class TopOpeBRepDS_Interference;
 
 
 class TopOpeBRepDS_HDataStructure;
-DEFINE_STANDARD_HANDLE(TopOpeBRepDS_HDataStructure, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(TopOpeBRepDS_HDataStructure, Standard_Transient)
 
 
-class TopOpeBRepDS_HDataStructure : public MMgt_TShared
+class TopOpeBRepDS_HDataStructure : public Standard_Transient
 {
 
 public:
@@ -63,9 +63,7 @@ public:
   //! Used by the previous one.
   Standard_EXPORT void AddAncestors (const TopoDS_Shape& S, const TopAbs_ShapeEnum T1, const TopAbs_ShapeEnum T2);
   
-  //! perform post processing of the DS.
-  Standard_EXPORT void Complete();
-  
+
   //! Check the integrity of the DS
   Standard_EXPORT void ChkIntg();
   
@@ -156,8 +154,6 @@ public:
   
   Standard_EXPORT void RemoveCurve (const Standard_Integer iC);
   
-  Standard_EXPORT void RemoveShape (const Standard_Integer iS);
-  
   Standard_EXPORT Standard_Integer NbGeometry (const TopOpeBRepDS_Kind K) const;
   
   Standard_EXPORT Standard_Integer NbTopology (const TopOpeBRepDS_Kind K) const;
@@ -213,7 +209,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(TopOpeBRepDS_HDataStructure,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(TopOpeBRepDS_HDataStructure,Standard_Transient)
 
 protected:
 
@@ -224,8 +220,6 @@ private:
 
 
   TopOpeBRepDS_DataStructure myDS;
-  Standard_Boolean myEdgesSameParameter;
-  TCollection_AsciiString myAscii;
 
 
 };

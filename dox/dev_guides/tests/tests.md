@@ -192,7 +192,11 @@ Use prefix <i>bug</i> followed by Mantis issue ID and, if necessary, additional 
 	*	If the test case reports error due to an existing problem and the fix is not available, add @ref testmanual_3_6 "TODO" statement for each error to mark it as a known problem. The TODO statements must be specific so as to match the actually generated messages but not all similar errors.
 	*	To check expected output which should be obtained as the test result, add @ref testmanual_3_7 "REQUIRED" statement for each line of output to mark it as required.
 	*	If the test case produces error messages (contained in parse.rules), which are expected in that test and should not be considered as its failure (e.g. test for *checkshape* command), add REQUIRED statement for each error to mark it as required output.
-4.	If the test uses data file(s) that are not yet present in the test database, it is possible to put them to (sub)directory pointed out by *CSF_TestDataPath* variable for running test. The files should be attached to the Mantis issue corresponding to the tested modification.
+4.	To check whether the data files needed for the test are already present in the database, use DRAW command *testfile* (see below).
+    If the data file is already present, use it for a new test instead of adding a duplicate.
+    If the data file(s) are not yet present in the test database, put them to a folder and add it to the environment variable *CSF_TestDataPath* to be found by the test system.
+    The location of the data files, which need to be accessed by OCC team and put to the official database, should be provided in the comment to Mantis issue, clearly indicating how the names of the files used by the test script match the actual names of the files.
+    The simplest way is to attach the data files to the Mantis issue, with the same names as used by the test script.
 5.	Check that the test case runs as expected (test for fix: OK with the fix, FAILED without the fix; test for existing problem: BAD), and integrate it to the Git branch created for the issue.
 
 Example:
@@ -216,6 +220,33 @@ restore [locate_data_file bug210_a.brep] a
 
 fixshape result a 0.01 0.01
 checkshape result
+~~~~~
+
+DRAW command *testfile* should be used to check the data files used by the test for possible duplication of content or names.
+The command accepts the list of paths to files to be checked (as a single argument) and gives a conclusion on each of the files, for instance:
+
+~~~~~
+Draw[1]> testfile [glob /my/data/path/bug12345*]
+Collecting info on test data files repository...
+Checking new file(s)...
+
+* /my/data/path/bug12345.brep: duplicate
+  already present under name bug28773_1.brep
+  --> //server/occt_tests_data/public/brep/bug28773_1.brep
+
+* /my/data/path/cadso.brep: new file
+  Warning: DOS encoding detected, consider converting to
+           UNIX unless DOS line ends are needed for the test
+  Warning: shape contains triangulation (946 triangles),
+           consider removing them unless they are needed for the test!
+  BREP size=201 KiB, nbfaces=33, nbedges=94 -> private
+
+* /my/data/path/case_8_wire3.brep: already present
+  --> //server/occt_tests_data/public/brep/case_8_wire3.brep
+
+* /my/data/path/case_8_wire4.brep: error
+  name is already used by existing file
+  --> //server/occt_tests_data/public/brep/case_8_wire4.brep
 ~~~~~
 
 @section testmanual_2 Organization of Test Scripts
@@ -242,8 +273,7 @@ The names *begin, end, data, parse.rules, grids.list* and *cases.list* are reser
 
 General layout of test scripts is shown in Figure 1.
 
-@image html /dev_guides/tests/images/tests_image001.png "Layout of tests folder"
-@image latex /dev_guides/tests/images/tests_image001.png "Layout of tests folder"
+@figure{/dev_guides/tests/images/tests_image001.png,"Layout of tests folder",400}
 
 
 @subsection testmanual_2_2 Test Groups
@@ -601,12 +631,12 @@ puts "TODO BugNumber ListOfPlatforms: RegularExpression"
 
 Here:
 * *BugNumber* is the bug ID in the tracker. For example: #12345.
-* *ListOfPlatforms* is a list of platforms, at which the bug is reproduced (Linux, Windows, MacOS, or All). Note that the platform name is custom for the OCCT test system; it corresponds to the value of environment variable *os_type* defined in DRAW.
+* *ListOfPlatforms* is a list of platforms, at which the bug is reproduced (Linux, Windows, MacOS, or All). Note that the platform name is custom for the OCCT test system; Use procedure *checkplatform* to get the platform name.
 
 Example:
 ~~~~~
-Draw[2]> puts $env(os_type)
-windows
+Draw[2]> checkplatform
+Windows
 ~~~~~
 
 * RegularExpression is a regular expression, which should be matched against the line indicating the problem in the script output. 
@@ -715,11 +745,24 @@ Possible options are:
 	* 1 -- outputs only differences;
 	* 2 -- additionally outputs the list of logs and directories present in one of directories only;
 	* 3 -- (by default) additionally outputs progress messages;
+* <i>-image [filename]</i> - compare images and save the resulting log in specified file (<i>$dir1/diffimage-$dir2.log</i> by default)
+* <i>-cpu [filename]</i> - compare overall CPU and save the resulting log in specified file (<i>$dir1/diffcpu-$dir2.log</i> by default)
+* <i>-memory [filename]</i> - compare memory delta and save the resulting log in specified file (<i>$dir1/diffmemory-$dir2.log</i> by default)
+* <i>-highlight_percent \<value\></i> - highlight considerable (>value in %) deviations of CPU and memory (default value is 5%)
 
 Example:
 
 ~~~~~
-Draw[]> testdiff results-CR12345-2012-10-10T08:00 results-master-2012-10-09T21:20 
+Draw[]> testdiff results/CR12345-2012-10-10T08:00 results/master-2012-10-09T21:20 
+~~~~~
+
+Particular tests can generate additional data that need to be compared by *testdiff* command.
+For that, for each parameter to be controlled, the test should produce the line containing keyword "COUNTER* followed by arbitrary name of the parameter, then colon and numeric value of the parameter.
+
+Example of test code:
+
+~~~~~
+puts "COUNTER Memory heap usage at step 5: [meminfo h]"
 ~~~~~
 
 @section testmanual_5 APPENDIX
@@ -882,6 +925,7 @@ DRAW module: XSDRAW
 | fix_shape	| fixshape	| Shape healing | 
 | fix_gaps	| fixwgaps	| Fixing gaps between edges on a wire |
 | same_parameter	| sameparameter	| Fixing non-sameparameter edges |
+| same_parameter_locked	| sameparameter	| Fixing non-sameparameter edges |
 | fix_face_size	| DT_ApplySeq	| Removal of small faces |
 | elementary_to_revolution	| DT_ApplySeq	| Conversion of elementary surfaces to revolution |
 | direct_faces	| directfaces	| Correction of axis of elementary surfaces | 
@@ -897,6 +941,7 @@ DRAW module: XSDRAW
 | split_continuity_standard | DT_ShapeDivide | Split surfaces by continuity criterion |
 | surface_to_revolution_advanced |	DT_ShapeConvertRev	| Convert elementary surfaces to revolutions, complex cases |
 | surface_to_revolution_standard |	DT_ShapeConvertRev	| Convert elementary surfaces to revolutions, simple cases |
+| update_tolerance_locked	| updatetolerance	| Update the tolerance of shape so that it satisfy the rule: toler(face)<=toler(edge)<=toler(vertex) |
 
 @subsubsection testmanual_5_1_11 mesh
 
@@ -1294,6 +1339,7 @@ Allowed options are:
  * <i>-s AREA</i> -- command *sprops*, computes the mass properties of all faces with a surface density of 1; 
  * <i>-v VOLUME</i> -- command *vprops*, computes the mass properties of all solids with a density of 1;
  * <i>-eps EPSILON</i> -- the epsilon defines relative precision of computation;
+ * <i>-deps DEPSILON</i> -- the epsilon defines relative precision to compare corresponding values;
  * <i>-equal SHAPE</i> -- compares area, volume and length of input shapes. Puts error if they are not equal;
  * <i>-notequal SHAPE</i> -- compares area, volume and length of input shapes. Puts error if they are equal.
 
@@ -1391,3 +1437,4 @@ Use options <i>-tol_\* </i> for that.
 ~~~~~
 checktrinfo result -defl 1 -tol_abs_defl 0.001
 ~~~~~
+

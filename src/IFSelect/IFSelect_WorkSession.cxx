@@ -14,9 +14,6 @@
 //#1 svv   10.01.00 : porting on DEC 
 //smh#14 17.03.2000 : FRA62479 Clearing of gtool
 
-#include <Dico_DictionaryOfTransient.hxx>
-#include <Dico_IteratorOfDictionaryOfInteger.hxx>
-#include <Dico_IteratorOfDictionaryOfTransient.hxx>
 #include <IFGraph_SubPartsIterator.hxx>
 #include <IFSelect_CheckCounter.hxx>
 #include <IFSelect_Dispatch.hxx>
@@ -87,7 +84,7 @@
 #include <TCollection_HAsciiString.hxx>
 #include <TColStd_MapOfInteger.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(IFSelect_WorkSession,MMgt_TShared)
+IMPLEMENT_STANDARD_RTTIEXT(IFSelect_WorkSession,Standard_Transient)
 
 #define Flag_Incorrect 2
 //  (Bit Map n0 2)
@@ -109,7 +106,6 @@ IFSelect_WorkSession::IFSelect_WorkSession ()
 {
   theshareout  = new IFSelect_ShareOut;
   theerrhand   = errhand = Standard_True;
-  thenames     = new Dico_DictionaryOfTransient;
   thecopier    = new IFSelect_ModelCopier;
   thecopier->SetShareOut (theshareout);
   thecheckdone = Standard_False;
@@ -117,61 +113,16 @@ IFSelect_WorkSession::IFSelect_WorkSession ()
   themodelstat = Standard_False;
 }
 
-
 //=======================================================================
 //function : 
 //purpose  : 
 //=======================================================================
 
-void  IFSelect_WorkSession::SetErrorHandle (const Standard_Boolean hand)
+void IFSelect_WorkSession::SetErrorHandle (const Standard_Boolean toHandle)
 {
-  theerrhand = errhand = hand;
+  theerrhand = errhand = toHandle;
 }
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-Standard_Boolean  IFSelect_WorkSession::ErrorHandle () const 
-{
-  return theerrhand;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-const Handle(IFSelect_ShareOut)&  IFSelect_WorkSession::ShareOut () const 
-{
-  return theshareout;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-void IFSelect_WorkSession::SetLibrary (const Handle(IFSelect_WorkLibrary)& lib)
-{
-  thelibrary = lib;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-Handle(IFSelect_WorkLibrary)  IFSelect_WorkSession::WorkLibrary () const
-{
-  return thelibrary;
-}
-
+ 
 
 //=======================================================================
 //function : 
@@ -192,23 +143,11 @@ void IFSelect_WorkSession::SetProtocol
 //purpose  : 
 //=======================================================================
 
-Handle(Interface_Protocol)  IFSelect_WorkSession::Protocol () const
-{
-  return theprotocol;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-void IFSelect_WorkSession::SetSignType
-  (const Handle(IFSelect_Signature)& signtype)
+void IFSelect_WorkSession::SetSignType (const Handle(IFSelect_Signature)& signtype)
 {
   thegtool->SetSignType (signtype);
-  if (signtype.IsNull()) thenames->RemoveItem ("xst-sign-type");
-  else thenames->SetItem ("xst-sign-type",signtype);
+  if (signtype.IsNull()) thenames.UnBind("xst-sign-type");
+  else thenames.Bind("xst-sign-type",signtype);
 }
 
 
@@ -242,29 +181,15 @@ void  IFSelect_WorkSession::SetShareOut
 //purpose  : 
 //=======================================================================
 
-Standard_Boolean  IFSelect_WorkSession::HasModel () const 
-{
-  return (!themodel.IsNull());
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
 void  IFSelect_WorkSession::SetModel
     (const Handle(Interface_InterfaceModel)& model,
      const Standard_Boolean clearpointed)
 {
-  if (themodel != model) {
+  if (myModel != model)
     theloaded.Clear();
-    //skl if (!themodel.IsNull()) themodel->Clear();
-  }
-  themodel = model;
+  myModel = model;
   if (!thegtool.IsNull()) thegtool->ClearEntities(); //smh#14 FRA62479
-//  themodel->SetProtocol(theprotocol);
-  themodel->SetGTool (thegtool);
+  myModel->SetGTool (thegtool);
   
   thegraph.Nullify();
   ComputeGraph();    // fait qqchose si Protocol present. Sinon, ne fait rien
@@ -274,39 +199,6 @@ void  IFSelect_WorkSession::SetModel
 //  MISE A JOUR des SelectPointed  C-A-D  on efface leur contenu
   if (clearpointed) ClearData(4);
   ClearData(0);
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-Handle(Interface_InterfaceModel)  IFSelect_WorkSession::Model () const 
-{
-  return themodel;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-void IFSelect_WorkSession::SetLoadedFile (const Standard_CString filename)
-{
-  theloaded.Clear();
-  theloaded.AssignCat (filename);
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-Standard_CString  IFSelect_WorkSession::LoadedFile () const
-{
-  return theloaded.ToCString();
 }
 
 
@@ -329,10 +221,10 @@ IFSelect_ReturnStatus  IFSelect_WorkSession::ReadFile
     else if (stat < 0) status = IFSelect_RetError;
     else status = IFSelect_RetFail;
   }
-  catch(Standard_Failure) {
+  catch(Standard_Failure const& anException) {
     Handle(Message_Messenger) sout = Message::DefaultMessenger();
     sout<<"    ****    Interruption ReadFile par Exception :   ****\n";
-    sout << Standard_Failure::Caught()->GetMessageString();
+    sout << anException.GetMessageString();
     sout<<"\n    Abandon"<<endl;
     status = IFSelect_RetFail;
   }
@@ -351,8 +243,7 @@ IFSelect_ReturnStatus  IFSelect_WorkSession::ReadFile
 
 Standard_Integer IFSelect_WorkSession::NbStartingEntities () const
 {
-  if (themodel.IsNull()) return 0;
-  return themodel->NbEntities();
+  return (myModel.IsNull()? 0 : myModel->NbEntities());
 }
 
 
@@ -361,13 +252,12 @@ Standard_Integer IFSelect_WorkSession::NbStartingEntities () const
 //purpose  : 
 //=======================================================================
 
-Handle(Standard_Transient) IFSelect_WorkSession::StartingEntity
-  (const Standard_Integer num) const
+Handle(Standard_Transient) IFSelect_WorkSession::StartingEntity (const Standard_Integer num) const
 {
   Handle(Standard_Transient) res;  // Null par defaut
-  if (themodel.IsNull()) return res;
-  if (num < 1 || num > themodel->NbEntities()) return res;
-  return themodel->Value(num);
+  if (myModel.IsNull()) return res;
+  if (num < 1 || num > myModel->NbEntities()) return res;
+  return myModel->Value(num);
 }
 
 
@@ -376,11 +266,9 @@ Handle(Standard_Transient) IFSelect_WorkSession::StartingEntity
 //purpose  : 
 //=======================================================================
 
-Standard_Integer IFSelect_WorkSession::StartingNumber
-  (const Handle(Standard_Transient)& ent) const
+Standard_Integer IFSelect_WorkSession::StartingNumber (const Handle(Standard_Transient)& ent) const
 {
-  if (themodel.IsNull()) return 0;
-  return themodel->Number(ent);
+  return (myModel.IsNull()? 0 : myModel->Number(ent));
 }
 
 
@@ -393,13 +281,13 @@ Standard_Integer IFSelect_WorkSession::NumberFromLabel
   (const Standard_CString val, const Standard_Integer afternum) const
 {
   Standard_Integer i, cnt = 0, num = atoi(val);
-  if (num > 0 || themodel.IsNull()) return num;    // un n0 direct : gagne !
+  if (num > 0 || myModel.IsNull()) return num;    // un n0 direct : gagne !
 //  Sinon, on considere que c est un label; a traiter en CaseNonSensitive ...
-  if (num > themodel->NbEntities())  { num = 0; return num; }
+  if (num > myModel->NbEntities())  { num = 0; return num; }
   Standard_Boolean exact = Standard_False;
   Standard_Integer after = (afternum >= 0 ? afternum : -afternum);
-  for (i = themodel->NextNumberForLabel (val, after, exact)  ; i != 0;
-       i = themodel->NextNumberForLabel (val, i, exact)) {
+  for (i = myModel->NextNumberForLabel (val, after, exact)  ; i != 0;
+       i = myModel->NextNumberForLabel (val, i, exact)) {
     cnt ++;
     if (num <= 0) num = i;
   }
@@ -415,14 +303,11 @@ Standard_Integer IFSelect_WorkSession::NumberFromLabel
 //purpose  : 
 //=======================================================================
 
-Handle(TCollection_HAsciiString)  IFSelect_WorkSession::EntityLabel
-  (const Handle(Standard_Transient)& ent) const
+Handle(TCollection_HAsciiString) IFSelect_WorkSession::EntityLabel (const Handle(Standard_Transient)& ent) const
 {
-  Handle(TCollection_HAsciiString) name;
-  if (themodel.IsNull() || ent.IsNull()) return name;
-  if (!themodel->Contains(ent)) return name;
-  name = themodel->StringLabel(ent);
-  return name;
+  if (myModel.IsNull() || ent.IsNull()) return 0;
+  if (!myModel->Contains(ent)) return 0;
+  return myModel->StringLabel(ent);
 }
 
 
@@ -431,11 +316,9 @@ Handle(TCollection_HAsciiString)  IFSelect_WorkSession::EntityLabel
 //purpose  : 
 //=======================================================================
 
-Handle(TCollection_HAsciiString)  IFSelect_WorkSession::EntityName
-  (const Handle(Standard_Transient)& ent) const
+Handle(TCollection_HAsciiString) IFSelect_WorkSession::EntityName (const Handle(Standard_Transient)& ent) const
 {
-  Handle(TCollection_HAsciiString) name;
-  if (themodel.IsNull() || ent.IsNull()) return name;
+  if (myModel.IsNull() || ent.IsNull()) return 0;
   Interface_ShareTool sht(thegraph->Graph());
 
   Standard_Integer CN;
@@ -450,12 +333,9 @@ Handle(TCollection_HAsciiString)  IFSelect_WorkSession::EntityName
 //purpose  : 
 //=======================================================================
 
-Standard_Integer IFSelect_WorkSession::CategoryNumber
-  (const Handle(Standard_Transient)& ent) const
+Standard_Integer IFSelect_WorkSession::CategoryNumber (const Handle(Standard_Transient)& ent) const
 {
-  if (themodel.IsNull()) return -1;
-  Standard_Integer num = StartingNumber(ent);
-  return themodel->CategoryNumber(num);
+  return (myModel.IsNull()? -1 : myModel->CategoryNumber(StartingNumber(ent)));
 }
 
 
@@ -464,11 +344,9 @@ Standard_Integer IFSelect_WorkSession::CategoryNumber
 //purpose  : 
 //=======================================================================
 
-Standard_CString IFSelect_WorkSession::CategoryName
-  (const Handle(Standard_Transient)& ent) const
+Standard_CString IFSelect_WorkSession::CategoryName (const Handle(Standard_Transient)& ent) const
 {
-  Standard_Integer cn = CategoryNumber (ent);
-  return Interface_Category::Name (cn);
+  return Interface_Category::Name (CategoryNumber (ent));
 }
 
 
@@ -477,11 +355,9 @@ Standard_CString IFSelect_WorkSession::CategoryName
 //purpose  : 
 //=======================================================================
 
-Standard_CString IFSelect_WorkSession::ValidityName
-  (const Handle(Standard_Transient)& ent) const
+Standard_CString IFSelect_WorkSession::ValidityName (const Handle(Standard_Transient)& ent) const
 {
-  if (StartingNumber(ent) == 0) return "";
-  return IFSelect_SignValidity::CVal (ent,themodel);
+  return ((StartingNumber(ent) == 0)? "" : IFSelect_SignValidity::CVal (ent,myModel));
 }
 
 
@@ -495,8 +371,10 @@ void IFSelect_WorkSession::ClearData (const Standard_Integer mode)
   switch (mode) {
     case 1 : {
       theloaded.Clear();
-      if (!themodel.IsNull()) themodel->Clear();
-      themodel.Nullify();
+      if (!myModel.IsNull()) {
+        myModel->Clear();
+        myModel.Nullify();
+      }
       ClearData(2);  ClearData(4);
       thecheckrun.Clear();
       break;
@@ -547,17 +425,16 @@ Standard_Boolean  IFSelect_WorkSession::ComputeGraph
   (const Standard_Boolean enforce)
 {
   if (theprotocol.IsNull()) return Standard_False;
-  if (themodel.IsNull()) return Standard_False;
-  //if (themodel->NbEntities() == 0) return Standard_False;
+  if (myModel.IsNull()) return Standard_False;
   if (enforce) thegraph.Nullify();
   if (!thegraph.IsNull()) {
-    if (themodel->NbEntities() == thegraph->Graph().Size()) return Standard_True;
+    if (myModel->NbEntities() == thegraph->Graph().Size()) return Standard_True;
     thegraph.Nullify();
   }
-  if (themodel->NbEntities() == 0) return Standard_False;
+  if (myModel->NbEntities() == 0) return Standard_False;
   //  Il faut calculer le graphe pour de bon
-  thegraph = new Interface_HGraph (themodel,themodelstat);
-  Standard_Integer nb = themodel->NbEntities();
+  thegraph = new Interface_HGraph (myModel,themodelstat);
+  Standard_Integer nb = myModel->NbEntities();
   if(themodelstat)
   {
     Standard_Integer i; // svv #1
@@ -574,8 +451,8 @@ Standard_Boolean  IFSelect_WorkSession::ComputeGraph
     Interface_Category categ(thegtool);
     Interface_ShareTool sht(thegraph);
     Standard_Integer i =1;
-    for ( ; i <= nb; i ++) themodel->SetCategoryNumber
-      (i,categ.CatNum(themodel->Value(i),sht));
+    for ( ; i <= nb; i ++)
+      myModel->SetCategoryNumber(i,categ.CatNum(myModel->Value(i),sht));
   }
 
   return Standard_True;
@@ -602,8 +479,7 @@ Handle(Interface_HGraph) IFSelect_WorkSession::HGraph ()
 const Interface_Graph& IFSelect_WorkSession::Graph ()
 {
   ComputeGraph();
-  if (thegraph.IsNull()) Standard_DomainError::Raise
-    ("IFSelect WorkSession : Graph not available");
+  if (thegraph.IsNull()) throw Standard_DomainError("IFSelect WorkSession : Graph not available");
   return thegraph->Graph();
 }
 
@@ -646,10 +522,10 @@ Handle(TColStd_HSequenceOfTransient) IFSelect_WorkSession::Sharings
 Standard_Boolean IFSelect_WorkSession::IsLoaded () const
 {
   if (theprotocol.IsNull()) return Standard_False;
-  if (themodel.IsNull()) return Standard_False;
-  if (themodel->NbEntities() == 0) return Standard_False;
+  if (myModel.IsNull()) return Standard_False;
+  if (myModel->NbEntities() == 0) return Standard_False;
   if (thegraph.IsNull()) return Standard_False;
-  if (themodel->NbEntities() == thegraph->Graph().Size()) return Standard_True;
+  if (myModel->NbEntities() == thegraph->Graph().Size()) return Standard_True;
   return Standard_False;
 }
 
@@ -669,7 +545,7 @@ Standard_Boolean IFSelect_WorkSession::ComputeCheck
   Interface_Graph& CG = thegraph->CGraph();
   Interface_CheckTool cht(thegraph);
   Interface_CheckIterator checklist = cht.VerifyCheckList();
-  themodel->FillSemanticChecks(checklist,Standard_False);
+  myModel->FillSemanticChecks(checklist,Standard_False);
   if(themodelstat)
   {
     //  Et on met a jour le Graphe (BitMap) !  Flag Incorrect (STX + SEM)
@@ -683,7 +559,7 @@ Standard_Boolean IFSelect_WorkSession::ComputeCheck
       if (num > 0 && num <= nb) BM.SetTrue (num,Flag_Incorrect);
     }
     for (num = 1; num <= nb; num ++)
-      if (themodel->IsErrorEntity (num)) BM.SetTrue (num,Flag_Incorrect);
+      if (myModel->IsErrorEntity (num)) BM.SetTrue (num,Flag_Incorrect);
   }
   return Standard_True;
 }
@@ -720,32 +596,21 @@ Interface_CheckIterator IFSelect_WorkSession::CheckOne
    const Standard_Boolean complete)
 {
   Interface_CheckIterator checks;
-  checks.SetModel(themodel);
+  checks.SetModel(myModel);
   if (!IsLoaded()) {
     checks.CCheck(0)->AddFail("DATA NOT AVAILABLE FOR CHECK");
     return checks;
   }
   Standard_Integer num = -1;
-  if (ent.IsNull() || ent == themodel) num = 0;
-  else num = themodel->Number(ent);
+  if (ent.IsNull() || ent == myModel) num = 0;
+  else num = myModel->Number(ent);
 
-  Handle(Interface_Check) ach = themodel->Check (num,Standard_True);
-  if (complete) ach->GetMessages (themodel->Check (num,Standard_False));
+  Handle(Interface_Check) ach = myModel->Check (num,Standard_True);
+  if (complete) ach->GetMessages (myModel->Check (num,Standard_False));
   if (num > 0) ach->SetEntity(ent);
   checks.Add (ach,num);
   checks.SetName ("Data Check (One Entity)");
   return checks;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-Interface_CheckIterator IFSelect_WorkSession::LastRunCheckList () const
-{
-  return thecheckrun;
 }
 
 
@@ -808,7 +673,8 @@ Handle(Standard_Transient) IFSelect_WorkSession::NamedItem
     Standard_Integer id = atoi( &name[1] );
     return Item(id);
   }
-  if (!thenames->GetItem(name,res)) res.Nullify();
+  if (!thenames.Find(name,res))
+    res.Nullify();
   return res;
 }
 
@@ -841,7 +707,8 @@ Standard_Integer IFSelect_WorkSession::NameIdent
     Standard_Integer id = atoi( &name[1] );
     return id;
   }
-  if (!thenames->GetItem(name,res)) return 0;
+  if (!thenames.Find(name,res))
+    return 0;
   return ItemIdent(res);
 }
 
@@ -916,12 +783,9 @@ Standard_Integer IFSelect_WorkSession::AddNamedItem
   if (name[0] == '#' || name[0] == '!') return 0;
 // #nnn : pas un nom mais un numero. !... : reserve (interdit pour un nom)
 //   nom deja pris : on ecrase l ancienne valeur
-  if (name[0] != '\0') {
-    Standard_Boolean deja;
-    Handle(Standard_Transient)& newitem = thenames->NewItem(name,deja);
-//    if (deja & item != newitem) return 0;
-    newitem = item;
-  }
+  if (name[0] != '\0')
+    thenames.Bind(name, item);
+
   Standard_Integer  id = theitems.FindIndex(item);
   if (id > 0) {
     Handle(Standard_Transient)& att = theitems.ChangeFromIndex(id);
@@ -995,7 +859,7 @@ Standard_Boolean IFSelect_WorkSession::RemoveName
   Handle(Standard_Transient) item = NamedItem(name);
   if (item.IsNull()) return Standard_False;
   theitems.Add(item,item);    // reste mais sans nom
-  return thenames->RemoveItem(name);
+  return thenames.UnBind(name);
 }
 
 
@@ -1018,7 +882,7 @@ Standard_Boolean IFSelect_WorkSession::RemoveItem
 
 //  Marquer "Removed" dans la Map (on ne peut pas la vider)
   if (att->IsKind(STANDARD_TYPE(TCollection_HAsciiString))) {
-    if (!thenames->RemoveItem
+    if (!thenames.UnBind
 	(GetCasted(TCollection_HAsciiString,att)->ToCString()))
       return Standard_False;
   }
@@ -1035,7 +899,7 @@ Standard_Boolean IFSelect_WorkSession::RemoveItem
 
 void IFSelect_WorkSession::ClearItems ()
 {
-  thenames->Clear();
+  thenames.Clear();
   theitems.Clear();
   theshareout->Clear(Standard_False);
 }
@@ -1148,9 +1012,10 @@ Handle(TColStd_HSequenceOfHAsciiString) IFSelect_WorkSession::ItemNames
 {
   Handle(TColStd_HSequenceOfHAsciiString) list =
     new TColStd_HSequenceOfHAsciiString();
-  for (Dico_IteratorOfDictionaryOfTransient IT(thenames); IT.More(); IT.Next()){
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>::Iterator IT(thenames);
+  for (; IT.More(); IT.Next()){
     if (IT.Value()->IsKind(type)) list->Append
-      (new TCollection_HAsciiString(IT.Name().ToCString()));
+      (new TCollection_HAsciiString(IT.Key()));
   }
   return list;
 }
@@ -1346,9 +1211,9 @@ Handle(IFSelect_Signature) IFSelect_WorkSession::Signature
     Standard_CString  IFSelect_WorkSession::SignValue
   (const Handle(IFSelect_Signature)& sign, const Handle(Standard_Transient)& ent) const
 {
-  if (sign.IsNull() || themodel.IsNull()) return "";
+  if (sign.IsNull() || myModel.IsNull()) return "";
   if (StartingNumber(ent) == 0) return "";
-  return sign->Value (ent,themodel);
+  return sign->Value (ent,myModel);
 }
 
 //  ########################################################################
@@ -1379,10 +1244,10 @@ Interface_EntityIterator IFSelect_WorkSession::EvalSelection
       OCC_CATCH_SIGNALS
       iter = EvalSelection(sel);    // appel normal (donc, code pas duplique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption EvalSelection par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
     errhand = theerrhand;
@@ -1422,10 +1287,10 @@ Handle(TColStd_HSequenceOfTransient) IFSelect_WorkSession::SelectionResult
       OCC_CATCH_SIGNALS
       res = SelectionResult(sel);    // appel normal (->code unique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption SelectionResult par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
     errhand = theerrhand;
@@ -1579,7 +1444,7 @@ Standard_Boolean IFSelect_WorkSession::ComputeCounterFromList
   if (counter.IsNull()) return Standard_False;
   if (clear) counter->Clear();
   if (list.IsNull()) return ComputeCounter (counter,Standard_True);
-  counter->AddList (list,themodel);
+  counter->AddList (list,myModel);
   return Standard_True;
 }
 
@@ -1646,19 +1511,7 @@ Standard_Integer IFSelect_WorkSession::DispatchRank
 //purpose  : 
 //=======================================================================
 
-Handle(IFSelect_ModelCopier) IFSelect_WorkSession::ModelCopier () const
-{
-  return thecopier;
-}
-
-
-//=======================================================================
-//function : 
-//purpose  : 
-//=======================================================================
-
-void IFSelect_WorkSession::SetModelCopier
-  (const Handle(IFSelect_ModelCopier)& copier)
+void IFSelect_WorkSession::SetModelCopier (const Handle(IFSelect_ModelCopier)& copier)
 {
   thecopier = copier;
   thecopier->SetShareOut(theshareout);
@@ -1670,8 +1523,7 @@ void IFSelect_WorkSession::SetModelCopier
 //purpose  : 
 //=======================================================================
 
-Standard_Integer IFSelect_WorkSession::NbFinalModifiers
-  (const Standard_Boolean formodel) const 
+Standard_Integer IFSelect_WorkSession::NbFinalModifiers (const Standard_Boolean formodel) const 
 {
   return theshareout->NbModifiers(formodel);
 }
@@ -1700,8 +1552,7 @@ Handle(TColStd_HSequenceOfInteger) IFSelect_WorkSession::FinalModifierIdents
 //purpose  : 
 //=======================================================================
 
-Handle(IFSelect_GeneralModifier) IFSelect_WorkSession::GeneralModifier
-  (const Standard_Integer id) const
+Handle(IFSelect_GeneralModifier) IFSelect_WorkSession::GeneralModifier (const Standard_Integer id) const
 {
   return GetCasted(IFSelect_GeneralModifier,Item(id));
 }
@@ -1712,8 +1563,7 @@ Handle(IFSelect_GeneralModifier) IFSelect_WorkSession::GeneralModifier
 //purpose  : 
 //=======================================================================
 
-Handle(IFSelect_Modifier) IFSelect_WorkSession::ModelModifier
-  (const Standard_Integer id) const 
+Handle(IFSelect_Modifier) IFSelect_WorkSession::ModelModifier (const Standard_Integer id) const 
 {
   return GetCasted(IFSelect_Modifier,Item(id));
 }
@@ -1724,8 +1574,7 @@ Handle(IFSelect_Modifier) IFSelect_WorkSession::ModelModifier
 //purpose  : 
 //=======================================================================
 
-Standard_Integer IFSelect_WorkSession::ModifierRank
-  (const Handle(IFSelect_GeneralModifier)& modif) const
+Standard_Integer IFSelect_WorkSession::ModifierRank (const Handle(IFSelect_GeneralModifier)& modif) const
 {
   if (ItemIdent(modif) == 0) return 0;
   return theshareout->ModifierRank(modif);
@@ -1836,8 +1685,7 @@ Handle(Standard_Transient) IFSelect_WorkSession::UsesAppliedModifier
 //purpose  : 
 //=======================================================================
 
-Handle(IFSelect_Transformer) IFSelect_WorkSession::Transformer
-  (const Standard_Integer id) const
+Handle(IFSelect_Transformer) IFSelect_WorkSession::Transformer (const Standard_Integer id) const
 {
   return GetCasted(IFSelect_Transformer,Item(id));
 }
@@ -1862,7 +1710,7 @@ Standard_Integer IFSelect_WorkSession::RunTransformer
   if (!checks.IsEmpty(Standard_False)) {
     Handle(Message_Messenger) sout = Message::DefaultMessenger();
     sout<<"  **    RunTransformer has produced Check Messages :    **"<<endl;
-    checks.Print (sout,themodel,Standard_False);
+    checks.Print (sout,myModel,Standard_False);
   }
   thecheckdone = Standard_False;
   thecheckrun  = checks;
@@ -1876,7 +1724,7 @@ Standard_Integer IFSelect_WorkSession::RunTransformer
     DeclareAndCast(IFSelect_SelectPointed,sp,Item(list->Value(i)));
     sp->Update(transf);
   }
-  if (newmod == themodel) {
+  if (newmod == myModel) {
     effect = (res ? 2 : -2);
     if (!res) return effect;
     Handle(Interface_Protocol) newproto = theprotocol;
@@ -1889,7 +1737,7 @@ Standard_Integer IFSelect_WorkSession::RunTransformer
     Handle(Interface_Protocol) newproto = theprotocol;
     if (transf->ChangeProtocol(newproto))
       {  effect = 5;  theprotocol = newproto;  thegtool->SetProtocol(newproto);  }
-    theoldel = themodel;
+    theoldel = myModel;
     SetModel(newmod,Standard_False);
   }
   return effect;
@@ -1955,9 +1803,9 @@ Standard_Boolean IFSelect_WorkSession::SetModelContent
   Interface_EntityIterator list = sel->UniqueResult(thegraph->Graph());
   if (list.NbEntities() == 0) return Standard_False;
 
-  Handle(Interface_InterfaceModel) newmod  = themodel->NewEmptyModel();
-  Interface_CopyTool TC(themodel,theprotocol);
-  Standard_Integer i, nb = themodel->NbEntities();
+  Handle(Interface_InterfaceModel) newmod  = myModel->NewEmptyModel();
+  Interface_CopyTool TC(myModel,theprotocol);
+  Standard_Integer i, nb = myModel->NbEntities();
   if (keep) {
     for (list.Start(); list.More(); list.Next())
       TC.TransferEntity (list.Value());
@@ -1965,18 +1813,18 @@ Standard_Boolean IFSelect_WorkSession::SetModelContent
     Standard_Integer* flags = new Standard_Integer[nb+1];
     for (i = 0; i <= nb; i ++) flags[i] = 0;
     for (list.Start(); list.More(); list.Next()) {
-      Standard_Integer num = themodel->Number(list.Value());
+      Standard_Integer num = myModel->Number(list.Value());
       if (num <= nb) flags[num] = 1;
     }
     for (i = 1; i <= nb; i ++) {
-      if (flags[i] == 0) TC.TransferEntity (themodel->Value(i));
+      if (flags[i] == 0) TC.TransferEntity (myModel->Value(i));
     }
     delete [] flags;
   }
   TC.FillModel(newmod);
   if (newmod->NbEntities() == 0) return Standard_False;
 //    Mettre a jour (ne pas oublier SelectPointed)
-  theoldel = themodel;
+  theoldel = myModel;
   SetModel(newmod,Standard_False);
 //  MISE A JOUR des SelectPointed
   Handle(TColStd_HSequenceOfInteger) pts =
@@ -2172,10 +2020,10 @@ void IFSelect_WorkSession::EvaluateFile ()
       OCC_CATCH_SIGNALS
       EvaluateFile();    // appel normal (donc, code pas duplique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption EvaluateFile par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
       checks.CCheck(0)->AddFail ("Exception Raised -> Abandon");
     }
@@ -2189,7 +2037,7 @@ void IFSelect_WorkSession::EvaluateFile ()
   if (!checks.IsEmpty(Standard_False)) {
     Handle(Message_Messenger) sout = Message::DefaultMessenger();
     sout<<"  **    EvaluateFile has produced Check Messages :    **"<<endl;
-    checks.Print (sout,themodel,Standard_False);
+    checks.Print (sout,myModel,Standard_False);
   } 
   thecopier->SetRemaining (thegraph->CGraph());
   thecheckrun = checks;
@@ -2276,10 +2124,10 @@ Standard_Boolean IFSelect_WorkSession::SendSplit ()
       OCC_CATCH_SIGNALS
       return SendSplit();   // appel normal (donc, code pas duplique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption SendSplit par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
       checks.CCheck(0)->AddFail ("Exception Raised -> Abandon");
     }
@@ -2420,16 +2268,16 @@ Standard_Boolean IFSelect_WorkSession::SetRemaining
     return Standard_True;
   } else if (mode == IFSelect_RemainCompute) {
     Handle(Interface_InterfaceModel) newmod;
-    Interface_CopyTool TC(themodel,theprotocol);
+    Interface_CopyTool TC(myModel,theprotocol);
     thecopier->CopiedRemaining (thegraph->Graph(),thelibrary,TC,newmod);
     if (newmod.IsNull()) {
       sout<<" No Remaining Data recorded"<<endl;  return Standard_False;
-    } else if (newmod == themodel) {
+    } else if (newmod == myModel) {
       sout<<" Remaining causes all original data to be kept"<<endl;
       thecopier->SetRemaining (thegraph->CGraph());
       return Standard_False;
     } else {
-      theoldel = themodel;
+      theoldel = myModel;
       SetModel(newmod,Standard_False);
 //  MISE A JOUR des SelectPointed
       Handle(TColStd_HSequenceOfInteger) list =
@@ -2499,10 +2347,10 @@ IFSelect_ReturnStatus IFSelect_WorkSession::SendAll
       ComputeGraph(computegraph);
       checks = thecopier->SendAll(filename,thegraph->Graph(),thelibrary,theprotocol);
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption SendAll par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
       errhand = theerrhand;
       checks.CCheck(0)->AddFail ("Exception Raised -> Abandon");
@@ -2549,10 +2397,10 @@ IFSelect_ReturnStatus IFSelect_WorkSession::SendSelected
       ComputeGraph(computegraph);
       return SendSelected (filename,sel);    // appel normal
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption SendSelected par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
       checks.CCheck(0)->AddFail ("Exception Raised -> Abandon");
       errhand = theerrhand;
@@ -2840,7 +2688,7 @@ static void IFSelect_QueryProp (Interface_IntList& list,
 void IFSelect_WorkSession::QueryCheckList (const Interface_CheckIterator& chl)
 {
   if (!IsLoaded()) return;
-  Standard_Integer i,nb = themodel->NbEntities();
+  Standard_Integer i,nb = myModel->NbEntities();
   thecheckana = TCollection_AsciiString (nb+1,' ');
   for (chl.Start(); chl.More(); chl.Next()) {
     Standard_Integer num = chl.Number();
@@ -2877,7 +2725,7 @@ Standard_Integer IFSelect_WorkSession::QueryCheckStatus
   (const Handle(Standard_Transient)& ent) const
 {
   if (!IsLoaded()) return -1;
-  Standard_Integer num = themodel->Number(ent);
+  Standard_Integer num = myModel->Number(ent);
   if (num == 0) return -1;
   if (thecheckana.Length() < num) return -1;
   Standard_Character val = thecheckana.Value (num);
@@ -2937,13 +2785,13 @@ Standard_Integer IFSelect_WorkSession::QueryParent
 //=======================================================================
 
 void IFSelect_WorkSession::SetParams
-  (const TColStd_SequenceOfTransient& params,
-   const TColStd_SequenceOfInteger&   uselist)
+  (const NCollection_Vector<Handle(Standard_Transient)>& params,
+   const NCollection_Vector<Standard_Integer>&   uselist)
 {
   Standard_Integer i, nbp = params.Length(), nbu = uselist.Length();
   Handle(IFSelect_ParamEditor) editor = new IFSelect_ParamEditor
     (nbp+nbu+50,"Parameter Editor");
-  for (i = 1; i <= nbp; i ++) {
+  for (i = params.Lower(); i <= params.Upper(); i ++) {
     DeclareAndCast(Interface_TypedValue,val,params.Value(i));
     if (val.IsNull()) continue;
     editor->AddValue(val);
@@ -2955,7 +2803,7 @@ void IFSelect_WorkSession::SetParams
 
 //  On attaque les EditForms partielles
   TColStd_SequenceOfInteger listgen,listload,listsend,listsplit,listread,listwrite;
-  for (i = 1; i <= nbu; i ++) {
+  for (i = uselist.Lower(); i <= uselist.Upper(); i ++) {
     Standard_Integer use = uselist.Value(i);
     switch (use) {
     case 1 : listgen.Append(i);   break;
@@ -3207,7 +3055,14 @@ Handle(IFSelect_Selection) IFSelect_WorkSession::GiveSelection
   }
 
   Handle(IFSelect_Selection) sel;
-  if (np >= 0) nomsel[np] = 0;  if (nf >= 0) nomsel[nf] = '\0';
+  if (np >= 0)
+  {
+    nomsel[np] = 0;
+  }
+  if (nf >= 0)
+  {
+    nomsel[nf] = '\0';
+  }
   Handle(Standard_Transient) item = NamedItem(nomsel);
 
 //  Parentheses ? essayer Signature (plus tard : Selection parametree)
@@ -3261,9 +3116,9 @@ Handle(TColStd_HSequenceOfTransient) IFSelect_WorkSession::GiveList
 
 //   Le modele : son contenu
   list = new TColStd_HSequenceOfTransient();
-  if (obj == themodel) {
-    Standard_Integer i, nb = themodel->NbEntities();
-    for (i = 1; i <= nb; i ++)  list->Append (themodel->Value(i));
+  if (obj == myModel) {
+    Standard_Integer i, nb = myModel->NbEntities();
+    for (i = 1; i <= nb; i ++)  list->Append (myModel->Value(i));
   }
 
 //   Une entite du modele : cette entite
@@ -3323,7 +3178,8 @@ Handle(TColStd_HSequenceOfTransient) IFSelect_WorkSession::GiveListFromList
       if (selname[i] == ' ') continue;
       if (selname[i] == ',' || selname[i] == ')') {
 	entid[j] = '\0';
-	if (j == 0) continue;  j = 0;
+	if (j == 0) continue;
+	j = 0;
 	num = NumberFromLabel (entid);
 	if (num <= 0 || !numap.Add (num)) continue;
 	Handle(Standard_Transient) anent = StartingEntity(num);
@@ -3431,15 +3287,15 @@ void IFSelect_WorkSession::DumpModel
   if (level == 0) {
     S<<"        ********  Short Dump of Header                           ********\n";
   S << "        *****************************************************************\n\n";
-    themodel->DumpHeader(S);  S<<endl;
+    myModel->DumpHeader(S);  S<<endl;
   }
 
-  Standard_Integer nbent = themodel->NbEntities();
+  Standard_Integer nbent = myModel->NbEntities();
   Standard_Integer nbr = 0;
   Interface_ShareFlags shar(thegraph->Graph());
 
   for (Standard_Integer i = 1; i <= nbent; i ++) {
-    if (!shar.IsShared(themodel->Value(i))) nbr ++;
+    if (!shar.IsShared(myModel->Value(i))) nbr ++;
   }
   S << "        *****************************************************************\n";
   S << "        ********  Model : "<<nbent<<" Entities, of which "<<nbr<<" Root(s)\n";
@@ -3451,7 +3307,7 @@ void IFSelect_WorkSession::DumpModel
     ListEntities (shar.RootEntities(),1);
   } else if (level == 2) {
     S<<"        ********  Complete List  ********      ";
-    ListEntities (themodel->Entities(),1);
+    ListEntities (myModel->Entities(),1);
   } else if (level > 2) {
     IFSelect_PrintCount mode = IFSelect_ItemsByEntity;
     if (level == 5 || level ==  8) mode = IFSelect_CountByItem;
@@ -3482,12 +3338,12 @@ void IFSelect_WorkSession::DumpModel
 //  Check List : si vide (pas demandee), naturellement passee
     try {
       OCC_CATCH_SIGNALS
-      C.Print(S,themodel, (level == 3));
+      C.Print(S,myModel, (level == 3));
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       Handle(Message_Messenger) sout = Message::DefaultMessenger();
       sout<<"    ****    Interruption DumpModel par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
 
@@ -3526,12 +3382,12 @@ void IFSelect_WorkSession::DumpEntity
 {
   if (!IsLoaded())
     {  S<< " ***  Data for List not available  ***"<<endl;  return;  }
-  Standard_Integer num = themodel->Number(ent);
+  Standard_Integer num = myModel->Number(ent);
   if (num == 0) { S<<" ***  Entity to Dump not in the Model  ***"<<endl; return; }
   if (thelibrary.IsNull()) { S<<" ***  WorkLibrary not defined  ***"<<endl; return; }
   S << "        ********  Dumping Entity n0 "<<num
     <<" level:"<<level<<"  ********"<<endl;
-  thelibrary->DumpEntity (themodel,theprotocol,ent,S,level);
+  thelibrary->DumpEntity (myModel,theprotocol,ent,S,level);
 }
 
 //  ....        DumpEntity        ....
@@ -3563,17 +3419,17 @@ void IFSelect_WorkSession::PrintEntityStatus
   if (num == 0)  {  cout<<" --  PrintEntityStatus : unknown"<<endl;  return;  }
 
   S <<"  Ent. n0/id:   ";
-  Model()->Print(ent,S);
+  myModel->Print(ent,S);
   Handle(TCollection_HAsciiString) hname = EntityName(ent);
   if (!hname.IsNull() && hname->Length() > 0) S<<"	Name:"<<hname->ToCString();
   S<<endl;
   Handle(IFSelect_Signature) signtype = SignType();
   if (signtype.IsNull()) S<<"  Type(CDL):"<<ent->DynamicType()->Name()<<endl;
-  else S <<"  Type:"<<signtype->Value (ent,Model())<<endl;
+  else S <<"  Type:"<<signtype->Value (ent,myModel)<<endl;
   S <<"    Category : " <<CategoryName (ent)
     <<"    Validity : " <<ValidityName (ent) << endl;
   Interface_CheckIterator chl = CheckOne (ent);
-  chl.Print (S,Model(),Standard_False,Standard_False);
+  chl.Print (S,myModel,Standard_False,Standard_False);
 
   Handle(TColStd_HSequenceOfTransient) list = Sharings(ent);
   if (list.IsNull()) S<<"  Root"<<endl;
@@ -3581,7 +3437,7 @@ void IFSelect_WorkSession::PrintEntityStatus
     nb = list->Length();
     if (nb == 0) S<<"  Root";
     else S<<"  Super-entities:"<<nb<<" : (n0/id):";
-    for (i = 1; i <= nb; i ++)  {  S<<" "; Model()->Print(list->Value(i),S);  }
+    for (i = 1; i <= nb; i ++)  {  S<<" "; myModel->Print(list->Value(i),S);  }
     S<<endl;
   }
   list = Shareds (ent);
@@ -3590,7 +3446,7 @@ void IFSelect_WorkSession::PrintEntityStatus
     nb = list->Length();
     if (nb == 0) S<<"  No sub-entity";
     else S<<"  Sub-entities:"<<nb<<" , i.e. (n0/id):";
-    for (i = 1; i <= nb; i ++)  {  S<<" "; Model()->Print(list->Value(i),S);  }
+    for (i = 1; i <= nb; i ++)  {  S<<" "; myModel->Print(list->Value(i),S);  }
     S<<endl;
   }
 }
@@ -3608,13 +3464,13 @@ void IFSelect_WorkSession::PrintCheckList
 {
 //  mode : 0  comptage   1 n0s entites   2 n0s+id ents
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
-  if (mode == IFSelect_ItemsByEntity) checklist.Print (sout,themodel,failsonly);
+  if (mode == IFSelect_ItemsByEntity) checklist.Print (sout,myModel,failsonly);
   else {
     Interface_CheckIterator chks = checklist;
     Handle(IFSelect_CheckCounter) counter =
       new IFSelect_CheckCounter (mode>1 && mode != IFSelect_CountSummary);
-    counter->Analyse (chks,themodel,Standard_True,failsonly);
-    counter->PrintList  (sout,themodel,mode);
+    counter->Analyse (chks,myModel,Standard_True,failsonly);
+    counter->PrintList  (sout,myModel,mode);
   }
 }
 
@@ -3631,7 +3487,7 @@ void IFSelect_WorkSession::PrintSignatureList
 {
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (signlist.IsNull()) return;
-  signlist->PrintList (sout,themodel,mode);
+  signlist->PrintList (sout,myModel,mode);
 }
 
 //  ####    ####    ####    ####    ####    ####    ####    ####    ####
@@ -3652,9 +3508,9 @@ void IFSelect_WorkSession::EvaluateSelection
       OCC_CATCH_SIGNALS
       EvaluateSelection(sel);    // appel normal (->code unique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       sout<<"    ****    Interruption EvaluateSelection par Exception    ****  Intitule\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
     errhand = theerrhand;
@@ -3690,9 +3546,9 @@ void IFSelect_WorkSession::EvaluateDispatch
       OCC_CATCH_SIGNALS
       EvaluateDispatch(disp,mode);    // appel normal (->code unique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       sout<<"    ****    Interruption EvaluateDispatch par Exception    ****  Intitule\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
     errhand = theerrhand;
@@ -3768,9 +3624,9 @@ void IFSelect_WorkSession::EvaluateComplete
       OCC_CATCH_SIGNALS
       EvaluateComplete(mode);    // appel normal (donc, code pas duplique)
     }
-    catch (Standard_Failure) {
+    catch (Standard_Failure const& anException) {
       sout<<"    ****    Interruption EvaluateComplete par Exception :   ****\n";
-      sout<<Standard_Failure::Caught()->GetMessageString();
+      sout<<anException.GetMessageString();
       sout<<"\n    Abandon"<<endl;
     }
     errhand = theerrhand;
@@ -3854,23 +3710,18 @@ void IFSelect_WorkSession::ListEntities
       if (!titre && mode == 2) sout<<"(";
       titre = 1;
       Handle(Standard_Transient) ent = iter.Value();
-      Standard_Integer num = themodel->Number(ent);
+      Standard_Integer num = myModel->Number(ent);
       if (mode == 1) {
-// n0 id (root?) category validity tracetype
+    // n0 id (root?) category validity tracetype
 	sout<<Interface_MSG::Blanks (num,6);
-	themodel->Print(ent,sout,0);
+	myModel->Print(ent,sout,0);
 	if (!tool.IsShared(ent)) sout << " #ROOT#";
 	else                     sout << "       ";
-	Standard_Integer catnum = themodel->CategoryNumber(num);
+	Standard_Integer catnum = myModel->CategoryNumber(num);
 	if (catnum > 0) sout<<"  "<<Interface_Category::Name (catnum);
 	sout << "  (" << ValidityName (ent) << ")  ";
 
-	sout<<" Type:"<<themodel->TypeName (ent, Standard_False);
-//	Handle(Interface_GeneralModule) tracemod;
-//	Standard_Integer CN;
-//	if (thegtool->Select(ent,tracemod,CN))tracemod->TraceType(ent,CN,sout);
-//	else sout << "(Not in Protocol) " << ent->DynamicType();
-	sout << endl;
+	sout<<" Type:"<<myModel->TypeName (ent, Standard_False)<<endl;
       } else if (mode == 2) {
 	newcount ++;
 	if (newcount > 0) sout<<",";
@@ -3879,29 +3730,19 @@ void IFSelect_WorkSession::ListEntities
 	newcount ++;  mods = 0; cnt ++;
 	if      (newcount >= 10) { sout << endl<<"["<<cnt<<"]:"; newcount = 1; }
 	if (newcount > 0)  sout << "	";
-	themodel->Print(ent,sout,0);
+	myModel->Print(ent,sout,0);
 	if (!tool.IsShared(ent)) { if(mods == 0) sout<<"("; sout<<"R"; mods++; }
-	if (themodel->IsUnknownEntity(num)) { sout<<(mods==0 ? '(' : ' ')<<"?"; mods ++; }
-	if (themodel->IsRedefinedContent(num)) { sout<<(mods==0 ? '(' : ' ')<<"*"; mods ++; }
+	if (myModel->IsUnknownEntity(num)) { sout<<(mods==0 ? '(' : ' ')<<"?"; mods ++; }
+	if (myModel->IsRedefinedContent(num)) { sout<<(mods==0 ? '(' : ' ')<<"*"; mods ++; }
 	if (mods) { sout<<")"; newcount ++; }
       }
     }
     if (mode == 0) sout<<endl;
     if (mode == 2) sout<<")"<<endl;
   }
-  catch (Standard_Failure) {
+  catch (Standard_Failure const& anException) {
     sout<<"    ****    Interruption ListEntities par Exception :   ****\n";
-    sout<<Standard_Failure::Caught()->GetMessageString();
+    sout<<anException.GetMessageString();
     sout<<"\n    Abandon"<<endl;
   }
-}
-
-void IFSelect_WorkSession::SetModeStat( Standard_Boolean theStatMode)
-{
-  themodelstat = theStatMode;
-}
-
-Standard_Boolean IFSelect_WorkSession::GetModeStat() const
-{
-  return themodelstat;
 }

@@ -2,31 +2,31 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{1893C6F8-0191-0409-0C8F-87AC1231EB25}</UniqueIdentifier>
+      <UniqueIdentifier>{2E5ADBA4-0CB7-0665-13B6-C966585E2CBC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\HLRTopoBRep">
-      <UniqueIdentifier>{44EC16BE-139B-12B4-1427-99ADD3632410}</UniqueIdentifier>
+      <UniqueIdentifier>{CB01E90E-0E28-0714-1869-02129E146907}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\HLRBRep">
-      <UniqueIdentifier>{D4982CC5-06BC-14FB-194E-47AAD32018D7}</UniqueIdentifier>
+      <UniqueIdentifier>{FB729D32-1625-00D2-09B9-A4A8DB49D8C2}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\HLRAlgo">
-      <UniqueIdentifier>{3F03BCF0-1467-1847-1673-6169233D80B8}</UniqueIdentifier>
+      <UniqueIdentifier>{35E11F64-0641-009C-08A8-F89AF284BFCF}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\HLRAppli">
-      <UniqueIdentifier>{CDD3084D-1221-0D2D-14F3-EA5B6D1883D7}</UniqueIdentifier>
+      <UniqueIdentifier>{4CD8D8C3-18A7-0D20-0EB7-BF873B476BCE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Intrv">
-      <UniqueIdentifier>{779C680B-044F-17A9-0411-3BE1CB64FF94}</UniqueIdentifier>
+      <UniqueIdentifier>{F6A51DCD-12A1-1359-1055-05A84F6CE3C7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopBas">
-      <UniqueIdentifier>{C7536423-12C4-0AA5-09D7-8267BE68F784}</UniqueIdentifier>
+      <UniqueIdentifier>{DE372ACF-17F8-173B-0DDC-85E0E06ED1FE}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TopCnx">
-      <UniqueIdentifier>{52082479-154F-1493-0110-70199EA2156F}</UniqueIdentifier>
+      <UniqueIdentifier>{9C98273C-1959-1850-0F65-EDABBBA5C293}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Contap">
-      <UniqueIdentifier>{2D370B77-1336-0993-1985-E00B1BF9527B}</UniqueIdentifier>
+      <UniqueIdentifier>{8981DA6A-005F-0895-165A-5E3BA59DFAF6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -63,16 +63,7 @@
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_BSurfaceTool.cxx">
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_BiPnt2D.cxx">
-      <Filter>Source files\HLRBRep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_BiPoint.cxx">
-      <Filter>Source files\HLRBRep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_CInter_0.cxx">
-      <Filter>Source files\HLRBRep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_CLPropsATool.cxx">
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_CLProps_0.cxx">
@@ -129,9 +120,6 @@
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_Intersector.cxx">
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_LineTool.cxx">
-      <Filter>Source files\HLRBRep</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_MyImpParToolOfTheIntersectorOfTheIntConicCurveOfCInter_0.cxx">
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
@@ -142,9 +130,6 @@
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_PolyHLRToShape.cxx">
-      <Filter>Source files\HLRBRep</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_SLPropsATool.cxx">
       <Filter>Source files\HLRBRep</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRBRep\HLRBRep_SLProps_0.cxx">
@@ -222,9 +207,6 @@
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_BiPoint.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_Coincidence.cxx">
-      <Filter>Source files\HLRAlgo</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_EdgeIterator.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
@@ -246,25 +228,16 @@
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyData.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyHidingData.cxx">
-      <Filter>Source files\HLRAlgo</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyInternalData.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyInternalNode.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyInternalSegment.cxx">
-      <Filter>Source files\HLRAlgo</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_PolyShellData.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_Projector.cxx">
-      <Filter>Source files\HLRAlgo</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_TriangleData.cxx">
       <Filter>Source files\HLRAlgo</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\HLRAlgo\HLRAlgo_WiresBlock.cxx">

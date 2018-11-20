@@ -26,6 +26,7 @@
 #include <TDF_Data.hxx>
 #include <TDF_Tool.hxx>
 #include <TDocStd_Document.hxx>
+#include <TObj_Application.hxx>
 #include <TObj_Model.hxx>
 #include <TObj_Object.hxx>
 #include <TObj_ObjectIterator.hxx>
@@ -33,11 +34,10 @@
 #include <TObj_TNameContainer.hxx>
 #include <TObjDRAW.hxx>
 
+#include <BinTObjDrivers.hxx>
+#include <XmlTObjDrivers.hxx>
+
 #include <stdio.h>
-// avoid warnings on 'extern "C"' functions returning C++ classes
-#ifdef _MSC_VER
-#pragma warning(4:4190)
-#endif
 
 //=======================================================================
 // Section: General commands
@@ -155,7 +155,8 @@ static Standard_Integer newModel (Draw_Interpretor& di, Standard_Integer argc, c
 
   if (!DDocStd::GetDocument(argv[1],D,Standard_False)) {
     Handle(TObjDRAW_Model) aModel = new TObjDRAW_Model();
-    aModel->Load(0);
+    // initializes the new model: filename is empty
+    aModel->Load("");
     D = aModel->GetDocument();
     DD = new DDocStd_DrawDocument(D);
     TDataStd_Name::Set(D->GetData()->Root(),argv[1]);
@@ -453,13 +454,13 @@ static Standard_Integer getChild (Draw_Interpretor& di, Standard_Integer argc, c
 
 void TObjDRAW::Init(Draw_Interpretor& di)
 {
-
   static Standard_Boolean initactor = Standard_False;
-  if (initactor) return;  initactor = Standard_True;
+  if (initactor)
+  {
+    return;
+  }
+  initactor = Standard_True;
 
-  // load TObjOcaf base data model messages
-  Message_MsgFile::Load( ::getenv( "CSF_TObjResources" ), "TObj.msg" );
-  
   //=====================================
   // General commands
   //=====================================
@@ -508,6 +509,16 @@ void TObjDRAW::Init(Draw_Interpretor& di)
 //==============================================================================
 void TObjDRAW::Factory(Draw_Interpretor& theDI)
 {
+  // Initialize TObj OCAF formats
+  Handle(TDocStd_Application) anApp = DDocStd::GetApplication();
+  BinTObjDrivers::DefineFormat(anApp);
+  XmlTObjDrivers::DefineFormat(anApp);
+
+  // define formats for TObj specific application
+  anApp = TObj_Application::GetInstance();
+  BinTObjDrivers::DefineFormat(anApp);
+  XmlTObjDrivers::DefineFormat(anApp);
+
   TObjDRAW::Init(theDI);
 
 #ifdef OCCT_DEBUG

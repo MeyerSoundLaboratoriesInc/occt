@@ -13,8 +13,585 @@
 
 
 #include <OSD.hxx>
+#include <OSD_Exception_CTRL_BREAK.hxx>
+#include <Standard_DivideByZero.hxx>
+#include <Standard_Overflow.hxx>
 
-#ifndef _WIN32
+#ifdef _WIN32
+//---------------------------- Windows NT System --------------------------------
+
+#ifdef NOUSER
+#undef NOUSER
+#endif
+#ifdef NONLS
+#undef NONLS
+#endif
+#include <windows.h>
+
+#include <Strsafe.h>
+
+#ifndef STATUS_FLOAT_MULTIPLE_FAULTS
+  // <ntstatus.h>
+  #define STATUS_FLOAT_MULTIPLE_FAULTS     (0xC00002B4L)
+  #define STATUS_FLOAT_MULTIPLE_TRAPS      (0xC00002B5L)
+#endif
+
+#include <OSD_Exception_ACCESS_VIOLATION.hxx>
+#include <OSD_Exception_ARRAY_BOUNDS_EXCEEDED.hxx>
+#include <OSD_Exception_ILLEGAL_INSTRUCTION.hxx>
+#include <OSD_Exception_IN_PAGE_ERROR.hxx>
+#include <OSD_Exception_INT_DIVIDE_BY_ZERO.hxx>
+#include <OSD_Exception_INT_OVERFLOW.hxx>
+#include <OSD_Exception_INVALID_DISPOSITION.hxx>
+#include <OSD_Exception_NONCONTINUABLE_EXCEPTION.hxx>
+#include <OSD_Exception_PRIV_INSTRUCTION.hxx>
+#include <OSD_Exception_STACK_OVERFLOW.hxx>
+#include <OSD_Exception_STATUS_NO_MEMORY.hxx>
+
+#include <OSD_Environment.hxx>
+#include <Standard_Underflow.hxx>
+#include <Standard_ProgramError.hxx>
+#include <Standard_Mutex.hxx>
+
+#include <OSD_WNT.hxx>
+
+#ifdef _MSC_VER
+#include <eh.h>
+#include <malloc.h>
+#endif
+
+#include <process.h>
+#include <signal.h>
+#include <float.h>
+
+static Standard_Boolean fCtrlBrk;
+
+static Standard_Boolean fMsgBox;
+static Standard_Boolean fFltExceptions;
+
+// used to forbid simultaneous execution of setting / executing handlers
+static Standard_Mutex THE_SIGNAL_MUTEX;
+
+static LONG __fastcall _osd_raise ( DWORD, LPSTR );
+static BOOL WINAPI     _osd_ctrl_break_handler ( DWORD );
+
+#if ! defined(OCCT_UWP) && !defined(__MINGW32__) && !defined(__CYGWIN32__)
+static Standard_Boolean fDbgLoaded;
+static LONG _osd_debug   ( void );
+#endif
+
+//# define _OSD_FPX ( _EM_INVALID | _EM_DENORMAL | _EM_ZERODIVIDE | _EM_OVERFLOW | _EM_UNDERFLOW )
+# define _OSD_FPX ( _EM_INVALID | _EM_DENORMAL | _EM_ZERODIVIDE | _EM_OVERFLOW )
+
+#ifdef OCC_CONVERT_SIGNALS
+#define THROW_OR_JUMP(Type,Message) Type::NewInstance(Message)->Jump()
+#else
+#define THROW_OR_JUMP(Type,Message) throw Type(Message)
+#endif
+
+//=======================================================================
+//function : CallHandler
+//purpose  :
+//=======================================================================
+static LONG CallHandler (DWORD dwExceptionCode,
+                         ptrdiff_t ExceptionInformation1,
+                         ptrdiff_t ExceptionInformation0)
+{
+  Standard_Mutex::Sentry aSentry (THE_SIGNAL_MUTEX); // lock the mutex to prevent simultaneous handling
+
+  static wchar_t         buffer[2048];
+
+  int                  flterr = 0;
+
+  buffer[0] = '\0' ;
+
+// cout << "CallHandler " << dwExceptionCode << endl ;
+  switch ( dwExceptionCode ) {
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+//      cout << "CallHandler : EXCEPTION_FLT_DENORMAL_OPERAND:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT DENORMAL OPERAND");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+//      cout << "CallHandler : EXCEPTION_FLT_DIVIDE_BY_ZERO:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT DIVIDE BY ZERO");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_INEXACT_RESULT:
+//      cout << "CallHandler : EXCEPTION_FLT_INEXACT_RESULT:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT INEXACT RESULT");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_INVALID_OPERATION:
+//      cout << "CallHandler : EXCEPTION_FLT_INVALID_OPERATION:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT INVALID OPERATION");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_OVERFLOW:
+//      cout << "CallHandler : EXCEPTION_FLT_OVERFLOW:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT OVERFLOW");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_STACK_CHECK:
+//      cout << "CallHandler : EXCEPTION_FLT_STACK_CHECK:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT STACK CHECK");
+      flterr = 1 ;
+      break ;
+    case EXCEPTION_FLT_UNDERFLOW:
+//      cout << "CallHandler : EXCEPTION_FLT_UNDERFLOW:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT UNDERFLOW");
+      flterr = 1 ;
+      break ;
+    case STATUS_FLOAT_MULTIPLE_TRAPS:
+//      cout << "CallHandler : EXCEPTION_FLT_UNDERFLOW:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT MULTIPLE TRAPS (possible overflow in conversion of double to integer)");
+      flterr = 1 ;
+      break ;
+    case STATUS_FLOAT_MULTIPLE_FAULTS:
+//      cout << "CallHandler : EXCEPTION_FLT_UNDERFLOW:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"FLT MULTIPLE FAULTS");
+      flterr = 1 ;
+      break ;
+    case STATUS_NO_MEMORY:
+//      cout << "CallHandler : STATUS_NO_MEMORY:" << endl ;
+      THROW_OR_JUMP (OSD_Exception_STATUS_NO_MEMORY, "MEMORY ALLOCATION ERROR ( no room in the process heap )");
+      break;
+    case EXCEPTION_ACCESS_VIOLATION:
+//      cout << "CallHandler : EXCEPTION_ACCESS_VIOLATION:" << endl ;
+      StringCchPrintfW (buffer, _countof(buffer), L"%s%s%s0x%.8p%s%s%s", L"ACCESS VIOLATION",
+                 fMsgBox ? L"\n" : L" ", L"at address ",
+                 ExceptionInformation1 ,
+                 L" during '",
+                 ExceptionInformation0 ? L"WRITE" : L"READ",
+                 L"' operation");
+      break;
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+//      cout << "CallHandler : EXCEPTION_ARRAY_BOUNDS_EXCEEDED:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"ARRAY BOUNDS EXCEEDED");
+      break;
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+//      cout << "CallHandler : EXCEPTION_DATATYPE_MISALIGNMENT:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"DATATYPE MISALIGNMENT");
+      break;
+
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+//      cout << "CallHandler : EXCEPTION_ILLEGAL_INSTRUCTION:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"ILLEGAL INSTRUCTION");
+      break;
+
+    case EXCEPTION_IN_PAGE_ERROR:
+//      cout << "CallHandler : EXCEPTION_IN_PAGE_ERROR:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"IN_PAGE ERROR");
+      break;
+
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+//      cout << "CallHandler : EXCEPTION_INT_DIVIDE_BY_ZERO:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"INTEGER DIVISION BY ZERO");
+      break;
+
+    case EXCEPTION_INT_OVERFLOW:
+//      cout << "CallHandler : EXCEPTION_INT_OVERFLOW:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"INTEGER OVERFLOW");
+      break;
+
+    case EXCEPTION_INVALID_DISPOSITION:
+//      cout << "CallHandler : EXCEPTION_INVALID_DISPOSITION:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"INVALID DISPOSITION");
+      break;
+
+    case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+//      cout << "CallHandler : EXCEPTION_NONCONTINUABLE_EXCEPTION:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"NONCONTINUABLE EXCEPTION");
+      break;
+
+    case EXCEPTION_PRIV_INSTRUCTION:
+//      cout << "CallHandler : EXCEPTION_PRIV_INSTRUCTION:" << endl ;
+      StringCchCopyW (buffer, _countof(buffer), L"PRIVELEGED INSTRUCTION ENCOUNTERED");
+      break;
+
+    case EXCEPTION_STACK_OVERFLOW:
+//      cout << "CallHandler : EXCEPTION_STACK_OVERFLOW:" << endl ;
+#if defined( _MSC_VER ) && ( _MSC_VER >= 1300 ) && !defined(OCCT_UWP)
+    // try recovering from stack overflow: available in MS VC++ 7.0
+      if (!_resetstkoflw())
+        StringCchCopyW (buffer, _countof(buffer), L"Unrecoverable STACK OVERFLOW");
+      else
+#endif
+      StringCchCopyW (buffer, _countof(buffer), L"STACK OVERFLOW");
+      break;
+
+    default:
+      StringCchPrintfW (buffer, _countof(buffer), L"unknown exception code 0x%x, params 0x%p 0x%p",
+                dwExceptionCode, ExceptionInformation1, ExceptionInformation0 );
+
+  }  // end switch
+
+ // provide message to the user with possibility to stop
+  size_t idx;
+  StringCchLengthW (buffer, _countof(buffer),&idx);
+  if ( idx && fMsgBox && dwExceptionCode != EXCEPTION_NONCONTINUABLE_EXCEPTION ) {
+     // reset FP operations before message box, otherwise it may fail to show up
+    _fpreset();
+    _clearfp();
+
+#if ! defined(OCCT_UWP) && !defined(__MINGW32__) && !defined(__CYGWIN32__)
+    MessageBeep ( MB_ICONHAND );
+    int aChoice = ::MessageBoxW (0, buffer, L"OCCT Exception Handler", MB_ABORTRETRYIGNORE | MB_ICONSTOP);
+    if (aChoice == IDRETRY)
+    {
+      _osd_debug();
+      DebugBreak();
+    } else if (aChoice == IDABORT)
+      exit(0xFFFF);
+#endif
+  }
+
+  // reset FPE state
+  if ( flterr ) {
+    if ( !fFltExceptions ) return EXCEPTION_EXECUTE_HANDLER;
+   _fpreset () ;
+   _clearfp() ;
+   _controlfp ( 0, _OSD_FPX ) ;          // JR add :
+//     cout << "OSD::WntHandler _controlfp( 0, _OSD_FPX ) " << hex << _controlfp(0,0) << dec << endl ;
+  }
+
+  char aBufferA[2048];
+  WideCharToMultiByte(CP_UTF8, 0, buffer, -1, aBufferA, sizeof(aBufferA), NULL, NULL);
+  return _osd_raise(dwExceptionCode, aBufferA);
+}
+
+//=======================================================================
+//function : SIGWntHandler
+//purpose  : Will only be used if user calls ::raise() function with
+//           signal type set in OSD::SetSignal() - SIGSEGV, SIGFPE, SIGILL
+//           (the latter will likely be removed in the future)
+//=======================================================================
+static void SIGWntHandler (int signum, int sub_code)
+{
+  Standard_Mutex::Sentry aSentry (THE_SIGNAL_MUTEX); // lock the mutex to prevent simultaneous handling
+  switch( signum ) {
+    case SIGFPE :
+      if ( signal( signum , (void(*)(int))SIGWntHandler ) == SIG_ERR )
+        cout << "signal error" << endl ;
+      switch( sub_code ) {
+        case _FPE_INVALID :
+          CallHandler( EXCEPTION_FLT_INVALID_OPERATION ,0,0) ;
+          break ;
+        case _FPE_DENORMAL :
+          CallHandler( EXCEPTION_FLT_DENORMAL_OPERAND ,0,0) ;
+          break ;
+        case _FPE_ZERODIVIDE :
+          CallHandler( EXCEPTION_FLT_DIVIDE_BY_ZERO ,0,0) ;
+          break ;
+        case _FPE_OVERFLOW :
+          CallHandler( EXCEPTION_FLT_OVERFLOW ,0,0) ;
+          break ;
+        case _FPE_UNDERFLOW :
+          CallHandler( EXCEPTION_FLT_UNDERFLOW ,0,0) ;
+          break ;
+        case _FPE_INEXACT :
+          CallHandler( EXCEPTION_FLT_INEXACT_RESULT ,0,0) ;
+          break ;
+        default:
+          cout << "SIGWntHandler(default) -> throw Standard_NumericError(\"Floating Point Error\");" << endl;
+	  THROW_OR_JUMP (Standard_NumericError, "Floating Point Error");
+          break ;
+      }
+      break ;
+    case SIGSEGV :
+      if ( signal( signum, (void(*)(int))SIGWntHandler ) == SIG_ERR )
+        cout << "signal error" << endl ;
+      CallHandler( EXCEPTION_ACCESS_VIOLATION ,0,0) ;
+      break ;
+    case SIGILL :
+      if ( signal( signum, (void(*)(int))SIGWntHandler ) == SIG_ERR )
+        cout << "signal error" << endl ;
+      CallHandler( EXCEPTION_ILLEGAL_INSTRUCTION ,0,0) ;
+      break ;
+    default:
+      cout << "SIGWntHandler unexpected signal : " << signum << endl ;
+      break ;
+  }
+#ifndef OCCT_UWP
+  DebugBreak ();
+#endif
+}
+
+//=======================================================================
+//function : TranslateSE
+//purpose  : Translate Structural Exceptions into C++ exceptions
+//           Will be used when user's code is compiled with /EHa option
+//=======================================================================
+#ifdef _MSC_VER
+// If this file compiled with the default MSVC options for exception
+// handling (/GX or /EHsc) then the following warning is issued:
+//   warning C4535: calling _set_se_translator() requires /EHa
+// However it is correctly inserted and used when user's code compiled with /EHa.
+// So, here we disable the warning.
+#pragma warning (disable:4535)
+
+static void TranslateSE( unsigned int theCode, EXCEPTION_POINTERS* theExcPtr )
+{
+  Standard_Mutex::Sentry aSentry (THE_SIGNAL_MUTEX); // lock the mutex to prevent simultaneous handling
+  ptrdiff_t info1 = 0, info0 = 0;
+  if ( theExcPtr ) {
+    info1 = theExcPtr->ExceptionRecord->ExceptionInformation[1];
+    info0 = theExcPtr->ExceptionRecord->ExceptionInformation[0];
+  }
+  CallHandler(theCode, info1, info0);
+}
+#endif
+
+//=======================================================================
+//function : WntHandler
+//purpose  : Will be used when user's code is compiled with /EHs
+//           option and unless user sets his own exception handler with
+//           ::SetUnhandledExceptionFilter().
+//=======================================================================
+static LONG WINAPI WntHandler (EXCEPTION_POINTERS *lpXP)
+{
+  DWORD               dwExceptionCode = lpXP->ExceptionRecord->ExceptionCode;
+
+  return CallHandler (dwExceptionCode,
+                      lpXP->ExceptionRecord->ExceptionInformation[1],
+                      lpXP->ExceptionRecord->ExceptionInformation[0]);
+}
+
+//=======================================================================
+//function : SetSignal
+//purpose  :
+//=======================================================================
+void OSD::SetSignal (const Standard_Boolean theFloatingSignal)
+{
+  Standard_Mutex::Sentry aSentry (THE_SIGNAL_MUTEX); // lock the mutex to prevent simultaneous handling
+#if !defined(OCCT_UWP) || defined(NTDDI_WIN10_TH2)
+  OSD_Environment env ("CSF_DEBUG_MODE");
+  TCollection_AsciiString val = env.Value();
+  if (!env.Failed())
+  {
+    cout << "Environment variable CSF_DEBUG_MODE setted.\n";
+    fMsgBox = Standard_True;
+  }
+  else
+  {
+    fMsgBox = Standard_False;
+  }
+
+  // Set exception handler (ignored when running under debugger). It will be used in most cases
+  // when user's code is compiled with /EHs
+  // Replaces the existing top-level exception filter for all existing and all future threads
+  // in the calling process
+  ::SetUnhandledExceptionFilter (/*(LPTOP_LEVEL_EXCEPTION_FILTER)*/ WntHandler);
+#endif // NTDDI_WIN10_TH2
+
+  // Signal handlers will only be used when the method ::raise() will be used
+  // Handlers must be set for every thread
+  if (signal (SIGSEGV, (void(*)(int))SIGWntHandler) == SIG_ERR)
+    cout << "signal(OSD::SetSignal) error\n";
+  if (signal (SIGFPE,  (void(*)(int))SIGWntHandler) == SIG_ERR)
+    cout << "signal(OSD::SetSignal) error\n";
+  if (signal (SIGILL,  (void(*)(int))SIGWntHandler) == SIG_ERR)
+    cout << "signal(OSD::SetSignal) error\n";
+
+  // Set Ctrl-C and Ctrl-Break handler
+  fCtrlBrk = Standard_False;
+#ifndef OCCT_UWP
+  SetConsoleCtrlHandler (&_osd_ctrl_break_handler, TRUE);
+#endif
+#ifdef _MSC_VER
+//  _se_translator_function pOldSeFunc =
+  _set_se_translator (TranslateSE);
+#endif
+
+  fFltExceptions = theFloatingSignal;
+  if (theFloatingSignal)
+  {
+    _controlfp (0, _OSD_FPX);        // JR add :
+  }
+  else {
+    _controlfp (_OSD_FPX, _OSD_FPX); // JR add :
+  }
+}  // end OSD :: SetSignal
+
+//============================================================================
+//==== ControlBreak
+//============================================================================
+void OSD::ControlBreak () {
+  if ( fCtrlBrk ) {
+    fCtrlBrk = Standard_False;
+    throw OSD_Exception_CTRL_BREAK ( "*** INTERRUPT ***" );
+  }
+}  // end OSD :: ControlBreak
+
+#ifndef OCCT_UWP
+//============================================================================
+//==== _osd_ctrl_break_handler
+//============================================================================
+static BOOL WINAPI _osd_ctrl_break_handler ( DWORD dwCode ) {
+  if ( dwCode == CTRL_C_EVENT || dwCode == CTRL_BREAK_EVENT ) {
+    MessageBeep ( MB_ICONEXCLAMATION );
+    fCtrlBrk = Standard_True;
+  } else
+    exit ( 254 );
+
+  return TRUE;
+}  // end _osd_ctrl_break_handler
+#endif
+
+//============================================================================
+//==== _osd_raise
+//============================================================================
+static LONG __fastcall _osd_raise ( DWORD dwCode, LPSTR msg )
+{
+  if (msg[0] == '\x03') ++msg;
+
+  switch (dwCode)
+  {
+    case EXCEPTION_ACCESS_VIOLATION:
+      THROW_OR_JUMP (OSD_Exception_ACCESS_VIOLATION, msg);
+      break;
+    case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+      THROW_OR_JUMP (OSD_Exception_ARRAY_BOUNDS_EXCEEDED, msg);
+      break;
+    case EXCEPTION_DATATYPE_MISALIGNMENT:
+      THROW_OR_JUMP (Standard_ProgramError, msg);
+      break;
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+      THROW_OR_JUMP (OSD_Exception_ILLEGAL_INSTRUCTION, msg);
+      break;
+    case EXCEPTION_IN_PAGE_ERROR:
+      THROW_OR_JUMP (OSD_Exception_IN_PAGE_ERROR, msg);
+      break;
+    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+      THROW_OR_JUMP (Standard_DivideByZero, msg);
+      break;
+    case EXCEPTION_INT_OVERFLOW:
+      THROW_OR_JUMP (OSD_Exception_INT_OVERFLOW, msg);
+      break;
+    case EXCEPTION_INVALID_DISPOSITION:
+      THROW_OR_JUMP (OSD_Exception_INVALID_DISPOSITION, msg);
+      break;
+    case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+      THROW_OR_JUMP (OSD_Exception_NONCONTINUABLE_EXCEPTION, msg);
+      break;
+    case EXCEPTION_PRIV_INSTRUCTION:
+      THROW_OR_JUMP (OSD_Exception_PRIV_INSTRUCTION, msg);
+      break;
+    case EXCEPTION_STACK_OVERFLOW:
+      THROW_OR_JUMP (OSD_Exception_STACK_OVERFLOW, msg);
+      break;
+    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+      THROW_OR_JUMP (Standard_DivideByZero, msg);
+      break;
+    case EXCEPTION_FLT_STACK_CHECK:
+    case EXCEPTION_FLT_OVERFLOW:
+      THROW_OR_JUMP (Standard_Overflow, msg);
+      break;
+    case EXCEPTION_FLT_UNDERFLOW:
+      THROW_OR_JUMP (Standard_Underflow, msg);
+      break;
+    case EXCEPTION_FLT_INVALID_OPERATION:
+    case EXCEPTION_FLT_DENORMAL_OPERAND:
+    case EXCEPTION_FLT_INEXACT_RESULT:
+    case STATUS_FLOAT_MULTIPLE_TRAPS:
+    case STATUS_FLOAT_MULTIPLE_FAULTS:
+      THROW_OR_JUMP (Standard_NumericError, msg);
+      break;
+    default:
+      break;
+  }  // end switch
+  return EXCEPTION_EXECUTE_HANDLER;
+}  // end _osd_raise
+
+#if ! defined(OCCT_UWP) && !defined(__MINGW32__) && !defined(__CYGWIN32__)
+//============================================================================
+//==== _osd_debug
+//============================================================================
+LONG _osd_debug ( void ) {
+
+  LONG action ;
+
+  if ( !fDbgLoaded ) {
+
+    HKEY                hKey = NULL;
+    HANDLE              hEvent = INVALID_HANDLE_VALUE;
+    DWORD               dwKeyType;
+    DWORD               dwValueLen;
+    TCHAR               keyValue[ MAX_PATH ];
+    TCHAR               cmdLine[ MAX_PATH ];
+    SECURITY_ATTRIBUTES sa;
+    PROCESS_INFORMATION pi;
+    STARTUPINFO         si;
+
+    __try {
+
+      if (  RegOpenKey (
+              HKEY_LOCAL_MACHINE,
+              TEXT( "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\AeDebug" ),
+              &hKey
+            ) != ERROR_SUCCESS
+      ) __leave;
+
+      dwValueLen = sizeof ( keyValue );
+
+      if (  RegQueryValueEx (
+             hKey, TEXT( "Debugger" ), NULL, &dwKeyType, ( unsigned char* )keyValue, &dwValueLen
+            ) != ERROR_SUCCESS
+      ) __leave;
+
+      sa.nLength              = sizeof ( SECURITY_ATTRIBUTES );
+      sa.lpSecurityDescriptor = NULL;
+      sa.bInheritHandle       = TRUE;
+
+      if (   (  hEvent = CreateEvent ( &sa, TRUE, FALSE, NULL )  ) == NULL   ) __leave;
+
+      StringCchPrintf(cmdLine, _countof(cmdLine), keyValue, GetCurrentProcessId(), hEvent);
+
+      ZeroMemory (  &si, sizeof ( STARTUPINFO )  );
+
+      si.cb      = sizeof ( STARTUPINFO );
+      si.dwFlags = STARTF_FORCEONFEEDBACK;
+
+  //   cout << "_osd_debug -> CreateProcess" << endl ;
+      if (  !CreateProcess (
+              NULL, cmdLine, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE,
+              NULL, NULL, &si, &pi
+             )
+      ) __leave;
+
+  //   cout << "_osd_debug -> WaitForSingleObject " << endl ;
+      WaitForSingleObject ( hEvent, INFINITE );
+  //   cout << "_osd_debug <- WaitForSingleObject -> CloseHandle " << endl ;
+
+      CloseHandle ( pi.hProcess );
+      CloseHandle ( pi.hThread  );
+
+  //   cout << "_osd_debug fDbgLoaded  " << endl ;
+      fDbgLoaded = TRUE;
+
+    }  // end __try
+
+    __finally {
+
+//   cout << "_osd_debug -> CloseHandle(hKey) " << endl ;
+      if ( hKey   != INVALID_HANDLE_VALUE ) CloseHandle ( hKey   );
+//   cout << "_osd_debug -> CloseHandle(hEvent) " << endl ;
+      if ( hEvent != INVALID_HANDLE_VALUE ) CloseHandle ( hEvent );
+//   cout << "_osd_debug end __finally " << endl ;
+
+    }  // end __finally
+
+  }  /* end if */
+
+  action = fDbgLoaded ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_EXECUTE_HANDLER;
+// cout << "_osd_debug return " << action << " EXCEPTION_CONTINUE_EXECUTION("
+//      << EXCEPTION_CONTINUE_EXECUTION << ")" << endl ;
+  return action ;
+
+}  // end _osd_debug
+#endif /* ! OCCT_UWP && ! __CYGWIN__ && ! __MINGW32__ */
+
+#else /* ! _WIN32 */
 
 //---------- All Systems except Windows NT : ----------------------------------
 
@@ -29,18 +606,16 @@
 #include <OSD_SIGBUS.hxx>
 #include <OSD_SIGSEGV.hxx>
 #include <OSD_SIGSYS.hxx>
-#include <OSD_Exception_CTRL_BREAK.hxx>
 #include <Standard_NumericError.hxx>
-#include <Standard_DivideByZero.hxx>
-#include <Standard_Overflow.hxx>
 
 #include <Standard_ErrorHandler.hxx>
 
 // POSIX threads
 #include <pthread.h>
 
-#ifdef linux
-#include <fenv.h>
+#ifdef __linux__
+#include  <cfenv>
+//#include  <fenv.h>
 static Standard_Boolean fFltExceptions = Standard_False;
 #endif
 
@@ -60,7 +635,7 @@ typedef void (* SIG_PFV) (int);
 # include <stdlib.h>
 # include <stdio.h>
 #else
-#  ifdef SA_SIGINFO 
+#  ifdef SA_SIGINFO
 #    ifndef _AIX
 #  include <sys/siginfo.h>
 #     endif
@@ -72,27 +647,6 @@ typedef void (* SIG_PFV) (int);
 
 #if !defined(__ANDROID__) && !defined(__QNX__)
   #include <sys/signal.h>
-#endif
-
-#if defined(HAVE_PTHREAD_H) && defined(NO_CXX_EXCEPTION)
-//============================================================================
-//====  GetOldSigAction
-//====     get previous 
-//============================================================================
-
-static struct sigaction *GetOldSigAction() 
-{
-  static struct sigaction oldSignals[NSIG];
-  return oldSignals;
-}
-
-#ifdef SOLARIS
-static sigfpe_handler_type *GetOldFPE()
-{
-  static sigfpe_handler_type aIEEEHandler[5] = { NULL, NULL, NULL, NULL, NULL } ;
-  return aIEEEHandler;
-}
-#endif
 #endif
 
 //============================================================================
@@ -115,11 +669,7 @@ static sigfpe_handler_type *GetOldFPE()
 //==== SIGSEGV is handled by "SegvHandler()"
 //============================================================================
 #ifdef SA_SIGINFO
-  #if defined(HAVE_PTHREAD_H) && defined(NO_CXX_EXCEPTION)
-static void Handler (const int theSignal, siginfo_t *theSigInfo, const Standard_Address theContext)
-  #else
 static void Handler (const int theSignal, siginfo_t */*theSigInfo*/, const Standard_Address /*theContext*/)
-  #endif
 #else
 static void Handler (const int theSignal)
 #endif
@@ -134,95 +684,10 @@ static void Handler (const int theSignal)
     perror ("sigaction");
   }
 
-#if defined(HAVE_PTHREAD_H) && defined(NO_CXX_EXCEPTION)
-  if (pthread_self() != getOCCThread()  || !Standard_ErrorHandler::IsInTryBlock()) {
-    // use the previous signal handler
-    // cout << "OSD::Handler: signal " << (int) theSignal << " occured outside a try block " <<  endl ;
-    struct sigaction *oldSignals = GetOldSigAction();
-    struct sigaction  asigacthandler =  oldSignals[theSignal >= 0 && theSignal < NSIG ? theSignal : 0];
-
-    if (asigacthandler.sa_flags & SA_SIGINFO) {
-      void (*aCurInfoHandle)(int, siginfo_t *, void *) = asigacthandler.sa_sigaction;
-
-      siginfo_t * aSigInfo = NULL;
-#ifdef SA_SIGINFO
-      aSigInfo = theSigInfo;
-#endif
-
-      if (aSigInfo) {
-        switch (aSigInfo->si_signo) {
-          case SIGFPE:
-          {
-#ifdef SOLARIS
-            sigfpe_handler_type *aIEEEHandlerTab = GetOldFPE();
-            sigfpe_handler_type  aIEEEHandler = NULL;
-            switch (aSigInfo->si_code) {
-              case FPE_INTDIV_TRAP :
-              case FPE_FLTDIV_TRAP :
-               aIEEEHandler = aIEEEHandlerTab[1];
-                break;
-              case FPE_INTOVF_TRAP :
-              case FPE_FLTOVF_TRAP :
-                aIEEEHandler = aIEEEHandlerTab[2];
-                break;
-              case FPE_FLTUND_TRAP :
-                aIEEEHandler = aIEEEHandlerTab[4];
-                break;
-              case FPE_FLTRES_TRAP :
-                aIEEEHandler = aIEEEHandlerTab[3];
-                break;
-              case FPE_FLTINV_TRAP :
-                aIEEEHandler = aIEEEHandlerTab[0];
-                break;
-              case FPE_FLTSUB_TRAP :
-              default:
-                break;
-            }
-            if (aIEEEHandler) {
-              // cout << "OSD::Handler: calling previous IEEE signal handler with info" <<  endl ;
-              (*aIEEEHandler) (theSignal, aSigInfo, theContext);
-              return;
-            }
-#endif
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      if (aCurInfoHandle) {
-        // cout << "OSD::Handler: calling previous signal handler with info " << aCurInfoHandle <<  endl ;
-        (*aCurInfoHandle) (theSignal, aSigInfo, theContext);
-#ifdef OCCT_DEBUG
-        cerr << " previous signal handler return" <<  endl ;
-#endif
-        return;
-      }
-      else {
-	// cout << "OSD::Handler: no handler with info for the signal" << endl;
-      }
-    }
-    else {
-      // no siginfo needed for the signal
-      void (*aCurHandler) (int) = asigacthandler.sa_handler;
-      if(aCurHandler) {
-        // cout << "OSD::Handler: calling previous signal handler" <<  endl ;
-        (*aCurHandler) (theSignal);
-#ifdef OCCT_DEBUG
-        cerr << " previous signal handler return" <<  endl ;
-#endif
-        return;
-      }
-    }
-    // cout << " Signal occured outside a try block, but no handler for it" <<endl;
-    return;
-  }
-#endif
-
   // cout << "OSD::Handler: signal " << (int) theSignal << " occured inside a try block " <<  endl ;
   if ( ADR_ACT_SIGIO_HANDLER != NULL )
     (*ADR_ACT_SIGIO_HANDLER)() ;
-#ifdef linux
+#ifdef __linux__
   if (fFltExceptions)
     feenableexcept (FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
     //feenableexcept (FE_INVALID | FE_DIVBYZERO);
@@ -337,16 +802,10 @@ static void SegvHandler(const int theSignal,
                         siginfo_t *ip,
                         const Standard_Address theContext)
 {
-#ifdef NO_CXX_EXCEPTION
-  if (!Standard_ErrorHandler::IsInTryBlock()) {
-    Handler(theSignal, ip, theContext);
-    return;
-  }
-#else
   (void)theSignal; // silence GCC warnings
   (void)theContext;
-#endif
-#ifdef linux
+
+#ifdef __linux__
   if (fFltExceptions)
     feenableexcept (FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
     //feenableexcept (FE_INVALID | FE_DIVBYZERO);
@@ -407,13 +866,12 @@ static void SegvHandler(const int theSignal,
 #endif
 
 //============================================================================
-//==== SetSignal 
+//==== SetSignal
 //====     Set the differents signals:
 //============================================================================
 
-void OSD::SetSignal(const Standard_Boolean aFloatingSignal) 
+void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
 {
-  static int first_time = 3 ;
   struct sigaction act, oact;
   int              stat = 0;
 
@@ -433,29 +891,27 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
       cerr << "ieee_handler does not work !!! KO " << endl;
 #endif
     }
-#elif defined (linux)
+#elif defined (__linux__)
     feenableexcept (FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
-    //feenableexcept (FE_INVALID | FE_DIVBYZERO);
     fFltExceptions = Standard_True;
 #endif
   }
-  else if ( first_time & 1 ) {
-//    cout << "SetSignal( Standard_False ) is not implemented..." << endl ;
-    first_time = first_time & (~ 1) ;
+  else
+  {
+#if defined (__linux__)
+    fedisableexcept (FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
+    fFltExceptions = Standard_False;
+#endif
   }
 
 #if defined (sgi) || defined (IRIX )
- if ( first_time & 2 ) {
-   char *TRAP_FPE = getenv("TRAP_FPE") ;
-   if ( TRAP_FPE == NULL ) {
+ char *TRAP_FPE = getenv("TRAP_FPE") ;
+ if ( TRAP_FPE == NULL ) {
 #ifdef OCCT_DEBUG
-     cout << "On SGI you must set TRAP_FPE environment variable : " << endl ;
-     cout << "set env(TRAP_FPE) \"UNDERFL=FLUSH_ZERO;OVERFL=DEFAULT;DIVZERO=DEFAULT;INT_OVERFL=DEFAULT\" or" << endl ;
-     cout << "setenv TRAP_FPE \"UNDERFL=FLUSH_ZERO;OVERFL=DEFAULT;DIVZERO=DEFAULT;INT_OVERFL=DEFAULT\"" << endl ;
+   cout << "On SGI you must set TRAP_FPE environment variable : " << endl ;
+   cout << "set env(TRAP_FPE) \"UNDERFL=FLUSH_ZERO;OVERFL=DEFAULT;DIVZERO=DEFAULT;INT_OVERFL=DEFAULT\" or" << endl ;
+   cout << "setenv TRAP_FPE \"UNDERFL=FLUSH_ZERO;OVERFL=DEFAULT;DIVZERO=DEFAULT;INT_OVERFL=DEFAULT\"" << endl ;
 #endif
-//     exit(1) ;
-     first_time = first_time & (~ 2) ;
-   }
  }
 #endif
 
@@ -476,7 +932,7 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
 #endif
 
   //==== Always detected the signal "SIGFPE" =================================
-  stat = sigaction(SIGFPE,&act,&oact);   // ...... floating point exception 
+  stat = sigaction(SIGFPE,&act,&oact);   // ...... floating point exception
   if (stat) {
 #ifdef OCCT_DEBUG
      cerr << "sigaction does not work !!! KO " << endl;
@@ -485,46 +941,46 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
   }
 
   //==== Detected the only the "free" signals ================================
-  sigaction(SIGHUP,&act,&oact);    // ...... hangup  
+  sigaction(SIGHUP,&act,&oact);    // ...... hangup
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGHUP,&oact,&oact);
 #endif
 
-  sigaction(SIGINT,&act,&oact);   // ...... interrupt   
+  sigaction(SIGINT,&act,&oact);   // ...... interrupt
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGINT,&oact,&oact);
 #endif
-            
+
   sigaction(SIGQUIT,&act,&oact);  // ...... quit
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGQUIT,&oact,&oact);
 #endif
 
-  sigaction(SIGILL,&act,&oact);   // ...... illegal instruction 
+  sigaction(SIGILL,&act,&oact);   // ...... illegal instruction
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGILL,&oact,&oact);
 #endif
 
-  sigaction(SIGBUS,&act,&oact);   // ...... bus error 
+  sigaction(SIGBUS,&act,&oact);   // ...... bus error
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGBUS,&oact,&oact);
 #endif
 
-#if (!defined (linux)) && (!defined(__linux__))
+#if !defined(__linux__)
   sigaction(SIGSYS,&act,&oact);   // ...... bad argument to system call
 
 # ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGSYS,&oact,&oact);
 # endif
 #endif
@@ -533,7 +989,7 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
   sigaction(SIGTRAP,&act,&oact);   // Integer Divide By Zero (IRIX)
 
 # ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGTRAP,&oact,&oact);
 # endif
 #endif
@@ -548,7 +1004,7 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
     perror("OSD::SetSignal sigaction( SIGSEGV , &act , &oact ) ") ;
 
 #ifdef OBJS
-  if(oact.sa_handler) 
+  if(oact.sa_handler)
 	sigaction(SIGSEGV,&oact,&oact);
 #endif
 #if defined(__osf__) || defined(DECOSF1)
@@ -556,7 +1012,7 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
    action.sa_handler = SIG_IGN;
    action.sa_mask = 0;
    action.sa_flags = 0;
-   
+
    if (sigaction (SIGFPE, &action, &prev_action) == -1) {
      perror ("sigaction");
      exit (1);
@@ -566,14 +1022,14 @@ void OSD::SetSignal(const Standard_Boolean aFloatingSignal)
 }
 
 //============================================================================
-//==== ControlBreak 
+//==== ControlBreak
 //============================================================================
 
-void OSD :: ControlBreak () 
+void OSD :: ControlBreak ()
 {
   if ( fCtrlBrk ) {
     fCtrlBrk = Standard_False;
-    OSD_Exception_CTRL_BREAK::Raise ("*** INTERRUPT ***");
+    throw OSD_Exception_CTRL_BREAK ("*** INTERRUPT ***");
   }
 }
 

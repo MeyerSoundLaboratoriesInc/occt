@@ -17,7 +17,7 @@
 #include <BinMDataStd.hxx>
 #include <BinMDataStd_ExtStringArrayDriver.hxx>
 #include <BinObjMgt_Persistent.hxx>
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_Array1OfExtendedString.hxx>
 #include <TColStd_HArray1OfExtendedString.hxx>
@@ -31,7 +31,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BinMDataStd_ExtStringArrayDriver,BinMDF_ADriver)
 //purpose  : Constructor
 //=======================================================================
 BinMDataStd_ExtStringArrayDriver::BinMDataStd_ExtStringArrayDriver
-                        (const Handle(CDM_MessageDriver)& theMsgDriver)
+                        (const Handle(Message_Messenger)& theMsgDriver)
      : BinMDF_ADriver (theMsgDriver, STANDARD_TYPE(TDataStd_ExtStringArray)->Name())
 {
 }
@@ -83,14 +83,16 @@ Standard_Boolean BinMDataStd_ExtStringArrayDriver::Paste
     Standard_Boolean aDelta(Standard_False);
     if(BinMDataStd::DocumentVersion() > 2) {
       Standard_Byte aDeltaValue;
-	  if (! (theSource >> aDeltaValue)) {
-	    return Standard_False;
-	  }
+      if (! (theSource >> aDeltaValue)) {
+        return Standard_False;
+      }
       else
-	aDelta = (Standard_Boolean)aDeltaValue;
-	}
+        aDelta = (aDeltaValue != 0);
+    }
     anAtt->SetDelta(aDelta);
   }
+
+  BinMDataStd::SetAttributeID(theSource, anAtt);
   return ok;
 }
 
@@ -104,7 +106,7 @@ void BinMDataStd_ExtStringArrayDriver::Paste
                                  BinObjMgt_Persistent&        theTarget,
                                  BinObjMgt_SRelocationTable&  ) const
 {
-  Handle(TDataStd_ExtStringArray) anAtt =
+  const Handle(TDataStd_ExtStringArray) anAtt =
     Handle(TDataStd_ExtStringArray)::DownCast(theSource);
   const TColStd_Array1OfExtendedString& aSourceArray = anAtt->Array()->Array1();
   const Standard_Integer aFirstInd = aSourceArray.Lower();
@@ -113,5 +115,9 @@ void BinMDataStd_ExtStringArrayDriver::Paste
   for (Standard_Integer i = aFirstInd; i <= aLastInd; i ++)
     theTarget << anAtt->Value( i );
 
-  theTarget << (Standard_Byte)anAtt->GetDelta();
+  theTarget << (Standard_Byte)(anAtt->GetDelta() ? 1 : 0);
+
+  // process user defined guid
+  if(anAtt->ID() != TDataStd_ExtStringArray::GetID()) 
+    theTarget << anAtt->ID();
 }

@@ -12,6 +12,7 @@
 // commercial license or contractual agreement.
 
 #include <DsgPrs_DatumPrs.hxx>
+#include <DsgPrs_XYZAxisPresentation.hxx>
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
 #include <gp_Ax2.hxx>
@@ -24,86 +25,51 @@
 #include <Prs3d_TextAspect.hxx>
 #include <Prs3d_ArrowAspect.hxx>
 
+// =======================================================================
+// function : Add
+// purpose  :
+// =======================================================================
 void DsgPrs_DatumPrs::Add (const Handle(Prs3d_Presentation)& thePresentation,
-                           const gp_Ax2&                     theDatum,
-                           const Handle(Prs3d_Drawer)&       theDrawer)
+                           const gp_Ax2& theDatum,
+                           const Handle(Prs3d_Drawer)& theDrawer)
 {
   Handle(Prs3d_DatumAspect) aDatumAspect = theDrawer->DatumAspect();
-  Handle(Graphic3d_Group) aGroup = Prs3d_Root::CurrentGroup(thePresentation);
+  Handle(Graphic3d_Group) aGroup = Prs3d_Root::CurrentGroup (thePresentation);
 
-  Quantity_Color aColor;
-  Aspect_TypeOfLine aTypeOfLine;
-  Standard_Real aWidth;
-  aDatumAspect->FirstAxisAspect()->Aspect()->Values(aColor, aTypeOfLine, aWidth);
-
-  gp_Ax2 anAxis(theDatum);
+  gp_Ax2 anAxis (theDatum);
   gp_Pnt anOrigin = anAxis.Location();
   gp_Dir aXDir = anAxis.XDirection();
   gp_Dir aYDir = anAxis.YDirection();
   gp_Dir aZDir = anAxis.Direction();
 
-  Quantity_Length anAxisLength;
-  Quantity_Length anArrowAngle = theDrawer->ArrowAspect()->Angle();
-
+  Standard_Real anAxisLength;
   const Standard_Boolean toDrawLabels = theDrawer->DatumAspect()->ToDrawLabels();
 
-  Handle(Graphic3d_ArrayOfSegments) aPrims;
-  if (aDatumAspect->DrawFirstAndSecondAxis())
+  Prs3d_DatumAxes anAxes = aDatumAspect->DatumAxes();
+  Handle(Prs3d_ArrowAspect) anArrowAspect = aDatumAspect->ArrowAspect();
+  Handle(Prs3d_TextAspect) aTextAspect = theDrawer->TextAspect();
+
+  if ((anAxes & Prs3d_DA_XAxis) != 0)
   {
-    anAxisLength = aDatumAspect->FirstAxisLength();
-    const gp_Pnt aPoint1(anOrigin.XYZ() + aXDir.XYZ()*anAxisLength);
-    
-    aGroup->SetPrimitivesAspect(aDatumAspect->FirstAxisAspect()->Aspect());
-    aPrims = new Graphic3d_ArrayOfSegments(2);
-    aPrims->AddVertex(anOrigin);
-    aPrims->AddVertex(aPoint1);
-    aGroup->AddPrimitiveArray(aPrims);
-
-    aGroup->SetPrimitivesAspect(theDrawer->ArrowAspect()->Aspect());
-    Prs3d_Arrow::Draw(thePresentation,aPoint1,aXDir,anArrowAngle,anAxisLength/10.);
-    aGroup->SetPrimitivesAspect(theDrawer->TextAspect()->Aspect());
-    Graphic3d_Vertex aVertex1(aPoint1.X(),aPoint1.Y(),aPoint1.Z());
-    if (toDrawLabels)
-    {
-      aGroup->Text (Standard_CString ("X"), aVertex1, 16.0);
-    }
-
-    anAxisLength = aDatumAspect->SecondAxisLength();
-    const gp_Pnt aPoint2(anOrigin.XYZ() + aYDir.XYZ()*anAxisLength);
-
-    aGroup->SetPrimitivesAspect(aDatumAspect->SecondAxisAspect()->Aspect());
-    aPrims = new Graphic3d_ArrayOfSegments(2);
-    aPrims->AddVertex(anOrigin);
-    aPrims->AddVertex(aPoint2);
-    aGroup->AddPrimitiveArray(aPrims);
-
-    aGroup->SetPrimitivesAspect(theDrawer->ArrowAspect()->Aspect());
-    Prs3d_Arrow::Draw(thePresentation,aPoint2,aYDir,anArrowAngle,anAxisLength/10.);
-    aGroup->SetPrimitivesAspect(theDrawer->TextAspect()->Aspect());
-    Graphic3d_Vertex aVertex2(aPoint2.X(),aPoint2.Y(),aPoint2.Z());
-    if (toDrawLabels)
-    {
-      aGroup->Text (Standard_CString ("Y"), aVertex2, 16.0);
-    }
+    anAxisLength = aDatumAspect->Attribute (Prs3d_DA_XAxisLength);
+    const gp_Pnt aPoint1 (anOrigin.XYZ() + aXDir.XYZ()*anAxisLength);
+    DsgPrs_XYZAxisPresentation::Add (thePresentation, aDatumAspect->LineAspect(Prs3d_DP_XAxis), anArrowAspect,
+                                     aTextAspect, aXDir, anAxisLength, toDrawLabels ? "X" : "", anOrigin, aPoint1);
   }
-  if (aDatumAspect->DrawThirdAxis())
+
+  if ((anAxes & Prs3d_DA_YAxis) != 0)
   {
-    anAxisLength = aDatumAspect->ThirdAxisLength();
-    const gp_Pnt aPoint3(anOrigin.XYZ() + aZDir.XYZ()*anAxisLength);
+    anAxisLength = aDatumAspect->Attribute (Prs3d_DA_YAxisLength);
+    const gp_Pnt aPoint2 (anOrigin.XYZ() + aYDir.XYZ()*anAxisLength);
+    DsgPrs_XYZAxisPresentation::Add (thePresentation, aDatumAspect->LineAspect(Prs3d_DP_YAxis), anArrowAspect,
+                                     aTextAspect, aYDir, anAxisLength, toDrawLabels ? "Y" : "", anOrigin, aPoint2);
+  }
 
-    aGroup->SetPrimitivesAspect(aDatumAspect->ThirdAxisAspect()->Aspect());
-    aPrims = new Graphic3d_ArrayOfSegments(2);
-    aPrims->AddVertex(anOrigin);
-    aPrims->AddVertex(aPoint3);
-    aGroup->AddPrimitiveArray(aPrims);
-
-    aGroup->SetPrimitivesAspect(theDrawer->ArrowAspect()->Aspect());
-    Prs3d_Arrow::Draw(thePresentation,aPoint3,aZDir,anArrowAngle,anAxisLength/10.);
-    aGroup->SetPrimitivesAspect(theDrawer->TextAspect()->Aspect());
-    Graphic3d_Vertex aVertex3(aPoint3.X(),aPoint3.Y(),aPoint3.Z());
-    if (toDrawLabels)
-    {
-      aGroup->Text (Standard_CString ("Z"), aVertex3, 16.0);
-    }
+  if ((anAxes & Prs3d_DA_ZAxis) != 0)
+  {
+    anAxisLength = aDatumAspect->Attribute (Prs3d_DA_ZAxisLength);
+    const gp_Pnt aPoint3 (anOrigin.XYZ() + aZDir.XYZ()*anAxisLength);
+    DsgPrs_XYZAxisPresentation::Add (thePresentation, aDatumAspect->LineAspect(Prs3d_DP_ZAxis), anArrowAspect,
+                                     aTextAspect, aZDir, anAxisLength, toDrawLabels ? "Z" : "", anOrigin, aPoint3);
   }
 }

@@ -17,10 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__StdDrivers_DLL" />
-					<Add option="-D__StdObject_DLL" />
-					<Add option="-D__StdPersistent_DLL" />
-					<Add option="-D__ShapePersistent_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKStd_obj.link" />
@@ -39,10 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__StdDrivers_DLL" />
-					<Add option="-D__StdObject_DLL" />
-					<Add option="-D__StdPersistent_DLL" />
-					<Add option="-D__ShapePersistent_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKStd_objd.link" />
@@ -106,6 +98,27 @@
 		<Unit filename="../../../src/StdPersistent/StdPersistent_TopLoc.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_BacketOfPersistent.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_Data.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_HeaderData.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_Root.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_RootData.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StdStorage/StdStorage_TypeData.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent.cxx">
 			<Option link="0" />
 		</Unit>
@@ -113,6 +126,9 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d_Curve.cxx">

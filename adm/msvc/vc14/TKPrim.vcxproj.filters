@@ -2,19 +2,19 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{43877207-1270-11A3-0F8D-9BA3820BBC04}</UniqueIdentifier>
+      <UniqueIdentifier>{A2F4E3D7-113C-0CFF-0FCE-119DA283FAD1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepPrim">
-      <UniqueIdentifier>{64BC95A9-0F92-1059-145D-0ABCB4EAEDC1}</UniqueIdentifier>
+      <UniqueIdentifier>{C7CE60FB-0D3F-17DE-0E4C-D809C4695ECA}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepSweep">
-      <UniqueIdentifier>{9F480593-1416-09D7-02A2-364D7E199382}</UniqueIdentifier>
+      <UniqueIdentifier>{CE29BAD1-01CA-0B97-06FC-0628AA57CEA8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\Sweep">
-      <UniqueIdentifier>{236B8E76-019C-1281-1765-06862851CF7F}</UniqueIdentifier>
+      <UniqueIdentifier>{C0AE235E-1280-108D-034A-CD6A5600498A}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BRepPrimAPI">
-      <UniqueIdentifier>{0DB31E46-07A0-1074-09F9-F2AF52D468E2}</UniqueIdentifier>
+      <UniqueIdentifier>{DC3AEE5A-10EC-017A-0522-F2DE38DB5789}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -109,9 +109,6 @@
       <Filter>Source files\BRepPrimAPI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepPrimAPI\BRepPrimAPI_MakeSphere.cxx">
-      <Filter>Source files\BRepPrimAPI</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\BRepPrimAPI\BRepPrimAPI_MakeSweep.cxx">
       <Filter>Source files\BRepPrimAPI</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BRepPrimAPI\BRepPrimAPI_MakeTorus.cxx">

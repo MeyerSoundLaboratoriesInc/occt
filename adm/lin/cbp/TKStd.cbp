@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -76,9 +78,17 @@
 		<Unit filename="../../../src/StdPersistent/StdPersistent_Naming.cxx" />
 		<Unit filename="../../../src/StdPersistent/StdPersistent_PPrsStd.cxx" />
 		<Unit filename="../../../src/StdPersistent/StdPersistent_TopLoc.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_BacketOfPersistent.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_Data.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_HeaderData.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_Root.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_RootData.cxx" />
+		<Unit filename="../../../src/StdStorage/StdStorage_TypeData.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_BRep.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom.cxx" />
+		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom2d_Curve.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom_Curve.cxx" />
 		<Unit filename="../../../src/ShapePersistent/ShapePersistent_Geom_Surface.cxx" />

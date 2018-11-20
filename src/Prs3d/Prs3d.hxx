@@ -17,34 +17,17 @@
 #ifndef _Prs3d_HeaderFile
 #define _Prs3d_HeaderFile
 
+#include <Graphic3d_ArrayOfPrimitives.hxx>
 #include <Standard.hxx>
 #include <Standard_DefineAlloc.hxx>
 #include <Standard_Handle.hxx>
-
 #include <Standard_Boolean.hxx>
-#include <Quantity_Length.hxx>
 #include <Standard_Real.hxx>
 #include <Prs3d_Drawer.hxx>
-class gp_Pnt;
+#include <Prs3d_NListOfSequenceOfPnt.hxx>
+
 class TopoDS_Shape;
 class Prs3d_Presentation;
-class Prs3d_BasicAspect;
-class Prs3d_PointAspect;
-class Prs3d_LineAspect;
-class Prs3d_ShadingAspect;
-class Prs3d_TextAspect;
-class Prs3d_IsoAspect;
-class Prs3d_ArrowAspect;
-class Prs3d_PlaneAspect;
-class Prs3d_DimensionAspect;
-class Prs3d_DatumAspect;
-class Prs3d_Projector;
-class Prs3d_PlaneSet;
-class Prs3d_Root;
-class Prs3d_Text;
-class Prs3d_ShapeTool;
-class Prs3d_Arrow;
-
 
 //! The Prs3d package provides the following services
 //! -   a presentation object (the context for all
@@ -64,11 +47,10 @@ class Prs3d
 public:
 
   DEFINE_STANDARD_ALLOC
-
   
   //! draws an arrow at a given location, with respect
   //! to a given direction.
-  Standard_EXPORT static Standard_Boolean MatchSegment (const Quantity_Length X, const Quantity_Length Y, const Quantity_Length Z, const Quantity_Length aDistance, const gp_Pnt& p1, const gp_Pnt& p2, Quantity_Length& dist);
+  Standard_EXPORT static Standard_Boolean MatchSegment (const Standard_Real X, const Standard_Real Y, const Standard_Real Z, const Standard_Real aDistance, const gp_Pnt& p1, const gp_Pnt& p2, Standard_Real& dist);
   
   //! Computes the absolute deflection value depending on
   //! the type of deflection in theDrawer:
@@ -84,44 +66,16 @@ public:
   //! between different representations of the shape and undesirable visual artifacts.
   Standard_EXPORT static Standard_Real GetDeflection (const TopoDS_Shape& theShape, const Handle(Prs3d_Drawer)& theDrawer);
 
+  //! Assembles array of primitives for sequence of polylines.
+  //! @param thePoints [in] the polylines sequence
+  //! @return array of primitives
+  Standard_EXPORT static Handle(Graphic3d_ArrayOfPrimitives) PrimitivesFromPolylines (const Prs3d_NListOfSequenceOfPnt& thePoints);
 
-
-
-protected:
-
-
-
-
-
-private:
-
-
-
-
-friend class Prs3d_Presentation;
-friend class Prs3d_BasicAspect;
-friend class Prs3d_PointAspect;
-friend class Prs3d_LineAspect;
-friend class Prs3d_ShadingAspect;
-friend class Prs3d_TextAspect;
-friend class Prs3d_IsoAspect;
-friend class Prs3d_ArrowAspect;
-friend class Prs3d_PlaneAspect;
-friend class Prs3d_DimensionAspect;
-friend class Prs3d_DatumAspect;
-friend class Prs3d_Projector;
-friend class Prs3d_PlaneSet;
-friend class Prs3d_Root;
-friend class Prs3d_Text;
-friend class Prs3d_ShapeTool;
-friend class Prs3d_Arrow;
+  //! Add primitives into new group in presentation and clear the list of polylines.
+  Standard_EXPORT static void AddPrimitivesGroup (const Handle(Prs3d_Presentation)& thePrs,
+                                                  const Handle(Prs3d_LineAspect)&   theAspect,
+                                                  Prs3d_NListOfSequenceOfPnt&       thePolylines);
 
 };
-
-
-
-
-
-
 
 #endif // _Prs3d_HeaderFile

@@ -19,24 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{7440E375-15C3-023D-089F-1375EBA2AA51}</ProjectGuid>
+    <ProjectGuid>{FE501353-1526-17A8-122C-DC45504A9059}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v100</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -85,7 +89,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -97,18 +101,19 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;TKXml.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc10\bin\TKQADraw.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc10\lib;$(CSF_OPT_LIB32);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win32\vc10\bin\TKQADraw.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win32\vc10\lib\TKQADraw.lib</ImportLibrary>
@@ -130,7 +135,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win32\vc10\objd\TKQADraw/</AssemblerListingLocation>
@@ -143,14 +148,15 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;TKXml.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win32\vc10\bind\TKQADraw.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win32\vc10\libd;$(CSF_OPT_LIB32D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -176,7 +182,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -188,17 +194,18 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;No_Exception;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;TKXml.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc10\bin\TKQADraw.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc10\lib;$(CSF_OPT_LIB64);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <GenerateDebugInformation>No</GenerateDebugInformation>
+      <GenerateDebugInformation>no</GenerateDebugInformation>
       <ProgramDatabaseFile>.\..\..\..\win64\vc10\bin\TKQADraw.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <ImportLibrary>..\..\..\win64\vc10\lib\TKQADraw.lib</ImportLibrary>
@@ -220,7 +227,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AssemblerListingLocation>.\..\..\..\win64\vc10\objd\TKQADraw/</AssemblerListingLocation>
@@ -233,13 +240,14 @@
       <DisableSpecificWarnings>%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <FloatingPointModel>Precise</FloatingPointModel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>..\..\..\inc;$(CSF_OPT_INC);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);__QABugs_DLL;__QADNaming_DLL;__QADraw_DLL;__QANCollection_DLL;__QANewBRepNaming_DLL;__QANewDBRepNaming_DLL;__QANewModTopOpe_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;$(CSF_DEFINES);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>TKBRep.lib;TKMath.lib;TKernel.lib;TKService.lib;TKG2d.lib;TKDraw.lib;TKV3d.lib;TKGeomBase.lib;TKG3d.lib;TKViewerTest.lib;TKCDF.lib;TKDCAF.lib;TKLCAF.lib;TKFillet.lib;TKTopAlgo.lib;TKHLR.lib;TKBool.lib;TKGeomAlgo.lib;TKPrim.lib;TKBO.lib;TKShHealing.lib;TKOffset.lib;TKFeat.lib;TKCAF.lib;TKVCAF.lib;TKIGES.lib;TKXSBase.lib;TKMesh.lib;TKXCAF.lib;TKSTEP.lib;TKSTEPBase.lib;TKXDESTEP.lib;TKXSDRAW.lib;TKSTL.lib;TKXml.lib;gdi32.lib;advapi32.lib;user32.lib;comdlg32.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>.\..\..\..\win64\vc10\bind\TKQADraw.dll</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>..\..\..\win64\vc10\libd;$(CSF_OPT_LIB64D);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -292,8 +300,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\QABugs\QABugs_9.cxx">
     </ClCompile>
-    <ClCompile Include="..\..\..\src\QABugs\QABugs_MyText.cxx">
-    </ClCompile>
     <ClCompile Include="..\..\..\src\QABugs\QABugs_PresentableObject.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\QADNaming\QADNaming.cxx">
@@ -325,74 +331,6 @@
     <ClCompile Include="..\..\..\src\QANCollection\QANCollection_Stl.cxx">
     </ClCompile>
     <ClCompile Include="..\..\..\src\QANCollection\QANCollection_Test.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_BooleanOperation.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_BooleanOperationFeat.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Box.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Chamfer.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Common.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Cut.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Cylinder.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Fillet.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Fuse.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Gluing.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_ImportShape.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Intersection.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Limitation.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Loader.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_LoaderParent.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Prism.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Revol.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_Sphere.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewBRepNaming\QANewBRepNaming_TopNaming.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewDBRepNaming\QANewDBRepNaming.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewDBRepNaming\QANewDBRepNaming_FeatureCommands.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewDBRepNaming\QANewDBRepNaming_PrimitiveCommands.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue_SDFaces.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue_shell.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue_util.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue_vertex.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Glue_wire.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Intersection.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Limitation.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_ReShaper.cxx">
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\QANewModTopOpe\QANewModTopOpe_Tools.cxx">
     </ClCompile>
 
   </ItemGroup>

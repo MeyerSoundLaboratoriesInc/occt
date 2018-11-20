@@ -74,7 +74,7 @@ static IFSelect_ReturnStatus XSControl_tpdraw
   const Standard_CString arg1 = pilot->Arg(1);
   const Standard_CString arg2 = pilot->Arg(2);
   const Standard_CString arg3 = pilot->Arg(3);
-  Handle(Transfer_TransientProcess) TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
+  const Handle(Transfer_TransientProcess) &TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (TP.IsNull()) { sout<<"No Transfer Read"<<endl; return IFSelect_RetError;}
   //        ****    tpdraw        ****
@@ -240,7 +240,7 @@ static IFSelect_ReturnStatus XSControl_tpcompound
 {
   Standard_Integer argc = pilot->NbWords();
   const Standard_CString arg1 = pilot->Arg(1);
-  Handle(Transfer_TransientProcess) TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
+  const Handle(Transfer_TransientProcess) &TP = XSControl::Session(pilot)->TransferReader()->TransientProcess();
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (TP.IsNull()) { sout<<"No Transfer Read"<<endl; return IFSelect_RetError;}
   //        ****    tpcompound        ****
@@ -283,10 +283,10 @@ static IFSelect_ReturnStatus XSControl_traccess
   Standard_Boolean cascomp = (pilot->Word(0).Location(1,'o',1,5) > 0);
   Standard_Boolean cassave = (pilot->Word(0).Location(1,'s',1,5) > 0);
   char nomsh[100], noms[100];
-  Handle(XSControl_TransferReader)  TR  = XSControl::Session(pilot)->TransferReader();
+  const Handle(XSControl_TransferReader) &TR = XSControl::Session(pilot)->TransferReader();
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (TR.IsNull()) { sout<<" manque init"<<endl; return IFSelect_RetError; }
-  Handle(Interface_InterfaceModel)  mdl = TR->Model();
+  const Handle(Interface_InterfaceModel) &mdl = TR->Model();
   if (mdl.IsNull()) { sout<<" modele absent"<<endl; return IFSelect_RetError; }
   Standard_Integer num = (argc > 1 ? IFSelect_Functions::GiveEntityNumber(XSControl::Session(pilot),arg1) : 0);
 
@@ -299,7 +299,7 @@ static IFSelect_ReturnStatus XSControl_traccess
     BRep_Builder B;
     B.MakeCompound(C);
 
-    Handle(TopTools_HSequenceOfShape) list = TR->ShapeResultList(Standard_True);
+    const Handle(TopTools_HSequenceOfShape) &list = TR->ShapeResultList(Standard_True);
     Standard_Integer i,  nb = list->Length();
     sout<<" TOUS RESULTATS par ShapeResultList, soit "<<nb<<endl;
     for (i = 1; i <= nb; i ++) {
@@ -382,7 +382,7 @@ static IFSelect_ReturnStatus XSControl_fromshape
   }
   
   //    IMPORT
-  Handle(XSControl_TransferReader)  TR  = XSControl::Session(pilot)->TransferReader();
+  const Handle(XSControl_TransferReader) &TR = XSControl::Session(pilot)->TransferReader();
   if (TR.IsNull()) { }  // sout<<"No read transfer (import) recorded"<<endl;
   else {
     yena = Standard_True;
@@ -459,8 +459,8 @@ static IFSelect_ReturnStatus XSControl_fromshape
   }
 
   //   ET EN EXPORT ?
-  Handle(Transfer_FinderProcess) FP = XSControl::Session(pilot)->MapWriter();
-  if (FP.IsNull()) { }  //sout<<"No write transfer (export) recorded"<<endl;
+  const Handle(Transfer_FinderProcess) &FP = XSControl::Session(pilot)->TransferWriter()->FinderProcess();
+  if (FP.IsNull()) { }
   else {
     yena = Standard_True;
     Handle(Transfer_Finder) fnd = TransferBRep::ShapeMapper (FP,Shape);
@@ -528,7 +528,7 @@ static IFSelect_ReturnStatus XSControl_trconnexentities
   Standard_Integer argc = pilot->NbWords();
   const Standard_CString arg1 = pilot->Arg(1);
   //        ****    connected entities (last transfer)         ****
-  Handle(XSControl_TransferReader)  TR  = XSControl::Session(pilot)->TransferReader();
+  const Handle(XSControl_TransferReader) &TR  = XSControl::Session(pilot)->TransferReader();
   Handle(Transfer_TransientProcess) TP;
   if (!TR.IsNull()) TP = TR->TransientProcess();
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
@@ -546,7 +546,7 @@ static IFSelect_ReturnStatus XSControl_trconnexentities
     XSControl_ConnectedShapes::AdjacentEntities (Shape,TP,TopAbs_FACE);
   Standard_Integer i, nb = list->Length();
   sout<<nb<<" Entities produced Connected Shapes :"<<endl;
-  Handle(Interface_InterfaceModel) model = XSControl::Session(pilot)->Model();
+  const Handle(Interface_InterfaceModel) &model = XSControl::Session(pilot)->Model();
   sout<<"(";
   for (i = 1; i <= nb; i ++) {
     if (i > 1) sout<<",";
@@ -618,7 +618,7 @@ static IFSelect_ReturnStatus XSControl_trimport
   //  Starting Transfer
 
   WS->InitTransferReader (0);
-  Handle(XSControl_TransferReader) TR = WS->TransferReader();
+  const Handle(XSControl_TransferReader) &TR = WS->TransferReader();
   if (TR.IsNull()) { sout<<" init not done or failed"<<endl; return IFSelect_RetError; }
 
   TR->BeginTransfer();
@@ -702,17 +702,21 @@ static IFSelect_ReturnStatus XSControl_twrite
 //  ####                                                              ####
 //  ######################################################################
 
-static int initactor = 0;
-
+static int THE_XSControl_FuncShape_initactor = 0;
 
 //=======================================================================
 //function : Init
-//purpose  : 
+//purpose  :
 //=======================================================================
 
 void  XSControl_FuncShape::Init ()
 {
-  if (initactor) return;  initactor = 1;
+  if (THE_XSControl_FuncShape_initactor)
+  {
+    return;
+  }
+
+  THE_XSControl_FuncShape_initactor = 1;
 
   IFSelect_Act::SetGroup("DE: General");
 
@@ -761,7 +765,7 @@ Standard_Integer  XSControl_FuncShape::MoreShapes
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (list.IsNull()) list = new TopTools_HSequenceOfShape();
   if (name[0] == '*' && (name[1] == '\0' || (name[1] == '*' && name[2] == '\0'))) {
-    Handle(Transfer_TransientProcess)  TP  = session->TransferReader()->TransientProcess();
+    const Handle(Transfer_TransientProcess) &TP = session->TransferReader()->TransientProcess();
     if (TP.IsNull()) { sout<<"last transfer : unknown"<<endl;return 0; }
     Handle(TopTools_HSequenceOfShape) li = TransferBRep::Shapes(TP,(name[1] == '\0'));
     if (li.IsNull()) return 0;
@@ -781,7 +785,11 @@ Standard_Integer  XSControl_FuncShape::MoreShapes
   //  liste
   if (n1 <= n2 && n1 > 0) {
     char nom[50], nomsh[60];  Standard_Integer nbsh = 0;
-    for (i = 0; i < paro; i ++) nom[i]=name[i];   nom[paro] = '\0';
+    for (i = 0; i < paro; i ++)
+    {
+      nom[i]=name[i];
+    }
+    nom[paro] = '\0';
     sout<<"Shapes DRAW named : "<<nom<<n1<<" to "<<nom<<n2;
     for (i = n1; i <= n2 ; i ++) {
       const char* nomshh = &nomsh[0];

@@ -17,6 +17,7 @@
 #include <AIS_InteractiveContext.hxx>
 #include <Aspect_TypeOfMarker.hxx>
 #include <Bnd_Box.hxx>
+#include <BRep_Builder.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
@@ -45,13 +46,12 @@
 #include <StdSelect_ViewerSelector3d.hxx>
 #include <StlAPI.hxx>
 #include <StlAPI_Writer.hxx>
-#include <StlMesh_Mesh.hxx>
-#include <StlMesh_SequenceOfMeshTriangle.hxx>
 #include <TColgp_SequenceOfXYZ.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TColStd_Array1OfReal.hxx>
 #include <TColStd_HPackedMapOfInteger.hxx>
 #include <TColStd_MapIteratorOfPackedMapOfInteger.hxx>
+#include <TopoDS_Face.hxx>
 #include <TopoDS_Shape.hxx>
 #include <V3d_View.hxx>
 #include <ViewerTest.hxx>
@@ -67,11 +67,6 @@
 #include <XSDRAWSTLVRML_DataSource.hxx>
 #include <XSDRAWSTLVRML_DataSource3D.hxx>
 #include <XSDRAWSTLVRML_DrawableMesh.hxx>
-
-// avoid warnings on 'extern "C"' functions returning C++ classes
-#ifdef _MSC_VER
-#pragma warning(4:4190)
-#endif
 
 #ifndef _STDIO_H
 #include <stdio.h>
@@ -95,27 +90,51 @@ static Standard_Integer writestl
     }
     StlAPI_Writer aWriter;
     aWriter.ASCIIMode() = isASCIIMode;
-    StlAPI_ErrorStatus aStatus = aWriter.Write (aShape, argv[2]);
-
-    switch (aStatus)
-    {
-    case StlAPI_MeshIsEmpty: di << "** Error **: Mesh is empty. Please, compute triangulation before."; break;
-    case StlAPI_CannotOpenFile: di << "** Error **: Cannot create/open a file with the passed name."; break;
-    case StlAPI_StatusOK: default: break;
-    }
+    Standard_Boolean isOK = aWriter.Write (aShape, argv[2]);
+    if (!isOK)
+       di << "** Error **: Mesh writing has been failed.\n";
   }
   return 0;
 }
 
-static Standard_Integer readstl
-(Draw_Interpretor& di, Standard_Integer argc, const char** argv)
+//=============================================================================
+//function : readstl
+//purpose  : Reads stl file
+//=============================================================================
+static Standard_Integer readstl(Draw_Interpretor& theDI,
+                                Standard_Integer theArgc,
+                                const char** theArgv)
 {
-  if (argc<3) di << "wrong number of parameters"    << "\n";
-  else {
-    TopoDS_Shape aShape ;
-    StlAPI::Read(aShape,argv[2]);
-    DBRep::Set(argv[1],aShape);
+  if (theArgc < 3)
+  {
+    theDI << "wrong number of parameters" << "\n";
+    return 1;
   }
+  else
+  {
+    if (theArgc == 4 &&
+        strcmp("triangulation", theArgv[3]) == 0)
+    {
+      // Read STL file to the triangulation.
+      Handle(Draw_ProgressIndicator) aProgress = new Draw_ProgressIndicator (theDI, 1);
+      Handle(Poly_Triangulation) aTriangulation = RWStl::ReadFile (theArgv[2], aProgress);
+
+      TopoDS_Face aFace;
+      BRep_Builder aB;
+      aB.MakeFace(aFace);
+      aB.UpdateFace(aFace, aTriangulation);
+      DBRep::Set(theArgv[1], aFace);
+    }
+    else
+    {
+      TopoDS_Shape aShape;
+      Standard_DISABLE_DEPRECATION_WARNINGS
+      StlAPI::Read(aShape, theArgv[2]);
+      Standard_ENABLE_DEPRECATION_WARNINGS
+      DBRep::Set(theArgv[1], aShape);
+    }
+  }
+
   return 0;
 }
 
@@ -265,7 +284,7 @@ static Standard_Integer createmesh
   // Progress indicator
   OSD_Path aFile( argv[2] );
   Handle(Draw_ProgressIndicator) aProgress = new Draw_ProgressIndicator (di, 1);
-  Handle(StlMesh_Mesh) aSTLMesh = RWStl::ReadFile (aFile, aProgress);
+  Handle(Poly_Triangulation) aSTLMesh = RWStl::ReadFile (aFile, aProgress);
 
   di << "Reading OK...\n";
   Handle( XSDRAWSTLVRML_DataSource ) aDS = new XSDRAWSTLVRML_DataSource( aSTLMesh );
@@ -280,7 +299,7 @@ static Standard_Integer createmesh
 
   // Hide all nodes by default
   Handle(TColStd_HPackedMapOfInteger) aNodes = new TColStd_HPackedMapOfInteger();
-  Standard_Integer aLen = aSTLMesh->Vertices().Length();
+  Standard_Integer aLen = aSTLMesh->Nodes().Length();
   for ( Standard_Integer anIndex = 1; anIndex <= aLen; anIndex++ )
     aNodes->ChangeMap().Add( anIndex );
   aMesh->SetHiddenNodes( aNodes );
@@ -389,7 +408,7 @@ static Standard_Integer setcolor
       if( aContext.IsNull() )
         di << "The context is null\n";
       else
-        aContext->Redisplay( aMesh );
+        aContext->Redisplay (aMesh, Standard_True);
     }
   }
   return 0;
@@ -425,7 +444,7 @@ static Standard_Integer meshmat
       if (argc == 4)
       {
         Standard_Real aTransparency = Draw::Atof(argv[3]);
-        aMatAsp.SetTransparency(aTransparency);
+        aMatAsp.SetTransparency (Standard_ShortReal (aTransparency));
       }
       aMesh->GetDrawer()->SetMaterial( MeshVS_DA_FrontMaterial, aMatAsp );
       aMesh->GetDrawer()->SetMaterial( MeshVS_DA_BackMaterial, aMatAsp );
@@ -435,7 +454,7 @@ static Standard_Integer meshmat
       if( aContext.IsNull() )
         di << "The context is null\n";
       else
-        aContext->Redisplay( aMesh );
+        aContext->Redisplay (aMesh, Standard_True);
     }
   }
   return 0;
@@ -459,7 +478,7 @@ static Standard_Integer shrink
       if( aContext.IsNull() )
         di << "The context is null\n";
       else
-        aContext->Redisplay( aMesh );
+        aContext->Redisplay (aMesh, Standard_True);
     }
   }
   return 0;
@@ -477,7 +496,7 @@ static Standard_Integer closed (Draw_Interpretor& theDI, Standard_Integer theArg
     Handle(MeshVS_Mesh) aMesh = getMesh (theArgv[1], theDI);
     if (!aMesh.IsNull())
     {
-      Standard_Integer aFlag = Draw::Atoi (theArgv[2]);
+      Standard_Boolean aFlag = Draw::Atoi (theArgv[2]) != 0;
       aMesh->GetDrawer()->SetBoolean (MeshVS_DA_SupressBackFaces, aFlag);
 
       Handle( AIS_InteractiveContext ) aContext = ViewerTest::GetAISContext();
@@ -487,7 +506,7 @@ static Standard_Integer closed (Draw_Interpretor& theDI, Standard_Integer theArg
       }
       else
       {
-        aContext->Redisplay (aMesh);
+        aContext->Redisplay (aMesh, Standard_True);
       }
     }
   }
@@ -512,10 +531,7 @@ static Standard_Integer mdisplay
         di << "The context is null\n";
       else
       {
-        if( aContext->HasOpenedContext() )
-          aContext->CloseLocalContext();
-
-        aContext->Display( aMesh );
+        aContext->Display (aMesh, Standard_True);
       }
     }
   }
@@ -538,10 +554,7 @@ static Standard_Integer merase
         di << "The context is null\n";
       else
       {
-        if( aContext->HasOpenedContext() )
-          aContext->CloseLocalContext();
-
-        aContext->Erase( aMesh );
+        aContext->Erase (aMesh, Standard_True);
       }
     }
     else
@@ -598,10 +611,10 @@ static Standard_Integer hidesel
         }
       }
     }
-    aContext->ClearSelected();
+    aContext->ClearSelected (Standard_False);
     aMesh->SetHiddenNodes( aHiddenNodes );
     aMesh->SetHiddenElems( aHiddenElements );
-    aContext->Redisplay( aMesh );
+    aContext->Redisplay (aMesh, Standard_True);
   }
 
   return 0;
@@ -652,7 +665,7 @@ static Standard_Integer showonly
     }
     aMesh->SetHiddenNodes( aHiddenNodes );
     aMesh->SetHiddenElems( aHiddenElements );
-    aContext->Redisplay( aMesh );
+    aContext->Redisplay (aMesh, Standard_True);
   }
 
   return 0;
@@ -682,7 +695,7 @@ static Standard_Integer showall
   {
     aMesh->SetHiddenNodes( new TColStd_HPackedMapOfInteger() );
     aMesh->SetHiddenElems( new TColStd_HPackedMapOfInteger() );
-    aContext->Redisplay( aMesh );
+    aContext->Redisplay (aMesh, Standard_True);
   }
 
   return 0;
@@ -727,8 +740,8 @@ static Standard_Integer meshcolors( Draw_Interpretor& di,
       if( !aMesh.IsNull() )
       {
         TCollection_AsciiString aMode = TCollection_AsciiString (argv[2]);
-        Quantity_Color aColor1( (Quantity_NameOfColor)( Quantity_NOC_BLUE1 ) );
-        Quantity_Color aColor2( (Quantity_NameOfColor)( Quantity_NOC_RED1 ) );
+        Quantity_Color aColor1(Quantity_NOC_BLUE1);
+        Quantity_Color aColor2(Quantity_NOC_RED1);
         if( aMode.IsEqual("elem1") || aMode.IsEqual("elem2") || aMode.IsEqual("nodal") || aMode.IsEqual("nodaltex") || aMode.IsEqual("none") )
         {
           Handle(MeshVS_PrsBuilder) aTempBuilder;
@@ -839,16 +852,11 @@ static Standard_Integer meshcolors( Draw_Interpretor& di,
             aBuilder->SetInvalidColor(Quantity_NOC_BLACK);
             aBuilder->SetTextureCoords(aScaleMap);
             aMesh->AddBuilder(aBuilder, Standard_True);
-
-            //set viewer to display texures
-            const Handle(V3d_Viewer)& aViewer = anIC->CurrentViewer();
-            for (aViewer->InitActiveViews(); aViewer->MoreActiveViews(); aViewer->NextActiveViews())
-                 aViewer->ActiveView()->SetSurfaceDetail(V3d_TEX_ALL);
           }
 
-          aMesh->GetDrawer()->SetBoolean ( MeshVS_DA_ColorReflection, Standard_Boolean(aReflection) );
+          aMesh->GetDrawer()->SetBoolean (MeshVS_DA_ColorReflection, aReflection != 0);
 
-          anIC->Redisplay( aMesh );
+          anIC->Redisplay (aMesh, Standard_True);
         }
         else
         {
@@ -924,7 +932,7 @@ static Standard_Integer meshvectors( Draw_Interpretor& di,
       }
       else if (aParam == "-issimple")
       {
-        isSimplePrs = Draw::Atoi(argv[anIdx]);
+        isSimplePrs = Draw::Atoi(argv[anIdx]) != 0;
       }
       aParam.Clear();
     }
@@ -964,18 +972,32 @@ static Standard_Integer meshvectors( Draw_Interpretor& di,
     Standard_Integer aNbNodes;
     MeshVS_EntityType aEntType;
 
+    TColStd_Array1OfReal aCoords(1, 3);
+    aCoords.Init (0.);
     TColStd_MapIteratorOfPackedMapOfInteger anIter( anAllIDs );
     for ( ; anIter.More(); anIter.Next() )
     {
-      TColStd_Array1OfReal aCoords(1, 3);
-      if (anIsElement)
-        aMesh->GetDataSource()->GetNormal(anIter.Key(), 3, aCoords.ChangeValue(1), aCoords.ChangeValue(2), aCoords.ChangeValue(3));
-      else
-        aMesh->GetDataSource()->GetGeom(anIter.Key(), Standard_False, aCoords, aNbNodes, aEntType);
+      Standard_Boolean IsValidData = Standard_False; 
+      if (anIsElement) {
+        aMesh->GetDataSource()->GetGeomType(anIter.Key(), anIsElement, aEntType);
+        if (aEntType == MeshVS_ET_Face)
+          IsValidData = aMesh->GetDataSource()->GetNormal(anIter.Key(), 3, aCoords.ChangeValue(1), aCoords.ChangeValue(2), aCoords.ChangeValue(3));
+      } else
+        IsValidData = aMesh->GetDataSource()->GetGeom(anIter.Key(), Standard_False, aCoords, aNbNodes, aEntType);
 
-      gp_Vec aNorm = gp_Vec(aCoords.Value(1), aCoords.Value(2), aCoords.Value(3));
-      if( !aNorm.Magnitude() )
+      gp_Vec aNorm;
+      if(IsValidData)
+      { 
+        aNorm = gp_Vec(aCoords.Value(1), aCoords.Value(2), aCoords.Value(3));
+        if(aNorm.Magnitude() < gp::Resolution())
+        {
+          aNorm = gp_Vec(0,0,1); //method GetGeom(...) returns coordinates of nodes
+        }
+      }
+      else
+      {
         aNorm = gp_Vec(0,0,1);
+      }
       aBuilder->SetVector(anIsElement, anIter.Key(), aNorm.Normalized());
     }
 
@@ -983,7 +1005,7 @@ static Standard_Integer meshvectors( Draw_Interpretor& di,
     aMesh->GetDrawer()->SetDouble ( MeshVS_DA_VectorArrowPart, anArrowPart );
   }
 
-  anIC->Redisplay( aMesh );
+  anIC->Redisplay (aMesh, Standard_True);
 
   return 0;
 }
@@ -1106,7 +1128,7 @@ static Standard_Integer meshdeform( Draw_Interpretor& di,
 
   aMesh->SetDataSource(aDefDS);
 
-  anIC->Redisplay( aMesh );
+  anIC->Redisplay (aMesh, Standard_False);
 
   Handle( V3d_View ) aView = ViewerTest::CurrentView();
   if ( !aView.IsNull() )
@@ -1160,7 +1182,7 @@ static Standard_Integer mesh_edge_width( Draw_Interpretor& di,
       }
 
       aDrawer->SetDouble( MeshVS_DA_EdgeWidth, aWidth );
-      anIC->Redisplay( aMesh );
+      anIC->Redisplay (aMesh, Standard_True);
   }
   catch ( Standard_Failure )
   {
@@ -1211,7 +1233,7 @@ void  XSDRAWSTLVRML::InitCommands (Draw_Interpretor& theCommands)
 
   theCommands.Add ("writevrml", "shape file [version VRML#1.0/VRML#2.0 (1/2): 2 by default] [representation shaded/wireframe/both (0/1/2): 1 by default]",__FILE__,writevrml,g);
   theCommands.Add ("writestl",  "shape file [ascii/binary (0/1) : 1 by default] [InParallel (0/1) : 0 by default]",__FILE__,writestl,g);
-  theCommands.Add ("readstl",   "shape file",__FILE__,readstl,g);
+  theCommands.Add ("readstl",   "shape file [triangulation: no by default]",__FILE__,readstl,g);
   theCommands.Add ("loadvrml" , "shape file",__FILE__,loadvrml,g);
 
   theCommands.Add ("meshfromstl",     "creates MeshVS_Mesh from STL file",            __FILE__, createmesh,      g );

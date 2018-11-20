@@ -16,12 +16,12 @@
 #ifndef _Graphic3d_Camera_HeaderFile
 #define _Graphic3d_Camera_HeaderFile
 
+#include <Graphic3d_CameraTile.hxx>
 #include <Graphic3d_Mat4d.hxx>
 #include <Graphic3d_Mat4.hxx>
 #include <Graphic3d_Vec3.hxx>
 #include <Graphic3d_WorldViewProjState.hxx>
-
-#include <NCollection_Handle.hxx>
+#include <NCollection_Lerp.hxx>
 
 #include <gp_Dir.hxx>
 #include <gp_Pnt.hxx>
@@ -44,46 +44,50 @@ private:
   template<typename Elem_t>
   struct TransformMatrices
   {
+
+    //! Default constructor.
+    TransformMatrices() : myIsOrientationValid (Standard_False), myIsProjectionValid (Standard_False) {}
+
+    //! Initialize orientation.
     void InitOrientation()
     {
-      Orientation = new NCollection_Mat4<Elem_t>();
+      myIsOrientationValid = Standard_True;
+      Orientation.InitIdentity();
     }
 
+    //! Initialize projection.
     void InitProjection()
     {
-      MProjection = new NCollection_Mat4<Elem_t>();
-      LProjection = new NCollection_Mat4<Elem_t>();
-      RProjection = new NCollection_Mat4<Elem_t>();
+      myIsProjectionValid = Standard_True;
+      MProjection.InitIdentity();
+      LProjection.InitIdentity();
+      RProjection.InitIdentity();
     }
 
-    void ResetOrientation()
-    {
-      Orientation.Nullify();
-    }
+    //! Invalidate orientation.
+    void ResetOrientation() { myIsOrientationValid = Standard_False; }
 
-    void ResetProjection()
-    {
-      MProjection.Nullify();
-      LProjection.Nullify();
-      RProjection.Nullify();
-    }
+    //! Invalidate projection.
+    void ResetProjection()  { myIsProjectionValid  = Standard_False; }
 
-    Standard_Boolean IsOrientationValid()
-    {
-      return !Orientation.IsNull();
-    }
+    //! Return true if Orientation was not invalidated.
+    Standard_Boolean IsOrientationValid() const { return myIsOrientationValid; }
 
-    Standard_Boolean IsProjectionValid()
-    {
-      return !MProjection.IsNull() &&
-             !LProjection.IsNull() &&
-             !RProjection.IsNull();
-    }
+    //! Return true if Projection was not invalidated.
+    Standard_Boolean IsProjectionValid()  const { return myIsProjectionValid;  }
 
-    NCollection_Handle< NCollection_Mat4<Elem_t> > Orientation;
-    NCollection_Handle< NCollection_Mat4<Elem_t> > MProjection;
-    NCollection_Handle< NCollection_Mat4<Elem_t> > LProjection;
-    NCollection_Handle< NCollection_Mat4<Elem_t> > RProjection;
+  public:
+
+    NCollection_Mat4<Elem_t> Orientation;
+    NCollection_Mat4<Elem_t> MProjection;
+    NCollection_Mat4<Elem_t> LProjection;
+    NCollection_Mat4<Elem_t> RProjection;
+
+  private:
+
+    Standard_Boolean myIsOrientationValid;
+    Standard_Boolean myIsProjectionValid;
+
   };
 
 public:
@@ -375,6 +379,14 @@ public:
     return myIODType;
   }
 
+  //! Get current tile.
+  const Graphic3d_CameraTile& Tile() const { return myTile; }
+
+  //! Sets the Tile defining the drawing sub-area within View.
+  //! Note that tile defining a region outside the view boundaries is also valid - use method Graphic3d_CameraTile::Cropped() to assign a cropped copy.
+  //! @param theTile tile definition
+  Standard_EXPORT void SetTile (const Graphic3d_CameraTile& theTile);
+
 //! @name Basic camera operations
 public:
 
@@ -386,7 +398,16 @@ public:
   //! Calculate view plane size at center (target) point
   //! and distance between ZFar and ZNear planes.
   //! @return values in form of gp_Pnt (Width, Height, Depth).
-  Standard_EXPORT gp_XYZ ViewDimensions() const;
+  gp_XYZ ViewDimensions() const
+  {
+    return ViewDimensions (Distance());
+  }
+
+  //! Calculate view plane size at center point with specified Z offset
+  //! and distance between ZFar and ZNear planes.
+  //! @param theZValue [in] the distance from the eye in eye-to-center direction
+  //! @return values in form of gp_Pnt (Width, Height, Depth).
+  Standard_EXPORT gp_XYZ ViewDimensions (const Standard_Real theZValue) const;
 
   //! Calculate WCS frustum planes for the camera projection volume.
   //! Frustum is a convex volume determined by six planes directing
@@ -619,6 +640,7 @@ private:
 
   Projection    myProjType; //!< Projection type used for rendering.
   Standard_Real myFOVy;     //!< Field Of View in y axis.
+  Standard_Real myFOVyTan;  //!< Field Of View as Tan(DTR_HALF * myFOVy)
   Standard_Real myZNear;    //!< Distance to near clipping plane.
   Standard_Real myZFar;     //!< Distance to far clipping plane.
   Standard_Real myAspect;   //!< Width to height display ratio.
@@ -629,6 +651,8 @@ private:
 
   Standard_Real myIOD;     //!< Intraocular distance value.
   IODType       myIODType; //!< Intraocular distance definition type.
+
+  Graphic3d_CameraTile myTile;//!< Tile defining sub-area for drawing
 
   mutable TransformMatrices<Standard_Real>      myMatricesD;
   mutable TransformMatrices<Standard_ShortReal> myMatricesF;
@@ -641,5 +665,27 @@ public:
 };
 
 DEFINE_STANDARD_HANDLE (Graphic3d_Camera, Standard_Transient)
+
+//! Linear interpolation tool for camera orientation and position.
+//! This tool interpolates camera parameters scale, eye, center, rotation (up and direction vectors) independently.
+//!
+//! Eye/Center interpolation is performed through defining an anchor point in-between Center and Eye.
+//! The anchor position is defined as point near to the camera point which has smaller translation part.
+//! The main idea is to keep the distance between Center and Eye
+//! (which will change if Center and Eye translation will be interpolated independently).
+//! E.g.:
+//!  - When both Center and Eye are moved at the same vector -> both will be just translated by straight line
+//!  - When Center is not moved -> camera Eye    will move around Center through arc
+//!  - When Eye    is not moved -> camera Center will move around Eye    through arc
+//!  - When both Center and Eye are move by different vectors -> transformation will be something in between,
+//!    and will try interpolate linearly the distance between Center and Eye.
+//!
+//! This transformation might be not in line with user expectations.
+//! In this case, application might define intermediate camera positions for interpolation
+//! or implement own interpolation logic.
+template<>
+Standard_EXPORT void NCollection_Lerp<Handle(Graphic3d_Camera)>::Interpolate (const double theT,
+                                                                              Handle(Graphic3d_Camera)& theResult) const;
+typedef NCollection_Lerp<Handle(Graphic3d_Camera)> Graphic3d_CameraLerp;
 
 #endif

@@ -111,8 +111,7 @@ Data types described in a package may include one or  more of the following data
   * Pointers to other object classes
 Inside a package, two data types cannot bear the same  name. 
 
-@image html /user_guides/foundation_classes/images/foundation_classes_image003.png  "Contents of a package"
-@image latex /user_guides/foundation_classes/images/foundation_classes_image003.png  "Contents of a package"
+@figure{/user_guides/foundation_classes/images/foundation_classes_image003.png,"Contents of a package",420}
 
 **Methods** are either **functions** or **procedures**.  Functions return an object, whereas procedures only communicate by passing arguments.  In both cases, when the transmitted object is an instance manipulated by a  handle, its identifier is passed. There are three categories of methods: 
 * **Object  constructor** Creates an instance of the described class. A class  will have one or more object constructors with various different arguments or none. 
@@ -143,8 +142,7 @@ The data types in Open CASCADE Technology fall into two  categories:
   * Data types manipulated by handle (or reference)
   * Data types manipulated by value
   
-@image html /user_guides/foundation_classes/images/foundation_classes_image004.png  "Manipulation of data types"
-@image latex /user_guides/foundation_classes/images/foundation_classes_image004.png  "Manipulation of data types"
+@figure{/user_guides/foundation_classes/images/foundation_classes_image004.png,"Manipulation of data types",420}
   
 A data type is implemented as a class. The class not only  defines its data representation and the methods available on instances, but it  also suggests how the instance will be manipulated. 
   * A variable of a type manipulated by value contains the instance  itself.
@@ -213,15 +211,13 @@ There are three categories of types which are manipulated by  value:
   * Types defined by classes not inheriting from *Standard_Transient*, whether directly or not.
 Types which are manipulated by value behave in a more direct  fashion than those manipulated by handle and thus can be expected to perform  operations faster, but they cannot be stored independently in a file. 
 
-@image html /user_guides/foundation_classes/images/foundation_classes_image005.png   "Manipulation of a data type by value"
-@image latex /user_guides/foundation_classes/images/foundation_classes_image005.png   "Manipulation of a data type by value"
+@figure{/user_guides/foundation_classes/images/foundation_classes_image005.png,"Manipulation of a data type by value",420}
 
 @subsubsection occt_fcug_2_1_3 Types manipulated by reference (handle)
 
 These are types defined by classes inheriting from the *Transient* class.
   
-@image html /user_guides/foundation_classes/images/foundation_classes_image006.png   "Manipulation of a data type by reference"
-@image latex /user_guides/foundation_classes/images/foundation_classes_image006.png   "Manipulation of a data type by reference"
+@figure{/user_guides/foundation_classes/images/foundation_classes_image006.png,"Manipulation of a data type by reference",420}
   
 @subsubsection occt_fcug_2_1_4 When is it necessary to use a handle?
 
@@ -752,7 +748,7 @@ In order to actually convert signals to exceptions, macro *OCC_CATCH_SIGNALS* ne
 
 @subsubsection occt_fcug_2_4_4 Implementation on various platforms. 
 
-The exception handling mechanism in Open CASCADE Technology  is implemented in different ways depending on the preprocessor macros *NO_CXX_EXCEPTIONS*  and *OCC_CONVERT_SIGNALS*, which shall be consistently defined by compilation  procedures for both Open CASCADE Technology and user applications: 
+The exception handling mechanism in Open CASCADE Technology  is implemented in different ways depending on the preprocessor macro *OCC_CONVERT_SIGNALS*, which shall be consistently defined by compilation  procedures for both Open CASCADE Technology and user applications: 
 
 1. On  Windows, these macros are not defined by default, and normal C++  exceptions are used in all cases, including throwing from signal handler. Thus the  behavior is as expected in C++. 
 
@@ -763,18 +759,7 @@ The exception handling mechanism in Open CASCADE Technology  is implemented in d
    * macro *OCC_CATCH_SIGNALS* is necessary (besides call to  *OSD::SetSignal()* described above) for conversion of signals into exceptions;
    * the destructors for automatic C++ objects created in the code  after that macro and till the place where signal is raised will not be called in  case of signal, since no C++ stack unwinding is performed by long jump.
 
-3. On  Linux Open CASCADE Technology can also be compiled in compatibility  mode. In that case macro  *NO_CXX_EXCEPTIONS* is defined and the C++ exceptions are simulated with C long  jumps. As a consequence, the behavior is slightly different from that expected  in the C++ standard.  
-
-While exception handling with  *NO_CXX_EXCEPTIONS* is very similar to C++ by syntax, it has a number of  peculiarities that should be taken into account: 
-
-* try and catch are actually macros defined in the file *Standard_ErrorHandler.hxx*. Therefore, including this file is necessary for  handling OCCT exceptions;
-* due to being a macro, catch cannot contain a declaration of the  exception object after its type; only type is allowed in the catch statement.  Use method *Standard_Failure::Caught()* to access an exception object;
-* catch macro may conflict with some STL classes that might use  catch(...) statements in their header files. So STL headers should not be  included after *Standard_ErrorHandler.hxx*;
-* Open CASCADE Technology try/catch block will not handle normal  C++ exceptions; however this can be achieved using special workarounds;
-* the try macro defines a C++ object that holds an entry point in the  exception handler. Therefore if exception is raised by code located immediately  after the try/catch block but on the same nesting level as *try*, it may  be handled by that *catch*. This may lead to unexpected behavior,  including infinite loop. To avoid that, always surround the try/catch block with curved brackets;
-* the destructors of C++ objects allocated on the stack after  handler initialization are not called by exception raising.
-
-In general, for writing platform-independent code it is recommended  to insert macros *OCC_CATCH_SIGNALS* in try {} blocks or other code where signals  may happen. For compatibility with previous versions of Open CASCADE Technology  the limitations described above for *NO_CXX_EXCEPTIONS* shall be assumed. 
+In general, for writing platform-independent code it is recommended  to insert macros *OCC_CATCH_SIGNALS* in try {} blocks or other code where signals  may happen.
 
 @subsection occt_fcug_2_5 Plug-In  Management
 
@@ -799,7 +784,7 @@ Foundation classes provide in the package *Plugin* a  method named *Load()*, whi
 That method reads the information regarding available  plug-ins and their locations from the resource file *Plugin* found by environment  variable *CSF_PluginDefaults*:
 
 ~~~~~ 
-$CSF_PluginDefaults/.Plugin 
+$CSF_PluginDefaults/Plugin 
 ~~~~~
 
 The *Load* method looks for the library name in the resource file or registry  through its GUID, for example, on UNIX:
@@ -807,132 +792,85 @@ The *Load* method looks for the library name in the resource file or registry  t
 ! METADATADRIVER whose value must be OS or DM.
 
 ! FW
-a148e300-5740-11d1-a904-080036aaa103.Location:
- 
-libFWOSPlugin.so
-a148e300-5740-11d1-a904-080036aaa103.CCL:
-/adv_44/CAS/BAG/FW-K4C/inc/FWOS.ccl
-
-! FWDM
-a148e301-5740-11d1-a904-080036aaa103.Location:
-libFWDMPlugin.so
-a148e301-5740-11d1-a904-080036aaa103.CCL:
-/adv_44/CAS/BAG/DESIGNMANAGER-K4C/inc/DMAccess.ccl|/
-adv_44/CAS/BAG/DATABASE-K4C/inc/FWDMCommands.ccl
-a148e301-5740-11d1-a904-080036aaa103.Message:  /adv_44/CAS/
-BAG/DESIGNMANAGER-K4C/etc/locale/DMAccess
-
-! Copy-Paste
-5ff7dc00-8840-11d1-b5c2-00a0c9064368.Location:
-libCDMShapeDriversPlugin.so
-5ff7dc01-8840-11d1-b5c2-00a0c9064368.Location:
-libCDMShapeDriversPlugin.so
-5ff7dc02-8840-11d1-b5c2-00a0c9064368.Location:
-libCDMShapeDriversPlugin.so
-5ff7dc03-8840-11d1-b5c2-00a0c9064368.Location:
-libCDMShapeDriversPlugin.so
-5ff7dc04-8840-11d1-b5c2-00a0c9064368.Location:
-libCDMShapeDriversPlugin.so
-
-! Plugs 2d plotters:
-d0d722a2-b4c9-11d1-b561-0000f87a4710.location: FWOSPlugin
-d0d722a2-b4c9-11d1-b561-0000f87a4710.CCL: /adv_44/CAS/BAG/
-VIEWERS-K4C/inc/CCLPlotters.ccl
-d0d722a2-b4c9-11d1-b561-0000f87a4710.Message: /adv_44/CAS/
-BAG/VIEWERS-K4C/etc/locale/CCLPlotters
-
-!SHAPES
-e3708f72-b1a8-11d0-91c2-080036424703.Location:
-libBRepExchangerPlugin.so
-e3708f72-b1a8-11d0-91c2-080036424703.CCL: /adv_44/CAS/BAG/
-FW-K4C/inc/BRep.ccl
+a148e300-5740-11d1-a904-080036aaa103.Location: libFWOSPlugin.so
 ~~~~~
 
-
-Then the *Load* method loads the library according to the rules of the operating system  of the host machine (for example, by using environment variables such as  *LD_LIBRARY_PATH* with Unix and *PATH* with Windows). After that it invokes the *Factory*  method to return the object which supports the required service.
+Then the *Load* method loads the library according to the rules of the operating system  of the host machine (for example, by using environment variables such as  *LD_LIBRARY_PATH* with Unix and *PATH* with Windows). After that it invokes the *PLUGINFACTORY*  method to return the object, which supports the required service.
 The client may then call the functions supported by this  object. 
 
 #### C++ Client Plug-In  Implementation
 
-To invoke one of the services provided by the plug-in, you  may call the *Plugin::ServiceFactory* global function with the *Standard_GUID* of the requested service as follows: 
+To invoke one of the services provided by the plug-in, you  may call the *Plugin::Load()* global function with the *Standard_GUID* of the requested service as follows:
 
-~~~~~
-Handle(FADriver_PartStorer)::DownCast 
-(PlugIn::ServiceFactory 
-(PlugIn_ServiceId(yourStandardGUID))) 
+~~~~~{.cpp}
+Handle(FADriver_PartStorer)::DownCast(PlugIn::Load (yourStandardGUID));
 ~~~~~
 
-Let us take *FAFactory.cxx* as an example:
+Let us take *FAFactory.hxx* and *FAFactory.cxx* as an example:
 
+~~~~~{.cpp}
+#include <Standard_Macro.hxx>
+#include <Standard_GUID.hxx>
+#include <Standard_Transient.hxx>
+
+class FAFactory
+{
+public:
+  Standard_EXPORT static Handle(Standard_Transient) Factory (const Standard_GUID& theGUID);
+};
 ~~~~~
-#include <FAFactory.ixx>
+
+~~~~~{.cpp}
+#include <FAFactory.hxx>
 
 #include <FADriver_PartRetriever.hxx>
 #include <FADriver_PartStorer.hxx>
 #include <FirstAppSchema.hxx>
-#include <Standard_GUID.hxx>
 #include <Standard_Failure.hxx>
 #include <FACDM_Application.hxx>
 #include <Plugin_Macro.hxx>
 
-PLUGIN(FAFactory)
-
-static Standard_GUID 
-       StorageDriver(“45b3c690-22f3-11d2-b09e-0000f8791463”);
-static Standard_GUID 
-       RetrievalDriver(“45b3c69c-22f3-11d2-b09e-0000f8791463”);
-static Standard_GUID 
-       Schema(“45b3c6a2-22f3-11d2-b09e-0000f8791463”);
+static Standard_GUID StorageDriver  ("45b3c690-22f3-11d2-b09e-0000f8791463");
+static Standard_GUID RetrievalDriver("45b3c69c-22f3-11d2-b09e-0000f8791463");
+static Standard_GUID Schema         ("45b3c6a2-22f3-11d2-b09e-0000f8791463");
 
 //======================================================
 // function : Factory
 // purpose :
 //======================================================
  
-Handle(Standard_Transient)  FAFactory::Factory(const Standard_GUID& aGUID) 
+Handle(Standard_Transient) FAFactory::Factory (const Standard_GUID& theGUID)
 {
-  if(aGUID == StorageDriver) {
-    cout  “FAFactory : Create store driver”   endl;
-    static  Handle(FADriver_PartStorer) sd = new FADriver_PartStorer();
+  if (theGUID == StorageDriver)
+  {
+    std::cout << "FAFactory : Create store driver\n";
+    static Handle(FADriver_PartStorer) sd = new FADriver_PartStorer();
     return sd;
   }
 
-  if(aGUID == RetrievalDriver) {
-    cout  “FAFactory : Create retrieve driver”   endl;
-    static Handle(FADriver_PartRetriever)
-    rd = new FADriver_PartRetriever();
+  if (theGUID == RetrievalDriver)
+  {
+    std::cout << "FAFactory : Create retrieve driver\n";
+    static Handle(FADriver_PartRetriever) rd = new FADriver_PartRetriever();
     return rd;
   }
 
-  if(aGUID == Schema) {
-    cout  “FAFactory : Create schema”   endl;
-    static Handle(FirstAppSchema) s = new  FirstAppSchema();
+  if (theGUID == Schema)
+  {
+    std::cout << "FAFactory : Create schema\n";
+    static Handle(FirstAppSchema) s = new FirstAppSchema();
     return s;
   }
 
-  Standard_Failure::Raise(“FAFactory: unknown GUID”);
-  Handle(Standard_Transient) t;
-  return t;
+  Standard_Failure::Raise ("FAFactory: unknown GUID");
+  return Handle(Standard_Transient)();
 }
+
+// export plugin function "PLUGINFACTORY"
+PLUGIN(FAFactory)
 ~~~~~
 
-#### Without using the Software  Factory
-
-To create a factory without using the Software Factory,  define a *dll* project under Windows or a library under UNIX by using a  source file as specified above. The *FAFactory* class is implemented as follows: 
-
-~~~~~
-#include <Handle_Standard_Transient.hxx>
-#include <Standard_Macro.hxx>
-class Standard_Transient;
-class Standard_GUID;
-class FAFactory {
-public:
-  Standard_EXPORT  static Handle_Standard_Transient
-                  Factory(const Standard_GUID& aGUID)  ;
-  . . .
-};
-~~~~~
-
+Application might also instantiate a factory by linking to the library and calling *FAFactory::Factory()* directly.
 
 @section occt_fcug_3 Collections,  Strings, Quantities and Unit Conversion
 
@@ -1812,7 +1750,7 @@ main ()
     sol.Solve(b1, x1);      // yes, so compute x1
     sol.Solve(b2, x2);      // then x2
     ...
-  } 
+  }
   else {                    // it is not OK:
     // fix up
     sol.Solve(b1, x1);            // error:
@@ -1971,4 +1909,5 @@ This is reasonable precision to pass to an Intersection process as  a limit of r
 
 This is a reasonable precision to pass to an approximation process  as a limit of refinement of fitting. The approximation is greater than the other  precisions because it is designed to be used when the time is at a premium. It has  been provided as a reasonable compromise by the designers of the Approximation  algorithm. The current value is *Confusion() * 10*. 
 Note that Approximation is greater than Confusion, so care  must be taken when using Confusion in an approximation process. 
+
 

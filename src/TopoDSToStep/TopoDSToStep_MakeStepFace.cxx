@@ -125,7 +125,7 @@ void TopoDSToStep_MakeStepFace::Init(const TopoDS_Face& aFace,
     new TransferBRep_ShapeMapper(aFace);  // on ne sait jamais
 
   // [BEGIN] Processing non-manifold topology (another approach) (ssv; 10.11.2010)
-  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold");
+  Standard_Boolean isNMMode = Interface_Static::IVal("write.step.nonmanifold") != 0;
   if (isNMMode) {
     Handle(StepShape_AdvancedFace) anAF;
     Handle(TransferBRep_ShapeMapper) aSTEPMapper = TransferBRep::ShapeMapper(FP, aFace);
@@ -476,7 +476,7 @@ void TopoDSToStep_MakeStepFace::Init(const TopoDS_Face& aFace,
 
 const Handle(StepShape_TopologicalRepresentationItem)& TopoDSToStep_MakeStepFace::Value() const 
 {
-  StdFail_NotDone_Raise_if(!done,"");
+  StdFail_NotDone_Raise_if (!done, "TopoDSToStep_MakeStepFace::Value() - no result");
   return myResult;
 }
 

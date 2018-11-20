@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -94,7 +96,6 @@
 		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeRevol.cxx" />
 		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeRevolution.cxx" />
 		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeSphere.cxx" />
-		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeSweep.cxx" />
 		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeTorus.cxx" />
 		<Unit filename="../../../src/BRepPrimAPI/BRepPrimAPI_MakeWedge.cxx" />
 	</Project>

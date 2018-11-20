@@ -25,12 +25,13 @@ if { [regexp {Debug mode} [dversion]] } {
     set max_t_001 600
 } else {
   if { [regexp {Windows} [dversion]] } {
-    set max_t_001 360
+    set max_t_001 189
   } else {
-    set max_t_001 400
+    set max_t_001 182
   }
 }
 
-if {${max_t_001} > ${t_001}} {
-   puts "Error. Time of building of triangulation, ${t_001} seconds, is less than expected minimum time - ${max_t_001} seconds"
-}
+# this test case is redundant, as we must not set lower limit for computation time
+#if {${max_t_001} > ${t_001}} {
+#   puts "Error. Time of building of triangulation, ${t_001} seconds, is less than expected minimum time - ${max_t_001} seconds"
+#}

@@ -20,52 +20,30 @@
 #include <Standard_Type.hxx>
 
 #include <TDataStd_DataMapOfStringByte.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Integer.hxx>
-
-
-class TDataStd_HDataMapOfStringByte;
-DEFINE_STANDARD_HANDLE(TDataStd_HDataMapOfStringByte, MMgt_TShared)
 
 //! Extension of TDataStd_DataMapOfStringByte class
 //! to be manipulated by handle.
-class TDataStd_HDataMapOfStringByte : public MMgt_TShared
+class TDataStd_HDataMapOfStringByte : public Standard_Transient
 {
-
+  DEFINE_STANDARD_RTTIEXT(TDataStd_HDataMapOfStringByte, Standard_Transient)
 public:
 
-  
   Standard_EXPORT TDataStd_HDataMapOfStringByte(const Standard_Integer NbBuckets = 1);
-  
+
   Standard_EXPORT TDataStd_HDataMapOfStringByte(const TDataStd_DataMapOfStringByte& theOther);
-  
-    const TDataStd_DataMapOfStringByte& Map() const;
-  
-    TDataStd_DataMapOfStringByte& ChangeMap();
 
+  const TDataStd_DataMapOfStringByte& Map() const { return myMap; }
 
-
-
-  DEFINE_STANDARD_RTTIEXT(TDataStd_HDataMapOfStringByte,MMgt_TShared)
-
-protected:
-
-
-
+  TDataStd_DataMapOfStringByte& ChangeMap() { return myMap; }
 
 private:
 
-
   TDataStd_DataMapOfStringByte myMap;
-
 
 };
 
-
-#include <TDataStd_HDataMapOfStringByte.lxx>
-
-
-
-
+DEFINE_STANDARD_HANDLE(TDataStd_HDataMapOfStringByte, Standard_Transient)
 
 #endif // _TDataStd_HDataMapOfStringByte_HeaderFile

@@ -62,8 +62,11 @@ public:
   //! transitions are Undecided.
   Standard_EXPORT IntPatch_WLine(const Handle(IntSurf_LineOn2S)& Line, const Standard_Boolean Tang);
   
-  //! Adds a vertex in the list.
-  virtual void AddVertex (const IntPatch_Point& Pnt) Standard_OVERRIDE;
+  //! Adds a vertex in the list. If theIsPrepend == TRUE the new
+  //! vertex will be added before the first element of vertices sequence.
+  //! Otherwise, to the end of the sequence
+  virtual void AddVertex (const IntPatch_Point& Pnt,
+                    const Standard_Boolean theIsPrepend = Standard_False) Standard_OVERRIDE;
   
   //! Set the Point of index <Index> in the LineOn2S
   Standard_EXPORT void SetPoint (const Standard_Integer Index, const IntPatch_Point& Pnt);
@@ -121,7 +124,7 @@ public:
   //! if a vertex is already in the line,
   //! its parameter is modified
   //! else a new point in the line is inserted.
-  Standard_EXPORT void ComputeVertexParameters (const Standard_Real Tol, const Standard_Boolean hasBeenAdded = Standard_False);
+  Standard_EXPORT void ComputeVertexParameters (const Standard_Real Tol);
   
   //! Returns set of intersection points
   Standard_EXPORT virtual Handle(IntSurf_LineOn2S) Curve() const Standard_OVERRIDE;
@@ -160,7 +163,7 @@ public:
   //! Removes single vertex from the line
   virtual void RemoveVertex (const Standard_Integer theIndex) Standard_OVERRIDE;
   
-  Standard_EXPORT void InsertVertexBefore (const Standard_Integer theIndex, const IntPatch_Point& thePnt);
+  void InsertVertexBefore (const Standard_Integer theIndex, const IntPatch_Point& thePnt);
   
   //! if (theMode == 0) then prints the information about WLine
   //! if (theMode == 1) then prints the list of 3d-points

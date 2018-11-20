@@ -21,6 +21,7 @@
 #include <BRepTools.hxx>
 #include <BRepTools_ShapeSet.hxx>
 #include <BRepTools_WireExplorer.hxx>
+#include <BinTools.hxx>
 #include <DBRep.hxx>
 #include <DBRep_DrawableShape.hxx>
 #include <Draw.hxx>
@@ -30,6 +31,7 @@
 #include <gp_Ax2.hxx>
 #include <GProp.hxx>
 #include <GProp_GProps.hxx>
+#include <NCollection_Vector.hxx>
 #include <Poly_Triangulation.hxx>
 #include <Precision.hxx>
 #include <Standard.hxx>
@@ -584,6 +586,11 @@ static Standard_Integer nexplode(Draw_Interpretor& di,
     typ = TopAbs_EDGE;
     break;
     
+  case 'V' :
+  case 'v' :
+    typ = TopAbs_VERTEX;
+    break;
+    
     default :
       return 1;
   }
@@ -604,20 +611,26 @@ static Standard_Integer nexplode(Draw_Interpretor& di,
     }
     Exp.Next();
   }
-  
+  //
   TColStd_Array1OfInteger OrderInd(1,MaxShapes);
-//  gp_Pnt GPoint;
+  gp_Pnt GPoint;
   GProp_GProps GPr;
-//  Standard_Integer InOfminX = 1,aTemp;
   Standard_Integer aTemp;
   TColStd_Array1OfReal MidXYZ(1,MaxShapes); //X,Y,Z;
   Standard_Boolean NoSort = Standard_True;
-  
-  // Computing of CentreOfMass
+  //
+  // Computing of CentreOfMass for edge and face
+  // and for vertex use its point
   for (Index=1; Index <= MaxShapes; Index++) {
     OrderInd.SetValue(Index,Index);
-    BRepGProp::LinearProperties(aShapes(Index),GPr);
-    gp_Pnt GPoint = GPr.CentreOfMass();
+    const TopoDS_Shape& aS = aShapes(Index);
+    if (aS.ShapeType() != TopAbs_VERTEX) {
+      BRepGProp::LinearProperties(aS, GPr);
+      GPoint = GPr.CentreOfMass();
+    }
+    else {
+      GPoint = BRep_Tool::Pnt(TopoDS::Vertex(aS));
+    }
     MidXYZ.SetValue(Index, GPoint.X()*999 + GPoint.Y()*99 +
 		    GPoint.Z()*0.9);
   }   
@@ -1106,72 +1119,145 @@ static Standard_Integer check(Draw_Interpretor& ,
 //=======================================================================
 // normals
 //=======================================================================
-
-static Standard_Integer normals(Draw_Interpretor& di,
-				Standard_Integer n, const char** a)
+static Standard_Integer normals (Draw_Interpretor& theDI,
+                                 Standard_Integer  theArgNum,
+                                 const char**      theArgs)
 {
-  if (n <= 1) return 1;
-  Standard_Real l = 1.;
-  if (n > 2) 
-    l = Draw::Atof(a[2]);
+  if (theArgNum < 2)
+  {
+    std::cout << "Syntax error: wrong number of arguments!\n";
+    theDI.PrintHelp (theArgs[0]);
+    return 1;
+  }
 
-  TopoDS_Shape S = DBRep::Get(a[1]);
-  if (S.IsNull()) return 1;
+  TopoDS_Shape aShape = DBRep::Get (theArgs[1]);
+  if (aShape.IsNull())
+  {
+    std::cout << "Error: shape with name " << theArgs[1] << " is not found\n";
+    return 1;
+  }
+
+  Standard_Boolean toUseMesh = Standard_False;
+  Standard_Real    aLength   = 10.0;
+  Standard_Integer aNbAlongU = 1, aNbAlongV = 1;
+  Standard_Boolean bPrint = Standard_False;
+  for (Standard_Integer anArgIter = 2; anArgIter< theArgNum; ++anArgIter)
+  {
+    TCollection_AsciiString aParam (theArgs[anArgIter]);
+    aParam.LowerCase();
+    if (anArgIter == 2
+     && aParam.IsRealValue())
+    {
+      aLength = aParam.RealValue();
+      if (Abs (aLength) <= gp::Resolution())
+      {
+        std::cout << "Syntax error: length should not be zero\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-usemesh"
+          || aParam == "-mesh")
+    {
+      toUseMesh = Standard_True;
+    }
+    else if (aParam == "-length"
+          || aParam == "-len")
+    {
+      ++anArgIter;
+      aLength = anArgIter < theArgNum ? Draw::Atof(theArgs[anArgIter]) : 0.0;
+      if (Abs(aLength) <= gp::Resolution())
+      {
+        std::cout << "Syntax error: length should not be zero\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-nbalongu"
+          || aParam == "-nbu")
+    {
+      ++anArgIter;
+      aNbAlongU = anArgIter< theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      if (aNbAlongU < 1)
+      {
+        std::cout << "Syntax error: NbAlongU should be >=1\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-nbalongv"
+          || aParam == "-nbv")
+    {
+      ++anArgIter;
+      aNbAlongV = anArgIter< theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      if (aNbAlongV < 1)
+      {
+        std::cout << "Syntax error: NbAlongV should be >=1\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-nbalong"
+          || aParam == "-nbuv")
+    {
+      ++anArgIter;
+      aNbAlongU = anArgIter< theArgNum ? Draw::Atoi (theArgs[anArgIter]) : 0;
+      aNbAlongV = aNbAlongU;
+      if (aNbAlongU < 1)
+      {
+        std::cout << "Syntax error: NbAlong should be >=1\n";
+        return 1;
+      }
+    }
+    else if (aParam == "-print")
+    {
+      bPrint = Standard_True;
+    }
+    else
+    {
+      std::cout << "Syntax error: unknown argument '" << aParam << "'\n";
+      return 1;
+    }
+  }
 
   DBRep_WriteColorOrientation();
 
-  gp_Pnt P1,P2;
-  gp_Vec V,V1,V2;
-  Draw_Color col;
-
-  TopExp_Explorer ex(S,TopAbs_FACE);
-  while (ex.More()) {
-
-    const TopoDS_Face& F = TopoDS::Face(ex.Current());
-    
-    // find the center of the minmax
-    BRepAdaptor_Surface SF(F);
-
-    Standard_Real u, v, x;
-
-    u = SF.FirstUParameter();
-    x = SF.LastUParameter();
-    if (Precision::IsInfinite(u))
-      u =  (Precision::IsInfinite(x)) ? 0. : x;
-    else if (!Precision::IsInfinite(x))
-      u = (u+x) / 2.;
-
-    v = SF.FirstVParameter();
-    x = SF.LastVParameter();
-    if (Precision::IsInfinite(v))
-      v =  (Precision::IsInfinite(x)) ? 0. : x;
-    else if (!Precision::IsInfinite(x))
-      v = (v+x) / 2.;
-
-    SF.D1(u,v,P1,V1,V2);
-    V = V1.Crossed(V2);
-    x = V.Magnitude();
-    if (x > 1.e-10) 
-      V.Multiply(l/x);
-    else {
-      V.SetCoord(l/2.,0,0);
-      di << "Null normal\n";
-    }
-
-    P2 = P1;
-    P2.Translate(V);
-
-    col = DBRep_ColorOrientation(F.Orientation());
-
-    Handle(Draw_Segment3D) seg = new Draw_Segment3D(P1,P2,col);
-    dout << seg;
-    
-    
-    ex.Next();
+  NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > > aNormals;
+  if (toUseMesh)
+  {
+    DBRep_DrawableShape::addMeshNormals (aNormals, aShape, aLength);
   }
+  else
+  {
+    DBRep_DrawableShape::addSurfaceNormals (aNormals, aShape, aLength, aNbAlongU, aNbAlongV);
+  }
+
+  for (NCollection_DataMap<TopoDS_Face, NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> > >::Iterator aFaceIt (aNormals); aFaceIt.More(); aFaceIt.Next())
+  {
+    Standard_Boolean bReverse = Standard_False;
+    TopAbs_Orientation aFaceOri = aFaceIt.Key().Orientation();
+    const Draw_Color aColor = DBRep_ColorOrientation (aFaceOri);
+    if (aFaceOri == TopAbs_REVERSED)
+      bReverse = Standard_True;
+
+    for (NCollection_Vector<std::pair<gp_Pnt, gp_Pnt> >::Iterator aNormalsIt (aFaceIt.Value()); aNormalsIt.More(); aNormalsIt.Next())
+    {
+      const std::pair<gp_Pnt, gp_Pnt>& aVec = aNormalsIt.Value();
+      Handle(Draw_Segment3D) aSeg = new Draw_Segment3D(aVec.first, aVec.second, aColor);
+      dout << aSeg;
+      if (bPrint)
+      {
+        // Make the normal vector from the points
+        gp_Vec aV(aVec.first, aVec.second);
+        if (bReverse)
+          aV.Reverse();
+
+        // Print values of the vector avoiding printing "-0" values
+        theDI << "(" << (aV.X() == 0 ? 0 : aV.X()) << ", "
+                     << (aV.Y() == 0 ? 0 : aV.Y()) << ", "
+                     << (aV.Z() == 0 ? 0 : aV.Z()) << ")\n";
+      }
+    }
+  }
+
   return 0;
 }
-
 
 //=======================================================================
 //function : Set
@@ -1264,6 +1350,51 @@ static Standard_Integer XProgress (Draw_Interpretor& di, Standard_Integer argc, 
 }
 
 //=======================================================================
+// binsave
+//=======================================================================
+
+static Standard_Integer binsave(Draw_Interpretor& di, Standard_Integer n, const char** a)
+{
+  if (n <= 2) return 1;
+
+  TopoDS_Shape aShape = DBRep::Get (a[1]);
+  if (aShape.IsNull())
+  {
+    di << a[1] << " is not a shape";
+    return 1;
+  }
+
+  if (!BinTools::Write (aShape, a[2]))
+  {
+    di << "Cannot write to the file " << a[2];
+    return 1;
+  }
+
+  di << a[1];
+  return 0;
+}
+
+//=======================================================================
+// binrestore
+//=======================================================================
+
+static Standard_Integer binrestore(Draw_Interpretor& di, Standard_Integer n, const char** a)
+{
+  if (n <= 2) return 1;
+
+  TopoDS_Shape aShape;
+  if (!BinTools::Read (aShape, a[1]))
+  {
+    di << "Cannot read from the file " << a[1];
+    return 1;
+  }
+
+  DBRep::Set (a[2], aShape);
+  di << a[2];
+  return 0;
+}
+
+//=======================================================================
 //function : BasicCommands
 //purpose  : 
 //=======================================================================
@@ -1286,9 +1417,12 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
   theCommands.Add("vconn","vconn [name1 ...] , edges are colored by number of faces (see vori)",__FILE__,dispor,g);
   theCommands.Add("discretisation","discretisation [nbpoints]",__FILE__,discretisation,g);
   theCommands.Add("compound","compound [name1 name2 ..] compound",__FILE__,compound,g);
-  theCommands.Add("add","add name1 name2",__FILE__,add,g);
+  theCommands.Add("add",
+                  "add what where"
+                  "\n  adds shape \"what\" to shape \"where\" ",
+                  __FILE__,add,g);
   theCommands.Add("explode","explode name [Cd/C/So/Sh/F/W/E/V]",__FILE__,explode,g);
-  theCommands.Add("nexplode","stable numbered explode for edge and face: nexplode name [F/E]",__FILE__,nexplode,g);
+  theCommands.Add("nexplode","stable numbered explode for vertex, edge and face: nexplode name [V/E/F]",__FILE__,nexplode,g);
   theCommands.Add("exwire","exwire wirename",__FILE__,exwire,g);
   theCommands.Add("emptycopy","emptycopy [copyshape] originalshape",__FILE__,emptycopy,g);
   theCommands.Add("check","check shape1 shape2 ...",__FILE__,check,g);
@@ -1297,7 +1431,7 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
   theCommands.Add("treverse","treverse name1 name2 ...",__FILE__,orientation,g);
   theCommands.Add("complement","complement name1 name2 ...",__FILE__,orientation,g);
   theCommands.Add("invert","invert name, reverse subshapes",__FILE__,invert,g);
-  theCommands.Add("normals","normals s (length = 10), disp normals",__FILE__,normals,g);
+  theCommands.Add("normals","normals shape [Length {10}] [-NbAlongU {1}] [-NbAlongV {1}] [-UseMesh] [-print], display normals",__FILE__,normals,g);
   theCommands.Add("nbshapes",
                   "\n nbshapes s - shows the number of sub-shapes in <s>;\n nbshapes s -t - shows the number of sub-shapes in <s> counting the same sub-shapes with different location as different sub-shapes.",
                   __FILE__,nbshapes,g);
@@ -1315,6 +1449,13 @@ void  DBRep::BasicCommands(Draw_Interpretor& theCommands)
   
   // Add command for DRAW-specific ProgressIndicator
   theCommands.Add ( "XProgress","XProgress [+|-t] [+|-g]: switch on/off textual and graphical mode of Progress Indicator",XProgress,"DE: General");
+
+  theCommands.Add("binsave", "binsave shape filename\n"
+                  "\t\tsave the shape in the binary format file",
+                  __FILE__, binsave, g);
+  theCommands.Add("binrestore", "binrestore filename shape\n"
+                  "\t\trestore the shape from the binary format file",
+                  __FILE__, binrestore, g);
 }
 
 //=======================================================================

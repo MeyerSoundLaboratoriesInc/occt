@@ -100,7 +100,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawSurface
 		CViewer3dDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicSurface);
+		getAISContext()->Display (aGraphicSurface, Standard_True);
   }
   
   return aGraphicSurface;
@@ -125,7 +125,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawCurve
 		CViewer3dDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicCurve);
+		getAISContext()->Display (aGraphicCurve, Standard_True);
   }
 
   return aGraphicCurve;
@@ -172,7 +172,7 @@ Handle(AIS_Point) OCCDemo_Presentation::drawPoint
 
   getAISContext()->SetColor (aGraphicPoint, theColor, toDisplay);
   if (toDisplay) {
-    getAISContext()->Display (aGraphicPoint);
+    getAISContext()->Display (aGraphicPoint, Standard_True);
     //COCCDemoDoc::Fit();
   }
 
@@ -210,7 +210,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawVector
 		CViewer3dDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicCurve);
+		getAISContext()->Display (aGraphicCurve, Standard_True);
   }
 
   return aGraphicCurve;
@@ -231,7 +231,7 @@ Handle(AIS_Shape) OCCDemo_Presentation::drawShape
 		CViewer3dDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicShape);
+		getAISContext()->Display (aGraphicShape, Standard_True);
   }
 
   return aGraphicShape;
@@ -251,13 +251,13 @@ Handle(AIS_Shape) OCCDemo_Presentation::drawShape
 		CViewer3dDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicShape);
+		getAISContext()->Display (aGraphicShape, Standard_True);
   }
 
   return aGraphicShape;
 }
 
-void OCCDemo_Presentation::GetViewAt (V3d_Coordinate& theX, V3d_Coordinate& theY, V3d_Coordinate& theZ)
+void OCCDemo_Presentation::GetViewAt (Standard_Real& theX, Standard_Real& theY, Standard_Real& theZ)
 {
   CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
   CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -265,7 +265,7 @@ void OCCDemo_Presentation::GetViewAt (V3d_Coordinate& theX, V3d_Coordinate& theY
   pView->GetViewAt (theX, theY, theZ);
 }
 
-void OCCDemo_Presentation::SetViewAt (const V3d_Coordinate theX, const V3d_Coordinate theY, const V3d_Coordinate theZ)
+void OCCDemo_Presentation::SetViewAt (const Standard_Real theX, const Standard_Real theY, const Standard_Real theZ)
 {
   CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
   CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -273,7 +273,7 @@ void OCCDemo_Presentation::SetViewAt (const V3d_Coordinate theX, const V3d_Coord
   pView->SetViewAt (theX, theY, theZ);
 }
 
-void OCCDemo_Presentation::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_Coordinate& Z)
+void OCCDemo_Presentation::GetViewEye(Standard_Real& X, Standard_Real& Y, Standard_Real& Z)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -281,7 +281,7 @@ void OCCDemo_Presentation::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_
 	pView->GetViewEye(X,Y,Z);
 }
 
-void OCCDemo_Presentation::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Coordinate Z)
+void OCCDemo_Presentation::SetViewEye(Standard_Real X, Standard_Real Y, Standard_Real Z)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -289,7 +289,7 @@ void OCCDemo_Presentation::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Co
 	pView->SetViewEye(X,Y,Z);
 }
 
-Quantity_Factor OCCDemo_Presentation::GetViewScale()
+Standard_Real OCCDemo_Presentation::GetViewScale()
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -297,7 +297,7 @@ Quantity_Factor OCCDemo_Presentation::GetViewScale()
 	return pView->GetViewScale();
 }
 
-void OCCDemo_Presentation::SetViewScale(Quantity_Factor Coef)
+void OCCDemo_Presentation::SetViewScale(Standard_Real Coef)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();

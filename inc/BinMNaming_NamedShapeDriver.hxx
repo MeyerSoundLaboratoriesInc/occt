@@ -27,7 +27,7 @@
 #include <BinObjMgt_SRelocationTable.hxx>
 #include <Standard_IStream.hxx>
 #include <Standard_OStream.hxx>
-class CDM_MessageDriver;
+class Message_Messenger;
 class TDF_Attribute;
 class BinObjMgt_Persistent;
 class BinTools_LocationSet;
@@ -43,7 +43,7 @@ class BinMNaming_NamedShapeDriver : public BinMDF_ADriver
 public:
 
   
-  Standard_EXPORT BinMNaming_NamedShapeDriver(const Handle(CDM_MessageDriver)& theMessageDriver);
+  Standard_EXPORT BinMNaming_NamedShapeDriver(const Handle(Message_Messenger)& theMessageDriver);
   
   Standard_EXPORT Handle(TDF_Attribute) NewEmpty() const Standard_OVERRIDE;
   
@@ -59,9 +59,12 @@ public:
   
   //! Clear myShapeSet
   Standard_EXPORT void Clear();
-  
+
+  //! Return true if shape should be stored with triangles.
+  Standard_Boolean IsWithTriangles() const { return myShapeSet.IsWithTriangles(); }
+
   //! set whether to store triangulation
-    void SetWithTriangles (const Standard_Boolean isWithTriangles);
+  void SetWithTriangles (const Standard_Boolean isWithTriangles);
   
   //! set the format of topology
   //! First : does not write CurveOnSurface UV Points into the file

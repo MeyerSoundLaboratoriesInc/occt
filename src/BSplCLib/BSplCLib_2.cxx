@@ -31,8 +31,6 @@
 
 #include <math_Matrix.hxx>
 
-static const Standard_Integer aGlobalMaxDegree = 25;
-
 //=======================================================================
 //struct : BSplCLib_DataContainer 
 //purpose: Auxiliary structure providing buffers for poles and knots used in
@@ -44,8 +42,7 @@ struct BSplCLib_DataContainer
   BSplCLib_DataContainer(Standard_Integer Degree)
   {
     (void)Degree; // avoid compiler warning
-    Standard_OutOfRange_Raise_if (Degree > BSplCLib::MaxDegree() ||
-        BSplCLib::MaxDegree() > aGlobalMaxDegree,
+    Standard_OutOfRange_Raise_if (Degree > BSplCLib::MaxDegree(),
         "BSplCLib: bspline degree is greater than maximum supported");
   }
 
@@ -326,7 +323,7 @@ BSplCLib::BuildBSpMatrix(const  TColStd_Array1OfReal&     Parameters,
   ReturnCode = 0,
   FirstNonZeroBsplineIndex,
   BandWidth,
-  MaxOrder = aGlobalMaxDegree+1,
+  MaxOrder = BSplCLib::MaxDegree() + 1,
   Order ;
   
   math_Matrix   BSplineBasis(1, MaxOrder,
@@ -346,8 +343,7 @@ BSplCLib::BuildBSpMatrix(const  TColStd_Array1OfReal&     Parameters,
   
   for (ii = Parameters.Lower() ; ii <= Parameters.Upper() ; ii++) {
     ErrorCode =
-      BSplCLib::EvalBsplineBasis(1,
-				 ContactOrderArray(ii),
+      BSplCLib::EvalBsplineBasis(ContactOrderArray(ii),
 				 Order,
 				 FlatKnots,
 				 Parameters(ii),
@@ -433,9 +429,7 @@ BSplCLib::FactorBandedMatrix(math_Matrix&   Matrix,
 
 Standard_Integer 
 BSplCLib::EvalBsplineBasis
-//(const Standard_Integer              Side, // = 1 rigth side, -1 left side 
-(const Standard_Integer              , // = 1 rigth side, -1 left side 
- const  Standard_Integer              DerivativeRequest,
+(const  Standard_Integer              DerivativeRequest,
  const  Standard_Integer              Order,
  const  TColStd_Array1OfReal&         FlatKnots,
  const  Standard_Real                 Parameter,
@@ -888,7 +882,7 @@ void BSplCLib::FunctionMultiply
  const TColStd_Array1OfReal &       FlatKnots,
  const Standard_Integer             NewDegree,
  Standard_Real &                    NewPoles,
- Standard_Integer &                 Status) 
+ Standard_Integer &                 theStatus)
 {
   Standard_Integer ii,
   jj,
@@ -938,7 +932,7 @@ void BSplCLib::FunctionMultiply
 		   result,
 		   error_code);
     if (error_code) {
-      Status = 1 ;
+      theStatus = 1;
       goto FINISH ;
     }     
     
@@ -963,7 +957,7 @@ void BSplCLib::FunctionMultiply
 	      contact_order_array,
 	      PolesDimension,
 	      array_of_new_poles[0],
-	      Status) ;
+	      theStatus);
   
   for (ii = 0 ; ii < num_new_poles * PolesDimension ; ii++) {
     array_of_poles[ii] = array_of_new_poles[ii] ;
@@ -987,7 +981,7 @@ void BSplCLib::FunctionReparameterise
  const TColStd_Array1OfReal &       FlatKnots,
  const Standard_Integer             NewDegree,
  Standard_Real &                    NewPoles,
- Standard_Integer &                 Status) 
+ Standard_Integer &                 theStatus)
 {
   Standard_Integer ii,
 //  jj,
@@ -1028,7 +1022,7 @@ void BSplCLib::FunctionReparameterise
 		   result,
 		   error_code);
     if (error_code) {
-      Status = 1 ;
+      theStatus = 1;
       goto FINISH ;
     }     
     
@@ -1049,7 +1043,7 @@ void BSplCLib::FunctionReparameterise
 	      contact_order_array,
 	      PolesDimension,
 	      array_of_new_poles[0],
-	      Status) ;
+	      theStatus);
   
   for (ii = 0 ; ii < num_new_poles * PolesDimension ; ii++) {
     array_of_poles[ii] = array_of_new_poles[ii] ;
@@ -1072,7 +1066,7 @@ void BSplCLib::FunctionMultiply
  const TColStd_Array1OfReal &        FlatKnots,
  const Standard_Integer              NewDegree,
  TColStd_Array1OfReal &              NewPoles,
- Standard_Integer &                  Status) 
+ Standard_Integer &                  theStatus)
 { 
   Standard_Integer num_bspline_poles =
     BSplineFlatKnots.Length() - BSplineDegree - 1 ;
@@ -1081,7 +1075,7 @@ void BSplCLib::FunctionMultiply
   
   if (Poles.Length() != num_bspline_poles ||
       NewPoles.Length() != num_new_poles) {
-    Standard_ConstructionError::Raise();  
+    throw Standard_ConstructionError();
   }
   Standard_Real  * array_of_poles =
     (Standard_Real *) &Poles(Poles.Lower()) ;
@@ -1095,7 +1089,7 @@ void BSplCLib::FunctionMultiply
 			     FlatKnots,
 			     NewDegree,
 			     array_of_new_poles[0],
-			     Status) ;
+			     theStatus);
 }
 
 //=======================================================================
@@ -1111,7 +1105,7 @@ void BSplCLib::FunctionReparameterise
  const TColStd_Array1OfReal &        FlatKnots,
  const Standard_Integer              NewDegree,
  TColStd_Array1OfReal &              NewPoles,
- Standard_Integer &                  Status) 
+ Standard_Integer &                  theStatus)
 { 
   Standard_Integer num_bspline_poles =
     BSplineFlatKnots.Length() - BSplineDegree - 1 ;
@@ -1120,7 +1114,7 @@ void BSplCLib::FunctionReparameterise
   
   if (Poles.Length() != num_bspline_poles ||
       NewPoles.Length() != num_new_poles) {
-    Standard_ConstructionError::Raise();  
+    throw Standard_ConstructionError();
   }
   Standard_Real  * array_of_poles =
     (Standard_Real *) &Poles(Poles.Lower()) ;
@@ -1135,7 +1129,7 @@ void BSplCLib::FunctionReparameterise
 				   FlatKnots,
 				   NewDegree,
 				   array_of_new_poles[0],
-				   Status) ;
+				   theStatus);
 }
 
 //=======================================================================

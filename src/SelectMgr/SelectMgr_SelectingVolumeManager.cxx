@@ -42,9 +42,13 @@ SelectMgr_SelectingVolumeManager::SelectMgr_SelectingVolumeManager (Standard_Boo
 //                - transformation only is needed: @theScaleFactor must be initialized
 //                  as any negative value;
 //                - scale only is needed: @theTrsf must be set to gp_Identity.
+//            Builder is an optional argument that represents corresponding settings for
+//            re-constructing transformed frustum from scratch. Can be null if reconstruction
+//            is not needed furthermore in the code.
 //=======================================================================
 SelectMgr_SelectingVolumeManager SelectMgr_SelectingVolumeManager::ScaleAndTransform (const Standard_Integer theScaleFactor,
-                                                                                      const gp_Trsf& theTrsf)
+                                                                                      const gp_GTrsf& theTrsf,
+                                                                                      const Handle(SelectMgr_FrustumBuilder)& theBuilder) const
 {
   SelectMgr_SelectingVolumeManager aMgr (Standard_False);
 
@@ -52,10 +56,11 @@ SelectMgr_SelectingVolumeManager SelectMgr_SelectingVolumeManager::ScaleAndTrans
     return aMgr;
 
   aMgr.myActiveSelectionType = myActiveSelectionType;
-
   aMgr.mySelectingVolumes[myActiveSelectionType / 2]
     = mySelectingVolumes[myActiveSelectionType / 2]->ScaleAndTransform (theScaleFactor, theTrsf);
   aMgr.myToAllowOverlap = myToAllowOverlap;
+  aMgr.mySelectingVolumes[myActiveSelectionType / 2]->SetBuilder (theBuilder);
+  aMgr.myViewClipPlanes = myViewClipPlanes;
 
   return aMgr;
 }
@@ -135,6 +140,15 @@ const Graphic3d_Mat4d& SelectMgr_SelectingVolumeManager::WorldViewMatrix() const
 const Graphic3d_WorldViewProjState& SelectMgr_SelectingVolumeManager::WorldViewProjState() const
 {
   return mySelectingVolumes[Frustum]->WorldViewProjState();
+}
+
+//=======================================================================
+// function : WindowSize
+// purpose  :
+//=======================================================================
+void SelectMgr_SelectingVolumeManager::WindowSize (Standard_Integer& theWidth, Standard_Integer& theHeight) const
+{
+  mySelectingVolumes[Frustum]->WindowSize (theWidth, theHeight);
 }
 
 //=======================================================================
@@ -367,7 +381,9 @@ Standard_Real SelectMgr_SelectingVolumeManager::DistToGeometryCenter (const gp_P
 gp_Pnt SelectMgr_SelectingVolumeManager::DetectedPoint (const Standard_Real theDepth) const
 {
   if (myActiveSelectionType != Point)
-    return gp_Pnt (RealLast(), RealLast(), RealLast());
+  {
+    throw Standard_ProgramError("SelectMgr_SelectingVolumeManager::DetectedPoint() should be called only for Point selection type");
+  }
 
   return mySelectingVolumes[Frustum]->DetectedPoint (theDepth);
 }
@@ -421,10 +437,10 @@ const gp_Pnt* SelectMgr_SelectingVolumeManager::GetVertices() const
 }
 
 //=======================================================================
-// function : GetNearPnt
+// function : GetNearPickedPnt
 // purpose  :
 //=======================================================================
-gp_Pnt SelectMgr_SelectingVolumeManager::GetNearPnt() const
+gp_Pnt SelectMgr_SelectingVolumeManager::GetNearPickedPnt() const
 {
   if (myActiveSelectionType == Polyline)
     return gp_Pnt();
@@ -435,10 +451,10 @@ gp_Pnt SelectMgr_SelectingVolumeManager::GetNearPnt() const
 }
 
 //=======================================================================
-// function : GetFarPnt
+// function : GetFarPickedPnt
 // purpose  :
 //=======================================================================
-gp_Pnt SelectMgr_SelectingVolumeManager::GetFarPnt() const
+gp_Pnt SelectMgr_SelectingVolumeManager::GetFarPickedPnt() const
 {
   if (myActiveSelectionType == Polyline)
     return gp_Pnt();
@@ -452,10 +468,23 @@ gp_Pnt SelectMgr_SelectingVolumeManager::GetFarPnt() const
 // function : SetViewClipping
 // purpose  :
 //=======================================================================
-void SelectMgr_SelectingVolumeManager::SetViewClipping (const Graphic3d_SequenceOfHClipPlane& thePlanes)
+void SelectMgr_SelectingVolumeManager::SetViewClipping (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes)
 {
+  myViewClipPlanes = thePlanes;
   if (myActiveSelectionType != Point)
     return;
 
   mySelectingVolumes[Frustum]->SetViewClipping (thePlanes);
+}
+
+//=======================================================================
+// function : SetViewClippingEnabled
+// purpose  :
+//=======================================================================
+Standard_Boolean SelectMgr_SelectingVolumeManager::SetViewClippingEnabled (const Standard_Boolean theToEnable)
+{
+  if (myActiveSelectionType != Point)
+    return Standard_False;
+
+  return mySelectingVolumes[Frustum]->SetViewClippingEnabled (theToEnable);
 }

@@ -14,8 +14,8 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-
 #include <AIS_Circle.hxx>
+
 #include <AIS_GraphicTool.hxx>
 #include <Aspect_TypeOfLine.hxx>
 #include <GC_MakeArcOfCircle.hxx>
@@ -78,8 +78,6 @@ void AIS_Circle::Compute(const Handle(PrsMgr_PresentationManager3d)& /*aPresenta
                          const Handle(Prs3d_Presentation)& aPresentation, 
                          const Standard_Integer /*aMode*/)
 {
-  aPresentation->Clear();
-
   aPresentation->SetDisplayPriority(5);
 
   if (myCircleIsArc) ComputeArc(aPresentation);
@@ -96,7 +94,7 @@ void AIS_Circle::Compute(const Handle(Prs3d_Projector)& aProjector,
                          const Handle(Geom_Transformation)& aTransformation,
                          const Handle(Prs3d_Presentation)& aPresentation)
 {
-// Standard_NotImplemented::Raise("AIS_Circle::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
+// throw Standard_NotImplemented("AIS_Circle::Compute(const Handle(Prs3d_Projector)&, const Handle(Geom_Transformation)&, const Handle(Prs3d_Presentation)&)");
   PrsMgr_PresentableObject::Compute( aProjector , aTransformation , aPresentation ) ;
 }
 
@@ -114,17 +112,6 @@ void AIS_Circle::ComputeSelection(const Handle(SelectMgr_Selection)& aSelection,
 
 }
 
-
-//=======================================================================
-//function : SetColor
-//purpose  : 
-//=======================================================================
-
-void AIS_Circle::SetColor(const Quantity_NameOfColor aCol)
-{
-  SetColor(Quantity_Color(aCol));
-}
-
 //=======================================================================
 //function : SetColor
 //purpose  : 
@@ -133,7 +120,7 @@ void AIS_Circle::SetColor(const Quantity_NameOfColor aCol)
 void AIS_Circle::SetColor(const Quantity_Color &aCol)
 {
   hasOwnColor=Standard_True;
-  myOwnColor=aCol;
+  myDrawer->SetColor (aCol);
 
   Standard_Real WW = HasWidth() ? myOwnWidth :
                                   myDrawer->HasLink() ?
@@ -158,7 +145,7 @@ void AIS_Circle::SetWidth(const Standard_Real aValue)
 
   if (!myDrawer->HasOwnLineAspect ()) {
     Quantity_Color CC = Quantity_NOC_YELLOW;
-    if( HasColor() ) CC = myOwnColor;
+    if( HasColor() ) CC = myDrawer->Color();
     else if(myDrawer->HasLink()) AIS_GraphicTool::GetLineColor (myDrawer->Link(), AIS_TOA_Line, CC);
     myDrawer->SetLineAspect (new Prs3d_LineAspect(CC,Aspect_TOL_SOLID,aValue));
   } else
@@ -179,10 +166,10 @@ void AIS_Circle::UnsetColor()
   if (!HasWidth()) myDrawer->SetLineAspect(NullAsp);
   else{
     Quantity_Color CC = Quantity_NOC_YELLOW;;
-    if( HasColor() ) CC = myOwnColor;
+    if( HasColor() ) CC = myDrawer->Color();
     else if (myDrawer->HasLink()) AIS_GraphicTool::GetLineColor(myDrawer->Link(),AIS_TOA_Line,CC);
     myDrawer->LineAspect()->SetColor(CC);
-    myOwnColor = CC;
+    myDrawer->SetColor (CC);
   }
 }
 

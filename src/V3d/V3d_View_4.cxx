@@ -23,7 +23,6 @@
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_Structure.hxx>
 #include <Graphic3d_TextureEnv.hxx>
-#include <Graphic3d_Vector.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_MultiplyDefined.hxx>
 #include <Standard_TypeMismatch.hxx>
@@ -150,136 +149,91 @@ void toCartesianCoords (const Standard_Real theR, const Standard_Real thePhi,
 //function : Compute
 //purpose  :
 //=============================================================================
-Graphic3d_Vertex V3d_View::Compute (const Graphic3d_Vertex & AVertex) const
+Graphic3d_Vertex V3d_View::Compute (const Graphic3d_Vertex& theVertex) const
 {
-  Graphic3d_Vertex CurPoint, NewPoint;
-  Standard_Real X1, Y1, Z1, X2, Y2, Z2;
-  Standard_Real XPp, YPp;
-  Handle(Graphic3d_Camera) aCamera = Camera();
+  const Handle(Graphic3d_Camera)& aCamera = Camera();
+  gp_Dir VPN = aCamera->Direction().Reversed(); // RefPlane
+  gp_Dir GPN = MyPlane.Direction();
 
-  gp_Dir aRefPlane = aCamera->Direction().Reversed();
-  X1 = aRefPlane.X(); Y1 = aRefPlane.Y(); Z1 = aRefPlane.Z();
-  MyPlane.Direction ().Coord (X2, Y2, Z2);
-
-  gp_Dir VPN (X1, Y1, Z1);
-  gp_Dir GPN (X2, Y2, Z2);
-
-  AVertex.Coord (X1, Y1, Z1);
-  Project (X1, Y1, Z1, XPp, YPp);
+  Standard_Real XPp = 0.0, YPp = 0.0;
+  Project (theVertex.X(), theVertex.Y(), theVertex.Z(), XPp, YPp);
 
   // Casw when the plane of the grid and the plane of the view
   // are perpendicular to MYEPSILON2 close radians
-  if (Abs (VPN.Angle (GPN) - M_PI / 2.) < MYEPSILON2) {
-    NewPoint.SetCoord (X1, Y1, Z1);
-    return NewPoint;
+  if (Abs (VPN.Angle (GPN) - M_PI / 2.) < MYEPSILON2)
+  {
+    return theVertex;
   }
 
-  Standard_Boolean IsRectangular = 
-    MyGrid->IsKind (STANDARD_TYPE (Aspect_RectangularGrid));
-
-  Graphic3d_Vertex P1;
-
-  Standard_Real x0, y0, z0, x1, y1, z1, x2, y2, z2;
-    
-  P1.SetCoord (0.0, 0.0, 0.0);
-  CurPoint = V3d_View::TrsPoint (P1, MyTrsf);
-  CurPoint.Coord (x0, y0, z0);
+  const gp_XYZ aPnt0 = V3d_View::TrsPoint (Graphic3d_Vertex (0.0, 0.0, 0.0), MyTrsf);
     
   // get grid axes in world space
-  P1.SetCoord (1.0, 0.0, 0.0);
-  CurPoint = V3d_View::TrsPoint (P1, MyTrsf);
-  CurPoint.Coord (x1, y1, z1);
-  gp_Vec aGridX (gp_Pnt (x0, y0, z0), gp_Pnt (x1, y1, z1));
+  const gp_XYZ aPnt1 = V3d_View::TrsPoint (Graphic3d_Vertex (1.0, 0.0, 0.0), MyTrsf);
+  gp_Vec aGridX (aPnt0, aPnt1);
   aGridX.Normalize();
 
-  P1.SetCoord (0.0, 1.0, 0.0);
-  CurPoint = V3d_View::TrsPoint (P1, MyTrsf);
-  CurPoint.Coord (x2, y2, z2);
-  gp_Vec aGridY (gp_Pnt (x0, y0, z0), gp_Pnt (x2, y2, z2));
+  const gp_XYZ aPnt2 = V3d_View::TrsPoint (Graphic3d_Vertex (0.0, 1.0, 0.0), MyTrsf);
+  gp_Vec aGridY (aPnt0, aPnt2);
   aGridY.Normalize();
 
-  // get grid normal
-  MyPlane.Direction().Coord (x2, y2, z2);
-  gp_Vec aPlaneNormal (x2, y2, z2);
-
-  gp_Vec aPointOnPlane = gp_Vec (0.0, 0.0, 0.0);
-
-  AVertex.Coord (x1, y1, z1);
-    
   // project ray from camera onto grid plane
-  gp_Vec aProjection  = aCamera->IsOrthographic()
-                      ? gp_Vec (aCamera->Direction())
-                      : gp_Vec (aCamera->Eye(), gp_Pnt (x1, y1, z1)).Normalized();
-  gp_Vec aPointOrigin = gp_Vec (gp_Pnt (x1, y1, z1), gp_Pnt (x0, y0, z0));
-  Standard_Real aT    = aPointOrigin.Dot (aPlaneNormal) / aProjection.Dot (aPlaneNormal);
-  aPointOnPlane       = gp_Vec (x1, y1, z1) + aProjection * aT;
+  const gp_Vec aProjection  = aCamera->IsOrthographic()
+                            ? gp_Vec (aCamera->Direction())
+                            : gp_Vec (aCamera->Eye(), gp_Pnt (theVertex.X(), theVertex.Y(), theVertex.Z())).Normalized();
+  const gp_Vec aPointOrigin = gp_Vec (gp_Pnt (theVertex.X(), theVertex.Y(), theVertex.Z()), aPnt0);
+  const Standard_Real aT    = aPointOrigin.Dot (MyPlane.Direction()) / aProjection.Dot (MyPlane.Direction());
+  const gp_XYZ aPointOnPlane = gp_XYZ (theVertex.X(), theVertex.Y(), theVertex.Z()) + aProjection.XYZ() * aT;
 
-  if (IsRectangular) {
-    Standard_Real XS, YS;
-    Handle(Aspect_RectangularGrid) theGrid =
-      Handle(Aspect_RectangularGrid)::DownCast (MyGrid);
-    XS = theGrid->XStep (), YS = theGrid->YStep ();
-
+  if (Handle(Aspect_RectangularGrid) aRectGrid = Handle(Aspect_RectangularGrid)::DownCast (MyGrid))
+  {
     // project point on plane to grid local space
-    gp_Vec aToPoint (gp_Pnt (x0, y0, z0), 
-                     gp_Pnt (aPointOnPlane.X(), aPointOnPlane.Y(), aPointOnPlane.Z()));
-    Standard_Real anXSteps = Round (aGridX.Dot (aToPoint) / XS);
-    Standard_Real anYSteps = Round (aGridY.Dot (aToPoint) / YS);
+    const gp_Vec aToPoint (aPnt0, aPointOnPlane);
+    const Standard_Real anXSteps = Round (aGridX.Dot (aToPoint) / aRectGrid->XStep());
+    const Standard_Real anYSteps = Round (aGridY.Dot (aToPoint) / aRectGrid->YStep());
 
     // clamp point to grid
-    gp_Vec aResult = aGridX * anXSteps * XS + aGridY * anYSteps * YS + gp_Vec (x0, y0, z0);
-    NewPoint.SetCoord (aResult.X(), aResult.Y(), aResult.Z());
-
+    const gp_Vec aResult = aGridX * anXSteps * aRectGrid->XStep()
+                         + aGridY * anYSteps * aRectGrid->YStep()
+                         + gp_Vec (aPnt0);
+    return Graphic3d_Vertex (aResult.X(), aResult.Y(), aResult.Z());
   } 
   else // IsCircular
   {
-    Standard_Real RS;
-    Standard_Integer DN;
-    Standard_Real Alpha;
-    Handle(Aspect_CircularGrid) theGrid =
-      Handle(Aspect_CircularGrid)::DownCast (MyGrid);
-    RS = theGrid->RadiusStep ();
-    DN = theGrid->DivisionNumber ();
-    Alpha = M_PI / Standard_Real (DN);
+    Handle(Aspect_CircularGrid) aCircleGrid = Handle(Aspect_CircularGrid)::DownCast (MyGrid);
+    const Standard_Real anAlpha = M_PI / Standard_Real (aCircleGrid->DivisionNumber());
 
     // project point on plane to grid local space
-    gp_Vec aToPoint (gp_Pnt (x0, y0, z0), 
-                     gp_Pnt (aPointOnPlane.X(), aPointOnPlane.Y(), aPointOnPlane.Z()));
-
-    Standard_Real anR = 0.0, aPhi = 0.0;
+    const gp_Vec aToPoint (aPnt0, aPointOnPlane);
     Standard_Real aLocalX = aGridX.Dot (aToPoint);
     Standard_Real aLocalY = aGridY.Dot (aToPoint);
+    Standard_Real anR = 0.0, aPhi = 0.0;
     toPolarCoords (aLocalX, aLocalY, anR, aPhi);
 
     // clamp point to grid
-    Standard_Real anRSteps  = Round (anR / RS);
-    Standard_Real aPhiSteps = Round (aPhi / Alpha);
-    toCartesianCoords (anRSteps * RS, aPhiSteps * Alpha, aLocalX, aLocalY);
+    const Standard_Real anRSteps  = Round (anR / aCircleGrid->RadiusStep());
+    const Standard_Real aPhiSteps = Round (aPhi / anAlpha);
+    toCartesianCoords (anRSteps * aCircleGrid->RadiusStep(), aPhiSteps * anAlpha, aLocalX, aLocalY);
 
-    gp_Vec aResult = aGridX * aLocalX + aGridY * aLocalY + gp_Vec (x0, y0, z0);
-    NewPoint.SetCoord (aResult.X(), aResult.Y(), aResult.Z());
+    const gp_Vec aResult = aGridX * aLocalX + aGridY * aLocalY + gp_Vec (aPnt0);
+    return Graphic3d_Vertex (aResult.X(), aResult.Y(), aResult.Z());
   }
-
-  return NewPoint;
 }
 
 //=============================================================================
 //function : ZBufferTriedronSetup
 //purpose  :
 //=============================================================================
-void V3d_View::ZBufferTriedronSetup(const Quantity_NameOfColor theXColor,
-                                    const Quantity_NameOfColor theYColor,
-                                    const Quantity_NameOfColor theZColor,
-                                    const Standard_Real        theSizeRatio,
-                                    const Standard_Real        theAxisDiametr,
-                                    const Standard_Integer     theNbFacettes)
+void V3d_View::ZBufferTriedronSetup(const Quantity_Color&  theXColor,
+                                    const Quantity_Color&  theYColor,
+                                    const Quantity_Color&  theZColor,
+                                    const Standard_Real    theSizeRatio,
+                                    const Standard_Real    theAxisDiametr,
+                                    const Standard_Integer theNbFacettes)
 {
-  myView->ZBufferTriedronSetup (theXColor,
-                                theYColor,
-                                theZColor,
-                                theSizeRatio,
-                                theAxisDiametr,
-                                theNbFacettes);
+  myTrihedron->SetArrowsColor   (theXColor, theYColor, theZColor);
+  myTrihedron->SetSizeRatio     (theSizeRatio);
+  myTrihedron->SetNbFacets      (theNbFacettes);
+  myTrihedron->SetArrowDiameter (theAxisDiametr);
 }
 
 //=============================================================================
@@ -287,11 +241,16 @@ void V3d_View::ZBufferTriedronSetup(const Quantity_NameOfColor theXColor,
 //purpose  :
 //=============================================================================
 void V3d_View::TriedronDisplay (const Aspect_TypeOfTriedronPosition thePosition,
-                                const Quantity_NameOfColor theColor,
+                                const Quantity_Color& theColor,
                                 const Standard_Real theScale,
                                 const V3d_TypeOfVisualization theMode)
 {
-  myView->TriedronDisplay (thePosition, theColor, theScale, (theMode == V3d_WIREFRAME));
+  myTrihedron->SetLabelsColor (theColor);
+  myTrihedron->SetScale       (theScale);
+  myTrihedron->SetPosition    (thePosition);
+  myTrihedron->SetWireframe   (theMode == V3d_WIREFRAME);
+
+  myTrihedron->Display (*this);
 }
 
 //=============================================================================
@@ -300,16 +259,7 @@ void V3d_View::TriedronDisplay (const Aspect_TypeOfTriedronPosition thePosition,
 //=============================================================================
 void V3d_View::TriedronErase()
 {
-  myView->TriedronErase();
-}
-
-//=============================================================================
-//function : TriedronEcho
-//purpose  :
-//=============================================================================
-void V3d_View::TriedronEcho (const Aspect_TypeOfTriedronEcho theType)
-{
-  myView->TriedronEcho (theType);
+  myTrihedron->Erase();
 }
 
 //=============================================================================

@@ -14,44 +14,44 @@
 // Alternatively, this file may be used under the terms of Open CASCADE
 // commercial license or contractual agreement.
 
-#include <Geom_Circle.hxx>
-
-#include <Select3D_Pnt.hxx>
-#include <Select3D_SensitiveTriangle.hxx>
-#include <Precision.hxx>
-
 #include <Select3D_SensitiveCircle.hxx>
 
+#include <Geom_Circle.hxx>
+#include <Precision.hxx>
+#include <Select3D_SensitiveTriangle.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(Select3D_SensitiveCircle,Select3D_SensitivePoly)
 
-static Standard_Integer GetCircleNbPoints (const Handle(Geom_Circle)& theCircle,
-                                           const Standard_Integer theNbPnts)
+namespace
 {
-  // Check if number of points is invalid.
-  // In this case myPolyg raises Standard_ConstructionError
-  // exception (look constructor bellow).
-  if (theNbPnts <= 0)
-    return 0;
+  static Standard_Integer GetCircleNbPoints (const Handle(Geom_Circle)& theCircle,
+                                             const Standard_Integer theNbPnts)
+  {
+    // Check if number of points is invalid.
+    // In this case myPolyg raises Standard_ConstructionError
+    // exception (look constructor bellow).
+    if (theNbPnts <= 0)
+      return 0;
 
-  if (theCircle->Radius() > Precision::Confusion())
-    return 2 * theNbPnts + 1;
+    if (theCircle->Radius() > Precision::Confusion())
+      return 2 * theNbPnts + 1;
 
-  // The radius is too small and circle degenerates into point
-  return 1;
-}
+    // The radius is too small and circle degenerates into point
+    return 1;
+  }
 
-static Standard_Integer GetArcNbPoints (const Handle(Geom_Circle)& theCircle,
-                                        const Standard_Integer theNbPnts)
-{
-  // There is no need to check number of points here.
-  // In case of invalid number of points this method returns
-  // -1 or smaller value.
-  if (theCircle->Radius() > Precision::Confusion())
-    return 2 * theNbPnts - 1;
+  static Standard_Integer GetArcNbPoints (const Handle(Geom_Circle)& theCircle,
+                                          const Standard_Integer theNbPnts)
+  {
+    // There is no need to check number of points here.
+    // In case of invalid number of points this method returns
+    // -1 or smaller value.
+    if (theCircle->Radius() > Precision::Confusion())
+      return 2 * theNbPnts - 1;
 
-  // The radius is too small and circle degenerates into point
-  return 1;
+    // The radius is too small and circle degenerates into point
+    return 1;
+  }
 }
 
 //=======================================================================
@@ -269,11 +269,12 @@ Standard_Boolean Select3D_SensitiveCircle::Matches (SelectBasics_SelectingVolume
       thePickResult = SelectBasics_PickResult (aDepth, aDistToCOG);
       return Standard_False;
     }
+    else
+    {
+      thePickResult = SelectBasics_PickResult (aDepth, theMgr.DistToGeometryCenter (myCenter3D));
+    }
   }
 
-
-  aDistToCOG = theMgr.DistToGeometryCenter (myCenter3D);
-  thePickResult = SelectBasics_PickResult (aDepth, aDistToCOG);
   return Standard_True;
 }
 
@@ -368,4 +369,13 @@ void Select3D_SensitiveCircle::computeCenter3D()
 gp_Pnt Select3D_SensitiveCircle::CenterOfGeometry() const
 {
   return myCenter3D;
+}
+
+//=======================================================================
+// function : distanceToCOG
+// purpose  :
+//=======================================================================
+Standard_Real Select3D_SensitiveCircle::distanceToCOG (SelectBasics_SelectingVolumeManager& theMgr)
+{
+  return theMgr.DistToGeometryCenter (myCenter3D);
 }

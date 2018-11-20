@@ -19,7 +19,9 @@
 #include <BOPAlgo_Section.hxx>
 #include <BOPTest_Objects.hxx>
 #include <BOPAlgo_CellsBuilder.hxx>
+#include <BOPAlgo_Splitter.hxx>
 #include <NCollection_BaseAllocator.hxx>
+#include <Precision.hxx>
 
 static Handle(NCollection_BaseAllocator)& Allocator1();
 
@@ -51,7 +53,11 @@ class BOPTest_Session {
     myBuilder=myBuilderDefault;
     myRunParallel=Standard_False;
     myNonDestructive = Standard_False;
-    myFuzzyValue = 0.;
+    myFuzzyValue = Precision::Confusion();
+    myGlue = BOPAlgo_GlueOff;
+    myDrawWarnShapes = Standard_False;
+    myCheckInverted = Standard_True;
+    myUseOBB = Standard_False;
   };
   //
   // Clear
@@ -91,11 +97,11 @@ class BOPTest_Session {
     myBuilder=myBuilderDefault;
   };
   //
-  BOPCol_ListOfShape& Shapes() {
+  TopTools_ListOfShape& Shapes() {
     return myShapes;
   }
   //
-  BOPCol_ListOfShape& Tools() {
+  TopTools_ListOfShape& Tools() {
     return myTools;
   }
   //
@@ -123,6 +129,37 @@ class BOPTest_Session {
     return myNonDestructive;
   };
   //
+  void SetGlue(const BOPAlgo_GlueEnum theGlue) {
+    myGlue = theGlue;
+  };
+  //
+  BOPAlgo_GlueEnum Glue() const {
+    return myGlue;
+  };
+  //
+  void SetDrawWarnShapes(const Standard_Boolean bDraw) {
+    myDrawWarnShapes = bDraw;
+  };
+  //
+  Standard_Boolean DrawWarnShapes() const {
+    return myDrawWarnShapes;
+  };
+  //
+  void SetCheckInverted(const Standard_Boolean bCheck) {
+    myCheckInverted = bCheck;
+  };
+  //
+  Standard_Boolean CheckInverted() const {
+    return myCheckInverted;
+  };
+  //
+  void SetUseOBB(const Standard_Boolean bUse) {
+    myUseOBB = bUse;
+  };
+  //
+  Standard_Boolean UseOBB() const {
+    return myUseOBB;
+  };
 protected:
   //
   BOPTest_Session(const BOPTest_Session&);
@@ -134,11 +171,15 @@ protected:
   BOPAlgo_Builder* myBuilder;
   BOPAlgo_Builder* myBuilderDefault;
   //
-  BOPCol_ListOfShape myShapes;
-  BOPCol_ListOfShape myTools;
+  TopTools_ListOfShape myShapes;
+  TopTools_ListOfShape myTools;
   Standard_Boolean myRunParallel;
   Standard_Boolean myNonDestructive;
   Standard_Real myFuzzyValue;
+  BOPAlgo_GlueEnum myGlue;
+  Standard_Boolean myDrawWarnShapes;
+  Standard_Boolean myCheckInverted;
+  Standard_Boolean myUseOBB;
 };
 //
 //=======================================================================
@@ -244,10 +285,19 @@ BOPAlgo_CellsBuilder& BOPTest_Objects::CellsBuilder()
   return sCBuilder;
 }
 //=======================================================================
+//function : Splitter
+//purpose  : 
+//=======================================================================
+BOPAlgo_Splitter& BOPTest_Objects::Splitter()
+{
+  static BOPAlgo_Splitter aSplitter(Allocator1());
+  return aSplitter;
+}
+//=======================================================================
 //function : Shapes
 //purpose  : 
 //=======================================================================
-BOPCol_ListOfShape& BOPTest_Objects::Shapes()
+TopTools_ListOfShape& BOPTest_Objects::Shapes()
 {
   return GetSession().Shapes();
 }
@@ -255,7 +305,7 @@ BOPCol_ListOfShape& BOPTest_Objects::Shapes()
 //function : Tools
 //purpose  : 
 //=======================================================================
-BOPCol_ListOfShape& BOPTest_Objects::Tools()
+TopTools_ListOfShape& BOPTest_Objects::Tools()
 {
   return GetSession().Tools();
 }
@@ -306,6 +356,70 @@ void BOPTest_Objects::SetNonDestructive(const Standard_Boolean theFlag)
 Standard_Boolean BOPTest_Objects::NonDestructive()
 {
   return GetSession().NonDestructive();
+}
+//=======================================================================
+//function : SetGlue
+//purpose  : 
+//=======================================================================
+void BOPTest_Objects::SetGlue(const BOPAlgo_GlueEnum theGlue)
+{
+  GetSession().SetGlue(theGlue);
+}
+//=======================================================================
+//function : Glue
+//purpose  : 
+//=======================================================================
+BOPAlgo_GlueEnum BOPTest_Objects::Glue()
+{
+  return GetSession().Glue();
+}
+//=======================================================================
+//function : SetDrawWarnShapes
+//purpose  : 
+//=======================================================================
+void BOPTest_Objects::SetDrawWarnShapes(const Standard_Boolean bDraw)
+{
+  GetSession().SetDrawWarnShapes(bDraw);
+}
+//=======================================================================
+//function : DrawWarnShapes
+//purpose  : 
+//=======================================================================
+Standard_Boolean BOPTest_Objects::DrawWarnShapes()
+{
+  return GetSession().DrawWarnShapes();
+}
+//=======================================================================
+//function : SetCheckInverted
+//purpose  : 
+//=======================================================================
+void BOPTest_Objects::SetCheckInverted(const Standard_Boolean bCheck)
+{
+  GetSession().SetCheckInverted(bCheck);
+}
+//=======================================================================
+//function : CheckInverted
+//purpose  : 
+//=======================================================================
+Standard_Boolean BOPTest_Objects::CheckInverted()
+{
+  return GetSession().CheckInverted();
+}
+//=======================================================================
+//function : SetUseOBB
+//purpose  : 
+//=======================================================================
+void BOPTest_Objects::SetUseOBB(const Standard_Boolean bUseOBB)
+{
+  GetSession().SetUseOBB(bUseOBB);
+}
+//=======================================================================
+//function : UseOBB
+//purpose  : 
+//=======================================================================
+Standard_Boolean BOPTest_Objects::UseOBB()
+{
+  return GetSession().UseOBB();
 }
 //=======================================================================
 //function : Allocator1

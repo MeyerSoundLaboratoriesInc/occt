@@ -4,7 +4,6 @@
 #include "DimensionDlg.h"
 
 #include <AIS_InteractiveContext.hxx>
-#include <AIS_LocalContext.hxx>
 #include <AIS_RadiusDimension.hxx>
 #include <AIS_DiameterDimension.hxx>
 #include <ElCLib.hxx>
@@ -58,8 +57,9 @@ END_MESSAGE_MAP()
 void CRadiusParamsPage::OnBnClickedObjectBtn()
 {
   //Build dimension here
-  myAISContext->LocalContext()->InitSelected();
-  if (!myAISContext->LocalContext()->MoreSelected())
+  myAISContext->InitSelected();
+  if (!myAISContext->MoreSelected() ||
+       myAISContext->SelectedShape().ShapeType() != TopAbs_EDGE)
   {
     AfxMessageBox (_T ("Choose the edge and press the button again"), MB_ICONINFORMATION | MB_OK);
     return;
@@ -69,9 +69,7 @@ void CRadiusParamsPage::OnBnClickedObjectBtn()
   Standard_Boolean isAttachPoint = Standard_False;
   Standard_Real aFirstPar = 0, aLastPar = 0;
 
-   // Workaround for AIS_LocalContext::SelectedShape()
-  TopoDS_Shape aSelShape = CDimensionDlg::SelectedShape();
-  //TopoDS_Shape aSelShape = myAISContext->LocalContext()->SelectedShape();
+  TopoDS_Shape aSelShape = myAISContext->SelectedShape();
 
   if (aSelShape.ShapeType() != TopAbs_EDGE &&
       aSelShape.ShapeType() != TopAbs_FACE &&
@@ -95,7 +93,7 @@ void CRadiusParamsPage::OnBnClickedObjectBtn()
     }
   }
 
-  myAISContext->LocalContext()->ClearSelected();
+  myAISContext->ClearSelected (Standard_False);
   CDimensionDlg *aDimDlg = (CDimensionDlg*)(this->GetParentOwner());
   // Try to create dimension if it is possible
   Handle(AIS_Dimension) aDim;
@@ -125,10 +123,7 @@ void CRadiusParamsPage::OnBnClickedObjectBtn()
   aDim->SetDimensionAspect (anAspect);
 
   // Display dimension in the neutral point
-  myAISContext->CloseAllContexts();
 
-  myAISContext->Display (aDim);
-
-  myAISContext->OpenLocalContext();
-  myAISContext->ActivateStandardMode (TopAbs_EDGE);
+  myAISContext->Display (aDim, Standard_True);
+  myAISContext->Activate (AIS_Shape::SelectionMode (TopAbs_EDGE));
 }

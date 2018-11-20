@@ -17,7 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__STEPCAFControl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXDESTEP_obj.link" />
@@ -36,7 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__STEPCAFControl_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXDESTEP_objd.link" />
@@ -73,12 +71,10 @@
 			<Add library="TKG3d" />
 			<Add library="TKXCAF" />
 			<Add library="TKSTEP" />
+			<Add library="TKShHealing" />
 		</Linker>
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_ActorWrite.cxx" />
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Controller.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_DictionaryOfExternFile_0.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_ExternFile.cxx">
@@ -87,13 +83,7 @@
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_GDTProperty.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_IteratorOfDictionaryOfExternFile_0.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Reader.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_StackItemOfDictionaryOfExternFile_0.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/STEPCAFControl/STEPCAFControl_Writer.cxx">

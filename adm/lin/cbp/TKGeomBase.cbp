@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -81,6 +83,8 @@
 		<Unit filename="../../../src/ProjLib/ProjLib_Torus.cxx" />
 		<Unit filename="../../../src/GeomProjLib/GeomProjLib.cxx" />
 		<Unit filename="../../../src/GCPnts/GCPnts_AbscissaPoint.cxx" />
+		<Unit filename="../../../src/GCPnts/GCPnts_DistFunction.cxx" />
+		<Unit filename="../../../src/GCPnts/GCPnts_DistFunction2d.cxx" />
 		<Unit filename="../../../src/GCPnts/GCPnts_QuasiUniformAbscissa.cxx" />
 		<Unit filename="../../../src/GCPnts/GCPnts_QuasiUniformDeflection.cxx" />
 		<Unit filename="../../../src/GCPnts/GCPnts_TangentialDeflection.cxx" />
@@ -150,8 +154,9 @@
 		<Unit filename="../../../src/Extrema/Extrema_ExtPS.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_ExtSS.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_FuncExtCS.cxx" />
-		<Unit filename="../../../src/Extrema/Extrema_FuncExtPS.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_FuncExtSS.cxx" />
+		<Unit filename="../../../src/Extrema/Extrema_FuncPSDist.cxx" />
+		<Unit filename="../../../src/Extrema/Extrema_FuncPSNorm.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_GenExtCS.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_GenExtPS.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_GenExtSS.cxx" />
@@ -176,8 +181,6 @@
 		<Unit filename="../../../src/Extrema/Extrema_PCLocFOfLocEPCOfLocateExtPC_0.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_POnCurv2d_0.cxx" />
 		<Unit filename="../../../src/Extrema/Extrema_POnCurv_0.cxx" />
-		<Unit filename="../../../src/Extrema/Extrema_POnSurf.cxx" />
-		<Unit filename="../../../src/Extrema/Extrema_POnSurfParams.cxx" />
 		<Unit filename="../../../src/IntAna/IntAna_Curve.cxx" />
 		<Unit filename="../../../src/IntAna/IntAna_Int3Pln.cxx" />
 		<Unit filename="../../../src/IntAna/IntAna_IntConicQuad.cxx" />
@@ -303,7 +306,6 @@
 		<Unit filename="../../../src/GC/GC_MakeTranslation.cxx" />
 		<Unit filename="../../../src/GC/GC_MakeTrimmedCone.cxx" />
 		<Unit filename="../../../src/GC/GC_MakeTrimmedCylinder.cxx" />
-		<Unit filename="../../../src/GC/GC_Root.cxx" />
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeArcOfCircle.cxx" />
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeArcOfEllipse.cxx" />
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeArcOfHyperbola.cxx" />
@@ -318,7 +320,6 @@
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeScale.cxx" />
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeSegment.cxx" />
 		<Unit filename="../../../src/GCE2d/GCE2d_MakeTranslation.cxx" />
-		<Unit filename="../../../src/GCE2d/GCE2d_Root.cxx" />
 		<Unit filename="../../../src/gce/gce_MakeCirc.cxx" />
 		<Unit filename="../../../src/gce/gce_MakeCirc2d.cxx" />
 		<Unit filename="../../../src/gce/gce_MakeCone.cxx" />

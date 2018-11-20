@@ -20,7 +20,6 @@
 #include <CDF_MetaDataDriverError.hxx>
 #include <CDF_Session.hxx>
 #include <CDF_StoreList.hxx>
-#include <CDF_Timer.hxx>
 #include <CDM_Document.hxx>
 #include <CDM_MetaData.hxx>
 #include <CDM_ReferenceIterator.hxx>
@@ -28,17 +27,14 @@
 #include <PCDM_Document.hxx>
 #include <PCDM_StorageDriver.hxx>
 #include <Standard_ErrorHandler.hxx>
-#include <Standard_Macro.hxx>
 #include <Standard_NoSuchObject.hxx>
-#include <Standard_Type.hxx>
 #include <TCollection_ExtendedString.hxx>
 
 IMPLEMENT_STANDARD_RTTIEXT(CDF_StoreList,Standard_Transient)
 
-static void CAUGHT(TCollection_ExtendedString& status,const TCollection_ExtendedString& what) {
-  Handle(Standard_Failure) F = Standard_Failure::Caught();
+static void CAUGHT(const Standard_Failure& theException,TCollection_ExtendedString& status,const TCollection_ExtendedString& what) {
   status += what;
-  status += F->GetMessageString();
+  status += theException.GetMessageString();
 }
 
 CDF_StoreList::CDF_StoreList(const Handle(CDM_Document)& aDocument) {
@@ -91,30 +87,30 @@ PCDM_StoreStatus CDF_StoreList::Store (Handle(CDM_MetaData)& aMetaData, TCollect
         Handle(CDM_Document) theDocument = myStack.First();
         if( theDocument == myMainDocument || theDocument->IsModified()) {
 
-          if(!PCDM::FindStorageDriver(theDocument)){
+          Handle(CDF_Application) anApp = Handle(CDF_Application)::DownCast (theDocument->Application());
+          if (anApp.IsNull())
+          {
+            throw Standard_Failure("Document has no application, cannot save!");
+          }
+          Handle(PCDM_StorageDriver) aDocumentStorageDriver = 
+            anApp->WriterFromFormat(theDocument->StorageFormat());
+          if (aDocumentStorageDriver.IsNull())
+          {
             Standard_SStream aMsg;
             aMsg <<"No storage driver does exist for this format: " << theDocument->StorageFormat() << (char)0;
-            Standard_Failure::Raise(aMsg);
+            throw Standard_Failure(aMsg.str().c_str());
           }
 
           if(!theMetaDataDriver->FindFolder(theDocument->RequestedFolder())) {
             Standard_SStream aMsg; aMsg << "could not find the active dbunit";
             aMsg << TCollection_ExtendedString(theDocument->RequestedFolder())<< (char)0;
-            Standard_NoSuchObject::Raise(aMsg);
+            throw Standard_NoSuchObject(aMsg.str().c_str());
           }
           TCollection_ExtendedString theName=theMetaDataDriver->BuildFileName(theDocument);
 
-          CDF_Timer theTimer;
-          Handle(PCDM_StorageDriver) aDocumentStorageDriver = PCDM::StorageDriver(theDocument);
-
           aDocumentStorageDriver->Write(theDocument,theName);
           status = aDocumentStorageDriver->GetStoreStatus();
-
-          theTimer.ShowAndRestart("Driver->Write: ");
-
           aMetaData = theMetaDataDriver->CreateMetaData(theDocument,theName);
-          theTimer.ShowAndStop("metadata creating: ");
-
           theDocument->SetMetaData(aMetaData);
 
           CDM_ReferenceIterator it(theDocument);
@@ -125,12 +121,12 @@ PCDM_StoreStatus CDF_StoreList::Store (Handle(CDM_MetaData)& aMetaData, TCollect
       }
     }
 
-    catch (CDF_MetaDataDriverError) {
-      CAUGHT(aStatusAssociatedText,TCollection_ExtendedString("metadatadriver failed; reason:"));
+    catch (CDF_MetaDataDriverError anException) {
+      CAUGHT(anException, aStatusAssociatedText, TCollection_ExtendedString("metadatadriver failed; reason:"));
       status = PCDM_SS_DriverFailure;
     }
-    catch (Standard_Failure) {
-      CAUGHT(aStatusAssociatedText,TCollection_ExtendedString("driver failed; reason:"));
+    catch (Standard_Failure const& anException) {
+      CAUGHT(anException, aStatusAssociatedText, TCollection_ExtendedString("driver failed; reason:"));
       status = PCDM_SS_Failure; 
     }
   }

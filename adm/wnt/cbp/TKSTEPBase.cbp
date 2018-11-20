@@ -17,14 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__StepBasic_DLL" />
-					<Add option="-D__RWStepBasic_DLL" />
-					<Add option="-D__StepRepr_DLL" />
-					<Add option="-D__RWStepRepr_DLL" />
-					<Add option="-D__StepGeom_DLL" />
-					<Add option="-D__RWStepGeom_DLL" />
-					<Add option="-D__StepShape_DLL" />
-					<Add option="-D__RWStepShape_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKSTEPBase_obj.link" />
@@ -43,14 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__StepBasic_DLL" />
-					<Add option="-D__RWStepBasic_DLL" />
-					<Add option="-D__StepRepr_DLL" />
-					<Add option="-D__RWStepRepr_DLL" />
-					<Add option="-D__StepGeom_DLL" />
-					<Add option="-D__RWStepGeom_DLL" />
-					<Add option="-D__StepShape_DLL" />
-					<Add option="-D__RWStepShape_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKSTEPBase_objd.link" />
@@ -385,6 +369,15 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionFormationWithSpecifiedSource.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionOrReference.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionReference.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionReferenceWithLocalRepresentation.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/StepBasic/StepBasic_ProductDefinitionRelationship.cxx">
@@ -765,6 +758,12 @@
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionFormationWithSpecifiedSource.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionReference.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionReferenceWithLocalRepresentation.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/RWStepBasic/RWStepBasic_RWProductDefinitionRelationship.cxx">
 			<Option link="0" />
 		</Unit>
@@ -858,6 +857,9 @@
 		<Unit filename="../../../src/StepRepr/StepRepr_CharacterizedDefinition.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/StepRepr/StepRepr_CharacterizedRepresentation.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/StepRepr/StepRepr_CompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
 			<Option link="0" />
 		</Unit>
@@ -883,6 +885,12 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/StepRepr/StepRepr_ConfigurationItem.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StepRepr/StepRepr_ConstructiveGeometryRepresentation.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/StepRepr/StepRepr_ConstructiveGeometryRepresentationRelationship.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/StepRepr/StepRepr_ContinuosShapeAspect.cxx">
@@ -1083,6 +1091,9 @@
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCentreOfSymmetry.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCharacterizedRepresentation.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWCompGroupShAspAndCompShAspAndDatumFeatAndShAsp.cxx">
 			<Option link="0" />
 		</Unit>
@@ -1105,6 +1116,12 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConfigurationItem.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConstructiveGeometryRepresentation.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWConstructiveGeometryRepresentationRelationship.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/RWStepRepr/RWStepRepr_RWContinuosShapeAspect.cxx">

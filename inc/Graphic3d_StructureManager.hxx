@@ -19,36 +19,25 @@
 
 #include <Aspect_GenId.hxx>
 #include <Aspect_TypeOfHighlightMethod.hxx>
-#include <Aspect_TypeOfUpdate.hxx>
 #include <Graphic3d_CView.hxx>
 #include <Graphic3d_MapOfObject.hxx>
 #include <Graphic3d_MapOfStructure.hxx>
 #include <Graphic3d_ViewAffinity.hxx>
 #include <Graphic3d_ZLayerId.hxx>
 #include <Graphic3d_ZLayerSettings.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <NCollection_IndexedMap.hxx>
 #include <Standard.hxx>
 #include <Standard_Boolean.hxx>
 #include <Standard_Integer.hxx>
 #include <Standard_Type.hxx>
 #include <TColStd_Array2OfReal.hxx>
-#include <TColStd_SequenceOfInteger.hxx>
 
 typedef NCollection_IndexedMap<Graphic3d_CView*> Graphic3d_IndexedMapOfView;
 
-class Graphic3d_AspectLine3d;
-class Graphic3d_AspectText3d;
-class Graphic3d_AspectMarker3d;
-class Graphic3d_AspectFillArea3d;
 class Graphic3d_GraphicDriver;
-class Graphic3d_InitialisationError;
 class Graphic3d_Structure;
 class Graphic3d_DataStructureManager;
-class Standard_Transient;
-
-class Graphic3d_StructureManager;
-DEFINE_STANDARD_HANDLE(Graphic3d_StructureManager, MMgt_TShared)
 
 //! This class allows the definition of a manager to
 //! which the graphic objects are associated.
@@ -56,8 +45,10 @@ DEFINE_STANDARD_HANDLE(Graphic3d_StructureManager, MMgt_TShared)
 //! It defines the global attributes.
 //! Keywords: Structure, Structure Manager, Update Mode,
 //! Destroy, Highlight, Visible
-class Graphic3d_StructureManager : public MMgt_TShared
+class Graphic3d_StructureManager : public Standard_Transient
 {
+  friend class Graphic3d_Structure;
+  DEFINE_STANDARD_RTTIEXT(Graphic3d_StructureManager, Standard_Transient)
 public:
 
   //! Initializes the ViewManager.
@@ -72,45 +63,8 @@ public:
   //! Deletes the manager <me>.
   Standard_EXPORT ~Graphic3d_StructureManager();
 
-  //! Modifies the default attributes for lines
-  //! in the visualiser.
-  Standard_EXPORT void SetPrimitivesAspect (const Handle(Graphic3d_AspectLine3d)& CTX);
-
-  //! Modifies the default attributes for faces
-  //! in the visualiser.
-  Standard_EXPORT void SetPrimitivesAspect (const Handle(Graphic3d_AspectFillArea3d)& CTX);
-
-  //! Modifies the default attributes for text
-  //! in the visualiser.
-  Standard_EXPORT void SetPrimitivesAspect (const Handle(Graphic3d_AspectText3d)& CTX);
-
-  //! Modifies the default attributes for markers
-  //! in the visualiser.
-  Standard_EXPORT void SetPrimitivesAspect (const Handle(Graphic3d_AspectMarker3d)& CTX);
-
-  //! Modifies the screen update mode.
-  //!
-  //! TOU_ASAP - as soon as possible
-  //! TOU_WAIT - on demand (with the Update function)
-  //! Note : Dynamic Operations and Update Mode
-  //! Use SetUpdateMode to control when changes to
-  //! the display are made.   Use one of the   following
-  //! functions to update one or more views:
-  //! - Update all views of the viewer: Graphic3d_StructureManager::Update()
-  //! - Update one view of the viewer:  Graphic3d_View::Update()
-  //! Use one of the following functions to update the entire display:
-  //! - Redraw all structures in all views: Graphic3d_StructureManager::Redraw()
-  //! - Redraw all structures in one view:  Graphic3d_View::Redraw()
-  Standard_EXPORT void SetUpdateMode (const Aspect_TypeOfUpdate theType);
-
-  //! Returns the screen update mode.
-  //!
-  //! TOU_ASAP	as soon as possible
-  //! TOU_WAIT	on demand (Update)
-  Standard_EXPORT Aspect_TypeOfUpdate UpdateMode() const;
-
-  //! Updates screen in function of modifications of the structures.
-  Standard_EXPORT virtual void Update (const Aspect_TypeOfUpdate theMode = Aspect_TOU_ASAP) const;
+  //! Invalidates bounding box of specified ZLayerId.
+  Standard_EXPORT virtual void Update (const Graphic3d_ZLayerId  theLayerId = Graphic3d_ZLayerId_UNKNOWN) const;
 
   //! Deletes and erases the 3D structure manager.
   Standard_EXPORT virtual void Remove();
@@ -125,27 +79,6 @@ public:
   //! Returns the set of highlighted structures
   //! in a visualiser <me>.
   Standard_EXPORT void HighlightedStructures (Graphic3d_MapOfStructure& SG) const;
-
-  //! Returns the values of the current default attributes.
-  Standard_EXPORT Handle(Graphic3d_AspectFillArea3d) FillArea3dAspect() const;
-
-  //! Returns maximum number of managers defineable.
-  Standard_EXPORT static Standard_Integer Limit();
-
-  //! Returns the values of the current default attributes.
-  Standard_EXPORT Handle(Graphic3d_AspectLine3d) Line3dAspect() const;
-
-  //! Returns the values of the current default attributes.
-  Standard_EXPORT Handle(Graphic3d_AspectMarker3d) Marker3dAspect() const;
-
-  //! Returns the values of the current default attributes.
-  Standard_EXPORT void PrimitivesAspect (Handle(Graphic3d_AspectLine3d)& CTXL, Handle(Graphic3d_AspectText3d)& CTXT, Handle(Graphic3d_AspectMarker3d)& CTXM, Handle(Graphic3d_AspectFillArea3d)& CTXF) const;
-
-  //! Returns the values of the current default attributes.
-  Standard_EXPORT Handle(Graphic3d_AspectText3d) Text3dAspect() const;
-
-  //! Returns a current identifier available.
-  Standard_EXPORT static Standard_Integer CurrentId();
 
   //! Forces a new construction of the structure.
   //! if <theStructure> is displayed and TOS_COMPUTED.
@@ -171,10 +104,10 @@ public:
   Standard_EXPORT virtual void Erase (const Handle(Graphic3d_Structure)& theStructure);
 
   //! Highlights the structure.
-  Standard_EXPORT virtual void Highlight (const Handle(Graphic3d_Structure)& theStructure, const Aspect_TypeOfHighlightMethod theMethod);
+  Standard_EXPORT virtual void Highlight (const Handle(Graphic3d_Structure)& theStructure);
 
   //! Transforms the structure.
-  Standard_EXPORT virtual void SetTransform (const Handle(Graphic3d_Structure)& theStructure, const TColStd_Array2OfReal& theTrsf);
+  Standard_EXPORT virtual void SetTransform (const Handle(Graphic3d_Structure)& theStructure, const Handle(Geom_Transformation)& theTrsf);
 
   //! Changes the display priority of the structure <AStructure>.
   Standard_EXPORT virtual void ChangeDisplayPriority (const Handle(Graphic3d_Structure)& theStructure, const Standard_Integer theOldPriority, const Standard_Integer theNewPriority);
@@ -200,14 +133,8 @@ public:
   //! view must have an identification and we have different managers.
   Standard_EXPORT Standard_Integer MaxNumOfViews() const;
 
-  //! Returns the identification number of the manager.
-  Standard_EXPORT virtual Standard_Integer Identification() const;
-
   //! Returns the structure with the identification number <AId>.
   Standard_EXPORT virtual Handle(Graphic3d_Structure) Identification (const Standard_Integer AId) const;
-
-  //! Returns a new identification number for a new structure in the manager.
-  Standard_EXPORT Standard_Integer NewIdentification();
 
   //! Suppress the highlighting on the structure <AStructure>.
   Standard_EXPORT virtual void UnHighlight (const Handle(Graphic3d_Structure)& AStructure);
@@ -215,6 +142,8 @@ public:
   //! Suppresses the highlighting on all the structures in <me>.
   Standard_EXPORT virtual void UnHighlight();
 
+  //! Recomputes all structures in the manager.
+  //! Resets Device Lost flag.
   Standard_EXPORT void RecomputeStructures();
 
   //! Recomputes all structures from theStructures.
@@ -226,9 +155,11 @@ public:
 
   Standard_EXPORT Handle(Graphic3d_ViewAffinity) ObjectAffinity (const Handle(Standard_Transient)& theObject) const;
 
-  friend class Graphic3d_Structure;
+  //! Returns TRUE if Device Lost flag has been set and presentation data should be reuploaded onto graphics driver.
+  Standard_Boolean IsDeviceLost() const { return myDeviceLostFlag; }
 
-  DEFINE_STANDARD_RTTIEXT(Graphic3d_StructureManager,MMgt_TShared)
+  //! Sets Device Lost flag.
+  void SetDeviceLost() { myDeviceLostFlag = Standard_True; }
 
 protected:
 
@@ -237,26 +168,17 @@ protected:
   //! Returns the structure displayed in visualizer <me>.
   Standard_EXPORT Standard_Integer NumberOfDisplayedStructures() const;
 
-private:
-
-  //! Frees the identifier of a structure.
-  void Remove (const Standard_Integer theId);
-
 protected:
 
-  Standard_Integer myId;
-  Aspect_GenId myStructGenId;
   Aspect_GenId myViewGenId;
-  Aspect_TypeOfUpdate myUpdateMode;
-  Handle(Graphic3d_AspectLine3d) myAspectLine3d;
-  Handle(Graphic3d_AspectText3d) myAspectText3d;
-  Handle(Graphic3d_AspectMarker3d) myAspectMarker3d;
-  Handle(Graphic3d_AspectFillArea3d) myAspectFillArea3d;
   Graphic3d_MapOfStructure myDisplayedStructure;
   Graphic3d_MapOfStructure myHighlightedStructure;
   Graphic3d_MapOfObject myRegisteredObjects;
   Handle(Graphic3d_GraphicDriver) myGraphicDriver;
   Graphic3d_IndexedMapOfView myDefinedViews;
+  Standard_Boolean myDeviceLostFlag;
 };
+
+DEFINE_STANDARD_HANDLE(Graphic3d_StructureManager, Standard_Transient)
 
 #endif // _Graphic3d_StructureManager_HeaderFile

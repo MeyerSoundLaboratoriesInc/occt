@@ -27,11 +27,9 @@
 #include <AIS_Line.hxx>
 #include <AIS_Shape.hxx>
 #include <AIS_Point.hxx>
-#include <AIS_TexturedShape.hxx>
 #include <Aspect_Grid.hxx>
 #include <Aspect_PolygonOffsetMode.hxx>
 #include <Aspect_DisplayConnection.hxx>
-#include <Aspect_AspectMarker.hxx>
 
 #include <BRep_Tool.hxx>
 #include <BRepTools.hxx>
@@ -56,7 +54,6 @@
 #include <Graphic3d_Group.hxx>
 #include <Graphic3d_HorizontalTextAlignment.hxx>
 #include <Graphic3d_VerticalTextAlignment.hxx>
-#include <Graphic3d_Array1OfVertex.hxx>
 #include <Graphic3d_ArrayOfPolylines.hxx>
 #include <Graphic3d_ExportFormat.hxx>
 #include <Graphic3d_ArrayOfPolylines.hxx>

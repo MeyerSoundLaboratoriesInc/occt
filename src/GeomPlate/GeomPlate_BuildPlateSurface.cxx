@@ -22,6 +22,7 @@
 
 #include <Adaptor2d_HCurve2d.hxx>
 #include <Adaptor3d_HCurve.hxx>
+#include <Adaptor3d_CurveOnSurface.hxx>
 #include <Approx_CurveOnSurface.hxx>
 #include <Extrema_ExtPS.hxx>
 #include <Extrema_POnSurf.hxx>
@@ -109,7 +110,7 @@ static Standard_Integer Affich=0;
 //---------------------------------------------------------
 GeomPlate_BuildPlateSurface::GeomPlate_BuildPlateSurface ( 
 		    const Handle(TColStd_HArray1OfInteger)& NPoints,
-		    const Handle(GeomPlate_HArray1OfHCurveOnSurface)& TabCurve,
+		    const Handle(GeomPlate_HArray1OfHCurve)& TabCurve,
 		    const Handle(TColStd_HArray1OfInteger)& Tang,
 		    const Standard_Integer Degree,
 		    const Standard_Integer NbIter,
@@ -133,21 +134,21 @@ myNbBounds(0)
   myLinCont = new GeomPlate_HSequenceOfCurveConstraint;
   myPntCont = new GeomPlate_HSequenceOfPointConstraint;
   if (myNbIter<1)
-    Standard_ConstructionError::Raise("GeomPlate :  Number of iteration must be >= 1");
+    throw Standard_ConstructionError("GeomPlate :  Number of iteration must be >= 1");
     
   if (NTCurve==0) 
-    Standard_ConstructionError::Raise("GeomPlate : the bounds Array is null");
+    throw Standard_ConstructionError("GeomPlate : the bounds Array is null");
   if (Tang->Length()==0) 
-    Standard_ConstructionError::Raise("GeomPlate : the constraints Array is null");
+    throw Standard_ConstructionError("GeomPlate : the constraints Array is null");
   Standard_Integer nbp = 0;
   Standard_Integer i ;
   for ( i=1;i<=NTCurve;i++) 
     { nbp+=NPoints->Value(i);
     }
   if (nbp==0) 
-    Standard_ConstructionError::Raise("GeomPlate : the resolution is impossible if the number of constraints points is 0");
+    throw Standard_ConstructionError("GeomPlate : the resolution is impossible if the number of constraints points is 0");
   if (myDegree<2) 
-    Standard_ConstructionError::Raise("GeomPlate ; the degree resolution must be upper of 2");  
+    throw Standard_ConstructionError("GeomPlate ; the degree resolution must be upper of 2");
   // Remplissage des champs  passage de l'ancien constructeur au nouveau
   for(i=1;i<=NTCurve;i++) 
     { Handle(GeomPlate_CurveConstraint) Cont = new GeomPlate_CurveConstraint 
@@ -186,9 +187,9 @@ myTol3d(Tol3d),
 myTolAng(TolAng),
 myNbBounds(0)
 {   if (myNbIter<1)
-    Standard_ConstructionError::Raise("GeomPlate :  Number of iteration must be >= 1");
+    throw Standard_ConstructionError("GeomPlate :  Number of iteration must be >= 1");
  if (myDegree<2) 
-     Standard_ConstructionError::Raise("GeomPlate : the degree resolution must be upper of 2");  
+     throw Standard_ConstructionError("GeomPlate : the degree resolution must be upper of 2");
    myLinCont = new GeomPlate_HSequenceOfCurveConstraint;
    myPntCont = new GeomPlate_HSequenceOfPointConstraint;
   mySurfInitIsGive=Standard_True;
@@ -220,9 +221,9 @@ myTol3d(Tol3d),
 myTolAng(TolAng),
 myNbBounds(0)
 {  if (myNbIter<1)
-    Standard_ConstructionError::Raise("GeomPlate :  Number of iteration must be >= 1");
+    throw Standard_ConstructionError("GeomPlate :  Number of iteration must be >= 1");
  if (myDegree<2) 
-    Standard_ConstructionError::Raise("GeomPlate : the degree resolution must be upper of 2");  
+    throw Standard_ConstructionError("GeomPlate : the degree resolution must be upper of 2");
   myLinCont = new GeomPlate_HSequenceOfCurveConstraint;
   myPntCont = new GeomPlate_HSequenceOfPointConstraint;
   mySurfInitIsGive=Standard_False;
@@ -474,8 +475,14 @@ void GeomPlate_BuildPlateSurface::Perform()
   NTPntCont = myPntCont->Length(), NbBoucle=0;
   // La variable  NTPoint peut etre enlevee
   Standard_Boolean Fini=Standard_True;
-  if ((NTLinCont+NTPntCont)==0)
-    Standard_RangeError::Raise("GeomPlate : The number of constraints is null.");
+  if ((NTLinCont + NTPntCont) == 0)
+  {
+#ifdef OCCT_DEBUG
+    cout << "WARNING : GeomPlate : The number of constraints is null." << endl;
+#endif
+
+    return;
+  }
 
   //======================================================================   
   // Surface Initiale
@@ -490,7 +497,7 @@ void GeomPlate_BuildPlateSurface::Perform()
 	  for (Standard_Integer l=1;l<=NTLinCont;l++)
 	    myInitOrder->SetValue(l,l);
 	  if (!CourbeJointive(myTol3d)) 
-	    {//    Standard_Failure::Raise("Curves are not joined"); 
+	    {//    throw Standard_Failure("Curves are not joined");
 #ifdef OCCT_DEBUG
 	      cout<<"WARNING : Courbes non jointives a "<<myTol3d<<" pres"<<endl;
 #endif	  
@@ -503,6 +510,11 @@ void GeomPlate_BuildPlateSurface::Perform()
        myInitOrder = new TColStd_HArray1OfInteger( 1, NTLinCont, 1 );
      }
  }
+
+  if (mySurfInit.IsNull())
+  {
+    return;
+  }
 
   Standard_Real u1,v1,u2,v2;
   mySurfInit->Bounds(u1,v1,u2,v2);
@@ -647,9 +659,16 @@ void GeomPlate_BuildPlateSurface::Perform()
 	  //Resolution de la surface
 	  //====================================================================
 	  myPlate.SolveTI(myDegree, ComputeAnisotropie());
-	  if (!myPlate.IsDone())   
-	    Standard_Failure::Raise("GeomPlate : abort calcul of Plate.");
-	  myGeomPlateSurface = new GeomPlate_Surface(mySurfInit,myPlate);
+          if (!myPlate.IsDone())
+          {
+#ifdef OCCT_DEBUG
+            cout << "WARNING : GeomPlate : abort calcul of Plate." << endl;
+#endif
+
+            return;
+          }
+
+          myGeomPlateSurface = new GeomPlate_Surface(mySurfInit,myPlate);
 	  Standard_Real Umin,Umax,Vmin,Vmax; 
           myPlate.UVBox(Umin,Umax,Vmin,Vmax);
 	  myGeomPlateSurface->SetBounds(Umin,Umax,Vmin,Vmax);
@@ -674,9 +693,15 @@ void GeomPlate_BuildPlateSurface::Perform()
 	  //Resolution de la surface
 	  //====================================================================
 	  myPlate.SolveTI(myDegree, ComputeAnisotropie());
-	  if (!myPlate.IsDone())   
-	    Standard_Failure::Raise("GeomPlate : abort calcul of Plate.");
-	  myGeomPlateSurface = new GeomPlate_Surface(mySurfInit,myPlate);
+          if (!myPlate.IsDone())
+          {
+#ifdef OCCT_DEBUG
+            cout << "WARNING : GeomPlate : abort calcul of Plate." << endl;
+#endif
+            return;
+          }
+
+          myGeomPlateSurface = new GeomPlate_Surface(mySurfInit,myPlate);
 	  Standard_Real Umin,Umax,Vmin,Vmax; 
           myPlate.UVBox(Umin,Umax,Vmin,Vmax);
 	  myGeomPlateSurface->SetBounds(Umin,Umax,Vmin,Vmax);
@@ -1502,7 +1527,7 @@ void GeomPlate_BuildPlateSurface::ComputeSurfInit()
       if ( NTPntCont != 0)
 	nopt = 1;  //Calcul par la methode du plan d'inertie
       else if (!CourbeJoint || NTLinCont != myNbBounds)
-	{//    Standard_Failure::Raise("Curves are not joined"); 
+	{//    throw Standard_Failure("Curves are not joined");
 #ifdef OCCT_DEBUG	    
 	  cout<<"WARNING : Courbes non jointives a "<<myTol3d<<" pres"<<endl;
 #endif	  
@@ -1550,7 +1575,14 @@ void GeomPlate_BuildPlateSurface::ComputeSurfInit()
       if (!CourbeJoint)
 	myNbBounds = 0;
       GeomPlate_BuildAveragePlane BAP( Pts, NbPoint*myNbBounds, myTol3d/1000, popt, nopt );
-      if (!BAP.IsPlane()) Standard_Failure::Raise("the initial surface is not a plane.");
+      if (!BAP.IsPlane())
+      {
+#ifdef OCCT_DEBUG
+        cout << "WARNING : GeomPlate : the initial surface is not a plane." << endl;
+#endif
+
+        return;
+      }
       Standard_Real u1,u2,v1,v2;
       BAP.MinMaxBox(u1,u2,v1,v2);
       // On agrandit le bazar pour les projections
@@ -1688,8 +1720,13 @@ void GeomPlate_BuildPlateSurface::ComputeSurfInit()
       //Resolution de la surface
       //====================================================================
       myPlate.SolveTI(2, ComputeAnisotropie());
-      if (!myPlate.IsDone())   
-	Standard_Failure::Raise("GeomPlate : abort calcul of Plate.");
+      if (!myPlate.IsDone())
+      {
+#ifdef OCCT_DEBUG
+        cout << "WARNING : GeomPlate : abort calcul of Plate." << endl;
+#endif
+        return;
+      }
 
       myGeomPlateSurface = new GeomPlate_Surface( mySurfInit, myPlate );
 

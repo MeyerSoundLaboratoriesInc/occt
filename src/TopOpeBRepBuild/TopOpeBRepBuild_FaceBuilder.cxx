@@ -59,8 +59,6 @@
 
 #ifdef OCCT_DEBUG
 extern Standard_Boolean TopOpeBRepBuild_GettracePURGE();
-extern Standard_Boolean TopOpeBRepDS_GettraceSTRANGE();
-#include <TopOpeBRepDS_DSX.hxx>
 void debifb() {}
 #endif
 
@@ -92,10 +90,6 @@ TopOpeBRepBuild_FaceBuilder::TopOpeBRepBuild_FaceBuilder(TopOpeBRepBuild_WireEdg
 void TopOpeBRepBuild_FaceBuilder::InitFaceBuilder(TopOpeBRepBuild_WireEdgeSet& WES,const TopoDS_Shape& F,const Standard_Boolean ForceClass) 
 {
   myFace = TopoDS::Face(F);
-#ifdef OCCT_DEBUG
-  Standard_Boolean deb = TopOpeBRepDS_GettraceSPSX(myFace);
-  if (deb) debifb();
-#endif
   MakeLoops(WES);
   TopOpeBRepBuild_BlockBuilder& BB = myBlockBuilder;
   TopOpeBRepBuild_WireEdgeClassifier WEC(F,BB);
@@ -374,10 +368,8 @@ void TopOpeBRepBuild_FaceBuilder::CorrectGclosedWire(const TopTools_IndexedDataM
 {
   // prequesitory : edges described by <mapVon1Edge> are not closed,not degenerated
 #ifdef OCCT_DEBUG
-  Standard_Boolean trc = TopOpeBRepDS_GettraceSTRANGE();
   if (TopOpeBRepBuild_GettracePURGE()) {
     cout<<endl<<"* CorrectGclosedWire :"<<endl<<endl;
-    trc = Standard_True;
   }
 #endif
   
@@ -397,10 +389,6 @@ void TopOpeBRepBuild_FaceBuilder::CorrectGclosedWire(const TopTools_IndexedDataM
     TopoDS_Vertex newVref = TopoDS::Vertex(aLocalShape);
 //    TopoDS_Vertex newVref = TopoDS::Vertex(Vref.Oriented(V.Orientation()));
     BB.Add(E,newVref);
-#ifdef OCCT_DEBUG
-    Standard_Integer iV = i,iVref = mapVVref.FindIndex(Vref),iE = mapVon1Edge.FindIndex(V);
-    if (trc) cout << " replacing V "<<iV<<" with V "<<iVref<<" on edge "<<iE<<endl;
-#endif
     TopOpeBRepDS_BuildTool BT;
     BT.Parameter(E,newVref,paronE);
   }
@@ -568,7 +556,7 @@ Standard_Integer TopOpeBRepBuild_FaceBuilder::InitEdge()
 {
   const Handle(TopOpeBRepBuild_Loop)& L = myFaceAreaBuilder.Loop();
   if ( L->IsShape() )
-    Standard_DomainError::Raise("TopOpeBRepBuild_FaceBuilder:InitEdge");
+    throw Standard_DomainError("TopOpeBRepBuild_FaceBuilder:InitEdge");
   else {
     myBlockIterator = L->BlockIterator();
     myBlockIterator.Initialize();
@@ -604,11 +592,11 @@ void TopOpeBRepBuild_FaceBuilder::NextEdge()
 //=======================================================================
 const TopoDS_Shape& TopOpeBRepBuild_FaceBuilder::Edge() const
 {
-  if (!myBlockIterator.More()) Standard_Failure::Raise("OutOfRange");
+  if (!myBlockIterator.More()) throw Standard_Failure("OutOfRange");
 
   const Standard_Integer i = myBlockIterator.Value();
   Standard_Boolean isvalid = myBlockBuilder.ElementIsValid(i);
-  if (!isvalid) Standard_Failure::Raise("Edge not Valid");
+  if (!isvalid) throw Standard_Failure("Edge not Valid");
 
   const TopoDS_Shape& E = myBlockBuilder.Element(i);
   return E;
@@ -621,9 +609,10 @@ const TopoDS_Shape& TopOpeBRepBuild_FaceBuilder::Edge() const
 Standard_Integer TopOpeBRepBuild_FaceBuilder::EdgeConnexity(const TopoDS_Shape& /*E*/) const
 {
 #ifdef OCCT_DEBUG
-  Standard_ProgramError::Raise("FaceBuilder::EdgeConnexity management disactivated");
-#endif
+  throw Standard_ProgramError("FaceBuilder::EdgeConnexity management disactivated");
+#else
   return 0;
+#endif
 //  Standard_Boolean inmosi = myMOSI.IsBound(E);
 //  Standard_Integer nmosi = (inmosi) ? myMOSI.Find(E) : 0;
 //  return nmosi;

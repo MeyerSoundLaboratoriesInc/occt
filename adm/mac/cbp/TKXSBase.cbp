@@ -332,9 +332,6 @@
 		<Unit filename="../../../src/MoniTool/MoniTool_Element.cxx" />
 		<Unit filename="../../../src/MoniTool/MoniTool_IntVal.cxx" />
 		<Unit filename="../../../src/MoniTool/MoniTool_MTHasher.cxx" />
-		<Unit filename="../../../src/MoniTool/MoniTool_OptValue.cxx" />
-		<Unit filename="../../../src/MoniTool/MoniTool_Option.cxx" />
-		<Unit filename="../../../src/MoniTool/MoniTool_Profile.cxx" />
 		<Unit filename="../../../src/MoniTool/MoniTool_RealVal.cxx" />
 		<Unit filename="../../../src/MoniTool/MoniTool_SignShape.cxx" />
 		<Unit filename="../../../src/MoniTool/MoniTool_SignText.cxx" />

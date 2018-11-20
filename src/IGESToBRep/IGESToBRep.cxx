@@ -21,7 +21,6 @@
 
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
-#include <BRepTools.hxx>
 #include <Geom2d_Curve.hxx>
 #include <Geom_Curve.hxx>
 #include <Geom_Surface.hxx>
@@ -78,12 +77,6 @@
 #include <TopoDS_Wire.hxx>
 #include <XSAlgo.hxx>
 
-#include <stdio.h>
-/* Just used for WriteShape */
-//:21 
-//                     =========================
-//                     ==  Selection Members  ==
-//                     =========================
 static Handle(IGESToBRep_AlgoContainer) theContainer; 
  
 //=======================================================================                                                
@@ -248,23 +241,6 @@ Standard_Boolean IGESToBRep::IsBRepEntity(const Handle(IGESData_IGESEntity)& sta
 }
 
 //=======================================================================
-//function : WriteShape
-//purpose  : Creates a file Shape_'number'
-//=======================================================================
-void IGESToBRep::WriteShape(const TopoDS_Shape& shape,
-			    const Standard_Integer number)
-{
-  char fname[110];
-  sprintf(fname, "Shape_%d",number);
-  ofstream f(fname,ios::out);
-  cout << "Output file name : " << fname << endl;
-  f << "DBRep_DrawableShape\n";
-  
-  BRepTools::Write(shape, f);
-  f.close();
-}
-
-//=======================================================================
 //function : IGESCurveToSequenceOfIGESCurve
 //purpose  : Creates a sequence of IGES curves from IGES curve:
 //           - if curve is CompositeCurve its components are recursively added,
@@ -327,11 +303,12 @@ void IGESToBRep::WriteShape(const TopoDS_Shape& shape,
 	  result = Standard_False;
 	}
       }
-      catch(Standard_Failure) {
+      catch(Standard_Failure const& anException) {
 #ifdef OCCT_DEBUG
 	cout << "\n**IGESToBRep::TransferPCurve: Exception in SameRange : "; 
-	Standard_Failure::Caught()->Print(cout);
+	anException.Print(cout);
 #endif
+	(void)anException;
 	result = Standard_False;
       }
     }

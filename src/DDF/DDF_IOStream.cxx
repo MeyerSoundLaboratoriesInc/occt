@@ -255,14 +255,14 @@ void DDF_IOStream::ReadExtendedLine(TCollection_ExtendedString& buffer)
   while (!fin && !IsEnd()) {
     myIStream->get(c);
     check++; 
-//    if (!(check % 2)) Storage_StreamExtCharParityError::Raise();
+//    if (!(check % 2)) throw Storage_StreamExtCharParityError();
     i = (Standard_ExtCharacter)c;
     if (c == '\0') fin = Standard_True;
     i = (i << 8);
 
     myIStream->get(c);
     check++;
-//    if ((check % 2) != 0) Storage_StreamExtCharParityError::Raise();
+//    if ((check % 2) != 0) throw Storage_StreamExtCharParityError();
 //    cout << check << endl;
     j = (Standard_ExtCharacter)c;
     if (c != '\n') fin = Standard_False;
@@ -270,7 +270,7 @@ void DDF_IOStream::ReadExtendedLine(TCollection_ExtendedString& buffer)
     buffer += (Standard_ExtCharacter)i;
   }
 
-//  if ((check % 2) != 0) Storage_StreamExtCharParityError::Raise();
+//  if ((check % 2) != 0) throw Storage_StreamExtCharParityError();
 //  cout << check << endl;
 }
 
@@ -281,7 +281,7 @@ void DDF_IOStream::ReadExtendedLine(TCollection_ExtendedString& buffer)
 
 void DDF_IOStream::ReadChar(TCollection_AsciiString& buffer, const Standard_Integer rsize)
 {
-  char             c;
+  char c = '\0';
   Standard_Integer ccount = 0;
 
   buffer.Clear();
@@ -390,7 +390,7 @@ void DDF_IOStream::SkipObject()
 Storage_BaseDriver& DDF_IOStream::PutReference(const Standard_Integer aValue)
 {
   *myOStream << aValue << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutReference");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutReference");
   return *this;
 }
 
@@ -402,7 +402,7 @@ Storage_BaseDriver& DDF_IOStream::PutReference(const Standard_Integer aValue)
 Storage_BaseDriver& DDF_IOStream::PutCharacter(const Standard_Character aValue)
 {
   *myOStream << aValue << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutCharacter");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutCharacter");
   return *this;
 }
 
@@ -413,8 +413,8 @@ Storage_BaseDriver& DDF_IOStream::PutCharacter(const Standard_Character aValue)
 
 Storage_BaseDriver& DDF_IOStream::PutExtCharacter(const Standard_ExtCharacter aValue)
 {
-  *myOStream << aValue << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutExtCharacter");
+  *myOStream << (short )aValue << " ";
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutExtCharacter");
   return *this;
 }
 
@@ -426,7 +426,7 @@ Storage_BaseDriver& DDF_IOStream::PutExtCharacter(const Standard_ExtCharacter aV
 Storage_BaseDriver& DDF_IOStream::PutInteger(const Standard_Integer aValue)
 {
   *myOStream << aValue << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutInteger");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutInteger");
   return *this;
 }
 
@@ -438,7 +438,7 @@ Storage_BaseDriver& DDF_IOStream::PutInteger(const Standard_Integer aValue)
 Storage_BaseDriver& DDF_IOStream::PutBoolean(const Standard_Boolean aValue)
 {
   *myOStream << ((Standard_Integer)aValue) << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutBoolean");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutBoolean");
   return *this;
 }
 
@@ -450,7 +450,7 @@ Storage_BaseDriver& DDF_IOStream::PutBoolean(const Standard_Boolean aValue)
 Storage_BaseDriver& DDF_IOStream::PutReal(const Standard_Real aValue)
 {
   *myOStream << ((Standard_Real)aValue) << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutReal");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutReal");
   return *this;
 }
 
@@ -462,7 +462,7 @@ Storage_BaseDriver& DDF_IOStream::PutReal(const Standard_Real aValue)
 Storage_BaseDriver& DDF_IOStream::PutShortReal(const Standard_ShortReal aValue)
 {
   *myOStream << aValue << " ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise("PutShortReal");
+  if (myOStream->bad()) throw Storage_StreamWriteError("PutShortReal");
   return *this;
 }
 
@@ -477,7 +477,7 @@ Storage_BaseDriver& DDF_IOStream::PutShortReal(const Standard_ShortReal aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetReference(Standard_Integer& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetReference");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetReference");
   return *this;
 }
 
@@ -488,7 +488,7 @@ Storage_BaseDriver& DDF_IOStream::GetReference(Standard_Integer& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetCharacter(Standard_Character& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetCharacter");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetCharacter");
   return *this;
 }
 
@@ -499,7 +499,9 @@ Storage_BaseDriver& DDF_IOStream::GetCharacter(Standard_Character& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetExtCharacter(Standard_ExtCharacter& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetExtCharacter");
+  short aChar = 0;
+  if (!(*myIStream >> aChar)) throw Storage_StreamTypeMismatchError("GetExtCharacter");
+  aValue = aChar;
   return *this;
 }
 
@@ -510,7 +512,7 @@ Storage_BaseDriver& DDF_IOStream::GetExtCharacter(Standard_ExtCharacter& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetInteger(Standard_Integer& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetInteger");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetInteger");
   return *this;
 }
 
@@ -521,7 +523,7 @@ Storage_BaseDriver& DDF_IOStream::GetInteger(Standard_Integer& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetBoolean(Standard_Boolean& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetBoolean");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetBoolean");
   return *this;
 }
 
@@ -532,7 +534,7 @@ Storage_BaseDriver& DDF_IOStream::GetBoolean(Standard_Boolean& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetReal(Standard_Real& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetReal");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetReal");
   return *this;
 }
 
@@ -543,7 +545,7 @@ Storage_BaseDriver& DDF_IOStream::GetReal(Standard_Real& aValue)
 
 Storage_BaseDriver& DDF_IOStream::GetShortReal(Standard_ShortReal& aValue)
 {
-  if (!(*myIStream >> aValue)) Storage_StreamTypeMismatchError::Raise("GetShortReal");
+  if (!(*myIStream >> aValue)) throw Storage_StreamTypeMismatchError("GetShortReal");
   return *this;
 }
 
@@ -572,7 +574,7 @@ Storage_Error DDF_IOStream::BeginWriteInfoSection()
 {
   *myOStream << DDF_IOStream::MagicNumber() << '\n';
   *myOStream << "BEGIN_INFO_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 
   return Storage_VSOk;
 }
@@ -606,11 +608,11 @@ void DDF_IOStream::WriteInfo(const Standard_Integer nbObj,
   WriteExtendedLine(dataType);
   *myOStream << userInfo.Length() << "\n";
 
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 
   for (i = 1; i <= userInfo.Length(); i++) {
     *myOStream << userInfo.Value(i).ToCString() << "\n";
-    if (myOStream->bad()) Storage_StreamWriteError::Raise();
+    if (myOStream->bad()) throw Storage_StreamWriteError();
   }
 }
 
@@ -623,7 +625,7 @@ void DDF_IOStream::WriteInfo(const Standard_Integer nbObj,
 Storage_Error DDF_IOStream::EndWriteInfoSection() 
 {
   *myOStream << "END_INFO_SECTION\n";
-  if (myOStream->bad())  Storage_StreamWriteError::Raise();
+  if (myOStream->bad())  throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -675,7 +677,7 @@ void DDF_IOStream::ReadInfo(Standard_Integer& nbObj,
 			TCollection_ExtendedString& dataType,
 			TColStd_SequenceOfAsciiString& userInfo) 
 {
-  if (!(*myIStream >> nbObj)) Storage_StreamTypeMismatchError::Raise("ReadInfo 1");
+  if (!(*myIStream >> nbObj)) throw Storage_StreamTypeMismatchError("ReadInfo 1");
 
   FlushEndOfLine();
 
@@ -689,7 +691,7 @@ void DDF_IOStream::ReadInfo(Standard_Integer& nbObj,
 
   Standard_Integer i,len = 0;
 
-  if (!(*myIStream >> len)) Storage_StreamTypeMismatchError::Raise("ReadInfo 2");
+  if (!(*myIStream >> len)) throw Storage_StreamTypeMismatchError("ReadInfo 2");
 
   FlushEndOfLine();
 
@@ -731,7 +733,7 @@ Storage_Error DDF_IOStream::EndReadInfoSection()
 Storage_Error DDF_IOStream::BeginWriteCommentSection() 
 {
   *myOStream << "BEGIN_COMMENT_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -746,11 +748,11 @@ void DDF_IOStream::WriteComment(const TColStd_SequenceOfExtendedString& aCom)
 
  aSize = aCom.Length();
  *myOStream << aSize << "\n";
- if (myOStream->bad()) Storage_StreamWriteError::Raise();
+ if (myOStream->bad()) throw Storage_StreamWriteError();
 
  for (i = 1; i <= aSize; i++) {
    WriteExtendedLine(aCom.Value(i));
-   if (myOStream->bad()) Storage_StreamWriteError::Raise();
+   if (myOStream->bad()) throw Storage_StreamWriteError();
  }
 }
 
@@ -762,7 +764,7 @@ void DDF_IOStream::WriteComment(const TColStd_SequenceOfExtendedString& aCom)
 Storage_Error DDF_IOStream::EndWriteCommentSection() 
 {
   *myOStream << "END_COMMENT_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -790,7 +792,7 @@ void DDF_IOStream::ReadComment(TColStd_SequenceOfExtendedString& aCom)
   TCollection_ExtendedString line;
   Standard_Integer           len,i;
 
-  if (!(*myIStream >> len)) Storage_StreamTypeMismatchError::Raise("ReadComment");
+  if (!(*myIStream >> len)) throw Storage_StreamTypeMismatchError("ReadComment");
   
   FlushEndOfLine();  
 
@@ -821,7 +823,7 @@ Storage_Error DDF_IOStream::EndReadCommentSection()
 Storage_Error DDF_IOStream::BeginWriteTypeSection() 
 {
   *myOStream << "BEGIN_TYPE_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -833,7 +835,7 @@ Storage_Error DDF_IOStream::BeginWriteTypeSection()
 void DDF_IOStream::SetTypeSectionSize(const Standard_Integer aSize) 
 {
   *myOStream << aSize << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -845,7 +847,7 @@ void DDF_IOStream::WriteTypeInformations(const Standard_Integer typeNum,
 				      const TCollection_AsciiString& typeName) 
 {
   *myOStream << typeNum << " " << typeName.ToCString() << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -856,7 +858,7 @@ void DDF_IOStream::WriteTypeInformations(const Standard_Integer typeNum,
 Storage_Error DDF_IOStream::EndWriteTypeSection() 
 {
   *myOStream << "END_TYPE_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -881,7 +883,7 @@ Standard_Integer DDF_IOStream::TypeSectionSize()
 {
   Standard_Integer i;
 
-  if (!(*myIStream >> i)) Storage_StreamTypeMismatchError::Raise("TypeSectionSize");
+  if (!(*myIStream >> i)) throw Storage_StreamTypeMismatchError("TypeSectionSize");
 
   FlushEndOfLine();
 
@@ -896,8 +898,8 @@ Standard_Integer DDF_IOStream::TypeSectionSize()
 void DDF_IOStream::ReadTypeInformations(Standard_Integer& typeNum,
 				    TCollection_AsciiString& typeName) 
 {
-  if (!(*myIStream >> typeNum)) Storage_StreamTypeMismatchError::Raise("ReadTypeInformations 1");
-  if (!(*myIStream >> typeName)) Storage_StreamTypeMismatchError::Raise("ReadTypeInformations 2");
+  if (!(*myIStream >> typeNum)) throw Storage_StreamTypeMismatchError("ReadTypeInformations 1");
+  if (!(*myIStream >> typeName)) throw Storage_StreamTypeMismatchError("ReadTypeInformations 2");
   FlushEndOfLine();
 }
 
@@ -923,7 +925,7 @@ Storage_Error DDF_IOStream::EndReadTypeSection()
 Storage_Error DDF_IOStream::BeginWriteRootSection() 
 {
   *myOStream << "BEGIN_ROOT_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -935,7 +937,7 @@ Storage_Error DDF_IOStream::BeginWriteRootSection()
 void DDF_IOStream::SetRootSectionSize(const Standard_Integer aSize) 
 {
   *myOStream << aSize << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -946,7 +948,7 @@ void DDF_IOStream::SetRootSectionSize(const Standard_Integer aSize)
 void DDF_IOStream::WriteRoot(const TCollection_AsciiString& rootName, const Standard_Integer aRef, const TCollection_AsciiString& rootType) 
 {
   *myOStream << aRef << " " << rootName.ToCString() << " " << rootType.ToCString() << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -957,7 +959,7 @@ void DDF_IOStream::WriteRoot(const TCollection_AsciiString& rootName, const Stan
 Storage_Error DDF_IOStream::EndWriteRootSection() 
 {
   *myOStream << "END_ROOT_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -982,7 +984,7 @@ Standard_Integer DDF_IOStream::RootSectionSize()
 {
   Standard_Integer i;
 
-  if (!(*myIStream >> i)) Storage_StreamTypeMismatchError::Raise("RootSectionSize");
+  if (!(*myIStream >> i)) throw Storage_StreamTypeMismatchError("RootSectionSize");
   
   FlushEndOfLine();
   
@@ -996,7 +998,7 @@ Standard_Integer DDF_IOStream::RootSectionSize()
 
 void DDF_IOStream::ReadRoot(TCollection_AsciiString& rootName, Standard_Integer& aRef,TCollection_AsciiString& rootType) 
 {
-  if (!(*myIStream >> aRef)) Storage_StreamTypeMismatchError::Raise("ReadRoot");
+  if (!(*myIStream >> aRef)) throw Storage_StreamTypeMismatchError("ReadRoot");
   ReadWord(rootName);
   ReadWord(rootType);
 }
@@ -1021,7 +1023,7 @@ Storage_Error DDF_IOStream::EndReadRootSection()
 Storage_Error DDF_IOStream::BeginWriteRefSection() 
 {
   *myOStream << "BEGIN_REF_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -1033,7 +1035,7 @@ Storage_Error DDF_IOStream::BeginWriteRefSection()
 void DDF_IOStream::SetRefSectionSize(const Standard_Integer aSize) 
 {
   *myOStream << aSize << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1045,7 +1047,7 @@ void DDF_IOStream::WriteReferenceType(const Standard_Integer reference,
 				  const Standard_Integer typeNum) 
 {
   *myOStream << reference << " " << typeNum << "\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1056,7 +1058,7 @@ void DDF_IOStream::WriteReferenceType(const Standard_Integer reference,
 Storage_Error DDF_IOStream::EndWriteRefSection() 
 {
   *myOStream << "END_REF_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -1081,7 +1083,7 @@ Standard_Integer DDF_IOStream::RefSectionSize()
 {
   Standard_Integer i;
 
-  if (!(*myIStream >> i)) Storage_StreamTypeMismatchError::Raise("RefSectionSize");
+  if (!(*myIStream >> i)) throw Storage_StreamTypeMismatchError("RefSectionSize");
   FlushEndOfLine();
 
   return i;
@@ -1095,8 +1097,8 @@ Standard_Integer DDF_IOStream::RefSectionSize()
 void DDF_IOStream::ReadReferenceType(Standard_Integer& reference,
 				 Standard_Integer& typeNum) 
 {
-  if (!(*myIStream >> reference)) Storage_StreamTypeMismatchError::Raise("ReadReferenceType 1");
-  if (!(*myIStream >> typeNum)) Storage_StreamTypeMismatchError::Raise("ReadReferenceType 2");
+  if (!(*myIStream >> reference)) throw Storage_StreamTypeMismatchError("ReadReferenceType 1");
+  if (!(*myIStream >> typeNum)) throw Storage_StreamTypeMismatchError("ReadReferenceType 2");
   FlushEndOfLine();
 }
 
@@ -1122,7 +1124,7 @@ Storage_Error DDF_IOStream::EndReadRefSection()
 Storage_Error DDF_IOStream::BeginWriteDataSection() 
 {
   *myOStream << "BEGIN_DATA_SECTION";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -1135,7 +1137,7 @@ void DDF_IOStream::WritePersistentObjectHeader(const Standard_Integer aRef,
 					   const Standard_Integer aType) 
 {
   *myOStream << "\n#" << aRef << "=%" << aType;
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1146,7 +1148,7 @@ void DDF_IOStream::WritePersistentObjectHeader(const Standard_Integer aRef,
 void DDF_IOStream::BeginWritePersistentObjectData() 
 {
   *myOStream << "( ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1157,7 +1159,7 @@ void DDF_IOStream::BeginWritePersistentObjectData()
 void DDF_IOStream::BeginWriteObjectData() 
 {
   *myOStream << "( ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1168,7 +1170,7 @@ void DDF_IOStream::BeginWriteObjectData()
 void DDF_IOStream::EndWriteObjectData() 
 {
   *myOStream << ") ";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1179,7 +1181,7 @@ void DDF_IOStream::EndWriteObjectData()
 void DDF_IOStream::EndWritePersistentObjectData() 
 {
   *myOStream << ")";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
 }
 
 //=======================================================================
@@ -1190,7 +1192,7 @@ void DDF_IOStream::EndWritePersistentObjectData()
 Storage_Error DDF_IOStream::EndWriteDataSection() 
 {
   *myOStream << "\nEND_DATA_SECTION\n";
-  if (myOStream->bad()) Storage_StreamWriteError::Raise();
+  if (myOStream->bad()) throw Storage_StreamWriteError();
   return Storage_VSOk;
 }
 
@@ -1214,23 +1216,23 @@ Storage_Error DDF_IOStream::BeginReadDataSection()
 void DDF_IOStream::ReadPersistentObjectHeader(Standard_Integer& aRef,
 					  Standard_Integer& aType) 
 {
-  char c;
+  char c = '\0';
 
   myIStream->get(c);
 
   while (c != '#') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise();
+      throw Storage_StreamFormatError();
     }
     myIStream->get(c);
   }
 
-  if (!(*myIStream >> aRef)) Storage_StreamTypeMismatchError::Raise("ReadPersistentObjectHeader 1");
+  if (!(*myIStream >> aRef)) throw Storage_StreamTypeMismatchError("ReadPersistentObjectHeader 1");
   myIStream->get(c);
 
   while (c != '=') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise();
+      throw Storage_StreamFormatError();
     }
     myIStream->get(c);
   }
@@ -1239,12 +1241,12 @@ void DDF_IOStream::ReadPersistentObjectHeader(Standard_Integer& aRef,
 
   while (c != '%') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise();
+      throw Storage_StreamFormatError();
     }
     myIStream->get(c);
   }
 
-  if (!(*myIStream >> aType)) Storage_StreamTypeMismatchError::Raise("ReadPersistentObjectHeader 2");
+  if (!(*myIStream >> aType)) throw Storage_StreamTypeMismatchError("ReadPersistentObjectHeader 2");
 }
 
 //=======================================================================
@@ -1254,11 +1256,11 @@ void DDF_IOStream::ReadPersistentObjectHeader(Standard_Integer& aRef,
 
 void DDF_IOStream::BeginReadPersistentObjectData() 
 {
-  char c;
+  char c = '\0';
   myIStream->get(c);
   while (c != '(') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise();
+      throw Storage_StreamFormatError();
     }
     myIStream->get(c);
   }
@@ -1271,11 +1273,11 @@ void DDF_IOStream::BeginReadPersistentObjectData()
 
 void DDF_IOStream::BeginReadObjectData() 
 {
-  char c;
+  char c = '\0';
   myIStream->get(c);
   while (c != '(') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise("BeginReadObjectData");
+      throw Storage_StreamFormatError("BeginReadObjectData");
     }
     myIStream->get(c);
   }
@@ -1288,11 +1290,11 @@ void DDF_IOStream::BeginReadObjectData()
 
 void DDF_IOStream::EndReadObjectData() 
 {
-  char c;
+  char c = '\0';
   myIStream->get(c);
   while (c != ')') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise("EndReadObjectData");
+      throw Storage_StreamFormatError("EndReadObjectData");
     }
     myIStream->get(c);
   }
@@ -1305,12 +1307,12 @@ void DDF_IOStream::EndReadObjectData()
 
 void DDF_IOStream::EndReadPersistentObjectData() 
 {
-  char c;
+  char c = '\0';
 
   myIStream->get(c);
   while (c != ')') {
     if (IsEnd() || (c != ' ') || (c == '\n')) {
-      Storage_StreamFormatError::Raise("EndReadPersistentObjectData");
+      throw Storage_StreamFormatError("EndReadPersistentObjectData");
     }
     myIStream->get(c);
   }
@@ -1318,7 +1320,7 @@ void DDF_IOStream::EndReadPersistentObjectData()
   myIStream->get(c);
   while (c != '\n') {
     if (IsEnd() || (c != ' ')) {
-      Storage_StreamFormatError::Raise();
+      throw Storage_StreamFormatError();
     }
     myIStream->get(c);
   }

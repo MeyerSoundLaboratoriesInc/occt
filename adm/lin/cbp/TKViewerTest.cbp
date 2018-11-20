@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -86,7 +88,6 @@
 		</Linker>
 		<Unit filename="../../../src/ViewerTest/ViewerTest.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_AutoUpdater.cxx" />
-		<Unit filename="../../../src/ViewerTest/ViewerTest_AviCommands.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_CmdParser.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_EventManager.cxx" />
 		<Unit filename="../../../src/ViewerTest/ViewerTest_FilletCommands.cxx" />

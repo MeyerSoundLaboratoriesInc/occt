@@ -1,3 +1,8 @@
+#ifdef ADAPTIVE_SAMPLING
+  #extension GL_ARB_shader_image_load_store : require
+  #extension GL_NV_shader_atomic_float : require
+#endif
+
 #ifdef USE_TEXTURES
   #extension GL_ARB_bindless_texture : require
 #endif
@@ -66,11 +71,6 @@ uniform samplerBuffer uRaytraceLightSrcTexture;
 //! Environment map texture.
 uniform sampler2D uEnvironmentMapTexture;
 
-//! Input pre-raytracing image rendered by OpenGL.
-uniform sampler2D uOpenGlColorTexture;
-//! Input pre-raytracing depth image rendered by OpenGL.
-uniform sampler2D uOpenGlDepthTexture;
-
 //! Total number of light sources.
 uniform int uLightCount;
 //! Intensity of global ambient light.
@@ -95,10 +95,39 @@ uniform float uSceneEpsilon;
   uniform uvec2 uTextureSamplers[MAX_TEX_NUMBER];
 #endif
 
+#ifdef ADAPTIVE_SAMPLING
+  //! OpenGL image used for accumulating rendering result.
+  volatile restrict layout(size1x32) uniform image2D  uRenderImage;
+
+  //! OpenGL image storing offsets of sampled pixels blocks.
+  coherent restrict layout(size2x32) uniform iimage2D uOffsetImage;
+#endif
+
 //! Top color of gradient background.
 uniform vec4 uBackColorTop = vec4 (0.0);
 //! Bottom color of gradient background.
 uniform vec4 uBackColorBot = vec4 (0.0);
+
+//! Aperture radius of camera used for depth-of-field
+uniform float uApertureRadius = 0.f;
+
+//! Focal distance of camera used for depth-of field
+uniform float uFocalPlaneDist = 10.f;
+
+//! Camera position used for projective mode
+uniform vec3 uEyeOrig;
+
+//! Camera view direction used for projective mode
+uniform vec3 uEyeView;
+
+//! Camera's screen vertical direction used for projective mode
+uniform vec3 uEyeVert;
+
+//! Camera's screen horizontal direction used for projective mode
+uniform vec3 uEyeSide;
+
+//! Camera's screen size used for projective mode
+uniform vec2 uEyeSize;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Specific data types
@@ -135,7 +164,9 @@ struct SIntersect
 #define AXIS_Y vec3 (0.0f, 1.0f, 0.0f)
 #define AXIS_Z vec3 (0.0f, 0.0f, 1.0f)
 
-#define M_PI 3.14159265f
+#define M_PI   3.141592653f
+#define M_2_PI 6.283185307f
+#define M_PI_2 1.570796327f
 
 #define LUMA vec3 (0.2126f, 0.7152f, 0.0722f)
 
@@ -187,7 +218,7 @@ uint RandInt()
 
 // =======================================================================
 // function : RandFloat
-// purpose  : Generates a random float in [0, 1) range
+// purpose  : Generates a random float in 0 <= x < 1 range
 // =======================================================================
 float RandFloat()
 {
@@ -240,11 +271,55 @@ vec3 InverseDirection (in vec3 theInput)
 //=======================================================================
 vec4 BackgroundColor()
 {
+#ifdef ADAPTIVE_SAMPLING
+
+  ivec2 aFragCoord = ivec2 (gl_FragCoord.xy);
+
+  ivec2 aTileXY = imageLoad (uOffsetImage, ivec2 (aFragCoord.x / BLOCK_SIZE,
+                                                  aFragCoord.y / BLOCK_SIZE)).xy;
+
+  aTileXY.y += aFragCoord.y % min (uWinSizeY - aTileXY.y, BLOCK_SIZE);
+
+  return mix (uBackColorBot, uBackColorTop, float (aTileXY.y) / uWinSizeY);
+
+#else
+
   return mix (uBackColorBot, uBackColorTop, vPixel.y);
+
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Functions for compute ray-object intersection
+
+//=======================================================================
+// function : sampleUniformDisk
+// purpose  :
+//=======================================================================
+vec2 sampleUniformDisk ()
+{
+  vec2 aPoint;
+
+  float aKsi1 = 2.f * RandFloat () - 1.f;
+  float aKsi2 = 2.f * RandFloat () - 1.f;
+
+  if (aKsi1 > -aKsi2)
+  {
+    if (aKsi1 > aKsi2)
+      aPoint = vec2 (aKsi1, (M_PI / 4.f) * (0.f + aKsi2 / aKsi1));
+    else
+      aPoint = vec2 (aKsi2, (M_PI / 4.f) * (2.f - aKsi1 / aKsi2));
+  }
+  else
+  {
+    if (aKsi1 < aKsi2)
+      aPoint = vec2 (-aKsi1, (M_PI / 4.f) * (4.f + aKsi2 / aKsi1));
+    else
+      aPoint = vec2 (-aKsi2, (M_PI / 4.f) * (6.f - aKsi1 / aKsi2));
+  }
+
+  return vec2 (sin (aPoint.y), cos (aPoint.y)) * aPoint.x;
+}
 
 // =======================================================================
 // function : GenerateRay
@@ -252,6 +327,8 @@ vec4 BackgroundColor()
 // =======================================================================
 SRay GenerateRay (in vec2 thePixel)
 {
+#ifndef DEPTH_OF_FIELD
+
   vec3 aP0 = mix (uOriginLB, uOriginRB, thePixel.x);
   vec3 aP1 = mix (uOriginLT, uOriginRT, thePixel.x);
 
@@ -261,39 +338,27 @@ SRay GenerateRay (in vec2 thePixel)
   vec3 aDirection = normalize (mix (aD0, aD1, thePixel.y));
 
   return SRay (mix (aP0, aP1, thePixel.y), aDirection);
-}
 
-// =======================================================================
-// function : ComputeOpenGlDepth
-// purpose  :
-// =======================================================================
-float ComputeOpenGlDepth (in SRay theRay)
-{
-  // a depth in range [0,1]
-  float anOpenGlDepth = texelFetch (uOpenGlDepthTexture, ivec2 (gl_FragCoord.xy), 0).r;
-  // pixel point in NDC-space [-1,1]
-  vec4 aPoint = vec4 (2.0f * vPixel.x - 1.0f,
-                      2.0f * vPixel.y - 1.0f,
-                      2.0f * anOpenGlDepth - 1.0f,
-                      1.0f);
-  vec4 aFinal = uUnviewMat * aPoint;
-  aFinal.xyz *= 1.f / aFinal.w;
+#else
 
-  return (anOpenGlDepth < 1.f) ? length (aFinal.xyz - theRay.Origin) : MAXFLOAT;
-}
+  vec2 aPixel = uEyeSize * (thePixel - vec2 (0.5f)) * 2.f;
 
-// =======================================================================
-// function : ComputeOpenGlColor
-// purpose  :
-// =======================================================================
-vec4 ComputeOpenGlColor()
-{
-  vec4 anOpenGlColor = texelFetch (uOpenGlColorTexture, ivec2 (gl_FragCoord.xy), 0);
-  // During blending with factors GL_SRC_ALPHA and GL_ONE_MINUS_SRC_ALPHA (for text and markers)
-  // the alpha channel (written in the color buffer) was squared.
-  anOpenGlColor.a = 1.f - sqrt (anOpenGlColor.a);
+  vec2 aAperturePnt = sampleUniformDisk () * uApertureRadius;
 
-  return anOpenGlColor;
+  vec3 aLocalDir = normalize (vec3 (
+    aPixel * uFocalPlaneDist - aAperturePnt, uFocalPlaneDist));
+
+  vec3 aOrigin = uEyeOrig +
+                 uEyeSide * aAperturePnt.x +
+                 uEyeVert * aAperturePnt.y;
+
+  vec3 aDirect = uEyeView * aLocalDir.z +
+                 uEyeSide * aLocalDir.x +
+                 uEyeVert * aLocalDir.y;
+
+  return SRay (aOrigin, aDirect);
+
+#endif
 }
 
 // =======================================================================
@@ -322,50 +387,33 @@ float IntersectSphere (in SRay theRay, in float theRadius)
 // function : IntersectTriangle
 // purpose  : Computes ray-triangle intersection (branchless version)
 // =======================================================================
-float IntersectTriangle (in SRay theRay,
-                         in vec3 thePnt0,
-                         in vec3 thePnt1,
-                         in vec3 thePnt2,
-                         out vec2 theUV,
-                         out vec3 theNorm)
+void IntersectTriangle (in SRay theRay,
+                        in vec3 thePnt0,
+                        in vec3 thePnt1,
+                        in vec3 thePnt2,
+                        out vec3 theUVT,
+                        out vec3 theNorm)
 {
+  vec3 aToTrg = thePnt0 - theRay.Origin;
+
   vec3 aEdge0 = thePnt1 - thePnt0;
   vec3 aEdge1 = thePnt0 - thePnt2;
 
   theNorm = cross (aEdge1, aEdge0);
 
-  vec3 aEdge2 = (1.0f / dot (theNorm, theRay.Direct)) * (thePnt0 - theRay.Origin);
+  vec3 theVect = cross (theRay.Direct, aToTrg);
 
-  float aTime = dot (theNorm, aEdge2);
+  theUVT = vec3 (dot (theNorm, aToTrg),
+                 dot (theVect, aEdge1),
+                 dot (theVect, aEdge0)) * (1.f / dot (theNorm, theRay.Direct));
 
-  vec3 theVec = cross (theRay.Direct, aEdge2);
-
-  theUV.x = dot (theVec, aEdge1);
-  theUV.y = dot (theVec, aEdge0);
-
-  return bool (int(aTime >= 0.0f) &
-               int(theUV.x >= 0.0f) &
-               int(theUV.y >= 0.0f) &
-               int(theUV.x + theUV.y <= 1.0f)) ? aTime : MAXFLOAT;
+  theUVT.x = any (lessThan (theUVT, ZERO)) || (theUVT.y + theUVT.z) > 1.f ? MAXFLOAT : theUVT.x;
 }
 
-//! Identifies the absence of intersection.
-#define INALID_HIT ivec4 (-1)
+#define EMPTY_ROOT ivec4(0)
 
-//! Global stack shared between traversal functions.
-int Stack[STACK_SIZE];
-
-#define MATERIAL_AMBN(index) (18 * index + 0)
-#define MATERIAL_DIFF(index) (18 * index + 1)
-#define MATERIAL_SPEC(index) (18 * index + 2)
-#define MATERIAL_EMIS(index) (18 * index + 3)
-#define MATERIAL_REFL(index) (18 * index + 4)
-#define MATERIAL_REFR(index) (18 * index + 5)
-#define MATERIAL_TRAN(index) (18 * index + 6)
-#define MATERIAL_TRS1(index) (18 * index + 7)
-#define MATERIAL_TRS2(index) (18 * index + 8)
-#define MATERIAL_TRS3(index) (18 * index + 9)
-
+//! Utility structure containing information about
+//! currently traversing sub-tree of scene's BVH.
 struct SSubTree
 {
   //! Transformed ray.
@@ -378,12 +426,54 @@ struct SSubTree
   ivec4 SubData;
 };
 
+#define MATERIAL_AMBN(index) (19 * index + 0)
+#define MATERIAL_DIFF(index) (19 * index + 1)
+#define MATERIAL_SPEC(index) (19 * index + 2)
+#define MATERIAL_EMIS(index) (19 * index + 3)
+#define MATERIAL_REFL(index) (19 * index + 4)
+#define MATERIAL_REFR(index) (19 * index + 5)
+#define MATERIAL_TRAN(index) (19 * index + 6)
+#define MATERIAL_TRS1(index) (19 * index + 7)
+#define MATERIAL_TRS2(index) (19 * index + 8)
+#define MATERIAL_TRS3(index) (19 * index + 9)
+
 #define TRS_OFFSET(treelet) treelet.SubData.x
 #define BVH_OFFSET(treelet) treelet.SubData.y
 #define VRT_OFFSET(treelet) treelet.SubData.z
 #define TRG_OFFSET(treelet) treelet.SubData.w
 
-#define EMPTY_ROOT ivec4(0)
+//! Identifies the absence of intersection.
+#define INALID_HIT ivec4 (-1)
+
+//! Global stack shared between traversal functions.
+int Stack[STACK_SIZE];
+
+// =======================================================================
+// function : pop
+// purpose  :
+// =======================================================================
+int pop (inout int theHead)
+{
+  int aData = Stack[theHead];
+
+  int aMask = aData >> 26;
+  int aNode = aMask & 0x3;
+
+  aMask >>= 2;
+
+  if ((aMask & 0x3) == aNode)
+  {
+    --theHead;
+  }
+  else
+  {
+    aMask |= (aMask << 2) & 0x30;
+
+    Stack[theHead] = (aData & 0x03FFFFFF) | (aMask << 26);
+  }
+
+  return (aData & 0x03FFFFFF) + aNode;
+}
 
 // =======================================================================
 // function : SceneNearestHit
@@ -399,55 +489,86 @@ ivec4 SceneNearestHit (in SRay theRay, in vec3 theInverse, inout SIntersect theH
 
   SSubTree aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
 
-  for (bool toContinue = true; toContinue;)
+  for (bool toContinue = true; toContinue; /* none */)
   {
     ivec4 aData = texelFetch (uSceneNodeInfoTexture, aNode);
 
     if (aData.x == 0) // if inner node
     {
-      float aTimeOut;
-      float aTimeLft;
-      float aTimeRgh;
-
       aData.y += BVH_OFFSET (aSubTree);
-      aData.z += BVH_OFFSET (aSubTree);
 
-      vec3 aNodeMinLft = texelFetch (uSceneMinPointTexture, aData.y).xyz;
-      vec3 aNodeMinRgh = texelFetch (uSceneMinPointTexture, aData.z).xyz;
-      vec3 aNodeMaxLft = texelFetch (uSceneMaxPointTexture, aData.y).xyz;
-      vec3 aNodeMaxRgh = texelFetch (uSceneMaxPointTexture, aData.z).xyz;
+      vec4 aHitTimes = vec4 (MAXFLOAT,
+                             MAXFLOAT,
+                             MAXFLOAT,
+                             MAXFLOAT);
 
-      vec3 aTime0 = (aNodeMinLft - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
-      vec3 aTime1 = (aNodeMaxLft - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
+      vec3 aRayOriginInverse = -aSubTree.TrsfRay.Origin * aSubTree.Inverse;
 
-      vec3 aTimeMax = max (aTime0, aTime1);
-      vec3 aTimeMin = min (aTime0, aTime1);
+      vec3 aNodeMin0 = texelFetch (uSceneMinPointTexture, aData.y +                0).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin1 = texelFetch (uSceneMinPointTexture, aData.y +                1).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin2 = texelFetch (uSceneMinPointTexture, aData.y + min (2, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin3 = texelFetch (uSceneMinPointTexture, aData.y + min (3, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax0 = texelFetch (uSceneMaxPointTexture, aData.y +                0).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax1 = texelFetch (uSceneMaxPointTexture, aData.y +                1).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax2 = texelFetch (uSceneMaxPointTexture, aData.y + min (2, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax3 = texelFetch (uSceneMaxPointTexture, aData.y + min (3, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
 
-      aTime0 = (aNodeMinRgh - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
-      aTime1 = (aNodeMaxRgh - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
+      vec3 aTimeMax = max (aNodeMin0, aNodeMax0);
+      vec3 aTimeMin = min (aNodeMin0, aNodeMax0);
 
-      aTimeOut = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
-      aTimeLft = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+      float aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      float aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
 
-      int aHitLft = int(aTimeLft <= aTimeOut) & int(aTimeOut >= 0.0f) & int(aTimeLft <= theHit.Time);
+      aHitTimes.x = (aTimeEnter <= aTimeLeave && aTimeEnter <= theHit.Time && aTimeLeave >= 0.f) ? aTimeEnter : MAXFLOAT;
 
-      aTimeMax = max (aTime0, aTime1);
-      aTimeMin = min (aTime0, aTime1);
+      aTimeMax = max (aNodeMin1, aNodeMax1);
+      aTimeMin = min (aNodeMin1, aNodeMax1);
 
-      aTimeOut = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
-      aTimeRgh = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
 
-      int aHitRgh = int(aTimeRgh <= aTimeOut) & int(aTimeOut >= 0.0f) & int(aTimeRgh <= theHit.Time);
+      aHitTimes.y = (aTimeEnter <= aTimeLeave && aTimeEnter <= theHit.Time && aTimeLeave >= 0.f) ? aTimeEnter : MAXFLOAT;
 
-      aNode = (aHitLft != 0) ? aData.y : aData.z;
+      aTimeMax = max (aNodeMin2, aNodeMax2);
+      aTimeMin = min (aNodeMin2, aNodeMax2);
 
-      if (aHitLft + aHitRgh == 2) // hit both children
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+
+      aHitTimes.z = (aTimeEnter <= aTimeLeave && aTimeEnter <= theHit.Time && aTimeLeave >= 0.f && aData.z > 1) ? aTimeEnter : MAXFLOAT;
+
+      aTimeMax = max (aNodeMin3, aNodeMax3);
+      aTimeMin = min (aNodeMin3, aNodeMax3);
+
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+
+      aHitTimes.w = (aTimeEnter <= aTimeLeave && aTimeEnter <= theHit.Time && aTimeLeave >= 0.f && aData.z > 2) ? aTimeEnter : MAXFLOAT;
+
+      ivec4 aChildren = ivec4 (0, 1, 2, 3);
+
+      aChildren.xy = aHitTimes.y < aHitTimes.x ? aChildren.yx : aChildren.xy;
+      aHitTimes.xy = aHitTimes.y < aHitTimes.x ? aHitTimes.yx : aHitTimes.xy;
+      aChildren.zw = aHitTimes.w < aHitTimes.z ? aChildren.wz : aChildren.zw;
+      aHitTimes.zw = aHitTimes.w < aHitTimes.z ? aHitTimes.wz : aHitTimes.zw;
+      aChildren.xz = aHitTimes.z < aHitTimes.x ? aChildren.zx : aChildren.xz;
+      aHitTimes.xz = aHitTimes.z < aHitTimes.x ? aHitTimes.zx : aHitTimes.xz;
+      aChildren.yw = aHitTimes.w < aHitTimes.y ? aChildren.wy : aChildren.yw;
+      aHitTimes.yw = aHitTimes.w < aHitTimes.y ? aHitTimes.wy : aHitTimes.yw;
+      aChildren.yz = aHitTimes.z < aHitTimes.y ? aChildren.zy : aChildren.yz;
+      aHitTimes.yz = aHitTimes.z < aHitTimes.y ? aHitTimes.zy : aHitTimes.yz;
+
+      if (aHitTimes.x != MAXFLOAT)
       {
-        aNode = (aTimeLft < aTimeRgh) ? aData.y : aData.z;
+        int aHitMask = (aHitTimes.w != MAXFLOAT ? aChildren.w : aChildren.z) << 2
+                     | (aHitTimes.z != MAXFLOAT ? aChildren.z : aChildren.y);
 
-        Stack[++aHead] = (aTimeLft < aTimeRgh) ? aData.z : aData.y;
+        if (aHitTimes.y != MAXFLOAT)
+          Stack[++aHead] = aData.y | (aHitMask << 2 | aChildren.y) << 26;
+
+        aNode = aData.y + aChildren.x;
       }
-      else if (aHitLft == aHitRgh) // no hit
+      else
       {
         toContinue = (aHead >= 0);
 
@@ -456,13 +577,14 @@ ivec4 SceneNearestHit (in SRay theRay, in vec3 theInverse, inout SIntersect theH
           aStop = -1; aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
         }
 
-        aNode = Stack[abs (aHead)]; --aHead;
+        if (aHead >= 0)
+          aNode = pop (aHead);
       }
     }
-    else if (aData.x < 0) // leaf node (containg triangles)
+    else if (aData.x < 0) // leaf node (contains triangles)
     {
       vec3 aNormal;
-      vec2 aParams;
+      vec3 aTimeUV;
 
       for (int anIdx = aData.y; anIdx <= aData.z; ++anIdx)
       {
@@ -472,16 +594,15 @@ ivec4 SceneNearestHit (in SRay theRay, in vec3 theInverse, inout SIntersect theH
         vec3 aPoint1 = texelFetch (uGeometryVertexTexture, aTriangle.y += VRT_OFFSET (aSubTree)).xyz;
         vec3 aPoint2 = texelFetch (uGeometryVertexTexture, aTriangle.z += VRT_OFFSET (aSubTree)).xyz;
 
-        float aTime = IntersectTriangle (aSubTree.TrsfRay,
-          aPoint0, aPoint1, aPoint2, aParams, aNormal);
+        IntersectTriangle (aSubTree.TrsfRay, aPoint0, aPoint1, aPoint2, aTimeUV, aNormal);
 
-        if (aTime < theHit.Time)
+        if (aTimeUV.x < theHit.Time)
         {
           aTriIndex = aTriangle;
 
           theTrsfId = TRS_OFFSET (aSubTree);
 
-          theHit = SIntersect (aTime, aParams, aNormal);
+          theHit = SIntersect (aTimeUV.x, aTimeUV.yz, aNormal);
         }
       }
 
@@ -492,7 +613,8 @@ ivec4 SceneNearestHit (in SRay theRay, in vec3 theInverse, inout SIntersect theH
         aStop = -1; aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
       }
 
-      aNode = Stack[abs (aHead)]; --aHead;
+      if (aHead >= 0)
+        aNode = pop (aHead);
     }
     else if (aData.x > 0) // switch node
     {
@@ -540,55 +662,86 @@ float SceneAnyHit (in SRay theRay, in vec3 theInverse, in float theDistance)
 
   SSubTree aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
 
-  for (bool toContinue = true; toContinue;)
+  for (bool toContinue = true; toContinue; /* none */)
   {
     ivec4 aData = texelFetch (uSceneNodeInfoTexture, aNode);
 
     if (aData.x == 0) // if inner node
     {
-      float aTimeOut;
-      float aTimeLft;
-      float aTimeRgh;
-
       aData.y += BVH_OFFSET (aSubTree);
-      aData.z += BVH_OFFSET (aSubTree);
 
-      vec3 aNodeMinLft = texelFetch (uSceneMinPointTexture, aData.y).xyz;
-      vec3 aNodeMinRgh = texelFetch (uSceneMinPointTexture, aData.z).xyz;
-      vec3 aNodeMaxLft = texelFetch (uSceneMaxPointTexture, aData.y).xyz;
-      vec3 aNodeMaxRgh = texelFetch (uSceneMaxPointTexture, aData.z).xyz;
+      vec4 aHitTimes = vec4 (MAXFLOAT,
+                             MAXFLOAT,
+                             MAXFLOAT,
+                             MAXFLOAT);
 
-      vec3 aTime0 = (aNodeMinLft - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
-      vec3 aTime1 = (aNodeMaxLft - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
+      vec3 aRayOriginInverse = -aSubTree.TrsfRay.Origin * aSubTree.Inverse;
 
-      vec3 aTimeMax = max (aTime0, aTime1);
-      vec3 aTimeMin = min (aTime0, aTime1);
+      vec3 aNodeMin0 = texelFetch (uSceneMinPointTexture, aData.y +                0).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin1 = texelFetch (uSceneMinPointTexture, aData.y +                1).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin2 = texelFetch (uSceneMinPointTexture, aData.y + min (2, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMin3 = texelFetch (uSceneMinPointTexture, aData.y + min (3, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax0 = texelFetch (uSceneMaxPointTexture, aData.y +                0).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax1 = texelFetch (uSceneMaxPointTexture, aData.y +                1).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax2 = texelFetch (uSceneMaxPointTexture, aData.y + min (2, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
+      vec3 aNodeMax3 = texelFetch (uSceneMaxPointTexture, aData.y + min (3, aData.z)).xyz * aSubTree.Inverse + aRayOriginInverse;
 
-      aTime0 = (aNodeMinRgh - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
-      aTime1 = (aNodeMaxRgh - aSubTree.TrsfRay.Origin) * aSubTree.Inverse;
+      vec3 aTimeMax = max (aNodeMin0, aNodeMax0);
+      vec3 aTimeMin = min (aNodeMin0, aNodeMax0);
 
-      aTimeOut = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
-      aTimeLft = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+      float aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      float aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
 
-      int aHitLft = int(aTimeLft <= aTimeOut) & int(aTimeOut >= 0.0f) & int(aTimeLft <= theDistance);
+      aHitTimes.x = (aTimeEnter <= aTimeLeave && aTimeEnter <= theDistance && aTimeLeave >= 0.f) ? aTimeEnter : MAXFLOAT;
 
-      aTimeMax = max (aTime0, aTime1);
-      aTimeMin = min (aTime0, aTime1);
+      aTimeMax = max (aNodeMin1, aNodeMax1);
+      aTimeMin = min (aNodeMin1, aNodeMax1);
 
-      aTimeOut = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
-      aTimeRgh = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
 
-      int aHitRgh = int(aTimeRgh <= aTimeOut) & int(aTimeOut >= 0.0f) & int(aTimeRgh <= theDistance);
+      aHitTimes.y = (aTimeEnter <= aTimeLeave && aTimeEnter <= theDistance && aTimeLeave >= 0.f) ? aTimeEnter : MAXFLOAT;
 
-      aNode = (aHitLft != 0) ? aData.y : aData.z;
+      aTimeMax = max (aNodeMin2, aNodeMax2);
+      aTimeMin = min (aNodeMin2, aNodeMax2);
 
-      if (aHitLft + aHitRgh == 2) // hit both children
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+
+      aHitTimes.z = (aTimeEnter <= aTimeLeave && aTimeEnter <= theDistance && aTimeLeave >= 0.f && aData.z > 1) ? aTimeEnter : MAXFLOAT;
+
+      aTimeMax = max (aNodeMin3, aNodeMax3);
+      aTimeMin = min (aNodeMin3, aNodeMax3);
+
+      aTimeLeave = min (aTimeMax.x, min (aTimeMax.y, aTimeMax.z));
+      aTimeEnter = max (aTimeMin.x, max (aTimeMin.y, aTimeMin.z));
+
+      aHitTimes.w = (aTimeEnter <= aTimeLeave && aTimeEnter <= theDistance && aTimeLeave >= 0.f && aData.z > 2) ? aTimeEnter : MAXFLOAT;
+
+      ivec4 aChildren = ivec4 (0, 1, 2, 3);
+
+      aChildren.xy = aHitTimes.y < aHitTimes.x ? aChildren.yx : aChildren.xy;
+      aHitTimes.xy = aHitTimes.y < aHitTimes.x ? aHitTimes.yx : aHitTimes.xy;
+      aChildren.zw = aHitTimes.w < aHitTimes.z ? aChildren.wz : aChildren.zw;
+      aHitTimes.zw = aHitTimes.w < aHitTimes.z ? aHitTimes.wz : aHitTimes.zw;
+      aChildren.xz = aHitTimes.z < aHitTimes.x ? aChildren.zx : aChildren.xz;
+      aHitTimes.xz = aHitTimes.z < aHitTimes.x ? aHitTimes.zx : aHitTimes.xz;
+      aChildren.yw = aHitTimes.w < aHitTimes.y ? aChildren.wy : aChildren.yw;
+      aHitTimes.yw = aHitTimes.w < aHitTimes.y ? aHitTimes.wy : aHitTimes.yw;
+      aChildren.yz = aHitTimes.z < aHitTimes.y ? aChildren.zy : aChildren.yz;
+      aHitTimes.yz = aHitTimes.z < aHitTimes.y ? aHitTimes.zy : aHitTimes.yz;
+
+      if (aHitTimes.x != MAXFLOAT)
       {
-        aNode = (aTimeLft < aTimeRgh) ? aData.y : aData.z;
+        int aHitMask = (aHitTimes.w != MAXFLOAT ? aChildren.w : aChildren.z) << 2
+                     | (aHitTimes.z != MAXFLOAT ? aChildren.z : aChildren.y);
 
-        Stack[++aHead] = (aTimeLft < aTimeRgh) ? aData.z : aData.y;
+        if (aHitTimes.y != MAXFLOAT)
+          Stack[++aHead] = aData.y | (aHitMask << 2 | aChildren.y) << 26;
+
+        aNode = aData.y + aChildren.x;
       }
-      else if (aHitLft == aHitRgh) // no hit
+      else
       {
         toContinue = (aHead >= 0);
 
@@ -597,13 +750,14 @@ float SceneAnyHit (in SRay theRay, in vec3 theInverse, in float theDistance)
           aStop = -1; aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
         }
 
-        aNode = Stack[abs (aHead)]; --aHead;
+        if (aHead >= 0)
+          aNode = pop (aHead);
       }
     }
     else if (aData.x < 0) // leaf node
     {
       vec3 aNormal;
-      vec2 aParams;
+      vec3 aTimeUV;
 
       for (int anIdx = aData.y; anIdx <= aData.z; ++anIdx)
       {
@@ -613,16 +767,15 @@ float SceneAnyHit (in SRay theRay, in vec3 theInverse, in float theDistance)
         vec3 aPoint1 = texelFetch (uGeometryVertexTexture, aTriangle.y += VRT_OFFSET (aSubTree)).xyz;
         vec3 aPoint2 = texelFetch (uGeometryVertexTexture, aTriangle.z += VRT_OFFSET (aSubTree)).xyz;
 
-        float aTime = IntersectTriangle (aSubTree.TrsfRay,
-          aPoint0, aPoint1, aPoint2, aParams, aNormal);
+        IntersectTriangle (aSubTree.TrsfRay, aPoint0, aPoint1, aPoint2, aTimeUV, aNormal);
 
 #ifdef TRANSPARENT_SHADOWS
-        if (aTime < theDistance)
+        if (aTimeUV.x < theDistance)
         {
           aFactor *= 1.f - texelFetch (uRaytraceMaterialTexture, MATERIAL_TRAN (aTriangle.w)).x;
         }
 #else
-        if (aTime < theDistance)
+        if (aTimeUV.x < theDistance)
         {
           aFactor = 0.f;
         }
@@ -636,7 +789,8 @@ float SceneAnyHit (in SRay theRay, in vec3 theInverse, in float theDistance)
         aStop = -1; aSubTree = SSubTree (theRay, theInverse, EMPTY_ROOT);
       }
 
-      aNode = Stack[abs (aHead)]; --aHead;
+      if (aHead >= 0)
+        aNode = pop (aHead);
     }
     else if (aData.x > 0) // switch node
     {
@@ -700,6 +854,31 @@ vec3 SmoothNormal (in vec2 theUV, in ivec4 theTriangle)
                     aNormal0 * (1.0f - theUV.x - theUV.y));
 }
 
+#define POLYGON_OFFSET_UNIT 0.f
+#define POLYGON_OFFSET_FACTOR 1.f
+#define POLYGON_OFFSET_SCALE 0.006f
+
+// =======================================================================
+// function : PolygonOffset
+// purpose  : Computes OpenGL polygon offset
+// =======================================================================
+float PolygonOffset (in vec3 theNormal, in vec3 thePoint)
+{
+  vec4 aProjectedNorm = vec4 (theNormal, -dot (theNormal, thePoint)) * uUnviewMat;
+
+  float aPolygonOffset = POLYGON_OFFSET_UNIT;
+
+  if (aProjectedNorm.z * aProjectedNorm.z > 1e-20f)
+  {
+    aProjectedNorm.xy *= 1.f / aProjectedNorm.z;
+
+    aPolygonOffset += POLYGON_OFFSET_FACTOR * max (abs (aProjectedNorm.x),
+                                                   abs (aProjectedNorm.y));
+  }
+
+  return aPolygonOffset;
+}
+
 // =======================================================================
 // function : SmoothUV
 // purpose  : Interpolates UV coordinates across the triangle
@@ -723,8 +902,8 @@ vec2 SmoothUV (in vec2 theUV, in ivec4 theTriangle)
 // =======================================================================
 vec4 FetchEnvironment (in vec2 theTexCoord)
 {
-  return mix (vec4 (0.0f, 0.0f, 0.0f, 1.0f),
-    textureLod (uEnvironmentMapTexture, theTexCoord, 0.0f), float (uSphereMapEnabled));
+  return uSphereMapEnabled == 0 ?
+    vec4 (0.f, 0.f, 0.f, 1.f) : textureLod (uEnvironmentMapTexture, theTexCoord, 0.f);
 }
 
 // =======================================================================
@@ -779,7 +958,6 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
 
   int aTrsfId;
 
-  float anOpenGlDepth = ComputeOpenGlDepth (theRay);
   float aRaytraceDepth = MAXFLOAT;
 
   for (int aDepth = 0; aDepth < NB_BOUNCES; ++aDepth)
@@ -801,8 +979,7 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
       }
       else
       {
-        vec4 aGlColor = ComputeOpenGlColor();
-        aColor = vec4 (mix (aGlColor.rgb, BackgroundColor().rgb, aGlColor.w), aGlColor.w);
+        aColor = BackgroundColor();
       }
 
       aResult += aWeight.xyz * aColor.xyz; aWeight.w *= aColor.w;
@@ -818,31 +995,15 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
                                    dot (aInvTransf1, aHit.Normal),
                                    dot (aInvTransf2, aHit.Normal)));
 
-    // For polygons that are parallel to the screen plane, the depth slope
-    // is equal to 1, resulting in small polygon offset. For polygons that
-    // that are at a large angle to the screen, the depth slope tends to 1,
-    // resulting in a larger polygon offset
-    float aPolygonOffset = uSceneEpsilon * EPS_SCALE /
-      max (abs (dot (theRay.Direct, aHit.Normal)), MIN_SLOPE);
-
-    if (anOpenGlDepth < aHit.Time + aPolygonOffset)
-    {
-      vec4 aGlColor = ComputeOpenGlColor();
-
-      aResult += aWeight.xyz * aGlColor.xyz;
-      aWeight *= aGlColor.w;
-    }
-
     theRay.Origin += theRay.Direct * aHit.Time; // intersection point
 
-    // Evaluate depth
+    // Evaluate depth on first hit
     if (aDepth == 0)
     {
-      // Hit point in NDC-space [-1,1] (the polygon offset is applied in the world space)
-      vec4 aNDCPoint = uViewMat * vec4 (theRay.Origin + theRay.Direct * aPolygonOffset, 1.f);
-      aNDCPoint.xyz *= 1.f / aNDCPoint.w;
+      vec4 aNDCPoint = uViewMat * vec4 (theRay.Origin, 1.f);
 
-      aRaytraceDepth = aNDCPoint.z * 0.5f + 0.5f;
+      float aPolygonOffset = PolygonOffset (aHit.Normal, theRay.Origin);
+      aRaytraceDepth = (aNDCPoint.z / aNDCPoint.w + aPolygonOffset * POLYGON_OFFSET_SCALE) * 0.5f + 0.5f;
     }
 
     vec3 aNormal = SmoothNormal (aHit.UV, aTriIndex);
@@ -873,11 +1034,14 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
       aTexCoord.st = vec2 (dot (aTrsfRow1, aTexCoord),
                            dot (aTrsfRow2, aTexCoord));
 
-      vec3 aTexColor = textureLod (
-        sampler2D (uTextureSamplers[int(aDiffuse.w)]), aTexCoord.st, 0.f).rgb;
+      vec4 aTexColor = textureLod (
+        sampler2D (uTextureSamplers[int(aDiffuse.w)]), aTexCoord.st, 0.f);
 
-      aDiffuse.rgb *= aTexColor;
-      aAmbient.rgb *= aTexColor;
+      aDiffuse.rgb *= aTexColor.rgb;
+      aAmbient.rgb *= aTexColor.rgb;
+
+      // keep refractive index untouched (Z component)
+      aOpacity.xy = vec2 (aTexColor.w * aOpacity.x, 1.0f - aTexColor.w * aOpacity.x);
     }
 #endif
 
@@ -926,8 +1090,8 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
 
         if (aVisibility > 0.0f)
         {
-          vec3 aIntensity = vec3 (texelFetch (
-            uRaytraceLightSrcTexture, LIGHT_PWR (aLightIdx)));
+          vec3 aIntensity = min (UNIT, vec3 (texelFetch (
+            uRaytraceLightSrcTexture, LIGHT_PWR (aLightIdx))));
 
           float aRdotV = dot (reflect (aLight.xyz, aSidedNormal), theRay.Direct);
 
@@ -944,10 +1108,6 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
       if (aOpacity.z != 1.0f)
       {
         theRay.Direct = Refract (theRay.Direct, aNormal, aOpacity.z, aOpacity.w);
-      }
-      else
-      {
-        anOpenGlDepth -= aHit.Time + uSceneEpsilon;
       }
     }
     else
@@ -977,8 +1137,6 @@ vec4 Radiance (in SRay theRay, in vec3 theInverse)
       theInverse = 1.0f / max (abs (theRay.Direct), SMALL);
 
       theInverse = mix (-theInverse, theInverse, step (ZERO, theRay.Direct));
-
-      anOpenGlDepth = MAXFLOAT; // disable combining image with OpenGL output
     }
 
     theRay.Origin += theRay.Direct * uSceneEpsilon;

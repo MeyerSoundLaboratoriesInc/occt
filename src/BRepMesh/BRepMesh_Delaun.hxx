@@ -52,6 +52,12 @@ public:
   Standard_EXPORT BRepMesh_Delaun (const Handle(BRepMesh_DataStructureOfDelaun)& theOldMesh,
                                    BRepMesh::Array1OfInteger&                    theVertexIndices);
 
+  //! Creates the triangulation with an existant Mesh data structure.
+  Standard_EXPORT BRepMesh_Delaun (const Handle (BRepMesh_DataStructureOfDelaun)& theOldMesh,
+                                   BRepMesh::Array1OfInteger&                     theVertexIndices,
+                                   const Standard_Integer                         theCellsCountU,
+                                   const Standard_Integer                         theCellsCountV);
+
   //! Initializes the triangulation with an array of vertices.
   Standard_EXPORT void Init (BRepMesh::Array1OfVertexOfDelaun& theVertices);
 
@@ -144,12 +150,15 @@ private:
   //! that have number of connected elements less or equal 1.
   BRepMesh::HMapOfInteger getEdgesByType (const BRepMesh_DegreeOfFreedom theEdgeType) const;
 
-  //! Create super mesh and run triangulation procedure.
-  void perform (Bnd_Box2d&                 theBndBox,
-                BRepMesh::Array1OfInteger& theVertexIndices);
+  //! Run triangulation procedure.
+  void perform (BRepMesh::Array1OfInteger& theVertexIndices,
+                const Standard_Integer     theCellsCountU = -1,
+                const Standard_Integer     theCellsCountV = -1);
 
   //! Build the super mesh.
-  void superMesh (const Bnd_Box2d& theBox);
+  void superMesh (const Bnd_Box2d&       theBox,
+                  const Standard_Integer theCellsCountU,
+                  const Standard_Integer theCellsCountV);
 
   //! Computes the triangulation and adds the vertices,
   //! edges and triangles to the Mesh data structure.
@@ -223,9 +232,9 @@ private:
                         BRepMesh::MapOfIntegerInteger& thePoly);
 
   //! Add a triangle based on the given oriented edges into mesh
-  inline void addTriangle (const Standard_Integer (&theEdgesId)[3],
-                           const Standard_Boolean (&theEdgesOri)[3],
-                           const Standard_Integer (&theNodesId)[3]);
+  void addTriangle (const Standard_Integer (&theEdgesId)[3],
+                    const Standard_Boolean (&theEdgesOri)[3],
+                    const Standard_Integer (&theNodesId)[3]);
 
   //! Deletes the triangle with the given index and adds the free edges into the map.
   //! When an edge is suppressed more than one time it is destroyed.
@@ -319,6 +328,9 @@ private:
   Standard_Real polyArea (const BRepMesh::SequenceOfInteger& thePolygon,
                           const Standard_Integer             theStartIndex,
                           const Standard_Integer             theEndIndex) const;
+
+  //! Performs insertion of internal edges into mesh.
+  void insertInternalEdges();
 
 private:
 

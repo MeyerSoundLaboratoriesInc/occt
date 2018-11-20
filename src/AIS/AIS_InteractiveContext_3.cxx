@@ -18,7 +18,6 @@
 #include <AIS_GlobalStatus.hxx>
 #include <AIS_InteractiveContext.hxx>
 #include <AIS_InteractiveObject.hxx>
-#include <AIS_LocalContext.hxx>
 #include <Prs3d_BasicAspect.hxx>
 #include <Prs3d_LineAspect.hxx>
 #include <Quantity_Color.hxx>
@@ -51,9 +50,7 @@ void AIS_InteractiveContext::SetPolygonOffsets(
   if ( anObj.IsNull() )
     return;
 
-  if( !anObj->HasInteractiveContext() )
-    anObj->SetContext( this );
-
+  setContextToObject (anObj);
   anObj->SetPolygonOffsets( aMode, aFactor, aUnits );
 
   if ( updateviewer ) {

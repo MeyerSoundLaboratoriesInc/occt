@@ -39,7 +39,7 @@ void SelectMgr_RectangularFrustum::segmentSegmentDistance (const gp_Pnt& theSegP
   Standard_Real aSn = aCoef;
   Standard_Real aTc, aTn, aTd = aCoef;
 
-  if (aCoef < Precision::Confusion())
+  if (aCoef < gp::Resolution())
   {
     aTn = anE;
     aTd = aC;
@@ -68,7 +68,7 @@ void SelectMgr_RectangularFrustum::segmentSegmentDistance (const gp_Pnt& theSegP
   {
     aTn = aTd;
   }
-  aTc = (Abs (aTn) < Precision::Confusion() ? 0.0 : aTn / aTd);
+  aTc = (Abs (aTd) < gp::Resolution() ? 0.0 : aTn / aTd);
 
   gp_Pnt aClosestPnt = myNearPickedPnt.XYZ() + myViewRayDir.XYZ() * aTc;
   theDepth = myNearPickedPnt.Distance (aClosestPnt) * myScale;
@@ -178,11 +178,11 @@ namespace
     // Top
     theNormals[0] = theEdges[0].Crossed (theEdges[4]);
     // Bottom
-    theNormals[1] = theEdges[2].Crossed (theEdges[3]);
+    theNormals[1] = theEdges[2].Crossed (theEdges[0]);
     // Left
     theNormals[2] = theEdges[4].Crossed (theEdges[1]);
     // Right
-    theNormals[3] = theEdges[5].Crossed (theEdges[3]);
+    theNormals[3] = theEdges[1].Crossed (theEdges[5]);
     // Near
     theNormals[4] = theEdges[0].Crossed (theEdges[1]);
     // Far
@@ -195,7 +195,7 @@ namespace
 // purpose  : Caches projection of frustum's vertices onto its plane directions
 //            and {i, j, k}
 // =======================================================================
-void SelectMgr_RectangularFrustum::cacheVertexProjections (SelectMgr_RectangularFrustum* theFrustum)
+void SelectMgr_RectangularFrustum::cacheVertexProjections (SelectMgr_RectangularFrustum* theFrustum) const
 {
   if (theFrustum->myIsOrthographic)
   {
@@ -322,13 +322,13 @@ void SelectMgr_RectangularFrustum::Build (const gp_Pnt2d& theMinPnt,
 //                  as any negative value;
 //                - scale only is needed: @theTrsf must be set to gp_Identity.
 // =======================================================================
-NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_RectangularFrustum::ScaleAndTransform (const Standard_Integer theScaleFactor,
-                                                                                           const gp_Trsf& theTrsf)
+Handle(SelectMgr_BaseFrustum) SelectMgr_RectangularFrustum::ScaleAndTransform (const Standard_Integer theScaleFactor,
+                                                                               const gp_GTrsf& theTrsf) const
 {
   Standard_ASSERT_RAISE (theScaleFactor > 0,
     "Error! Pixel tolerance for selection should be greater than zero");
 
-  SelectMgr_RectangularFrustum* aRes = new SelectMgr_RectangularFrustum();
+  Handle(SelectMgr_RectangularFrustum) aRes = new SelectMgr_RectangularFrustum();
   const Standard_Boolean isToScale = theScaleFactor != 1;
   const Standard_Boolean isToTrsf  = theTrsf.Form() != gp_Identity;
 
@@ -336,7 +336,7 @@ NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_RectangularFrustum::ScaleAnd
     return aRes;
 
   aRes->myIsOrthographic = myIsOrthographic;
-  SelectMgr_RectangularFrustum* aRef = this;
+  const SelectMgr_RectangularFrustum* aRef = this;
 
   if (isToScale)
   {
@@ -352,31 +352,29 @@ NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_RectangularFrustum::ScaleAnd
     // recompute base frustum characteristics from scratch
     computeFrustum (aMinPnt, aMaxPnt, myBuilder, aRes->myVertices, aRes->myEdgeDirs);
 
-    aRef = aRes;
+    aRef = aRes.get();
   }
 
   if (isToTrsf)
   {
-    aRes->myNearPickedPnt = aRef->myNearPickedPnt.Transformed (theTrsf);
-    aRes->myFarPickedPnt  = aRef->myFarPickedPnt.Transformed (theTrsf);
+    const Standard_Real aRefScale = aRef->myFarPickedPnt.SquareDistance (aRef->myNearPickedPnt);
+
+    gp_Pnt aPoint = aRef->myNearPickedPnt;
+    theTrsf.Transforms (aPoint.ChangeCoord());
+    aRes->myNearPickedPnt = aPoint;
+
+    aPoint.SetXYZ (aRef->myFarPickedPnt.XYZ());
+    theTrsf.Transforms (aPoint.ChangeCoord());
+    aRes->myFarPickedPnt = aPoint;
+
     aRes->myViewRayDir    = aRes->myFarPickedPnt.XYZ() - aRes->myNearPickedPnt.XYZ();
 
-      // LeftTopNear
-    aRes->myVertices[0] = aRef->myVertices[0].Transformed (theTrsf);
-    // LeftTopFar
-    aRes->myVertices[1] = aRef->myVertices[1].Transformed (theTrsf);
-    // LeftBottomNear
-    aRes->myVertices[2] = aRef->myVertices[2].Transformed (theTrsf);
-    // LeftBottomFar
-    aRes->myVertices[3] = aRef->myVertices[3].Transformed (theTrsf);
-    // RightTopNear
-    aRes->myVertices[4] = aRef->myVertices[4].Transformed (theTrsf);
-    // RightTopFar
-    aRes->myVertices[5] = aRef->myVertices[5].Transformed (theTrsf);
-    // RightBottomNear
-    aRes->myVertices[6] = aRef->myVertices[6].Transformed (theTrsf);
-    // RightBottomFar
-    aRes->myVertices[7] = aRef->myVertices[7].Transformed (theTrsf);
+    for (Standard_Integer anIt = 0; anIt < 8; anIt++)
+    {
+      aPoint = aRef->myVertices[anIt];
+      theTrsf.Transforms (aPoint.ChangeCoord());
+      aRes->myVertices[anIt] = aPoint;
+    }
 
     // Horizontal
     aRes->myEdgeDirs[0] = aRes->myVertices[4].XYZ() - aRes->myVertices[0].XYZ();
@@ -391,17 +389,20 @@ NCollection_Handle<SelectMgr_BaseFrustum> SelectMgr_RectangularFrustum::ScaleAnd
     // RightUpper
     aRes->myEdgeDirs[5] = aRes->myVertices[4].XYZ() - aRes->myVertices[5].XYZ();
 
-    aRes->myScale = 1.0 / theTrsf.ScaleFactor();
+    // Compute scale to transform depth from local coordinate system to world coordinate system
+    aRes->myScale = Sqrt (aRefScale / aRes->myFarPickedPnt.SquareDistance (aRes->myNearPickedPnt));
   }
 
   // compute frustum normals
   computeNormals (aRes->myEdgeDirs, aRes->myPlanes);
 
-  cacheVertexProjections (aRes);
+  cacheVertexProjections (aRes.get());
 
   aRes->myViewClipRange = myViewClipRange;
+  aRes->myIsViewClipEnabled = myIsViewClipEnabled;
+  aRes->myMousePos      = myMousePos;
 
-  return NCollection_Handle<SelectMgr_BaseFrustum> (aRes);
+  return aRes;
 }
 
 // =======================================================================
@@ -636,7 +637,7 @@ Standard_Real SelectMgr_RectangularFrustum::DistToGeometryCenter (const gp_Pnt& 
 // =======================================================================
 gp_Pnt SelectMgr_RectangularFrustum::DetectedPoint (const Standard_Real theDepth) const
 {
-  return myNearPickedPnt.XYZ() + myViewRayDir.Normalized().XYZ() * theDepth;
+  return myNearPickedPnt.XYZ() + myViewRayDir.Normalized().XYZ() * theDepth / myScale;
 }
 
 // =======================================================================
@@ -674,17 +675,14 @@ void SelectMgr_RectangularFrustum::computeClippingRange (const Graphic3d_Sequenc
     }
 
     // compute distance to point of pick line intersection with the plane
-    Standard_Real aParam = aDistance / aDotProduct;
-
-    // check if ray intersects the plane, in case aIntDist < 0
-    // the plane is "behind" the ray
+    const Standard_Real aParam = aDistance / aDotProduct;
+    const gp_Pnt anIntersectionPt = myNearPickedPnt.XYZ() + myViewRayDir.XYZ() * aParam;
+    Standard_Real aDistToPln = anIntersectionPt.Distance (myNearPickedPnt);
     if (aParam < 0.0)
     {
-      continue;
+      // the plane is "behind" the ray
+      aDistToPln = -aDistToPln;
     }
-
-    const gp_Pnt anIntersectionPt = myNearPickedPnt.XYZ() + myViewRayDir.XYZ() * aParam;
-    const Standard_Real aDistToPln = anIntersectionPt.Distance (myNearPickedPnt);
 
     // change depth limits for case of opposite and directed planes
     if (aDotProduct < 0.0)
@@ -716,16 +714,17 @@ Standard_Boolean SelectMgr_RectangularFrustum::IsClipped (const Graphic3d_Sequen
 // function : SetViewClipping
 // purpose  :
 // =======================================================================
-void SelectMgr_RectangularFrustum::SetViewClipping (const Graphic3d_SequenceOfHClipPlane& thePlanes)
+void SelectMgr_RectangularFrustum::SetViewClipping (const Handle(Graphic3d_SequenceOfHClipPlane)& thePlanes)
 {
-  if (thePlanes.Size() == 0)
+  if (thePlanes.IsNull()
+   || thePlanes->IsEmpty())
   {
     myViewClipRange.Clear();
     return;
   }
 
   Standard_Real aMaxDepth, aMinDepth;
-  computeClippingRange (thePlanes, aMinDepth, aMaxDepth);
+  computeClippingRange (*thePlanes, aMinDepth, aMaxDepth);
   myViewClipRange.Set (aMinDepth, aMaxDepth);
 }
 
@@ -735,9 +734,33 @@ void SelectMgr_RectangularFrustum::SetViewClipping (const Graphic3d_SequenceOfHC
 // =======================================================================
 Standard_Boolean SelectMgr_RectangularFrustum::isViewClippingOk (const Standard_Real theDepth) const
 {
-  if (!myViewClipRange.IsValid())
+  if (!myViewClipRange.IsValid()
+   || !myIsViewClipEnabled)
+  {
     return Standard_True;
+  }
 
   return myViewClipRange.MaxDepth() > theDepth
     && myViewClipRange.MinDepth() < theDepth;
+}
+
+// =======================================================================
+// function : GetPlanes
+// purpose  :
+// =======================================================================
+void SelectMgr_RectangularFrustum::GetPlanes (NCollection_Vector<SelectMgr_Vec4>& thePlaneEquations) const
+{
+  thePlaneEquations.Clear();
+
+  SelectMgr_Vec4 anEquation;
+  for (Standard_Integer aPlaneIdx = 0; aPlaneIdx < 6; ++aPlaneIdx)
+  {
+    const gp_Vec& aPlaneNorm = myIsOrthographic && aPlaneIdx % 2 == 1 ?
+      myPlanes[aPlaneIdx - 1].Reversed() : myPlanes[aPlaneIdx];
+    anEquation.x() = aPlaneNorm.X();
+    anEquation.y() = aPlaneNorm.Y();
+    anEquation.z() = aPlaneNorm.Z();
+    anEquation.w() = - (aPlaneNorm.XYZ().Dot (myVertices[aPlaneIdx % 2 == 0 ? aPlaneIdx : aPlaneIdx + 2].XYZ()));
+    thePlaneEquations.Append (anEquation);
+  }
 }

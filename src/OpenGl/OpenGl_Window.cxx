@@ -14,7 +14,6 @@
 // commercial license or contractual agreement.
 
 #include <OpenGl_GlCore12.hxx>
-#include <InterfaceGraphic.hxx>
 
 #include <OpenGl_Context.hxx>
 #include <OpenGl_GraphicDriver.hxx>
@@ -26,9 +25,11 @@
 #include <TCollection_ExtendedString.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Window,MMgt_TShared)
+#include <memory>
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Window,Standard_Transient)
+
+#if defined(HAVE_EGL)
   #include <EGL/egl.h>
 #endif
 
@@ -38,7 +39,7 @@ IMPLEMENT_STANDARD_RTTIEXT(OpenGl_Window,MMgt_TShared)
 namespace
 {
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+#if defined(HAVE_EGL)
   //
 #elif defined(_WIN32)
 
@@ -174,7 +175,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 
   Standard_Boolean isCoreProfile = Standard_False;
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+#if defined(HAVE_EGL)
   EGLDisplay anEglDisplay = (EGLDisplay )theDriver->getRawGlDisplay();
   EGLContext anEglContext = (EGLContext )theDriver->getRawGlContext();
   EGLConfig  anEglConfig  = (EGLConfig  )theDriver->getRawGlConfig();
@@ -182,7 +183,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
    || anEglContext == EGL_NO_CONTEXT
    || anEglConfig == NULL)
   {
-    Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window, EGL does not provide compatible configurations!");
+    throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window, EGL does not provide compatible configurations!");
     return;
   }
 
@@ -196,13 +197,13 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
                                         NULL);
     if (anEglSurf == EGL_NO_SURFACE)
     {
-      Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window, EGL is unable to create surface for window!");
+      throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window, EGL is unable to create surface for window!");
       return;
     }
   }
   else if (theGContext != anEglContext)
   {
-    Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window, EGL is used in unsupported combination!");
+    throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window, EGL is used in unsupported combination!");
     return;
   }
   else
@@ -210,7 +211,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
     anEglSurf = eglGetCurrentSurface(EGL_DRAW);
     if (anEglSurf == EGL_NO_SURFACE)
     {
-      Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window, EGL is unable to retrieve current surface!");
+      throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window, EGL is unable to retrieve current surface!");
       return;
     }
   }
@@ -260,7 +261,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 
     TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: ChoosePixelFormat failed. Error code: ");
     aMsg += (int )GetLastError();
-    Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+    throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
     return;
   }
 
@@ -360,7 +361,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 
       TCollection_AsciiString aMsg("OpenGl_Window::CreateWindow: SetPixelFormat failed. Error code: ");
       aMsg += (int )GetLastError();
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
 
@@ -451,7 +452,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
 
       TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: wglCreateContext failed. Error code: ");
       aMsg += (int )GetLastError();
-      Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+      throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
       return;
     }
   }
@@ -461,7 +462,7 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
   {
     TCollection_AsciiString aMsg ("OpenGl_Window::CreateWindow: wglShareLists failed. Error code: ");
     aMsg += (int )GetLastError();
-    Aspect_GraphicDeviceDefinitionError::Raise (aMsg.ToCString());
+    throw Aspect_GraphicDeviceDefinitionError(aMsg.ToCString());
     return;
   }
 
@@ -478,16 +479,16 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
   aVisInfo.visualid = aWinAttribs.visual->visualid;
   aVisInfo.screen   = DefaultScreen (aDisp);
   int aNbItems;
-  XVisualInfo* aVis = XGetVisualInfo (aDisp, VisualIDMask | VisualScreenMask, &aVisInfo, &aNbItems);
+  std::unique_ptr<XVisualInfo, int(*)(void*)> aVis (XGetVisualInfo (aDisp, VisualIDMask | VisualScreenMask, &aVisInfo, &aNbItems), &XFree);
   int isGl = 0;
-  if (aVis == NULL)
+  if (aVis.get() == NULL)
   {
-    Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window::CreateWindow: XGetVisualInfo is unable to choose needed configuration in existing OpenGL context. ");
+    throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: XGetVisualInfo is unable to choose needed configuration in existing OpenGL context. ");
     return;
   }
-  else if (glXGetConfig (aDisp, aVis, GLX_USE_GL, &isGl) != 0 || !isGl)
+  else if (glXGetConfig (aDisp, aVis.get(), GLX_USE_GL, &isGl) != 0 || !isGl)
   {
-    Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window::CreateWindow: window Visual does not support GL rendering!");
+    throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: window Visual does not support GL rendering!");
     return;
   }
 
@@ -557,10 +558,10 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
   if (myOwnGContext
    && aGContext == NULL)
   {
-    aGContext = glXCreateContext (aDisp, aVis, aSlaveCtx, GL_TRUE);
+    aGContext = glXCreateContext (aDisp, aVis.get(), aSlaveCtx, GL_TRUE);
     if (aGContext == NULL)
     {
-      Aspect_GraphicDeviceDefinitionError::Raise ("OpenGl_Window::CreateWindow: glXCreateContext failed.");
+      throw Aspect_GraphicDeviceDefinitionError("OpenGl_Window::CreateWindow: glXCreateContext failed.");
       return;
     }
   }
@@ -569,11 +570,11 @@ OpenGl_Window::OpenGl_Window (const Handle(OpenGl_GraphicDriver)& theDriver,
   TCollection_ExtendedString aList;
   int isDoubleBuffer = 0, isRGBA = 0, isStereo = 0;
   int aDepthSize = 0, aStencilSize = 0;
-  glXGetConfig (aDisp, aVis, GLX_RGBA,         &isRGBA);
-  glXGetConfig (aDisp, aVis, GLX_DOUBLEBUFFER, &isDoubleBuffer);
-  glXGetConfig (aDisp, aVis, GLX_STEREO,       &isStereo);
-  glXGetConfig (aDisp, aVis, GLX_DEPTH_SIZE,   &aDepthSize);
-  glXGetConfig (aDisp, aVis, GLX_STENCIL_SIZE, &aStencilSize);
+  glXGetConfig (aDisp, aVis.get(), GLX_RGBA,         &isRGBA);
+  glXGetConfig (aDisp, aVis.get(), GLX_DOUBLEBUFFER, &isDoubleBuffer);
+  glXGetConfig (aDisp, aVis.get(), GLX_STEREO,       &isStereo);
+  glXGetConfig (aDisp, aVis.get(), GLX_DEPTH_SIZE,   &aDepthSize);
+  glXGetConfig (aDisp, aVis.get(), GLX_STENCIL_SIZE, &aStencilSize);
   if (aDepthSize < 1)      addMsgToList (aList, "no depth buffer");
   if (aStencilSize < 1)    addMsgToList (aList, "no stencil buffer");
   if (isRGBA == 0)         addMsgToList (aList, "no RGBA color buffer");
@@ -617,7 +618,7 @@ OpenGl_Window::~OpenGl_Window()
   // release "GL" context if it is owned by window
   // Mesa implementation can fail to destroy GL context if it set for current thread.
   // It should be safer to unset thread GL context before its destruction.
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
+#if defined(HAVE_EGL)
   if ((EGLSurface )myGlContext->myWindow != EGL_NO_SURFACE)
   {
     eglDestroySurface ((EGLDisplay )myGlContext->myDisplay,
@@ -679,7 +680,7 @@ Standard_Boolean OpenGl_Window::Activate()
 // =======================================================================
 void OpenGl_Window::Resize()
 {
-#if !defined(_WIN32) && !defined(HAVE_EGL) && !defined(__ANDROID__) && !defined(__QNX__)
+#if !defined(_WIN32) && !defined(HAVE_EGL)
   Display* aDisp = (Display* )myGlContext->myDisplay;
   if (aDisp == NULL)
     return;
@@ -696,7 +697,7 @@ void OpenGl_Window::Resize()
   myWidth  = aWidth;
   myHeight = aHeight;
 
-#if !defined(_WIN32) && !defined(HAVE_EGL) && !defined(__ANDROID__) && !defined(__QNX__)
+#if !defined(_WIN32) && !defined(HAVE_EGL)
   XResizeWindow (aDisp, myGlContext->myWindow, (unsigned int )myWidth, (unsigned int )myHeight);
   XSync (aDisp, False);
 #endif
@@ -713,9 +714,12 @@ void OpenGl_Window::Init()
   if (!Activate())
     return;
 
-#if defined(HAVE_EGL) || defined(__ANDROID__) || defined(__QNX__)
-  eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_WIDTH,  &myWidth);
-  eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_HEIGHT, &myHeight);
+#if defined(HAVE_EGL)
+  if (!myPlatformWindow->IsVirtual())
+  {
+    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_WIDTH,  &myWidth);
+    eglQuerySurface ((EGLDisplay )myGlContext->myDisplay, (EGLSurface )myGlContext->myWindow, EGL_HEIGHT, &myHeight);
+  }
 #elif defined(_WIN32)
   //
 #else
@@ -732,9 +736,10 @@ void OpenGl_Window::Init()
 
   glDisable (GL_DITHER);
   glDisable (GL_SCISSOR_TEST);
-  glViewport (0, 0, myWidth, myHeight);
+  const Standard_Integer aViewport[4] = { 0, 0, myWidth, myHeight };
+  myGlContext->ResizeViewport (aViewport);
 #if !defined(GL_ES_VERSION_2_0)
-  glDrawBuffer (GL_BACK);
+  myGlContext->SetDrawBuffer (GL_BACK);
   if (myGlContext->core11 != NULL)
   {
     glMatrixMode (GL_MODELVIEW);

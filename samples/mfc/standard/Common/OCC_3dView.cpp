@@ -81,9 +81,10 @@ OCC_3dView::~OCC_3dView()
 
 BOOL OCC_3dView::PreCreateWindow(CREATESTRUCT& cs)
 {
-	// TODO: Modify the Window class or styles here by modifying
-	//  the CREATESTRUCT cs
-	return CView::PreCreateWindow(cs);
+  // TODO: Modify the Window class or styles here by modifying
+  //  the CREATESTRUCT cs
+  cs.lpszClass = ::AfxRegisterWndClass(CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | CS_OWNDC, ::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
+  return CView::PreCreateWindow(cs);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -162,8 +163,9 @@ void OCC_3dView::OnFileExportImage()
   GetDocument()->ExportView (myView);
 }
 
-void OCC_3dView::OnSize(UINT /*nType*/, int /*cx*/, int /*cy*/) 
+void OCC_3dView::OnSize(UINT nType, int cx, int cy)
 {
+  OCC_BaseView::OnSize (nType, cx, cy);
   if (!myView.IsNull())
    myView->MustBeResized();
 }
@@ -214,6 +216,7 @@ void OCC_3dView::OnBUTTONHlrOff()
 {
   myHlrModeIsOn = Standard_False;
   myView->SetComputedMode (myHlrModeIsOn);
+  myView->Redraw();
 }
 
 void OCC_3dView::OnBUTTONHlrOn() 
@@ -221,6 +224,7 @@ void OCC_3dView::OnBUTTONHlrOn()
   SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
   myHlrModeIsOn = Standard_True;
   myView->SetComputedMode (myHlrModeIsOn);
+  myView->Redraw();
   SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
 }
 
@@ -300,7 +304,7 @@ void OCC_3dView::OnLButtonDown(UINT nFlags, CPoint point)
       myView->StartRotation(point.x,point.y);  
       break;
     default :
-      Standard_Failure::Raise(" incompatible Current Mode ");
+      throw Standard_Failure(" incompatible Current Mode ");
       break;
     }
   }
@@ -363,6 +367,7 @@ void OCC_3dView::OnLButtonUp(UINT nFlags, CPoint point)
       {
         CWaitCursor aWaitCursor;
         myView->SetComputedMode (myHlrModeIsOn);
+        myView->Redraw();
       }
       else
       {
@@ -370,7 +375,7 @@ void OCC_3dView::OnLButtonUp(UINT nFlags, CPoint point)
       }
       break;
     default :
-      Standard_Failure::Raise(" incompatible Current Mode ");
+      throw Standard_Failure(" incompatible Current Mode ");
       break;
     } //switch (myCurrentMode)
   } //	else // if ( Ctrl )
@@ -413,7 +418,11 @@ void OCC_3dView::OnRButtonDown(UINT nFlags, CPoint point)
 void OCC_3dView::OnRButtonUp(UINT /*nFlags*/, CPoint /*point*/) 
 {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
-    myView->SetComputedMode (myHlrModeIsOn);
+    if (myHlrModeIsOn)
+    {
+      myView->SetComputedMode (myHlrModeIsOn);
+      myView->Redraw();
+    }
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
 }
 
@@ -470,7 +479,7 @@ void OCC_3dView::OnMouseMove(UINT nFlags, CPoint point)
         myView->Redraw();
         break;
       default :
-        Standard_Failure::Raise(" incompatible Current Mode ");
+        throw Standard_Failure(" incompatible Current Mode ");
         break;
       }//  switch (myCurrentMode)
     }// if ( nFlags & MK_CONTROL )  else 

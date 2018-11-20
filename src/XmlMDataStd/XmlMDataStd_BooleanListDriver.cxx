@@ -14,7 +14,7 @@
 // commercial license or contractual agreement.
 
 
-#include <CDM_MessageDriver.hxx>
+#include <Message_Messenger.hxx>
 #include <NCollection_LocalArray.hxx>
 #include <Standard_Type.hxx>
 #include <TDataStd_BooleanList.hxx>
@@ -27,12 +27,13 @@
 IMPLEMENT_STANDARD_RTTIEXT(XmlMDataStd_BooleanListDriver,XmlMDF_ADriver)
 IMPLEMENT_DOMSTRING (FirstIndexString, "first")
 IMPLEMENT_DOMSTRING (LastIndexString,  "last")
+IMPLEMENT_DOMSTRING (AttributeIDString, "boollistattguid")
 
 //=======================================================================
 //function : XmlMDataStd_BooleanListDriver
 //purpose  : Constructor
 //=======================================================================
-XmlMDataStd_BooleanListDriver::XmlMDataStd_BooleanListDriver(const Handle(CDM_MessageDriver)& theMsgDriver)
+XmlMDataStd_BooleanListDriver::XmlMDataStd_BooleanListDriver(const Handle(Message_Messenger)& theMsgDriver)
      : XmlMDF_ADriver (theMsgDriver, NULL)
 {
 
@@ -52,8 +53,8 @@ Handle(TDF_Attribute) XmlMDataStd_BooleanListDriver::NewEmpty() const
 //purpose  : persistent -> transient (retrieve)
 //=======================================================================
 Standard_Boolean XmlMDataStd_BooleanListDriver::Paste(const XmlObjMgt_Persistent&  theSource,
-						      const Handle(TDF_Attribute)& theTarget,
-						      XmlObjMgt_RRelocationTable&  ) const
+                                                      const Handle(TDF_Attribute)& theTarget,
+                                                      XmlObjMgt_RRelocationTable&  ) const
 {
   Standard_Integer aFirstInd, aLastInd, aValue, ind;
   const XmlObjMgt_Element& anElement = theSource;
@@ -68,7 +69,7 @@ Standard_Boolean XmlMDataStd_BooleanListDriver::Paste(const XmlObjMgt_Persistent
       TCollection_ExtendedString("Cannot retrieve the first index"
                                  " for BooleanList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
@@ -79,24 +80,34 @@ Standard_Boolean XmlMDataStd_BooleanListDriver::Paste(const XmlObjMgt_Persistent
       TCollection_ExtendedString("Cannot retrieve the last index"
                                  " for BooleanList attribute as \"")
         + aFirstIndex + "\"";
-    WriteMessage (aMessageString);
+    myMessageDriver->Send (aMessageString, Message_Fail);
     return Standard_False;
   }
 
   const Handle(TDataStd_BooleanList) aBooleanList = Handle(TDataStd_BooleanList)::DownCast(theTarget);
+
+  // attribute id
+  Standard_GUID aGUID;
+  XmlObjMgt_DOMString aGUIDStr = anElement.getAttribute(::AttributeIDString());
+  if (aGUIDStr.Type() == XmlObjMgt_DOMString::LDOM_NULL)
+    aGUID = TDataStd_BooleanList::GetID(); //default case
+  else
+    aGUID = Standard_GUID(Standard_CString(aGUIDStr.GetString())); // user defined case
+
+  aBooleanList->SetID(aGUID);
+
   if(aLastInd == 0) aFirstInd = 0;
   if (aFirstInd == aLastInd && aLastInd > 0) 
   {
-    Standard_Integer anInteger;
-    if (!XmlObjMgt::GetStringValue(anElement).GetInteger(anInteger)) 
+    if (!XmlObjMgt::GetStringValue(anElement).GetInteger(aValue)) 
     {
       TCollection_ExtendedString aMessageString =
         TCollection_ExtendedString("Cannot retrieve integer member"
                                    " for BooleanList attribute as \"");
-      WriteMessage (aMessageString);
-      return Standard_False;
+      myMessageDriver->Send (aMessageString, Message_Warning);
+      aValue = 0;
     }
-    aBooleanList->Append(anInteger ? Standard_True : Standard_False);
+    aBooleanList->Append(aValue ? Standard_True : Standard_False);
   }
   else if(aLastInd >= 1)
   {
@@ -109,13 +120,13 @@ Standard_Boolean XmlMDataStd_BooleanListDriver::Paste(const XmlObjMgt_Persistent
           TCollection_ExtendedString("Cannot retrieve integer member"
                                      " for BooleanList attribute as \"")
             + aValueStr + "\"";
-        WriteMessage (aMessageString);
-        return Standard_False;
+        myMessageDriver->Send (aMessageString, Message_Warning);
+        aValue = 0;
       }
       aBooleanList->Append(aValue ? Standard_True : Standard_False);
     }
   }
-  
+
   return Standard_True;
 }
 
@@ -124,8 +135,8 @@ Standard_Boolean XmlMDataStd_BooleanListDriver::Paste(const XmlObjMgt_Persistent
 //purpose  : transient -> persistent (store)
 //=======================================================================
 void XmlMDataStd_BooleanListDriver::Paste(const Handle(TDF_Attribute)& theSource,
-					  XmlObjMgt_Persistent&        theTarget,
-					  XmlObjMgt_SRelocationTable&  ) const
+                                          XmlObjMgt_Persistent&        theTarget,
+                                          XmlObjMgt_SRelocationTable&  ) const
 {
   const Handle(TDataStd_BooleanList) aBooleanList = Handle(TDataStd_BooleanList)::DownCast(theSource);
 
@@ -145,4 +156,12 @@ void XmlMDataStd_BooleanListDriver::Paste(const Handle(TDF_Attribute)& theSource
     }
   }
   XmlObjMgt::SetStringValue (theTarget, (Standard_Character*)str, Standard_True);
+
+  if(aBooleanList->ID() != TDataStd_BooleanList::GetID()) {
+    //convert GUID
+    Standard_Character aGuidStr [Standard_GUID_SIZE_ALLOC];
+    Standard_PCharacter pGuidStr = aGuidStr;
+    aBooleanList->ID().ToCString (pGuidStr);
+    theTarget.Element().setAttribute (::AttributeIDString(), aGuidStr);
+  }
 }

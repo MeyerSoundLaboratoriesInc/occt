@@ -18,6 +18,8 @@
 #include <Standard_NoMoreObject.hxx>
 #include <Standard_NullObject.hxx>
 #include <Standard_Type.hxx>
+#include <Standard_GUID.hxx>
+#include <NCollection_Array1.hxx>
 #include <TCollection_AsciiString.hxx>
 #include <TDF_Attribute.hxx>
 #include <TDF_AttributeDelta.hxx>
@@ -37,7 +39,9 @@
 #include <TDF_Tool.hxx>
 #include <TDF_Transaction.hxx>
 
-IMPLEMENT_STANDARD_RTTIEXT(TDF_Data,MMgt_TShared)
+typedef NCollection_Array1<Handle(TDF_AttributeDelta)> TDF_Array1OfAttributeIDelta;
+
+IMPLEMENT_STANDARD_RTTIEXT(TDF_Data,Standard_Transient)
 
 #undef DEB_DELTA_CREATION
 #undef TDF_DATA_COMMIT_OPTIMIZED
@@ -216,7 +220,7 @@ Standard_Integer TDF_Data::CommitTransaction
 
     TDF_AttributeIterator itr1(aLabel, Standard_False);
     while (itr1.More()) {
-      TDF_Attribute * aPtrCurrentAtt = itr1.Value();
+      Handle(TDF_Attribute) aPtrCurrentAtt = itr1.Value();
       itr1.Next();
       //      currentAtt = itr1.Value();
 
@@ -297,7 +301,7 @@ Standard_Integer TDF_Data::CommitTransaction
         }
         // --------------------------------------------------------- Modified.
         else {
-          const TDF_Attribute* anAttrPtr = aPtrCurrentAtt; // to avoid ambiguity
+          const TDF_Attribute* anAttrPtr = aPtrCurrentAtt.operator->(); // to avoid ambiguity
           TDF_Data_DeltaCreation
             ("Modification",
              anAttrPtr->DeltaOnModification(backupAtt));
@@ -365,15 +369,39 @@ Standard_Boolean TDF_Data::IsApplicable
   return !aDelta.IsNull() && aDelta->IsApplicable(myTime);
 }
 
+//=======================================================================
+//function : FixOrder
+//purpose  : 
+//=======================================================================
+void TDF_Data::FixOrder(const Handle(TDF_Delta)& theDelta)
+{
+  // make all OnRemoval (which will cause addition of the attribute) are in the end
+  // to do not put two attributes with the same GUID at one label during undo/redo
+  TDF_AttributeDeltaList anOrderedList;
 
+  const TDF_AttributeDeltaList& attList = theDelta->AttributeDeltas();
+  TDF_ListIteratorOfAttributeDeltaList anIt(attList);
+  for (; anIt.More(); anIt.Next()) { // append not-removal
+    Handle(TDF_AttributeDelta) attDelta = anIt.Value();
+    if (!attDelta->IsKind(STANDARD_TYPE(TDF_DeltaOnRemoval))) {
+      anOrderedList.Append(attDelta);
+    }
+  }
+  for (anIt.Initialize(attList); anIt.More(); anIt.Next()) { // append removal
+    Handle(TDF_AttributeDelta) attDelta = anIt.Value();
+    if (attDelta->IsKind(STANDARD_TYPE(TDF_DeltaOnRemoval))) {
+      anOrderedList.Append(attDelta);
+    }
+  }
+  theDelta->ReplaceDeltaList(anOrderedList);
+}
 //=======================================================================
 //function : Undo
 //purpose  : Applies a delta to undo  actions.
 //=======================================================================
 
-Handle(TDF_Delta) TDF_Data::Undo
-(const Handle(TDF_Delta)& aDelta,
- const Standard_Boolean withDelta)
+Handle(TDF_Delta) TDF_Data::Undo(const Handle(TDF_Delta)& aDelta,
+                                 const Standard_Boolean withDelta)
 {
   Handle(TDF_Delta) newDelta;
   if (!aDelta.IsNull ()) {
@@ -385,6 +413,7 @@ Handle(TDF_Delta) TDF_Data::Undo
 #endif
       aDelta->BeforeOrAfterApply(Standard_True);
       myNotUndoMode = Standard_False;
+      FixOrder(aDelta);
       aDelta->Apply ();
       myNotUndoMode = Standard_True;
       if (withDelta) {

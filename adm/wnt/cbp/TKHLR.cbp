@@ -17,14 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__HLRTopoBRep_DLL" />
-					<Add option="-D__HLRBRep_DLL" />
-					<Add option="-D__HLRAlgo_DLL" />
-					<Add option="-D__HLRAppli_DLL" />
-					<Add option="-D__Intrv_DLL" />
-					<Add option="-D__TopBas_DLL" />
-					<Add option="-D__TopCnx_DLL" />
-					<Add option="-D__Contap_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKHLR_obj.link" />
@@ -43,14 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__HLRTopoBRep_DLL" />
-					<Add option="-D__HLRBRep_DLL" />
-					<Add option="-D__HLRAlgo_DLL" />
-					<Add option="-D__HLRAppli_DLL" />
-					<Add option="-D__Intrv_DLL" />
-					<Add option="-D__TopBas_DLL" />
-					<Add option="-D__TopCnx_DLL" />
-					<Add option="-D__Contap_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKHLR_objd.link" />
@@ -113,16 +97,7 @@
 		<Unit filename="../../../src/HLRBRep/HLRBRep_BSurfaceTool.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/HLRBRep/HLRBRep_BiPnt2D.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/HLRBRep/HLRBRep_BiPoint.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/HLRBRep/HLRBRep_CInter_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/HLRBRep/HLRBRep_CLPropsATool.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRBRep/HLRBRep_CLProps_0.cxx">
@@ -179,9 +154,6 @@
 		<Unit filename="../../../src/HLRBRep/HLRBRep_Intersector.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/HLRBRep/HLRBRep_LineTool.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/HLRBRep/HLRBRep_MyImpParToolOfTheIntersectorOfTheIntConicCurveOfCInter_0.cxx">
 			<Option link="0" />
 		</Unit>
@@ -192,9 +164,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRBRep/HLRBRep_PolyHLRToShape.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/HLRBRep/HLRBRep_SLPropsATool.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRBRep/HLRBRep_SLProps_0.cxx">
@@ -272,9 +241,6 @@
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_BiPoint.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_Coincidence.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_EdgeIterator.cxx">
 			<Option link="0" />
 		</Unit>
@@ -296,25 +262,16 @@
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyData.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyHidingData.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalData.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalNode.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyInternalSegment.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_PolyShellData.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_Projector.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/HLRAlgo/HLRAlgo_TriangleData.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/HLRAlgo/HLRAlgo_WiresBlock.cxx">

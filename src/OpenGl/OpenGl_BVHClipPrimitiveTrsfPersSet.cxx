@@ -14,17 +14,17 @@
 // commercial license or contractual agreement.
 
 #include <OpenGl_BVHClipPrimitiveTrsfPersSet.hxx>
-#include <BVH_LinearBuilder.hxx>
 
 // =======================================================================
 // function : OpenGl_BVHClipPrimitiveTrsfPersSet
 // purpose  :
 // =======================================================================
-OpenGl_BVHClipPrimitiveTrsfPersSet::OpenGl_BVHClipPrimitiveTrsfPersSet()
+OpenGl_BVHClipPrimitiveTrsfPersSet::OpenGl_BVHClipPrimitiveTrsfPersSet (const Handle(Select3D_BVHBuilder3d)& theBuilder)
 : myIsDirty (Standard_False),
-  myBVH (new BVH_Tree<Standard_ShortReal, 4>())
+  myBVH (new BVH_Tree<Standard_Real, 3>()),
+  myBuilder (theBuilder)
 {
-  myBuilder = new BVH_LinearBuilder<Standard_ShortReal, 4> (1, 32);
+  //
 }
 
 // =======================================================================
@@ -40,7 +40,7 @@ Standard_Integer OpenGl_BVHClipPrimitiveTrsfPersSet::Size() const
 // function : Box
 // purpose  :
 // =======================================================================
-Graphic3d_BndBox4f OpenGl_BVHClipPrimitiveTrsfPersSet::Box (const Standard_Integer theIdx) const
+Graphic3d_BndBox3d OpenGl_BVHClipPrimitiveTrsfPersSet::Box (const Standard_Integer theIdx) const
 {
   return *myStructBoxes (theIdx + 1);
 }
@@ -49,12 +49,11 @@ Graphic3d_BndBox4f OpenGl_BVHClipPrimitiveTrsfPersSet::Box (const Standard_Integ
 // function : Center
 // purpose  :
 // =======================================================================
-Standard_ShortReal OpenGl_BVHClipPrimitiveTrsfPersSet::Center (const Standard_Integer theIdx,
-                                                               const Standard_Integer theAxis) const
+Standard_Real OpenGl_BVHClipPrimitiveTrsfPersSet::Center (const Standard_Integer theIdx,
+                                                          const Standard_Integer theAxis) const
 {
-  const Graphic3d_BndBox4f& aBndBox = *myStructBoxes (theIdx + 1);
-
-  return (aBndBox.CornerMin()[theAxis] + aBndBox.CornerMax()[theAxis]) * 0.5f;
+  const Graphic3d_BndBox3d& aBndBox = *myStructBoxes (theIdx + 1);
+  return (aBndBox.CornerMin()[theAxis] + aBndBox.CornerMax()[theAxis]) * 0.5;
 }
 
 // =======================================================================
@@ -132,9 +131,12 @@ const OpenGl_Structure* OpenGl_BVHClipPrimitiveTrsfPersSet::GetStructureById (St
 // function : BVH
 // purpose  :
 //=======================================================================
-const NCollection_Handle<BVH_Tree<Standard_ShortReal, 4> >&
-  OpenGl_BVHClipPrimitiveTrsfPersSet::BVH (const OpenGl_Mat4& theProjectionMatrix,
-                                           const OpenGl_Mat4& theWorldViewMatrix,
+const opencascade::handle<BVH_Tree<Standard_Real, 3> >&
+  OpenGl_BVHClipPrimitiveTrsfPersSet::BVH (const Handle(Graphic3d_Camera)& theCamera,
+                                           const OpenGl_Mat4d& theProjectionMatrix,
+                                           const OpenGl_Mat4d& theWorldViewMatrix,
+                                           const Standard_Integer theViewportWidth,
+                                           const Standard_Integer theViewportHeight,
                                            const Graphic3d_WorldViewProjState& theWVPState)
 {
   if (!myIsDirty
@@ -150,14 +152,17 @@ const NCollection_Handle<BVH_Tree<Standard_ShortReal, 4> >&
   {
     const OpenGl_Structure* aStructure = myStructs (aStructIdx);
 
-    HBndBox4f aBoundingBox = new Graphic3d_BndBox4f;
+    Handle(HBndBox3d) aBoundingBox = new HBndBox3d();
     *aBoundingBox = aStructure->BoundingBox();
-     aStructure->TransformPersistence.Apply (theProjectionMatrix, theWorldViewMatrix, 0, 0, *aBoundingBox);
+    if (!aStructure->TransformPersistence().IsNull())
+    {
+      aStructure->TransformPersistence()->Apply (theCamera, theProjectionMatrix, theWorldViewMatrix, theViewportWidth, theViewportHeight, *aBoundingBox);
+    }
 
     myStructBoxes.Add (aBoundingBox);
   }
 
-  myBuilder->Build (this, myBVH.operator->(), BVH_Set<Standard_ShortReal, 4>::Box());
+  myBuilder->Build (this, myBVH.operator->(), BVH_Set<Standard_Real, 3>::Box());
 
   myStructBoxesState = theWVPState;
   myStructBoxes.Clear();

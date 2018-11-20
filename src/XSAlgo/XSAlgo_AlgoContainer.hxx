@@ -19,7 +19,7 @@
 #include <Standard.hxx>
 #include <Standard_Type.hxx>
 
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 #include <Standard_Real.hxx>
 #include <Standard_CString.hxx>
 #include <Standard_Boolean.hxx>
@@ -35,10 +35,10 @@ class Transfer_FinderProcess;
 
 
 class XSAlgo_AlgoContainer;
-DEFINE_STANDARD_HANDLE(XSAlgo_AlgoContainer, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(XSAlgo_AlgoContainer, Standard_Transient)
 
 
-class XSAlgo_AlgoContainer : public MMgt_TShared
+class XSAlgo_AlgoContainer : public Standard_Transient
 {
 
 public:
@@ -63,7 +63,11 @@ public:
   //! This information should be later transmitted to
   //! MergeTransferInfo in order to be recorded in the
   //! translation map
-  Standard_EXPORT virtual TopoDS_Shape ProcessShape (const TopoDS_Shape& shape, const Standard_Real Prec, const Standard_Real MaxTol, const Standard_CString rscfile, const Standard_CString seq, Handle(Standard_Transient)& info, const Handle(Message_ProgressIndicator)& progress = 0) const;
+  Standard_EXPORT virtual TopoDS_Shape ProcessShape (
+      const TopoDS_Shape& shape, const Standard_Real Prec, const Standard_Real MaxTol,
+      const Standard_CString rscfile, const Standard_CString seq, Handle(Standard_Transient)& info,
+      const Handle(Message_ProgressIndicator)& progress = 0,
+      const Standard_Boolean NonManifold = Standard_False) const;
   
   //! Checks quality of pcurve of the edge on the given face,
   //! and corrects it if necessary.
@@ -81,7 +85,7 @@ public:
 
 
 
-  DEFINE_STANDARD_RTTIEXT(XSAlgo_AlgoContainer,MMgt_TShared)
+  DEFINE_STANDARD_RTTIEXT(XSAlgo_AlgoContainer,Standard_Transient)
 
 protected:
 

@@ -2,19 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{AC056149-0525-05F6-088B-D616F97E7369}</UniqueIdentifier>
+      <UniqueIdentifier>{DBA124A3-0D65-0768-1880-D2339F3B22B6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XCAFApp">
-      <UniqueIdentifier>{CB0ADB23-1130-0485-02EB-EDC862FE9BF1}</UniqueIdentifier>
+      <UniqueIdentifier>{63E934D6-167E-186D-125C-348CCE083D01}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XCAFDimTolObjects">
-      <UniqueIdentifier>{B024A863-0CA4-1582-0E62-E0BFC04D0D94}</UniqueIdentifier>
+      <UniqueIdentifier>{DD15E6BC-07EC-04D0-0F11-5B4755A83226}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\XCAFNoteObjects">
+      <UniqueIdentifier>{745D2048-17A6-02E8-1690-245DAA814DB7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XCAFDoc">
-      <UniqueIdentifier>{B6A925A1-0248-0ADC-195B-D18227B809D8}</UniqueIdentifier>
+      <UniqueIdentifier>{15465C6B-0877-0412-08DE-DBDC9C709828}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\XCAFPrs">
-      <UniqueIdentifier>{8E649696-0448-0F48-1409-2D4C70F58302}</UniqueIdentifier>
+      <UniqueIdentifier>{15868783-03F9-0801-0382-9C8892CA4126}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files\XCAFView">
+      <UniqueIdentifier>{7B39AF50-1190-16D6-058F-DF93B85B364E}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -33,13 +39,25 @@
     <ClCompile Include="..\..\..\src\XCAFDimTolObjects\XCAFDimTolObjects_Tool.cxx">
       <Filter>Source files\XCAFDimTolObjects</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFNoteObjects\XCAFNoteObjects_NoteObject.cxx">
+      <Filter>Source files\XCAFNoteObjects</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_Area.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_AssemblyItemId.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_AssemblyItemRef.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_Centroid.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_ClippingPlaneTool.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_Color.cxx">
@@ -84,10 +102,31 @@
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_MaterialTool.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_Note.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_NoteBalloon.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_NoteBinData.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_NoteComment.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_NotesTool.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_ShapeMapTool.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_ShapeTool.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_View.cxx">
+      <Filter>Source files\XCAFDoc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_ViewTool.cxx">
       <Filter>Source files\XCAFDoc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFDoc\XCAFDoc_Volume.cxx">
@@ -104,6 +143,9 @@
     </ClCompile>
     <ClCompile Include="..\..\..\src\XCAFPrs\XCAFPrs_Style.cxx">
       <Filter>Source files\XCAFPrs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\XCAFView\XCAFView_Object.cxx">
+      <Filter>Source files\XCAFView</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

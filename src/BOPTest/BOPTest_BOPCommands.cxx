@@ -19,7 +19,6 @@
 #include <BOPAlgo_Operation.hxx>
 #include <BOPAlgo_PaveFiller.hxx>
 #include <BOPAlgo_Section.hxx>
-#include <BOPCol_ListOfShape.hxx>
 #include <BOPDS_DS.hxx>
 #include <BOPTest.hxx>
 #include <BOPTest_Objects.hxx>
@@ -29,6 +28,7 @@
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAlgoAPI_Section.hxx>
+#include <BRepTest_Objects.hxx>
 #include <DBRep.hxx>
 #include <Draw.hxx>
 #include <DrawTrSurf.hxx>
@@ -42,6 +42,7 @@
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Iterator.hxx>
 #include <TopoDS_Shape.hxx>
+#include <TopTools_ListOfShape.hxx>
 
 #include <stdio.h>
 //
@@ -101,12 +102,16 @@ static Standard_Integer mkvolume   (Draw_Interpretor&, Standard_Integer, const c
   theCommands.Add("bfuse"   , "use bfuse r s1 s2"   , __FILE__,bfuse, g);
   theCommands.Add("bcut"    , "use bcut r s1 s2"    , __FILE__,bcut, g);
   theCommands.Add("btuc"    , "use btuc r s1 s2"    , __FILE__,btuc, g);
-  theCommands.Add("bsection", "use bsection r s1 s2 [-n2d/-n2d1/-n2d2] [-na]", 
+  theCommands.Add("bsection", "use bsection r s1 s2 [-n2d/-n2d1/-n2d2] [-na]"
+                               "Builds section between shapes. Options:\n"
+                               "-n2d/-n2d1/-n2d2 - disable the PCurve construction;\n"
+                               "-na - disables the approximation of the section curves.\n",
                                                       __FILE__, bsection, g);
   //
-  theCommands.Add("bopcurves", "use bopcurves F1 F2 [-2d/-2d1/-2d2] [-p u1 v1 u2 v2]",
+  theCommands.Add("bopcurves", "use bopcurves F1 F2 [-2d/-2d1/-2d2] "
+                               "[-p u1 v1 u2 v2 (to add start points] [-v (for extended output)]",
                                                       __FILE__, bopcurves, g);
-  theCommands.Add("mkvolume", "make solids from set of shapes.\nmkvolume r b1 b2 ... [-c] [-ni]", 
+  theCommands.Add("mkvolume", "make solids from set of shapes.\nmkvolume r b1 b2 ... [-c] [-ni] [-ai]",
                   __FILE__, mkvolume , g);
 }
 
@@ -118,12 +123,10 @@ Standard_Integer bop(Draw_Interpretor& di,
                      Standard_Integer n, 
                      const char** a)
 {
-  char buf[32];
   Standard_Boolean bRunParallel, bNonDestructive;
-  Standard_Integer iErr;
   Standard_Real aTol;
   TopoDS_Shape aS1, aS2;
-  BOPCol_ListOfShape aLC;
+  TopTools_ListOfShape aLC;
   //
   if (n != 3) {
     di << " use bop s1 s2 \n";
@@ -141,6 +144,7 @@ Standard_Integer bop(Draw_Interpretor& di,
   aTol=BOPTest_Objects::FuzzyValue();
   bRunParallel=BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
+  BOPAlgo_GlueEnum aGlue = BOPTest_Objects::Glue();
   //
   aLC.Append(aS1);
   aLC.Append(aS2);
@@ -157,14 +161,11 @@ Standard_Integer bop(Draw_Interpretor& di,
   pPF->SetFuzzyValue(aTol);
   pPF->SetRunParallel(bRunParallel);
   pPF->SetNonDestructive(bNonDestructive);
+  pPF->SetGlue(aGlue);
+  pPF->SetUseOBB(BOPTest_Objects::UseOBB());
   //
   pPF->Perform();
-  iErr=pPF->ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
-    return 0;
-  }
+  BOPTest::ReportAlerts(pPF->GetReport());
   //
   return 0;
 }
@@ -227,17 +228,17 @@ Standard_Integer bopsmt(Draw_Interpretor& di,
     return 0;
   }
   //
-  if (pPF->ErrorStatus()) {
+  if (pPF->HasErrors()) {
     di << " PaveFiller has not been done\n";
     return 0;
   }
   //
   char buf[64];
   Standard_Boolean bRunParallel;
-  Standard_Integer aNb, iErr;
+  Standard_Integer aNb;
   BOPAlgo_BOP aBOP;
   //
-  const BOPCol_ListOfShape& aLC=pPF->Arguments();
+  const TopTools_ListOfShape& aLC=pPF->Arguments();
   aNb=aLC.Extent();
   if (aNb!=2) {
     Sprintf (buf, " wrong number of arguments %s\n", aNb);
@@ -254,12 +255,15 @@ Standard_Integer bopsmt(Draw_Interpretor& di,
   aBOP.AddTool(aS2);
   aBOP.SetOperation(aOp);
   aBOP.SetRunParallel (bRunParallel);
+  aBOP.SetCheckInverted(BOPTest_Objects::CheckInverted());
   //
   aBOP.PerformWithFiller(*pPF);
-  iErr=aBOP.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aBOP.GetReport());
+
+  // Store the history of Boolean operation into the session
+  BRepTest_Objects::SetHistory(pPF->Arguments(), aBOP);
+
+  if (aBOP.HasErrors()) {
     return 0;
   }
   //
@@ -290,17 +294,17 @@ Standard_Integer bopsection(Draw_Interpretor& di,
     return 0;
   }
   //
-  if (pPF->ErrorStatus()) {
+  if (pPF->HasErrors()) {
     di << " PaveFiller has not been done\n";
     return 0;
   }
   //
   char buf[64];
   Standard_Boolean bRunParallel;
-  Standard_Integer aNb, iErr;
+  Standard_Integer aNb;
   BOPAlgo_Section aBOP;
   //
-  const BOPCol_ListOfShape& aLC=pPF->Arguments();
+  const TopTools_ListOfShape& aLC=pPF->Arguments();
   aNb=aLC.Extent();
   if (aNb!=2) {
     Sprintf (buf, " wrong number of arguments %s\n", aNb);
@@ -316,12 +320,15 @@ Standard_Integer bopsection(Draw_Interpretor& di,
   aBOP.AddArgument(aS1);
   aBOP.AddArgument(aS2);
   aBOP.SetRunParallel (bRunParallel);
+  aBOP.SetCheckInverted(BOPTest_Objects::CheckInverted());
   //
   aBOP.PerformWithFiller(*pPF);
-  iErr=aBOP.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aBOP.GetReport());
+
+  // Store the history of Section operation into the session
+  BRepTest_Objects::SetHistory(pPF->Arguments(), aBOP);
+
+  if (aBOP.HasErrors()) {
     return 0;
   }
   //
@@ -396,9 +403,7 @@ Standard_Integer  bsection(Draw_Interpretor& di,
     return 0;
   }
   // 
-  char buf[80];
   Standard_Boolean bRunParallel, bNonDestructive, bApp, bPC1, bPC2;
-  Standard_Integer i, iErr;
   Standard_Real aTol;
   //
   bApp = Standard_True;
@@ -407,8 +412,9 @@ Standard_Integer  bsection(Draw_Interpretor& di,
   aTol = BOPTest_Objects::FuzzyValue(); 
   bRunParallel = BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
+  BOPAlgo_GlueEnum aGlue = BOPTest_Objects::Glue();
   //
-  for (i = 4; i < n; ++i) {
+  for (Standard_Integer i = 4; i < n; ++i) {
     if (!strcmp(a[i], "-n2d")) {
       bPC1 = Standard_False;
       bPC2 = Standard_False;
@@ -433,12 +439,25 @@ Standard_Integer  bsection(Draw_Interpretor& di,
   aSec.SetFuzzyValue(aTol);
   aSec.SetRunParallel(bRunParallel);
   aSec.SetNonDestructive(bNonDestructive);
+  aSec.SetGlue(aGlue);
+  aSec.SetUseOBB(BOPTest_Objects::UseOBB());
   //
   aSec.Build();
-  iErr=aSec.ErrorStatus();
+
+  // Store the history of Section operation into the session
+  BRepTest_Objects::SetHistory(aSec.DSFiller()->Arguments(), aSec);
+
+  //
+  if (aSec.HasWarnings()) {
+    Standard_SStream aSStream;
+    aSec.DumpWarnings(aSStream);
+    di << aSStream;
+  }
+  //
   if (!aSec.IsDone()) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
+    Standard_SStream aSStream;
+    aSec.DumpErrors(aSStream);
+    di << aSStream;
     return 0;
   }
   //
@@ -459,11 +478,9 @@ Standard_Integer bsmt (Draw_Interpretor& di,
                        const char** a,
                        const BOPAlgo_Operation aOp)
 {
-  char buf[32];
   Standard_Boolean bRunParallel, bNonDestructive;
-  Standard_Integer iErr;
   TopoDS_Shape aS1, aS2;
-  BOPCol_ListOfShape aLC;
+  TopTools_ListOfShape aLC;
   Standard_Real aTol;
   //
   if (n != 4) {
@@ -484,6 +501,7 @@ Standard_Integer bsmt (Draw_Interpretor& di,
   aTol=BOPTest_Objects::FuzzyValue();
   bRunParallel = BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
+  BOPAlgo_GlueEnum aGlue = BOPTest_Objects::Glue();
   //
   Handle(NCollection_BaseAllocator)aAL=
     NCollection_BaseAllocator::CommonBaseAllocator();
@@ -495,12 +513,12 @@ Standard_Integer bsmt (Draw_Interpretor& di,
   aPF.SetFuzzyValue(aTol); 
   aPF.SetRunParallel(bRunParallel);
   aPF.SetNonDestructive(bNonDestructive);
+  aPF.SetGlue(aGlue);
+  aPF.SetUseOBB(BOPTest_Objects::UseOBB());
   //
   aPF.Perform();
-  iErr=aPF.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aPF.GetReport());
+  if (aPF.HasErrors()) {
     return 0;
   }
   //
@@ -511,13 +529,15 @@ Standard_Integer bsmt (Draw_Interpretor& di,
   aBOP.AddTool(aS2);
   aBOP.SetOperation(aOp);
   aBOP.SetRunParallel(bRunParallel);
+  aBOP.SetCheckInverted(BOPTest_Objects::CheckInverted());
   // 
   aBOP.PerformWithFiller(aPF);
-  //
-  iErr=aBOP.ErrorStatus();
-  if (iErr) {
-    Sprintf(buf, " ErrorStatus : %d\n",  iErr);
-    di << buf;
+  BOPTest::ReportAlerts(aBOP.GetReport());
+
+  // Store the history of Boolean operation into the session
+  BRepTest_Objects::SetHistory(aPF.Arguments(), aBOP);
+
+  if (aBOP.HasErrors()) {
     return 0;
   }
   const TopoDS_Shape& aR=aBOP.Shape();
@@ -538,7 +558,8 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
                             const char** a)
 {
   if (n<3) {
-    di << " use bopcurves F1 F2 [-2d/-2d1/-2d2]\n";
+    di << "Usage: bopcurves F1 F2 [-2d/-2d1/-2d2] "
+          "[-p u1 v1 u2 v2 (to add start points] [-v (for extended output)]\n";
     return 1;
   }
   //
@@ -547,7 +568,7 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
   TopAbs_ShapeEnum aType;
   //
   if (S1.IsNull() || S2.IsNull()) {
-    di << " Null shapes is not allowed \n";
+    di << " Null shapes are not allowed \n";
     return 1;
   }
   //
@@ -567,7 +588,7 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
   //
   Standard_Boolean aToApproxC3d, aToApproxC2dOnS1, aToApproxC2dOnS2, anIsDone;
   Standard_Integer aNbCurves, aNbPoints;
-  Standard_Real anAppTol, aTolR;
+  Standard_Real anAppTol;
   IntSurf_ListOfPntOn2S aListOfPnts;
   TCollection_AsciiString aNm("c_"), aNp("p_");
   //
@@ -577,6 +598,7 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
   aToApproxC2dOnS2 = Standard_False;
 
   //
+  Standard_Boolean bExtOut = Standard_False;
   for(Standard_Integer i = 3; i < n; i++)
   {
     if (!strcasecmp(a[i],"-2d")) {
@@ -599,13 +621,17 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
       aPt.SetValue(aU1, aV1, aU2, aV2);
       aListOfPnts.Append(aPt);
     }
+    else if (!strcasecmp(a[i],"-v")) {
+      bExtOut = Standard_True;
+    }
     else {
-      di << "Wrong key. To build 2d curves use: bopcurves F1 F2 [-2d/-2d1/-2d2] [-p u1 v1 u2 v2]\n";
+      di << "Wrong key.\n";
+      di << "To build 2d curves use one of the following keys: -2d/-2d1/-2d2\n";
+      di << "To add start points use the following key: -p u1 v1 u2 v2\n";
+      di << "For extended output use the following key: -v\n";
       return 1;
     }
-
   }
-
   //
   IntTools_FaceFace aFF;
   //
@@ -619,7 +645,7 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
   //
   anIsDone=aFF.IsDone();
   if (!anIsDone) {
-    di << "Error: anIsDone=" << (Standard_Integer) anIsDone << "\n";
+    di << "Error: Intersection failed\n";
     return 0;
   }
   //
@@ -635,11 +661,20 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
     return 0;
   }
   //
-  aTolR=aFF.TolReached3d();
-  di << "Tolerance Reached=" << aTolR << "\n";
-  //
   // curves
   if (aNbCurves) {
+    Standard_Real aTolR = 0.;
+    if (!bExtOut) {
+      // find maximal tolerance
+      for (Standard_Integer i = 1; i <= aNbCurves; i++) {
+        const IntTools_Curve& anIC = aSCs(i);
+        if (aTolR < anIC.Tolerance()) {
+          aTolR = anIC.Tolerance();
+        }
+      }
+      di << "Tolerance Reached=" << aTolR << "\n";
+    }
+    //
     di << aNbCurves << " curve(s) found.\n";
     //
     for (Standard_Integer i=1; i<=aNbCurves; i++) {
@@ -689,8 +724,16 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
         }
         di << ") ";
       }
+      //
+      if (bExtOut) {
+        di << "\nTolerance: " << anIC.Tolerance() << "\n";
+        di << "Tangential tolerance: " << anIC.TangentialTolerance() << "\n";
+        di << "\n";
+      }
     }
-    di << "\n";
+    if (!bExtOut) {
+      di << "\n";
+    }
   }
   //
   // points
@@ -720,28 +763,32 @@ Standard_Integer bopcurves (Draw_Interpretor& di,
 Standard_Integer mkvolume(Draw_Interpretor& di, Standard_Integer n, const char** a) 
 {
   if (n < 3) {
-    di << "Usage: mkvolume r b1 b2 ... [-c] [-ni]\n";
+    di << "Usage: mkvolume r b1 b2 ... [-c] [-ni] [-ai]\n";
     di << "Options:\n";
     di << " -c  - use this option if the arguments are compounds\n";
     di << "       containing shapes that should be interfered;\n";
     di << " -ni - use this option if the arguments should not be interfered;\n";
+    di << " -ai - use this option to avoid internal for solids shapes in the result.\n";
     return 1;
   }
   //
   const char* usage = "Type mkvolume without arguments for the usage of the command.\n";
   //
-  Standard_Boolean bToIntersect, bRunParallel, bNonDestructive, bCompounds;
+  Standard_Boolean bToIntersect, bRunParallel, bNonDestructive;
+  Standard_Boolean bCompounds, bAvoidInternal;
   Standard_Integer i;
   Standard_Real aTol;
   TopoDS_Shape aS;
-  BOPCol_ListOfShape aLS;
+  TopTools_ListOfShape aLS;
   //
   aTol = BOPTest_Objects::FuzzyValue();
   bRunParallel = BOPTest_Objects::RunParallel();
   bNonDestructive = BOPTest_Objects::NonDestructive();
+  BOPAlgo_GlueEnum aGlue = BOPTest_Objects::Glue();
   //
   bToIntersect = Standard_True;
   bCompounds = Standard_False;
+  bAvoidInternal = Standard_False;
   //
   for (i = 2; i < n; ++i) {
     aS = DBRep::Get(a[i]);
@@ -755,6 +802,9 @@ Standard_Integer mkvolume(Draw_Interpretor& di, Standard_Integer n, const char**
       else if (!strcmp(a[i], "-ni")) {
         bToIntersect = Standard_False;
       }
+      else if (!strcmp(a[i], "-ai")) {
+        bAvoidInternal = Standard_True;
+      }
     }
   }
   //
@@ -766,8 +816,8 @@ Standard_Integer mkvolume(Draw_Interpretor& di, Standard_Integer n, const char**
   //
   // treat list of arguments for the case of compounds
   if (bToIntersect && bCompounds) {
-    BOPCol_ListOfShape aLSx;
-    BOPCol_ListIteratorOfListOfShape aItLS;
+    TopTools_ListOfShape aLSx;
+    TopTools_ListIteratorOfListOfShape aItLS;
     //
     aItLS.Initialize(aLS);
     for (; aItLS.More(); aItLS.Next()) {
@@ -789,11 +839,18 @@ Standard_Integer mkvolume(Draw_Interpretor& di, Standard_Integer n, const char**
   aMV.SetRunParallel(bRunParallel);
   aMV.SetFuzzyValue(aTol);
   aMV.SetNonDestructive(bNonDestructive);
+  aMV.SetAvoidInternalShapes(bAvoidInternal);
+  aMV.SetGlue(aGlue);
+  aMV.SetUseOBB(BOPTest_Objects::UseOBB());
   //
   aMV.Perform();
-  if (aMV.ErrorStatus()) {
-    di << "Error status: " << aMV.ErrorStatus();
-    return 1;
+  BOPTest::ReportAlerts(aMV.GetReport());
+
+  // Store the history of Volume Maker into the session
+  BRepTest_Objects::SetHistory(aLS, aMV);
+
+  if (aMV.HasErrors()) {
+    return 0;
   }
   //
   const TopoDS_Shape& aR = aMV.Shape();

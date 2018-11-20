@@ -16,8 +16,6 @@
 
 #include <DDocStd.hxx>
 #include <DDocStd_DrawDocument.hxx>
-#include <Dico_DictionaryOfTransient.hxx>
-#include <Dico_IteratorOfDictionaryOfTransient.hxx>
 #include <Draw.hxx>
 #include <Draw_Interpretor.hxx>
 #include <IFSelect_SessionPilot.hxx>
@@ -25,9 +23,7 @@
 #include <IGESCAFControl_Writer.hxx>
 #include <IGESControl_Controller.hxx>
 #include <Interface_Macros.hxx>
-#include <STEPCAFControl_DictionaryOfExternFile.hxx>
 #include <STEPCAFControl_ExternFile.hxx>
-#include <STEPCAFControl_IteratorOfDictionaryOfExternFile.hxx>
 #include <STEPCAFControl_Reader.hxx>
 #include <STEPCAFControl_Writer.hxx>
 #include <STEPControl_Controller.hxx>
@@ -51,16 +47,17 @@
 #include <XCAFDoc_Editor.hxx>
 #include <TDF_Tool.hxx>
 #include <TopoDS_Shape.hxx>
+#include <Interface_Static.hxx>
 
 #include <stdio.h>
 //============================================================
 // Support for several models in DRAW
 //============================================================
-static Handle(Dico_DictionaryOfTransient) thedictws = new Dico_DictionaryOfTransient;
+static NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)> thedictws;
 
 static Standard_Boolean ClearDicWS()
 {
-  thedictws->Clear();
+  thedictws.Clear();
   return Standard_True;
 }
 
@@ -68,20 +65,20 @@ static void AddWS(TCollection_AsciiString filename,
 		  const Handle(XSControl_WorkSession)& WS)
 {
   WS->SetVars ( new XSDRAW_Vars ); // support of DRAW variables
-  thedictws->SetItem( filename, WS );
+  thedictws.Bind( filename, WS );
 }
 
 
-static Standard_Boolean FillDicWS(Handle(STEPCAFControl_DictionaryOfExternFile)& dicFile)
+static Standard_Boolean FillDicWS(NCollection_DataMap<TCollection_AsciiString, Handle(STEPCAFControl_ExternFile)>& dicFile)
 {
   ClearDicWS();
-  if ( dicFile->IsEmpty() ) {
+  if ( dicFile.IsEmpty() ) {
     return Standard_False;
   }
   Handle(STEPCAFControl_ExternFile) EF;
-  STEPCAFControl_IteratorOfDictionaryOfExternFile DicEFIt ( dicFile );
+  NCollection_DataMap<TCollection_AsciiString, Handle(STEPCAFControl_ExternFile)>::Iterator DicEFIt(dicFile);
   for (; DicEFIt.More(); DicEFIt.Next() ) {
-    TCollection_AsciiString filename = DicEFIt.Name();
+    TCollection_AsciiString filename = DicEFIt.Key();
     EF = DicEFIt.Value();
     AddWS ( filename, EF->GetWS() );
   }
@@ -90,9 +87,9 @@ static Standard_Boolean FillDicWS(Handle(STEPCAFControl_DictionaryOfExternFile)&
 
 static Standard_Boolean SetCurrentWS (TCollection_AsciiString filename)
 {
-  if ( !thedictws->HasItem(filename) ) return Standard_False;
+  if ( !thedictws.IsBound(filename) ) return Standard_False;
   Handle(XSControl_WorkSession) CurrentWS = 
-    Handle(XSControl_WorkSession)::DownCast( thedictws->Item(filename) );
+    Handle(XSControl_WorkSession)::DownCast( thedictws.ChangeFind(filename) );
   XSDRAW::Pilot()->SetSession( CurrentWS );
   
   return Standard_True;
@@ -123,13 +120,13 @@ static Standard_Integer SetCurWS (Draw_Interpretor& di , Standard_Integer argc, 
 
 static Standard_Integer GetDicWSList (Draw_Interpretor& di, Standard_Integer /*argc*/, const char** /*argv*/)
 {
-  Handle(Dico_DictionaryOfTransient) DictWS = thedictws;
-  if ( DictWS->IsEmpty() ) return 1;
-  Dico_IteratorOfDictionaryOfTransient DicIt ( DictWS );
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)> DictWS = thedictws;
+  if ( DictWS.IsEmpty() ) return 1;
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>::Iterator DicIt(DictWS);
   di << " The list of last translated files:\n";
   Standard_Integer num = 0;
   for (; DicIt.More() ; DicIt.Next(), num++ ) {
-    TCollection_AsciiString strng ( DicIt.Name() );
+    TCollection_AsciiString strng ( DicIt.Key() );
     if ( num ) di << "\n";
     di << "\"" << strng.ToCString() << "\"";
   }
@@ -162,12 +159,12 @@ static Standard_Integer FromShape (Draw_Interpretor& di, Standard_Integer argc, 
   
   char command[256];
   Sprintf ( command, "fromshape %.200s -1", argv[1] );
-  Handle(Dico_DictionaryOfTransient) DictWS = thedictws;
-  if ( DictWS->IsEmpty() ) return di.Eval ( command );
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)> DictWS = thedictws;
+  if ( DictWS.IsEmpty() ) return di.Eval ( command );
   
   Handle(XSControl_WorkSession) WS = XSDRAW::Session();
 
-  Dico_IteratorOfDictionaryOfTransient DicIt ( DictWS );
+  NCollection_DataMap<TCollection_AsciiString, Handle(Standard_Transient)>::Iterator DicIt ( DictWS );
 //  di << "Searching for shape among all the loaded files:\n";
   Standard_Integer num = 0;
   for (; DicIt.More() ; DicIt.Next(), num++ ) {
@@ -195,8 +192,11 @@ static Standard_Integer ReadIges (Draw_Interpretor& di, Standard_Integer argc, c
   
   DeclareAndCast(IGESControl_Controller,ctl,XSDRAW::Controller());
   if (ctl.IsNull()) XSDRAW::SetNorm("IGES");
+ 
 
   IGESCAFControl_Reader reader ( XSDRAW::Session(),Standard_True);
+  Standard_Integer onlyvisible = Interface_Static::IVal("read.iges.onlyvisible");
+  reader.SetReadVisible(onlyvisible == 1);
   
   if (argc == 4) {
     Standard_Boolean mode = Standard_True;
@@ -225,8 +225,7 @@ static Standard_Integer ReadIges (Draw_Interpretor& di, Standard_Integer argc, c
 
   Handle(TDocStd_Document) doc;
   if (!DDocStd::GetDocument(argv[1],doc,Standard_False)) {  
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) {di<<"No application found\n";return 1;}
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     A->NewDocument("BinXCAF",doc);  
     TDataStd_Name::Set(doc->GetData()->Root(),argv[1]);  
     Handle(DDocStd_DrawDocument) DD = new DDocStd_DrawDocument(doc);  
@@ -336,8 +335,7 @@ static Standard_Integer ReadStep (Draw_Interpretor& di, Standard_Integer argc, c
 
   Handle(TDocStd_Document) doc;
   if (!DDocStd::GetDocument(argv[1],doc,Standard_False)) {  
-    Handle(TDocStd_Application) A;
-    if (!DDocStd::Find(A)) {di<<"No application found\n";return 1;}
+    Handle(TDocStd_Application) A = DDocStd::GetApplication();
     A->NewDocument("BinXCAF",doc);  
     TDataStd_Name::Set(doc->GetData()->Root(),argv[1]);  
     Handle(DDocStd_DrawDocument) DD = new DDocStd_DrawDocument(doc);  
@@ -353,7 +351,7 @@ static Standard_Integer ReadStep (Draw_Interpretor& di, Standard_Integer argc, c
   Draw::Set(argv[1],DD);       
   di << "Document saved with name " << argv[1];
 
-  Handle(STEPCAFControl_DictionaryOfExternFile) DicFile = reader.ExternFiles();
+  NCollection_DataMap<TCollection_AsciiString, Handle(STEPCAFControl_ExternFile)> DicFile = reader.ExternFiles();
   FillDicWS( DicFile );
   AddWS ( fnom , XSDRAW::Session() );
   
@@ -462,7 +460,7 @@ static Standard_Integer WriteStep (Draw_Interpretor& di, Standard_Integer argc, 
     case IFSelect_RetDone : {
       di<<"File "<<argv[2]<<" written\n";
 
-      Handle(STEPCAFControl_DictionaryOfExternFile) DicFile = writer.ExternFiles();
+      NCollection_DataMap<TCollection_AsciiString, Handle(STEPCAFControl_ExternFile)> DicFile = writer.ExternFiles();
       FillDicWS( DicFile );
       AddWS( argv[2], XSDRAW::Session() );
       break;
@@ -490,7 +488,7 @@ static Standard_Integer Expand (Draw_Interpretor& di, Standard_Integer argc, con
   if (argc == 3)
   {
     if(!XCAFDoc_Editor::Expand(Doc->Main(), recurs)){
-      di << "The shape is assembly or not compaund\n";
+      di << "No suitable labels to expand\n";
       return 1;
     }
   }
@@ -508,7 +506,7 @@ static Standard_Integer Expand (Draw_Interpretor& di, Standard_Integer argc, con
 
       if (!aLabel.IsNull()){
         if(!XCAFDoc_Editor::Expand(Doc->Main(), aLabel, recurs)){
-          di << "The shape is assembly or not compaund\n";
+          di << "The shape is assembly or not compound\n";
           return 1;
         }
       }
@@ -519,10 +517,14 @@ static Standard_Integer Expand (Draw_Interpretor& di, Standard_Integer argc, con
   return 0;
 }
 
-void XDEDRAW_Common::InitCommands(Draw_Interpretor& di) {
-
+void XDEDRAW_Common::InitCommands(Draw_Interpretor& di)
+{
   static Standard_Boolean initactor = Standard_False;
-  if (initactor) return;  initactor = Standard_True;
+  if (initactor)
+  {
+    return;
+  }
+  initactor = Standard_True;
 
   Standard_CString g = "XDE translation commands";
 
@@ -536,7 +538,7 @@ void XDEDRAW_Common::InitCommands(Draw_Interpretor& di) {
   di.Add("XFileSet", "filename: Set the specified file to be the current one",__FILE__, SetCurWS, g);
   di.Add("XFromShape", "shape: do fromshape command for all the files",__FILE__, FromShape, g);
 
-  di.Add("XExpand", "XExpand Doc recursively(0/1) or XExpand Doc recursively(0/1) label1 abel2 ..."  
+  di.Add("XExpand", "XExpand Doc recursively(0/1) or XExpand Doc recursively(0/1) label1 label2 ..."  
           "or XExpand Doc recursively(0/1) shape1 shape2 ...",__FILE__, Expand, g);
 
 }

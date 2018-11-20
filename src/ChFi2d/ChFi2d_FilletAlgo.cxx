@@ -90,7 +90,7 @@ void ChFi2d_FilletAlgo::Init(const TopoDS_Wire& theWire, const gp_Pln& thePlane)
       break;
   }
   if (theEdge1.IsNull() || theEdge2.IsNull())
-    Standard_ConstructionError::Raise("The fillet algorithms expects a wire consisting of two edges.");
+    throw Standard_ConstructionError("The fillet algorithms expects a wire consisting of two edges.");
   Init(theEdge1, theEdge2, thePlane);
 }
 
@@ -654,12 +654,12 @@ void FilletPoint::appendValue(Standard_Real theValue, Standard_Boolean theValid)
     if (theValue < myV.Value(a)) 
     {
       myV.InsertBefore(a, theValue);
-      myValid.InsertBefore(a, (int)theValid);
+      myValid.InsertBefore(a, theValid);
       return;
     }
   }
   myV.Append(theValue);
-  myValid.Append((int)theValid);
+  myValid.Append(theValid);
 }
 
 Standard_Boolean FilletPoint::calculateDiff(FilletPoint* thePoint) 

@@ -9,9 +9,9 @@
 #include <TopExp.hxx>
 #include <TopTools_IndexedMapOfShape.hxx>
 #include <BRepBuilderAPI_MakeFace.hxx>
-#include <AIS_TexturedShape.hxx>
+#include <AIS_Shape.hxx>
 #include <BRepTools.hxx>
-#include <Graphic3d_Texture2D.hxx>
+#include <Graphic3d_Texture2Dmanual.hxx>
 #include <BRep_Tool.hxx>
 #include <TopoDS.hxx>
 #include <BRepBuilderAPI_Transform.hxx>
@@ -56,7 +56,7 @@ void TexturesExt_Presentation::DoSample()
 {
 	((CViewer3dApp*) AfxGetApp())->SetSampleName (L"Viewer3d");
 	((CViewer3dApp*) AfxGetApp())->SetSamplePath (L"..\\..\\04_Viewer3d");
-	getAISContext()->EraseAll();
+	getAISContext()->EraseAll (Standard_True);
 	if (myIndex >=0 && myIndex < myNbSamples)
 	{
 	  // turn lights on for terrain sample
@@ -70,7 +70,6 @@ void TexturesExt_Presentation::Init()
   // initialize v3d_view so it displays TexturesExt well
   getViewer()->InitActiveViews();
   Handle(V3d_View) aView = getViewer()->ActiveView();
-  aView->SetSurfaceDetail(V3d_TEX_ALL);
   aView->SetSize(ZVIEW_SIZE);
 
 //  getDocument()->UpdateResultMessageDlg("Textured Shape", 
@@ -81,7 +80,7 @@ void TexturesExt_Presentation::Init()
     "  // aShape = ..." EOL
     "" EOL
     "  // create a textured presentation object for aShape" EOL
-    "  Handle(AIS_TexturedShape) aTShape = new AIS_TexturedShape(aShape);" EOL
+    "  Handle(AIS_Shape) aTShape = new AIS_Shape(aShape);" EOL
     "" EOL
     "  TCollection_AsciiString aTFileName;" EOL
     "" EOL
@@ -91,26 +90,10 @@ void TexturesExt_Presentation::Init()
     "  // which will indicate use of predefined texture of this number" EOL
     "  // aTFileName = ..." EOL
     "" EOL
-    "  aTShape->SetTextureFileName(aTFileName);" EOL
-    "" EOL
-    "  // do other initialization of AIS_TexturedShape" EOL
-    "  Standard_Real nRepeat;" EOL
-    "  Standard_Boolean toRepeat;" EOL
-    "  Standard_Boolean toScale;" EOL
-    "  // initialize aRepeat, toRepeat, toScale ..." EOL
-    "" EOL
-    "  aTShape->SetTextureMapOn();" EOL
-    "  aTShape->SetTextureRepeat(toRepeat, nRepeat, nRepeat);" EOL
-    "  aTShape->SetTexturesExtcale(toScale);" EOL
-    "  " EOL
-    "  // mode 3 is \"textured\" mode of AIS_TexturedShape, " EOL
-    "  // other modes will display the \"normal\", non-textured shape," EOL
-    "  // in wireframe(1) or shaded(2) modes correspondingly" EOL
-    "  aTShape->SetDisplayMode(3); " EOL
-    "" EOL
-    "  // V3d_TEX_ALL constant must be set as surface detail" EOL
-    "  // for current view to see AIS_TexturedShape" EOL
-    "  myCurrentView->SetSurfaceDetail(V3d_TEX_ALL);" EOL);
+    "  aTShape->Attributes()->SetShadingAspect (new Prs3d_ShadingAspect());" EOL
+    "  Handle(Graphic3d_Texture2Dmanual) aTexture = new Graphic3d_Texture2Dmanual (aTFileName);" EOL
+    "  aTShape->Attributes()->ShadingAspect()->Aspect()->SetTextureMap (aTexture);" EOL
+    "  aTShape->Attributes()->ShadingAspect()->Aspect()->SetTextureMapOn();" EOL);
 //	CString text(Message.ToCString());
   	getDocument()->ClearDialog();
 	getDocument()->SetDialogTitle("Change face color");
@@ -122,12 +105,12 @@ void TexturesExt_Presentation::Init()
 //////////////////////////////////////////////////////////////////////
 //================================================================
 // Function : TexturesExt_Presentation::Texturize
-// display an AIS_TexturedShape based on a given shape with texture with given filename
+// display an AIS_Shape based on a given shape with texture with given filename
 // filename can also be an integer value ("2", "5", etc.), in this case
 // a predefined texture from Graphic3d_NameOfTexture2D with number = this value
 // is loaded.
 //================================================================
-Handle(AIS_TexturedShape) TexturesExt_Presentation::Texturize(const TopoDS_Shape& aShape,
+Handle(AIS_Shape) TexturesExt_Presentation::Texturize(const TopoDS_Shape& aShape,
                                                         TCollection_AsciiString aTFileName,
                                                         Standard_Real toScaleU,
                                                         Standard_Real toScaleV,
@@ -137,27 +120,31 @@ Handle(AIS_TexturedShape) TexturesExt_Presentation::Texturize(const TopoDS_Shape
                                                         Standard_Real originV)
 {
   // create a textured presentation object for aShape
-  Handle(AIS_TexturedShape) aTShape = new AIS_TexturedShape(aShape);
+  Handle(AIS_Shape) aTShape = new AIS_Shape(aShape);
   TCollection_AsciiString TFileName;
   // load texture from file if it is not an integer value
   // integer value indicates a number of texture in predefined TexturesExt enumeration
-  CString initfile(((OCC_App*) AfxGetApp())->GetInitDataDir());
-  initfile += "..\\..\\..\\04_Viewer3d\\Data\\";
+  CString anOCCTDataPathValue;
+  anOCCTDataPathValue.GetEnvironmentVariable(L"CSF_OCCTDataPath");
+  CString initfile = (anOCCTDataPathValue + L"\\images\\");
   if (!aTFileName.IsIntegerValue())
   {
-	initfile += aTFileName.ToCString();
+    initfile += aTFileName.ToCString();
   }
 
-  TCollection_ExtendedString aFileName ((Standard_ExtString )(const wchar_t* )initfile);
-  aTShape->SetTextureFileName (TCollection_AsciiString (aFileName, '?'));
+  if (!aTShape->Attributes()->HasOwnShadingAspect())
+  {
+    aTShape->Attributes()->SetShadingAspect (new Prs3d_ShadingAspect());
+  }
+  aTShape->Attributes()->ShadingAspect()->Aspect()->SetTextureMap (new Graphic3d_Texture2Dmanual (TCollection_AsciiString ((const wchar_t* )initfile)));
+  aTShape->Attributes()->ShadingAspect()->Aspect()->SetTextureMapOn();
 
-  // do other initialization of AIS_TexturedShape
-  aTShape->SetTextureMapOn();
-  aTShape->SetTextureScale(Standard_True, toScaleU, toScaleV);
-  aTShape->SetTextureRepeat(Standard_True, toRepeatU, toRepeatV);
-  aTShape->SetTextureOrigin(Standard_True, originU, originV);
-  
-  aTShape->SetDisplayMode(3); // mode 3 is "textured" mode
+  // do other initialization of AIS_Shape
+  aTShape->SetTextureScaleUV (gp_Pnt2d ( toScaleU, toScaleV));
+  aTShape->SetTextureRepeatUV(gp_Pnt2d (toRepeatU, toRepeatV));
+  aTShape->SetTextureOriginUV(gp_Pnt2d (  originU, originV));
+
+  aTShape->SetDisplayMode(AIS_Shaded);
 
   return aTShape;
 }
@@ -171,9 +158,9 @@ Standard_Boolean TexturesExt_Presentation::loadShape(TopoDS_Shape& aShape,
                                          TCollection_AsciiString aFileName)
 {
   // create a TopoDS_Shape -> read from a brep file
-  CString initfile(((OCC_App*) AfxGetApp())->GetInitDataDir());
-  initfile += "..\\..\\..\\04_Viewer3d\\Data\\";
-  initfile += aFileName.ToCString();
+  CString anOCCTDataPathValue;
+  anOCCTDataPathValue.GetEnvironmentVariable(L"CSF_OCCTDataPath");
+  CString initfile = (anOCCTDataPathValue + L"\\occ\\" + aFileName.ToCString());
 
   std::filebuf aFileBuf;
   std::istream aStream (&aFileBuf);
@@ -204,12 +191,12 @@ Standard_Boolean TexturesExt_Presentation::loadShape(TopoDS_Shape& aShape,
 //================================================================
 void TexturesExt_Presentation::lightsOnOff(Standard_Boolean isOn)
 {
-  static Handle(V3d_Light) aLight1 = new V3d_DirectionalLight(getViewer(), V3d_XnegYposZneg);
-  static Handle(V3d_Light) aLight2 = new V3d_DirectionalLight(getViewer(), V3d_XnegYnegZpos);
-  static Handle(V3d_Light) aLight3 = new V3d_DirectionalLight(getViewer(), V3d_XposYnegZpos);
-  static Handle(V3d_Light) aLight4 = new V3d_DirectionalLight(getViewer(), V3d_XnegYnegZneg);
-  static Handle(V3d_Light) aLight5 = new V3d_DirectionalLight(getViewer(), V3d_XnegYposZpos);
-  static Handle(V3d_Light) aLight6 = new V3d_DirectionalLight(getViewer(), V3d_XposYposZpos);
+  static Handle(V3d_Light) aLight1 = new V3d_DirectionalLight(V3d_XnegYposZneg);
+  static Handle(V3d_Light) aLight2 = new V3d_DirectionalLight(V3d_XnegYnegZpos);
+  static Handle(V3d_Light) aLight3 = new V3d_DirectionalLight(V3d_XposYnegZpos);
+  static Handle(V3d_Light) aLight4 = new V3d_DirectionalLight(V3d_XnegYnegZneg);
+  static Handle(V3d_Light) aLight5 = new V3d_DirectionalLight(V3d_XnegYposZpos);
+  static Handle(V3d_Light) aLight6 = new V3d_DirectionalLight(V3d_XposYposZpos);
 
   if (isOn)
   {
@@ -260,10 +247,10 @@ aShape = Transformer.Shape();
   aShapeIO->SetPolygonOffsets(Aspect_POM_Fill, 1.5, 0.5);
   DISP(aShapeIO);
 
-  Handle(AIS_TexturedShape) aTFace1 = Texturize(aFaces(16), "carrelage1.gif", 1, 1, 3, 2);
+  Handle(AIS_Shape) aTFace1 = Texturize(aFaces(16), "carrelage1.gif", 1, 1, 3, 2);
   DISP(aTFace1);
 
-  Handle(AIS_TexturedShape) aTFace2 = Texturize(aFaces(21), "carrelage1.gif", 1, 1, 3, 2);
+  Handle(AIS_Shape) aTFace2 = Texturize(aFaces(21), "carrelage1.gif", 1, 1, 3, 2);
   DISP(aTFace2);
 
   getViewer()->Update();
@@ -305,7 +292,7 @@ void TexturesExt_Presentation::sampleTerrain()
   aTransform.Perform(aFaces(1));
   aShape = aTransform;
 
-  getAISContext()->Display(Texturize(aShape, "terrain.gif"));
+  getAISContext()->Display (Texturize (aShape, "terrain.gif"), Standard_True);
 }
 
 
@@ -337,7 +324,7 @@ void TexturesExt_Presentation::sampleKitchen()
 {
   TopoDS_Shape aShape;
 
-  if (!loadShape(aShape, "Kitchen\\Room.brep"))
+  if (!loadShape(aShape, "Room.brep"))
     return;
 
   gp_Trsf aTrsf;
@@ -367,17 +354,17 @@ void TexturesExt_Presentation::sampleKitchen()
 //  DISP(drawShape(aFaces(4), Quantity_NOC_LIGHTPINK, Standard_False));
 
   // texturize furniture items with "wooden" texture
-  if (loadShape(aShape, "Kitchen\\MODERN_Table_1.brep"))
+  if (loadShape(aShape, "MODERN_Table_1.brep"))
   {
     moveScale(aShape);
     DISP(Texturize(aShape, "chataignier.gif"));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Chair_1.brep"))
+  if (loadShape(aShape, "MODERN_Chair_1.brep"))
   {
     moveScale(aShape);
     DISP(Texturize(aShape, "chataignier.gif"));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Cooker_1.brep"))
+  if (loadShape(aShape, "MODERN_Cooker_1.brep"))
   {
     moveScale(aShape);
 
@@ -397,27 +384,27 @@ void TexturesExt_Presentation::sampleKitchen()
         DISP(Texturize(aFaces(i), "chataignier.gif"));
     }
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Cooker_1_opened.brep"))
+  if (loadShape(aShape, "MODERN_Cooker_1_opened.brep"))
   {
     moveScale(aShape);
     DISP(Texturize(aShape, "chataignier.gif"));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Exhaust_1.brep"))
+  if (loadShape(aShape, "MODERN_Exhaust_1.brep"))
   {
     moveScale(aShape);
     DISP(drawShape(aShape, Graphic3d_NOM_STONE, Standard_False));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_MVCooker_1.brep"))
+  if (loadShape(aShape, "MODERN_MVCooker_1.brep"))
   {
     moveScale(aShape);
     DISP(drawShape(aShape, Graphic3d_NOM_SILVER, Standard_False));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_MVCooker_1_opened.brep"))
+  if (loadShape(aShape, "MODERN_MVCooker_1_opened.brep"))
   {
     moveScale(aShape);
     DISP(drawShape(aShape, Graphic3d_NOM_SILVER, Standard_False));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Sink_1.brep"))
+  if (loadShape(aShape, "MODERN_Sink_1.brep"))
   {
     moveScale(aShape);
 
@@ -435,17 +422,17 @@ void TexturesExt_Presentation::sampleKitchen()
         DISP(Texturize(aFaces(i), "chataignier.gif"));
     }
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Sink_1_opened.brep"))
+  if (loadShape(aShape, "MODERN_Sink_1_opened.brep"))
   {
     moveScale(aShape);
     DISP(Texturize(aShape, "chataignier.gif"));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Refrigerator_1.brep"))
+  if (loadShape(aShape, "MODERN_Refrigerator_1.brep"))
   {
     moveScale(aShape);
     DISP(drawShape(aShape, Graphic3d_NOM_CHROME, Standard_False));
   }
-  if (loadShape(aShape, "Kitchen\\MODERN_Refrigerator_1_opened.brep"))
+  if (loadShape(aShape, "MODERN_Refrigerator_1_opened.brep"))
   {
     moveScale(aShape);
     DISP(drawShape(aShape, Graphic3d_NOM_CHROME, Standard_False));

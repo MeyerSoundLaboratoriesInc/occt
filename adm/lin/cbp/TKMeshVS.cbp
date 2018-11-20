@@ -21,6 +21,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/lib" />
 					<Add option="$(CSF_OPT_LNK64)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/lib" />
 				</Linker>
 			</Target>
 			<Target title="Debug">
@@ -38,6 +39,7 @@
 				<Linker>
 					<Add directory="../../../lin/cbp/libd" />
 					<Add option="$(CSF_OPT_LNK64D)" />
+					<Add option="-Wl,-rpath-link=../../../lin/cbp/libd" />
 				</Linker>
 			</Target>
 		</Build>
@@ -62,7 +64,6 @@
 			<Add library="TKG3d" />
 			<Add library="TKG2d" />
 		</Linker>
-		<Unit filename="../../../src/MeshVS/MeshVS_ColorHasher.cxx" />
 		<Unit filename="../../../src/MeshVS/MeshVS_CommonSensitiveEntity.cxx" />
 		<Unit filename="../../../src/MeshVS/MeshVS_DataSource.cxx" />
 		<Unit filename="../../../src/MeshVS/MeshVS_DataSource3D.cxx" />

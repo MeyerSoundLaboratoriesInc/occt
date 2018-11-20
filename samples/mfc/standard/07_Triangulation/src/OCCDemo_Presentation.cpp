@@ -101,7 +101,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawSurface
 		CTriangulationDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicSurface);
+		getAISContext()->Display (aGraphicSurface, Standard_True);
   }
   
   return aGraphicSurface;
@@ -126,7 +126,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawCurve
 		CTriangulationDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicCurve);
+		getAISContext()->Display (aGraphicCurve, Standard_True);
   }
 
   return aGraphicCurve;
@@ -173,7 +173,7 @@ Handle(AIS_Point) OCCDemo_Presentation::drawPoint
 
   getAISContext()->SetColor (aGraphicPoint, theColor, toDisplay);
   if (toDisplay) {
-    getAISContext()->Display (aGraphicPoint);
+    getAISContext()->Display (aGraphicPoint, Standard_True);
     //COCCDemoDoc::Fit();
   }
 
@@ -211,7 +211,7 @@ Handle(AIS_InteractiveObject) OCCDemo_Presentation::drawVector
 		CTriangulationDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicCurve);
+		getAISContext()->Display (aGraphicCurve, Standard_True);
   }
 
   return aGraphicCurve;
@@ -232,7 +232,7 @@ Handle(AIS_Shape) OCCDemo_Presentation::drawShape
 		CTriangulationDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicShape);
+		getAISContext()->Display (aGraphicShape, Standard_True);
   }
 
   return aGraphicShape;
@@ -252,13 +252,13 @@ Handle(AIS_Shape) OCCDemo_Presentation::drawShape
 		CTriangulationDoc::Fit();
 	}
 	else
-		getAISContext()->Display (aGraphicShape);
+		getAISContext()->Display (aGraphicShape, Standard_True);
   }
 
   return aGraphicShape;
 }
 /*
-void OCCDemo_Presentation::GetViewCenter(V3d_Coordinate& Xc, V3d_Coordinate& Yc)
+void OCCDemo_Presentation::GetViewCenter(Standard_Real& Xc, Standard_Real& Yc)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -266,7 +266,7 @@ void OCCDemo_Presentation::GetViewCenter(V3d_Coordinate& Xc, V3d_Coordinate& Yc)
 	pView->GetViewCenter(Xc,Yc);
 }
 
-void OCCDemo_Presentation::SetViewCenter(V3d_Coordinate Xc, V3d_Coordinate Yc)
+void OCCDemo_Presentation::SetViewCenter(Standard_Real Xc, Standard_Real Yc)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -274,7 +274,7 @@ void OCCDemo_Presentation::SetViewCenter(V3d_Coordinate Xc, V3d_Coordinate Yc)
 	pView->SetViewCenter(Xc,Yc);
 }
 
-void OCCDemo_Presentation::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_Coordinate& Z)
+void OCCDemo_Presentation::GetViewEye(Standard_Real& X, Standard_Real& Y, Standard_Real& Z)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -282,7 +282,7 @@ void OCCDemo_Presentation::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_
 	pView->GetViewEye(X,Y,Z);
 }
 
-void OCCDemo_Presentation::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Coordinate Z)
+void OCCDemo_Presentation::SetViewEye(Standard_Real X, Standard_Real Y, Standard_Real Z)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -290,7 +290,7 @@ void OCCDemo_Presentation::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Co
 	pView->SetViewEye(X,Y,Z);
 }
 
-Quantity_Factor OCCDemo_Presentation::GetViewScale()
+Standard_Real OCCDemo_Presentation::GetViewScale()
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();
@@ -298,7 +298,7 @@ Quantity_Factor OCCDemo_Presentation::GetViewScale()
 	return pView->GetViewScale();
 }
 
-void OCCDemo_Presentation::SetViewScale(Quantity_Factor Coef)
+void OCCDemo_Presentation::SetViewScale(Standard_Real Coef)
 {
 	CMDIFrameWnd *pFrame =  (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
 	CMDIChildWnd *pChild =  (CMDIChildWnd *) pFrame->GetActiveFrame();

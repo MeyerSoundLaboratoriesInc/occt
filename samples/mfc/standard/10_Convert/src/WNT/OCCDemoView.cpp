@@ -7,6 +7,7 @@
 #include "OCCDemoDoc.h"
 #include "OCCDemoView.h"
 
+#include <AIS_RubberBand.hxx>
 #include <Graphic3d_GraphicDriver.hxx>
 
 #define ValZWMin 1
@@ -69,7 +70,7 @@ COCCDemoView::COCCDemoView()
   myCurZoom=0;
   myCurrentMode = CurAction3d_Nothing;
   myVisMode = VIS_SHADE;
-  m_Pen = NULL;
+  myRect = new AIS_RubberBand (Quantity_NOC_WHITE, Aspect_TOL_SOLID, 1.0);
   myGraphicDriver = ((COCCDemoApp*)AfxGetApp())->GetGraphicDriver();
 }
 
@@ -77,16 +78,14 @@ COCCDemoView::~COCCDemoView()
 {
 	if (!myView.IsNull())
     myView->Remove();
-  if (m_Pen)
-    delete m_Pen;
 }
 
 BOOL COCCDemoView::PreCreateWindow(CREATESTRUCT& cs)
 {
-	// TODO: Modify the Window class or styles here by modifying
-	//  the CREATESTRUCT cs
-
-	return CView::PreCreateWindow(cs);
+  // TODO: Modify the Window class or styles here by modifying
+  //  the CREATESTRUCT cs
+  cs.lpszClass = ::AfxRegisterWndClass(CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | CS_OWNDC, ::LoadCursor(NULL, IDC_ARROW), NULL, NULL);
+  return CView::PreCreateWindow(cs);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -141,8 +140,9 @@ COCCDemoDoc* COCCDemoView::GetDocument() // non-debug version is inline
 /////////////////////////////////////////////////////////////////////////////
 // COCCDemoView message handlers
 
-void COCCDemoView::OnSize(UINT /*nType*/, int /*cx*/, int /*cy*/) 
+void COCCDemoView::OnSize(UINT nType, int cx, int cy)
 {
+  CView::OnSize (nType, cx, cy);
   if (!myView.IsNull())
     myView->MustBeResized();
 }
@@ -276,6 +276,7 @@ void COCCDemoView::OnLButtonUp(UINT nFlags, CPoint point)
       {
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
         myView->SetComputedMode(Standard_True);
+        myView->Redraw();
         SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
       }
       myCurrentMode = CurAction3d_Nothing;
@@ -299,6 +300,7 @@ void COCCDemoView::OnRButtonUp(UINT /*nFlags*/, CPoint /*point*/)
   {
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
     myView->SetComputedMode(Standard_True);
+    myView->Redraw();
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
   }
 }
@@ -333,8 +335,7 @@ void COCCDemoView::OnMouseMove(UINT nFlags, CPoint point)
         break;
       case CurAction3d_WindowZooming :
         myXmax = point.x; myYmax = point.y;	
-        DrawRectangle(myXmin,myYmin,myXmax,myYmax,Standard_False,LongDash);
-        DrawRectangle(myXmin,myYmin,myXmax,myYmax,Standard_True,LongDash);
+        DrawRectangle (myXmin, myYmin, myXmax, myYmax, Standard_True, Aspect_TOL_DASH);
         break;
       case CurAction3d_DynamicPanning :
         myView->Pan(point.x-myXmax,myYmax-point.y); // Realize the panning
@@ -404,67 +405,34 @@ void COCCDemoView::OnUpdateBUTTONRot(CCmdUI* pCmdUI)
 	pCmdUI->Enable   (myCurrentMode != CurAction3d_DynamicRotation);	
 }
 
-void COCCDemoView::DrawRectangle(const Standard_Integer  MinX,
-                                        const Standard_Integer  MinY,
-                                        const Standard_Integer  MaxX,
-                                        const Standard_Integer  MaxY,
-                                        const Standard_Boolean  Draw, 
-                                        const LineStyle aLineStyle)
+void COCCDemoView::DrawRectangle (Standard_Integer theMinX,
+                                  Standard_Integer theMinY,
+                                  Standard_Integer theMaxX,
+                                  Standard_Integer theMaxY,
+                                  Standard_Boolean theToDraw,
+                                  Aspect_TypeOfLine theLineType)
 {
-  static int m_DrawMode;
-  if  (!m_Pen && aLineStyle ==Solid )
+  const Handle(AIS_InteractiveContext)& aCtx = GetDocument()->GetAISContext();
+  if (!theToDraw)
   {
-    m_Pen = new CPen(PS_SOLID, 1, RGB(0,0,0)); m_DrawMode = R2_MERGEPENNOT;
-  }
-  else if (!m_Pen && aLineStyle ==Dot )
-  {
-    m_Pen = new CPen(PS_DOT, 1, RGB(0,0,0));   m_DrawMode = R2_XORPEN;
-  }
-  else if (!m_Pen && aLineStyle == ShortDash)
-  {
-    m_Pen = new CPen(PS_DASH, 1, RGB(255,0,0));	m_DrawMode = R2_XORPEN;
-  }
-  else if (!m_Pen && aLineStyle == LongDash)
-  {
-    m_Pen = new CPen(PS_DASH, 1, RGB(0,0,0));	m_DrawMode = R2_NOTXORPEN;
-  }
-  else if (aLineStyle == Default) 
-  {
-    m_Pen = NULL;	m_DrawMode = R2_MERGEPENNOT;
+    aCtx->Remove (myRect, false);
+    aCtx->CurrentViewer()->RedrawImmediate();
+    return;
   }
 
-  CPen* aOldPen = NULL;
-  CClientDC clientDC(this);
-  if (m_Pen) 
-    aOldPen = clientDC.SelectObject(m_Pen);
-  clientDC.SetROP2(m_DrawMode);
-
-  static		Standard_Integer StoredMinX, StoredMaxX, StoredMinY, StoredMaxY;
-  static		Standard_Boolean m_IsVisible = Standard_False;
-
-  if ( m_IsVisible && !Draw) // move or up  : erase at the old position 
+  CRect aRect;
+  GetWindowRect (aRect);
+  myRect->SetLineType (theLineType);
+  myRect->SetRectangle (theMinX, aRect.Height() - theMinY, theMaxX, aRect.Height() - theMaxY);
+  if (!aCtx->IsDisplayed (myRect))
   {
-    clientDC.MoveTo(StoredMinX,StoredMinY); clientDC.LineTo(StoredMinX,StoredMaxY); 
-    clientDC.LineTo(StoredMaxX,StoredMaxY); 
-    clientDC.LineTo(StoredMaxX,StoredMinY); clientDC.LineTo(StoredMinX,StoredMinY);
-    m_IsVisible = false;
+    aCtx->Display (myRect, false);
   }
-
-  StoredMinX = Min ( MinX, MaxX );
-  StoredMinY = Min ( MinY, MaxY );
-  StoredMaxX = Max ( MinX, MaxX );
-  StoredMaxY = Max ( MinY, MaxY);
-
-  if (Draw) // move : draw
+  else
   {
-    clientDC.MoveTo(StoredMinX,StoredMinY); clientDC.LineTo(StoredMinX,StoredMaxY); 
-    clientDC.LineTo(StoredMaxX,StoredMaxY); 
-    clientDC.LineTo(StoredMaxX,StoredMinY); clientDC.LineTo(StoredMinX,StoredMinY);
-    m_IsVisible = true;
+    aCtx->Redisplay (myRect, false);
   }
-
-  if (m_Pen) 
-    clientDC.SelectObject(aOldPen);
+  aCtx->CurrentViewer()->RedrawImmediate();
 }
 
 void COCCDemoView::InitButtons()
@@ -493,18 +461,21 @@ void COCCDemoView::RedrawVisMode()
   switch (myVisMode)
   {
   case VIS_WIREFRAME:
-    GetDocument()->GetAISContext()->SetDisplayMode(AIS_WireFrame);
+    GetDocument()->GetAISContext()->SetDisplayMode (AIS_WireFrame, Standard_True);
     myView->SetComputedMode (Standard_False);
+    myView->Redraw();
     break;
   case VIS_SHADE:
-    GetDocument()->GetAISContext()->SetDisplayMode(AIS_Shaded);
+    GetDocument()->GetAISContext()->SetDisplayMode (AIS_Shaded, Standard_True);
     myView->SetComputedMode (Standard_False);
+    myView->Redraw();
     break;
   case VIS_HLR:
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_WAIT));
     myView->SetComputedMode (Standard_True);
+    myView->Redraw();
     SetCursor(AfxGetApp()->LoadStandardCursor(IDC_ARROW));
-    GetDocument()->GetAISContext()->SetDisplayMode(AIS_WireFrame);
+    GetDocument()->GetAISContext()->SetDisplayMode (AIS_WireFrame, Standard_True);
     break;
   }
 }
@@ -545,32 +516,32 @@ void COCCDemoView::OnUpdateBUTTONHlrOn(CCmdUI* pCmdUI)
 	pCmdUI->Enable   (myVisMode != VIS_HLR);	
 }
 
-void COCCDemoView::GetViewAt (V3d_Coordinate& theX, V3d_Coordinate& theY, V3d_Coordinate& theZ) const
+void COCCDemoView::GetViewAt (Standard_Real& theX, Standard_Real& theY, Standard_Real& theZ) const
 {
   myView->At (theX, theY, theZ);
 }
 
-void COCCDemoView::SetViewAt (const V3d_Coordinate theX, const V3d_Coordinate theY, const V3d_Coordinate theZ)
+void COCCDemoView::SetViewAt (const Standard_Real theX, const Standard_Real theY, const Standard_Real theZ)
 {
   myView->SetAt (theX, theY, theZ);
 }
 
-void COCCDemoView::GetViewEye(V3d_Coordinate& X, V3d_Coordinate& Y, V3d_Coordinate& Z)
+void COCCDemoView::GetViewEye(Standard_Real& X, Standard_Real& Y, Standard_Real& Z)
 {
 	myView->Eye(X,Y,Z);
 }
 
-void COCCDemoView::SetViewEye(V3d_Coordinate X, V3d_Coordinate Y, V3d_Coordinate Z)
+void COCCDemoView::SetViewEye(Standard_Real X, Standard_Real Y, Standard_Real Z)
 {
 	myView->SetEye(X,Y,Z);
 }
 
-Quantity_Factor COCCDemoView::GetViewScale()
+Standard_Real COCCDemoView::GetViewScale()
 {
 	return myView->Scale();
 }
 
-void COCCDemoView::SetViewScale(Quantity_Factor Coef)
+void COCCDemoView::SetViewScale(Standard_Real Coef)
 {
 	myView->SetScale(Coef);
 }

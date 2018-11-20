@@ -32,12 +32,12 @@ proc OCCDoc_ParseArguments {arguments} {
   array set args_values {}
 
   foreach arg $arguments {
-    if {[regexp {^(-)[a-z]+$} $arg] == 1} {
+    if {[regexp {^(-)[a-z_]+$} $arg] == 1} {
       set name [string range $arg 1 [string length $arg]-1]
       lappend args_names $name
       set args_values($name) "NULL"
       continue
-    } elseif {[regexp {^(-)[a-z]+=.+$} $arg] == 1} {
+    } elseif {[regexp {^(-)[a-z_]+=.+$} $arg] == 1} {
       set equal_symbol_position [string first "=" $arg]
       set name [string range $arg 1 $equal_symbol_position-1]
       lappend args_names $name
@@ -59,8 +59,19 @@ proc OCCDoc_ParseArguments {arguments} {
 }
 
 # Returns script parent folder
-proc OCCDoc_GetDoxDir {} {
-  return [file normalize [file dirname [info script]]/../dox]
+proc OCCDoc_GetDoxDir { {theProductsPath ""} } {
+  if { $theProductsPath == "" } {
+    return [file normalize [file dirname [info script]]/../dox]
+  } else {
+    return [file normalize $theProductsPath]/dox
+  }
+}
+
+# Returns products root folder
+proc OCCDoc_GetProdRootDir {} {
+  if {[info exists ::env(PRODROOT)]} {
+    return [file normalize $::env(PRODROOT)]
+  }
 }
 
 # Returns OCCT root dir
@@ -71,7 +82,6 @@ proc OCCDoc_GetOCCTRootDir {} {
 
 # Returns root dir
 proc OCCDoc_GetRootDir { {theProductsPath ""} } {
-
   if { $theProductsPath == "" } {
     return [OCCDoc_GetOCCTRootDir]
   } else {
@@ -736,8 +746,7 @@ proc OCCDoc_PostProcessor {outDir} {
 
 # Loads a list of docfiles from file FILES.txt
 proc OCCDoc_LoadFilesList {} {
-
-  set INPUTDIR [OCCDoc_GetDoxDir]
+  set INPUTDIR [OCCDoc_GetDoxDir [OCCDoc_GetProdRootDir]]
 
   global available_docfiles
   set available_docfiles {}
@@ -799,7 +808,11 @@ proc OCCDoc_MakeRefmanTex {fileName latexDir verboseMode latexFilesList} {
   }
 
   # Copy template file to latex folder
-  file copy "[OCCDoc_GetDoxDir]/resources/occt_pdf_template.tex" $DOCNAME
+  if { "[OCCDoc_GetProdRootDir]" != "" } {
+    file copy "[OCCDoc_GetDoxDir [OCCDoc_GetProdRootDir]]/resources/prod_pdf_template.tex" $DOCNAME
+  } else {
+    file copy "[OCCDoc_GetDoxDir]/resources/occt_pdf_template.tex" $DOCNAME
+  }
 
   # Get templatized data
   set texfile [open $DOCNAME "r"]
@@ -808,6 +821,7 @@ proc OCCDoc_MakeRefmanTex {fileName latexDir verboseMode latexFilesList} {
 
   # Replace dummy values 
   set year       [clock format [clock seconds] -format {%Y}]
+  set month      [clock format [clock seconds] -format {%B}]
   set texfile    [open $DOCNAME "w"]
   set casVersion [OCCDoc_DetectCasVersion]
 
@@ -815,23 +829,23 @@ proc OCCDoc_MakeRefmanTex {fileName latexDir verboseMode latexFilesList} {
   set docLabel   ""
   foreach aFileName $latexFilesList {
     # Find the file in FILES_PDF.txt
-    set parsedFileName [split $aFileName "/" ]
-    set newfileName [string range $fileName [expr [string first "__" $fileName] + 2] end]
-
-    if { [lsearch -nocase $parsedFileName "$newfileName.md" ] != -1 } {
-      set filepath "[OCCDoc_GetDoxDir]/$aFileName"
+    set parsedFileName [file rootname [lindex [split $aFileName "/" ] end]]
+    if { [regexp "${parsedFileName}$" $fileName] } {
+      set filepath "[OCCDoc_GetDoxDir [OCCDoc_GetProdRootDir]]/$aFileName"
       if { [file exists $filepath] } {
         set MDFile   [open $filepath "r"]
         set label    [split [gets $MDFile] "\{"]
         set docLabel [lindex $label 0]
         close $MDFile
-        
         break
       }
     }
   }
 
-  set texfile_loaded [string map [list DEFDOCLABEL "$docLabel" DEFCASVERSION "$casVersion" DEFFILENAME "$fileName" DEFYEAR "$year"] $texfile_loaded]
+  set occtlogo_path "[OCCDoc_GetDoxDir]/resources/occt_logo.png"
+  set occlogo_path  "[OCCDoc_GetDoxDir]/resources/occ_logo.png"
+  set copyright_path  "[OCCDoc_GetDoxDir [OCCDoc_GetProdRootDir]]/resources/prod_pdf_template.tex"
+  set texfile_loaded [string map [list DEFDOCLABEL "$docLabel" DEFCASVERSION "$casVersion" DEFFILENAME "$fileName" DEFYEAR "$year" DEFMONTH "$month" DEFCOPYRIGHT "$copyright_path" DEFLOGO "$occtlogo_path" DEFOCCLOGO "$occlogo_path" DEFTITLE ""] $texfile_loaded]
 
   # Get data
   puts $texfile $texfile_loaded

@@ -2,25 +2,25 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{B9E218FA-040B-15AF-0B17-ED9C8AC03345}</UniqueIdentifier>
+      <UniqueIdentifier>{A1154C17-0D8C-18B1-0C9D-C43C3E4F3776}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMDF">
-      <UniqueIdentifier>{6608D5FC-1837-10D7-18D4-0AB787970CE9}</UniqueIdentifier>
+      <UniqueIdentifier>{C22E64B7-02C7-08B3-0721-543ABFDCD7EB}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMDataStd">
-      <UniqueIdentifier>{D09C7ABD-078D-14DB-07C8-A852DFD8D961}</UniqueIdentifier>
+      <UniqueIdentifier>{E3BDA67B-06E6-16D4-0029-F6FEF5DCA7A1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMFunction">
-      <UniqueIdentifier>{A7983B4F-0DBA-18C6-0FC0-4823F931D99C}</UniqueIdentifier>
+      <UniqueIdentifier>{8174EA42-00DE-10B8-1512-9E5FB39CFC45}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinMDocStd">
-      <UniqueIdentifier>{C5A97C3F-0A0D-13EC-0A64-76563014918E}</UniqueIdentifier>
+      <UniqueIdentifier>{762EF220-0FD3-10E7-040F-BAC98A05986D}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinObjMgt">
-      <UniqueIdentifier>{601FEF8D-09AC-11B1-03D1-484CB9A51B5E}</UniqueIdentifier>
+      <UniqueIdentifier>{5A2F9B7E-1476-0E81-178A-0D29BF2FFBC3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\BinLDrivers">
-      <UniqueIdentifier>{A7F218C0-10A3-0CAB-0A87-2993B39FDCC0}</UniqueIdentifier>
+      <UniqueIdentifier>{39DC89FB-0B04-13C1-0349-F84D69A25206}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +139,9 @@
       <Filter>Source files\BinMDocStd</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BinObjMgt\BinObjMgt_Persistent.cxx">
+      <Filter>Source files\BinObjMgt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\BinObjMgt\BinObjMgt_RRelocationTable.cxx">
       <Filter>Source files\BinObjMgt</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\BinLDrivers\BinLDrivers.cxx">

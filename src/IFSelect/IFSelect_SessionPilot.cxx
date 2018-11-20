@@ -36,19 +36,30 @@ IMPLEMENT_STANDARD_RTTIEXT(IFSelect_SessionPilot,IFSelect_Activator)
 #define MAXWORDS 200
 #define MAXCARS 1000
 
-static int initactor = 0;
-static char* trace;
-
+static int THE_IFSelect_SessionPilot_initactor = 0;
 static TCollection_AsciiString nulword;
+
+//#define DEBUG_TRACE
 
 // Nb Maxi de words : cf thewords et method SetCommandLine
 
-    IFSelect_SessionPilot::IFSelect_SessionPilot (const Standard_CString prompt)
-    : theprompt (prompt) , thewords (0,MAXWORDS-1) , thewordeb (0,MAXWORDS-1)
+IFSelect_SessionPilot::IFSelect_SessionPilot (const Standard_CString prompt)
+: theprompt (prompt),
+  thewords  (0, MAXWORDS - 1),
+  thewordeb (0, MAXWORDS - 1)
 {
-  if (theprompt.Length() == 0) theprompt.AssignCat ("Test-XSTEP>");
-  therecord = Standard_False;  thenbwords = 0;
-  if (initactor) return;  initactor = 1;
+  if (theprompt.Length() == 0)
+  {
+    theprompt.AssignCat ("Test-XSTEP>");
+  }
+  therecord = Standard_False;
+  thenbwords = 0;
+  if (THE_IFSelect_SessionPilot_initactor)
+  {
+    return;
+  }
+
+  THE_IFSelect_SessionPilot_initactor = 1;
   Add (1,"x");
   Add (1,"exit");
   Add (2,"?");
@@ -57,7 +68,6 @@ static TCollection_AsciiString nulword;
   Add (4,"xsource");
   Add (5,"xstep");
   Add (6,"xnew");
-  trace = getenv("DEBUGMODE");
 }
 
 
@@ -100,7 +110,9 @@ static TCollection_AsciiString nulword;
       if (thenbwords >= MAXWORDS) {  unarg[nc] = val;  nc ++;  continue;  }
       unarg[nc] = '\0';
       thewords(thenbwords).Clear();  thewords(thenbwords).AssignCat(unarg);
-      if (trace) cout<<"thewords("<<thenbwords<<") ="<<unarg<<endl;
+#ifdef DEBUG_TRACE
+      cout<<"thewords("<<thenbwords<<") ="<<unarg<<endl;
+#endif
       thenbwords ++; nc = 0;
       continue;
     }
@@ -111,7 +123,9 @@ static TCollection_AsciiString nulword;
   if (nc > 0) {
     unarg[nc] = '\0'; thewords(thenbwords).Clear();
     thewords(thenbwords).AssignCat(unarg);
-    if (trace) cout<<"thewords("<<thenbwords<<")="<<unarg<<endl<<" .. Fin avec thenbwords="<<thenbwords+1<<endl;
+#ifdef DEBUG_TRACE
+    cout<<"thewords("<<thenbwords<<")="<<unarg<<endl<<" .. Fin avec thenbwords="<<thenbwords+1<<endl;
+#endif
     thenbwords ++;
   }
 /*
@@ -285,8 +299,8 @@ static TCollection_AsciiString nulword;
 //  Ici, resultat non nomme;  Resultat nomme par commande x (plus loin)
     if (!theobjrec.IsNull()) {
       thesession->RemoveItem(theobjrec);  //// depannage ?
-      Standard_Boolean addws = thesession->AddItem(theobjrec);
-      if (!addws) { cout<<"Could not add item to session, sorry"<<endl; return IFSelect_RetFail; }
+      Standard_Integer addws = thesession->AddItem(theobjrec);
+      if (addws == 0) { cout<<"Could not add item to session, sorry"<<endl; return IFSelect_RetFail; }
     }
 
     if (stat == IFSelect_RetVoid || stat == IFSelect_RetDone) {
@@ -363,6 +377,7 @@ static TCollection_AsciiString nulword;
       modhelp = 1;
       cout<<"  --  Commands candidate for  xsnew  --"<<endl;
 //  HELP : soit complet (par defaut)  soit limite a xsnew
+      Standard_FALLTHROUGH
     case  0 : {                               //        ****     HELP
       Handle(TColStd_HSequenceOfAsciiString) list;
 //    Help complet : on donne la liste des commandes, sans plus (deja pas mal)
@@ -497,10 +512,10 @@ static TCollection_AsciiString nulword;
 //  Prise en compte des commandes a resultat
 	  if (!theobjrec.IsNull()) {
 	    thesession->RemoveItem(theobjrec);  //// depannage ?
-	    Standard_Boolean addws =
+	    Standard_Integer addws =
 	      thesession->AddNamedItem(name.ToCString(),theobjrec);
 	    theobjrec.Nullify();
-	    if (!addws) { cout<<"Could not add named item:"<<name<<", sorry"<<endl; return IFSelect_RetFail; }
+	    if (addws == 0) { cout<<"Could not add named item:"<<name<<", sorry"<<endl; return IFSelect_RetFail; }
 	  }
 	  else cout<<"Remark : xsnew with name:"<<name<<" and no result"<<endl;
 

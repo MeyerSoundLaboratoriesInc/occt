@@ -25,6 +25,8 @@
 #include <Standard_Integer.hxx>
 #include <Standard_Byte.hxx>
 #include <Standard_OStream.hxx>
+#include <Standard_GUID.hxx>
+
 class TDataStd_DeltaOnModificationOfByteArray;
 class Standard_GUID;
 class TDF_Label;
@@ -39,7 +41,8 @@ DEFINE_STANDARD_HANDLE(TDataStd_ByteArray, TDF_Attribute)
 //! An array of Byte (unsigned char) values.
 class TDataStd_ByteArray : public TDF_Attribute
 {
-
+  friend class TDataStd_DeltaOnModificationOfByteArray;
+  DEFINE_STANDARD_RTTIEXT(TDataStd_ByteArray, TDF_Attribute)
 public:
 
   
@@ -55,6 +58,11 @@ public:
   //! attribute is returned.
   Standard_EXPORT static Handle(TDataStd_ByteArray) Set (const TDF_Label& label, const Standard_Integer lower, const Standard_Integer upper, const Standard_Boolean isDelta = Standard_False);
   
+  //! Finds or creates an attribute with byte array and explicit user defined <guid> on the specified label.
+  Standard_EXPORT static Handle(TDataStd_ByteArray) Set (const TDF_Label& label, const Standard_GUID&   theGuid,
+                                                         const Standard_Integer lower, const Standard_Integer upper, 
+                                                         const Standard_Boolean isDelta = Standard_False);
+  
   //! Initialize the inner array with bounds from <lower> to <upper>
   Standard_EXPORT void Init (const Standard_Integer lower, const Standard_Integer upper);
   
@@ -62,12 +70,19 @@ public:
   //! OutOfRange exception is raised if <Index> doesn't respect Lower and Upper bounds of the internal  array.
   Standard_EXPORT void SetValue (const Standard_Integer index, const Standard_Byte value);
   
+  //! Sets the explicit GUID (user defined) for the attribute.
+  Standard_EXPORT void SetID( const Standard_GUID&  theGuid) Standard_OVERRIDE;
+
+  //! Sets default GUID for the attribute.
+  Standard_EXPORT void SetID() Standard_OVERRIDE;
+
   //! Return the value of the <Index>th element of the array.
   Standard_EXPORT Standard_Byte Value (const Standard_Integer Index) const;
-Standard_Byte operator () (const Standard_Integer Index) const
-{
-  return Value(Index);
-}
+
+  Standard_Byte operator () (const Standard_Integer Index) const
+  {
+    return Value(Index);
+  }
   
   //! Returns the lower boundary of the array.
   Standard_EXPORT Standard_Integer Lower() const;
@@ -77,9 +92,9 @@ Standard_Byte operator () (const Standard_Integer Index) const
   
   //! Returns the number of elements in the array.
   Standard_EXPORT Standard_Integer Length() const;
-  
-    const Handle(TColStd_HArray1OfByte) InternalArray() const;
-  
+
+  const Handle(TColStd_HArray1OfByte)& InternalArray() const { return myValue; }
+
   //! Sets the inner array <myValue>  of the attribute to
   //! <newArray>. If value of <newArray> differs from <myValue>, Backup performed
   //! and myValue refers to new instance of HArray1OfInteger that holds <newArray>
@@ -87,12 +102,12 @@ Standard_Byte operator () (const Standard_Integer Index) const
   //! If <isCheckItems> equal True each item of <newArray> will be checked with each
   //! item of <myValue> for coincidence (to avoid backup).
   Standard_EXPORT void ChangeArray (const Handle(TColStd_HArray1OfByte)& newArray, const Standard_Boolean isCheckItems = Standard_True);
-  
-    Standard_Boolean GetDelta() const;
-  
+
+  Standard_Boolean GetDelta() const { return myIsDelta; }
+
   //! for internal  use  only!
-    void SetDelta (const Standard_Boolean isDelta);
-  
+  void SetDelta (const Standard_Boolean isDelta) { myIsDelta = isDelta; }
+
   Standard_EXPORT TDataStd_ByteArray();
   
   Standard_EXPORT const Standard_GUID& ID() const Standard_OVERRIDE;
@@ -109,33 +124,16 @@ Standard_Byte operator () (const Standard_Integer Index) const
   //! <anOldAttribute>.
   Standard_EXPORT virtual Handle(TDF_DeltaOnModification) DeltaOnModification (const Handle(TDF_Attribute)& anOldAttribute) const Standard_OVERRIDE;
 
-
-friend class TDataStd_DeltaOnModificationOfByteArray;
-
-
-  DEFINE_STANDARD_RTTIEXT(TDataStd_ByteArray,TDF_Attribute)
-
-protected:
-
-
-
-
 private:
 
+  void RemoveArray() { myValue.Nullify(); }
   
-    void RemoveArray();
+private:
 
   Handle(TColStd_HArray1OfByte) myValue;
   Standard_Boolean myIsDelta;
-
+  Standard_GUID myID;
 
 };
-
-
-#include <TDataStd_ByteArray.lxx>
-
-
-
-
 
 #endif // _TDataStd_ByteArray_HeaderFile

@@ -360,6 +360,7 @@ BRepFill_NSections::BRepFill_NSections(const TopTools_SequenceOfShape& S,
   }
   myParams = par;
   Init(par,Build);
+  myDone = Standard_True;
 }
 
 //=======================================================================
@@ -399,7 +400,10 @@ BRepFill_NSections::BRepFill_NSections(const TopTools_SequenceOfShape& S,
     VFirst = VF;
     VLast = VL;
     Init(P,Build);
+    myDone = Standard_True;
   }
+  else
+    myDone = Standard_False;
 }
 
 //=======================================================================
@@ -445,7 +449,7 @@ void BRepFill_NSections::Init(const TColStd_SequenceOfReal & P,
   
   // Fill tables
   uclosed = Standard_True;
-  for (jj=ideb;jj<=ifin;jj++){
+  for (jj = ideb; jj <= ifin; jj++){
 
     W = TopoDS::Wire(myShapes(jj));
     
@@ -454,7 +458,11 @@ void BRepFill_NSections::Init(const TColStd_SequenceOfReal & P,
       
 //      if ( ! B.Degenerated(E)) {
       if ( ! BRep_Tool::Degenerated(E)) {
-	myEdges->SetValue(ii,jj, E);
+	myEdges->SetValue(ii, jj, E);
+        if (E.Orientation() == TopAbs_FORWARD)
+          myIndices.Bind(E, ii);
+        else
+          myIndices.Bind(E, -ii);
       }
     }
 
@@ -595,7 +603,6 @@ void BRepFill_NSections::Init(const TColStd_SequenceOfReal & P,
   } 
  
 }
-
 
 //=======================================================================
 //function : IsVertex

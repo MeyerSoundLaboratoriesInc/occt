@@ -124,7 +124,7 @@ static IFSelect_ReturnStatus fun1
 {
   Handle(IFSelect_WorkSession) WS = pilot->Session();
 //        ****    ToggleHandler     ****
-  int hand = !WS->ErrorHandle();
+  Standard_Boolean hand = !WS->ErrorHandle();
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (hand) sout << " --  Mode Catch Error now Active"   <<endl;
   else      sout << " --  Mode Catch Error now Inactive" <<endl;
@@ -159,17 +159,6 @@ static IFSelect_ReturnStatus fun3
 //      sout<<" - clearing list of already written files"<<endl;
   WS->BeginSentFiles(Standard_True);
   return status;
-}
-
-static IFSelect_ReturnStatus fun_whatfile
-  (const Handle(IFSelect_SessionPilot)& pilot)
-{
-  TCollection_AsciiString whatcom = IFSelect_Activator::Alias ("whatfile");
-  if (whatcom.Length() > 0) return pilot->ExecuteAlias (whatcom);
-  Handle(Message_Messenger) sout = Message::DefaultMessenger();
-  sout<<"Load File : "<<pilot->Session()->LoadedFile()<<endl;
-  sout<<"No specific whatfile available"<<endl;
-  return IFSelect_RetVoid;
 }
 
 static IFSelect_ReturnStatus fun4
@@ -256,7 +245,7 @@ static IFSelect_ReturnStatus fun8
   Handle(Message_Messenger) sout = Message::DefaultMessenger();
   if (argc < 2) { sout<<"Give label to search"<<endl; return IFSelect_RetError; }
   if (!WS->HasModel()) { sout<<"No loaded model, abandon"<<endl; return IFSelect_RetError; }
-  Handle(Interface_InterfaceModel) model = WS->Model();
+  const Handle(Interface_InterfaceModel) &model = WS->Model();
   Standard_Integer i, cnt = 0;
   Standard_Boolean exact = Standard_False;
   sout<<" **  Search Entity Number for Label : "<<arg1<<endl;
@@ -1984,7 +1973,7 @@ static IFSelect_ReturnStatus fun91
   }
   DeclareAndCast(IFSelect_SelectPointed,sp,WS->NamedItem(arg1));
   if (sp.IsNull()) { sout<<"Pas une SelectPointed:"<<arg1<<endl; return IFSelect_RetError; }
-  Handle(Interface_InterfaceModel) model = WS->Model();  // pour Print
+  const Handle(Interface_InterfaceModel) &model = WS->Model();  // pour Print
   if (argc == 2) {    // listage simple
     Standard_Integer nb = sp->NbItems();
     sout<<" SelectPointed : "<<arg1<<" : "<<nb<<" Items :"<<endl;
@@ -2449,19 +2438,21 @@ Handle(IFSelect_Dispatch)  IFSelect_Functions::GiveDispatch
 //  ####    INITIALISATIONS              ####
 //  #########################################
 
-static int initactor = 0;
+static int THE_IFSelect_Functions_initactor = 0;
 
-
-    void  IFSelect_Functions::Init ()
+void IFSelect_Functions::Init()
 {
-  if (initactor) return;  initactor = 1;
+  if (THE_IFSelect_Functions_initactor)
+  {
+    return;
+  }
+
+  THE_IFSelect_Functions_initactor = 1;
   IFSelect_Act::SetGroup("DE: General");
   IFSelect_Act::AddFunc("xstatus","Lists XSTEP Status : Version, System Name ...",funstatus);
   IFSelect_Act::AddFunc("handler","Toggle status catch Handler Error of the session",fun1);
   IFSelect_Act::AddFunc("xload","file:string  : Read File -> Load Model",fun3);
-// IFSelect_Act::AddFunc("load","file:string  : Read File -> Load Model",fun3);
   IFSelect_Act::AddFunc("xread","file:string  : Read File -> Load Model",fun3);
-  IFSelect_Act::AddFunc("whatfile"," -> analyses a file (specific per norm)",fun_whatfile);
   IFSelect_Act::AddFunc("writeall","file:string  : Write all model (no split)",fun4);
   IFSelect_Act::AddFunc("writesel","file:string sel:Selection : Write Selected (no split)",fun5);
   IFSelect_Act::AddFunc("writeent","file:string  n1ent n2ent...:integer : Write Entite(s) (no split)",fun6);

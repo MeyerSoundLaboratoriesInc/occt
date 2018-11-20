@@ -15,11 +15,9 @@
 // commercial license or contractual agreement.
 
 #include <Select3D_SensitiveEntity.hxx>
+
 #include <Precision.hxx>
 #include <SelectBasics_EntityOwner.hxx>
-#include <Select3D_Macro.hxx>
-#include <TopLoc_Location.hxx>
-
 
 IMPLEMENT_STANDARD_RTTIEXT(Select3D_SensitiveEntity,SelectBasics_SensitiveEntity)
 
@@ -85,7 +83,7 @@ Standard_Boolean Select3D_SensitiveEntity::HasInitLocation() const
 // purpose  : Returns inversed location transformation matrix if the shape corresponding
 //            to this entity has init location set. Otherwise, returns identity matrix.
 //=======================================================================
-gp_Trsf Select3D_SensitiveEntity::InvInitLocation() const
+gp_GTrsf Select3D_SensitiveEntity::InvInitLocation() const
 {
-  return gp_Trsf();
+  return gp_GTrsf();
 }

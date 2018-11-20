@@ -140,6 +140,7 @@
 			<Depends filename="TKBO.cbp" />
 			<Depends filename="TKG3d.cbp" />
 			<Depends filename="TKBool.cbp" />
+			<Depends filename="TKShHealing.cbp" />
 		</Project>
 		<Project filename="TKOffset.cbp" >
 			<Depends filename="TKFillet.cbp" />
@@ -214,10 +215,6 @@
 		<Project filename="TKLCAF.cbp" >
 			<Depends filename="TKCDF.cbp" />
 			<Depends filename="TKernel.cbp" />
-		</Project>
-		<Project filename="FWOSPlugin.cbp" >
-			<Depends filename="TKernel.cbp" />
-			<Depends filename="TKCDF.cbp" />
 		</Project>
 		<Project filename="TKCAF.cbp" >
 			<Depends filename="TKernel.cbp" />
@@ -353,7 +350,6 @@
 			<Depends filename="TKBRep.cbp" />
 			<Depends filename="TKG2d.cbp" />
 			<Depends filename="TKG3d.cbp" />
-			<Depends filename="TKMesh.cbp" />
 			<Depends filename="TKTopAlgo.cbp" />
 		</Project>
 		<Project filename="TKXSBase.cbp" >
@@ -464,6 +460,7 @@
 			<Depends filename="TKG3d.cbp" />
 			<Depends filename="TKXCAF.cbp" />
 			<Depends filename="TKSTEP.cbp" />
+			<Depends filename="TKShHealing.cbp" />
 		</Project>
 		<Project filename="TKDraw.cbp" >
 			<Depends filename="TKernel.cbp" />
@@ -581,6 +578,12 @@
 			<Depends filename="TKCAF.cbp" />
 			<Depends filename="TKVCAF.cbp" />
 			<Depends filename="TKViewerTest.cbp" />
+			<Depends filename="TKStd.cbp" />
+			<Depends filename="TKStdL.cbp" />
+			<Depends filename="TKBin.cbp" />
+			<Depends filename="TKBinL.cbp" />
+			<Depends filename="TKXml.cbp" />
+			<Depends filename="TKXmlL.cbp" />
 		</Project>
 		<Project filename="TKXDEDRAW.cbp" >
 			<Depends filename="TKCDF.cbp" />
@@ -607,6 +610,8 @@
 			<Depends filename="TKXDESTEP.cbp" />
 			<Depends filename="TKDCAF.cbp" />
 			<Depends filename="TKViewerTest.cbp" />
+			<Depends filename="TKBinXCAF.cbp" />
+			<Depends filename="TKXmlXCAF.cbp" />
 		</Project>
 		<Project filename="TKTObjDRAW.cbp" >
 			<Depends filename="TKernel.cbp" />
@@ -616,6 +621,8 @@
 			<Depends filename="TKMath.cbp" />
 			<Depends filename="TKDraw.cbp" />
 			<Depends filename="TKDCAF.cbp" />
+			<Depends filename="TKBinTObj.cbp" />
+			<Depends filename="TKXmlTObj.cbp" />
 		</Project>
 		<Project filename="TKQADraw.cbp" >
 			<Depends filename="TKBRep.cbp" />
@@ -652,6 +659,7 @@
 			<Depends filename="TKXDESTEP.cbp" />
 			<Depends filename="TKXSDRAW.cbp" />
 			<Depends filename="TKSTL.cbp" />
+			<Depends filename="TKXml.cbp" />
 		</Project>
 		<Project filename="DRAWEXE.cbp" active="1">
 			<Depends filename="TKDraw.cbp" />

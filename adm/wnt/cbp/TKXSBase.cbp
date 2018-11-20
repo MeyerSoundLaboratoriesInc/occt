@@ -17,22 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__Interface_DLL" />
-					<Add option="-D__Transfer_DLL" />
-					<Add option="-D__IFGraph_DLL" />
-					<Add option="-D__IFSelect_DLL" />
-					<Add option="-D__TransferBRep_DLL" />
-					<Add option="-D__XSControl_DLL" />
-					<Add option="-D__StepData_DLL" />
-					<Add option="-D__StepFile_DLL" />
-					<Add option="-D__HeaderSection_DLL" />
-					<Add option="-D__RWHeaderSection_DLL" />
-					<Add option="-D__APIHeaderSection_DLL" />
-					<Add option="-D__StepSelect_DLL" />
-					<Add option="-D__UnitsMethods_DLL" />
-					<Add option="-D__XSAlgo_DLL" />
-					<Add option="-D__LibCtl_DLL" />
-					<Add option="-D__MoniTool_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXSBase_obj.link" />
@@ -51,22 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__Interface_DLL" />
-					<Add option="-D__Transfer_DLL" />
-					<Add option="-D__IFGraph_DLL" />
-					<Add option="-D__IFSelect_DLL" />
-					<Add option="-D__TransferBRep_DLL" />
-					<Add option="-D__XSControl_DLL" />
-					<Add option="-D__StepData_DLL" />
-					<Add option="-D__StepFile_DLL" />
-					<Add option="-D__HeaderSection_DLL" />
-					<Add option="-D__RWHeaderSection_DLL" />
-					<Add option="-D__APIHeaderSection_DLL" />
-					<Add option="-D__StepSelect_DLL" />
-					<Add option="-D__UnitsMethods_DLL" />
-					<Add option="-D__XSAlgo_DLL" />
-					<Add option="-D__LibCtl_DLL" />
-					<Add option="-D__MoniTool_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKXSBase_objd.link" />
@@ -880,15 +848,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/MoniTool/MoniTool_MTHasher.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/MoniTool/MoniTool_OptValue.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/MoniTool/MoniTool_Option.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/MoniTool/MoniTool_Profile.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/MoniTool/MoniTool_RealVal.cxx">

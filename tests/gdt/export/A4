@@ -3,16 +3,17 @@ set filename bug26689_nist_ctc_04_asme1_ap242.stp
 
 set ref_data {
 
- NbOfDimensions          : 5
-  NbOfDimensionalSize    : 3
-  NbOfDimensionalLocation: 2
+ NbOfDimensions          : 12
+  NbOfDimensionalSize    : 6
+  NbOfDimensionalLocation: 3
   NbOfAngular            : 1
   NbOfWithPath           : 0
- NbOfTolerances          : 4
+  NbOfCommonLabels       : 3
+ NbOfTolerances          : 6
   NbOfGTWithModifiers    : 0
   NbOfGTWithMaxTolerance : 0
-  NbOfGTWithDatums       : 4
- NbOfDatumFeature        : 6
- NbOfAttachedDatum       : 10
+  NbOfGTWithDatums       : 6
+ NbOfDatumFeature        : 10
+ NbOfAttachedDatum       : 19
  NbOfDatumTarget         : 0
 }

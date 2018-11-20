@@ -354,6 +354,8 @@
 #include <RWStepRepr_RWCompoundRepresentationItem.hxx>
 #include <RWStepRepr_RWConfigurationDesign.hxx>
 #include <RWStepRepr_RWConfigurationEffectivity.hxx>
+#include <RWStepRepr_RWConstructiveGeometryRepresentation.hxx>
+#include <RWStepRepr_RWConstructiveGeometryRepresentationRelationship.hxx>
 #include <RWStepRepr_RWDataEnvironment.hxx>
 #include <RWStepRepr_RWDefinitionalRepresentation.hxx>
 #include <RWStepRepr_RWDerivedShapeAspect.hxx>
@@ -888,6 +890,8 @@
 #include <StepRepr_CompoundRepresentationItem.hxx>
 #include <StepRepr_ConfigurationDesign.hxx>
 #include <StepRepr_ConfigurationEffectivity.hxx>
+#include <StepRepr_ConstructiveGeometryRepresentation.hxx>
+#include <StepRepr_ConstructiveGeometryRepresentationRelationship.hxx>
 #include <StepRepr_DataEnvironment.hxx>
 #include <StepRepr_DefinitionalRepresentation.hxx>
 #include <StepRepr_DerivedShapeAspect.hxx>
@@ -1092,19 +1096,6 @@
 #include <StepVisual_TextStyleWithBoxCharacteristics.hxx>
 #include <StepVisual_ViewVolume.hxx>
 #include <TCollection_HAsciiString.hxx>
-
-#include <StepVisual_TessellatedAnnotationOccurrence.hxx>
-#include <StepVisual_TessellatedItem.hxx>
-#include <StepVisual_TessellatedGeometricSet.hxx>
-#include <StepVisual_TessellatedCurveSet.hxx>
-#include <StepVisual_CoordinatesList.hxx>
-
-#include <RWStepVisual_RWTessellatedAnnotationOccurrence.hxx>
-#include <RWStepVisual_RWTessellatedItem.hxx>
-#include <RWStepVisual_RWTessellatedGeometricSet.hxx>
-#include <RWStepVisual_RWTessellatedCurveSet.hxx>
-#include <RWStepVisual_RWCoordinatesList.hxx>
-
 
 IMPLEMENT_STANDARD_RTTIEXT(RWStepAP214_GeneralModule,StepData_GeneralModule)
 
@@ -1351,7 +1342,22 @@ IMPLEMENT_STANDARD_RTTIEXT(RWStepAP214_GeneralModule,StepData_GeneralModule)
 #include <RWStepVisual_RWTessellatedGeometricSet.hxx>
 #include <RWStepVisual_RWTessellatedCurveSet.hxx>
 #include <RWStepVisual_RWCoordinatesList.hxx>
-
+#include <StepRepr_CharacterizedRepresentation.hxx>
+#include <RWStepRepr_RWCharacterizedRepresentation.hxx>
+#include <StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.hxx>
+#include <RWStepVisual_RWCharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation.hxx>
+#include <StepVisual_AnnotationFillArea.hxx>
+#include <StepVisual_AnnotationFillAreaOccurrence.hxx>
+#include <RWStepVisual_RWAnnotationFillArea.hxx>
+#include <RWStepVisual_RWAnnotationFillAreaOccurrence.hxx>
+#include <StepVisual_CameraModelD3MultiClipping.hxx>
+#include <StepVisual_CameraModelD3MultiClippingIntersection.hxx>
+#include <StepVisual_CameraModelD3MultiClippingUnion.hxx>
+#include <RWStepVisual_RWCameraModelD3MultiClipping.hxx>
+#include <RWStepVisual_RWCameraModelD3MultiClippingIntersection.hxx>
+#include <RWStepVisual_RWCameraModelD3MultiClippingUnion.hxx>
+#include <StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.hxx>
+#include <RWStepVisual_RWAnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem.hxx>
 
 static Standard_Integer catsh,catdr,catstr,catdsc,cataux;
 
@@ -1435,6 +1441,20 @@ void RWStepAP214_GeneralModule::FillSharedCase(const Standard_Integer CN,
 	tool.Share(anent,iter);
       }
       break;
+    case 5:
+    {
+      DeclareAndCast(StepVisual_AnnotationFillArea, anent, ent);
+      RWStepVisual_RWAnnotationFillArea tool;
+      tool.Share(anent, iter);
+    }
+    break;
+    case 6:
+    {
+      DeclareAndCast(StepVisual_AnnotationFillAreaOccurrence, anent, ent);
+      RWStepVisual_RWAnnotationFillAreaOccurrence tool;
+      tool.Share(anent, iter);
+    }
+    break;
     case 7:
       {
 	DeclareAndCast(StepVisual_AnnotationOccurrence,anent,ent);
@@ -5076,6 +5096,69 @@ void RWStepAP214_GeneralModule::FillSharedCase(const Standard_Integer CN,
       tool.Share(anent,iter);
     }
     break;
+  case 710:
+    {
+      DeclareAndCast(StepVisual_TessellatedCurveSet,anent,ent);
+      RWStepVisual_RWTessellatedCurveSet tool;
+      tool.Share(anent,iter);
+    }
+    break;
+  case 712:
+    {
+      DeclareAndCast(StepRepr_ConstructiveGeometryRepresentation,anent,ent);
+      RWStepRepr_RWConstructiveGeometryRepresentation tool;
+      tool.Share(anent,iter);
+    }
+    break;
+  case 713:
+    {
+      DeclareAndCast(StepRepr_ConstructiveGeometryRepresentationRelationship,anent,ent);
+      RWStepRepr_RWConstructiveGeometryRepresentationRelationship tool;
+      tool.Share(anent,iter);
+    }
+    break;
+  case 714:
+  {
+    DeclareAndCast(StepRepr_CharacterizedRepresentation, anent, ent);
+    RWStepRepr_RWCharacterizedRepresentation tool;
+    tool.Share(anent, iter);
+  }
+  break;
+  case 715:
+  {
+    DeclareAndCast(StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation, anent, ent);
+    RWStepVisual_RWCharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation tool;
+    tool.Share(anent, iter);
+  }
+  break;
+  case 716:
+  {
+    DeclareAndCast(StepVisual_CameraModelD3MultiClipping, anent, ent);
+    RWStepVisual_RWCameraModelD3MultiClipping tool;
+    tool.Share(anent, iter);
+  }
+  break;
+  case 717:
+  {
+    DeclareAndCast(StepVisual_CameraModelD3MultiClippingIntersection, anent, ent);
+    RWStepVisual_RWCameraModelD3MultiClippingIntersection tool;
+    tool.Share(anent, iter);
+  }
+  break;
+  case 718:
+  {
+    DeclareAndCast(StepVisual_CameraModelD3MultiClippingUnion, anent, ent);
+    RWStepVisual_RWCameraModelD3MultiClippingUnion tool;
+    tool.Share(anent, iter);
+  }
+  break;
+  case 719:
+  {
+    DeclareAndCast(StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem, anent, ent);
+    RWStepVisual_RWAnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem tool;
+    tool.Share(anent, iter);
+  }
+  break;
     default : break;
     }
 }
@@ -5232,6 +5315,12 @@ Standard_Boolean RWStepAP214_GeneralModule::NewVoid
   case 4 : 
     ent = new StepVisual_AnnotationCurveOccurrence;
     break;
+  case 5:
+    ent = new StepVisual_AnnotationFillArea;
+  break;
+  case 6:
+    ent = new StepVisual_AnnotationFillAreaOccurrence;
+  break;
   case 7 : 
     ent = new StepVisual_AnnotationOccurrence;
     break;
@@ -7043,26 +7132,46 @@ Standard_Boolean RWStepAP214_GeneralModule::NewVoid
   case 706:
     ent = new StepDimTol_GeoTolAndGeoTolWthMaxTol;
     break;
-
    case 707:
         ent = new StepVisual_TessellatedAnnotationOccurrence;
      break;
-
    case 708:
      ent = new StepVisual_TessellatedItem;     
     break;
+   case 709:
+     ent = new StepVisual_TessellatedGeometricSet;
+   break;
+   case 710:
+     ent = new StepVisual_TessellatedCurveSet;
+   break;
+   case 711:
+       ent = new StepVisual_CoordinatesList;
+   break;
+   case 712:
+       ent = new StepRepr_ConstructiveGeometryRepresentation;
+   break;
+   case 713:
+       ent = new StepRepr_ConstructiveGeometryRepresentationRelationship;
+   break;
+   case 714:
+   ent = new StepRepr_CharacterizedRepresentation;
+   break;
+   case 715:
+   ent = new StepVisual_CharacterizedObjectAndCharacterizedRepresentationAndDraughtingModelAndRepresentation;
+   break;
+   case 716:
+     ent = new StepVisual_CameraModelD3MultiClipping;
+   break;
+   case 717:
+     ent = new StepVisual_CameraModelD3MultiClippingIntersection;
+   break;
+   case 718:
+     ent = new StepVisual_CameraModelD3MultiClippingUnion;
+   break;
+   case 719:
+     ent = new StepVisual_AnnotationCurveOccurrenceAndAnnotationOccurrenceAndGeomReprItemAndReprItemAndStyledItem;
+   break;
 
-     case 709:
-       ent = new StepVisual_TessellatedGeometricSet;
-     break;
-
-     case 710:
-       ent = new StepVisual_TessellatedCurveSet;
-     break;
-    
-      case 711:
-          ent = new StepVisual_CoordinatesList;
-      break;
     
   default: 
     return Standard_False;
@@ -7653,8 +7762,15 @@ Standard_Integer  RWStepAP214_GeneralModule::CategoryNumber
   case 708: 
   case 709:
   case 710:
-  case 711: 
-    return cataux;
+  case 711: return cataux;
+  case 712:
+  case 713: return catsh;
+  case 714: return catstr;
+  case 715: return catdsc;
+  case 716:
+  case 717:
+  case 718: return cataux;
+  case 719: return catdr;
     
   default : break;
   }

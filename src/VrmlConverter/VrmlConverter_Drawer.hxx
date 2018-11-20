@@ -22,10 +22,9 @@
 
 #include <Standard_Integer.hxx>
 #include <Standard_Boolean.hxx>
-#include <Quantity_Length.hxx>
 #include <Aspect_TypeOfDeflection.hxx>
 #include <Standard_Real.hxx>
-#include <MMgt_TShared.hxx>
+#include <Standard_Transient.hxx>
 class VrmlConverter_IsoAspect;
 class VrmlConverter_LineAspect;
 class VrmlConverter_ShadingAspect;
@@ -33,12 +32,12 @@ class VrmlConverter_PointAspect;
 
 
 class VrmlConverter_Drawer;
-DEFINE_STANDARD_HANDLE(VrmlConverter_Drawer, MMgt_TShared)
+DEFINE_STANDARD_HANDLE(VrmlConverter_Drawer, Standard_Transient)
 
 //! qualifies the aspect properties for
 //! the VRML conversation of a specific kind of object.
 //! This includes for example color, maximal chordial deviation, etc...
-class VrmlConverter_Drawer : public MMgt_TShared
+class VrmlConverter_Drawer : public Standard_Transient
 {
 
 public:
@@ -60,11 +59,11 @@ public:
   //! VrmlConverter_DeflectionCurve
   //! VrmlConverter_WFDeflectionRestrictedFace
   //! VrmlConverter_WFDeflectionShape
-  Standard_EXPORT void SetMaximalChordialDeviation (const Quantity_Length aChordialDeviation);
+  Standard_EXPORT void SetMaximalChordialDeviation (const Standard_Real aChordialDeviation);
   
   //! returns the maximal chordial deviation.
   //! Default value: 0.1
-  Standard_EXPORT Quantity_Length MaximalChordialDeviation() const;
+  Standard_EXPORT Standard_Real MaximalChordialDeviation() const;
   
   //! default 0.001
   Standard_EXPORT void SetDeviationCoefficient (const Standard_Real aCoefficient);
@@ -213,18 +212,9 @@ public:
   //! sets LineAspect  for  the seen lines.
   Standard_EXPORT void SetSeenLineAspect (const Handle(VrmlConverter_LineAspect)& anAspect);
 
-
-
-
-  DEFINE_STANDARD_RTTIEXT(VrmlConverter_Drawer,MMgt_TShared)
-
-protected:
-
-
-
+  DEFINE_STANDARD_RTTIEXT(VrmlConverter_Drawer,Standard_Transient)
 
 private:
-
 
   Handle(VrmlConverter_IsoAspect) myUIsoAspect;
   Handle(VrmlConverter_IsoAspect) myVIsoAspect;
@@ -238,7 +228,7 @@ private:
   Standard_Boolean myWireDraw;
   Handle(VrmlConverter_LineAspect) myLineAspect;
   Handle(VrmlConverter_ShadingAspect) myShadingAspect;
-  Quantity_Length myChordialDeviation;
+  Standard_Real myChordialDeviation;
   Aspect_TypeOfDeflection myTypeOfDeflection;
   Standard_Real myMaximalParameterValue;
   Standard_Real myDeviationCoefficient;
@@ -247,13 +237,6 @@ private:
   Handle(VrmlConverter_LineAspect) myHiddenLineAspect;
   Handle(VrmlConverter_LineAspect) mySeenLineAspect;
 
-
 };
-
-
-
-
-
-
 
 #endif // _VrmlConverter_Drawer_HeaderFile

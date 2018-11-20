@@ -17,23 +17,6 @@
 					<Add option="-O2" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DNo_Exception" />
-					<Add option="-D__FSD_DLL" />
-					<Add option="-D__MMgt_DLL" />
-					<Add option="-D__OSD_DLL" />
-					<Add option="-D__Plugin_DLL" />
-					<Add option="-D__Quantity_DLL" />
-					<Add option="-D__Resource_DLL" />
-					<Add option="-D__Standard_DLL" />
-					<Add option="-D__StdFail_DLL" />
-					<Add option="-D__Storage_DLL" />
-					<Add option="-D__TColStd_DLL" />
-					<Add option="-D__TCollection_DLL" />
-					<Add option="-D__TShort_DLL" />
-					<Add option="-D__Units_DLL" />
-					<Add option="-D__UnitsAPI_DLL" />
-					<Add option="-D__Dico_DLL" />
-					<Add option="-D__NCollection_DLL" />
-					<Add option="-D__Message_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKernel_obj.link" />
@@ -52,23 +35,6 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 					<Add option="-D_DEBUG" />
-					<Add option="-D__FSD_DLL" />
-					<Add option="-D__MMgt_DLL" />
-					<Add option="-D__OSD_DLL" />
-					<Add option="-D__Plugin_DLL" />
-					<Add option="-D__Quantity_DLL" />
-					<Add option="-D__Resource_DLL" />
-					<Add option="-D__Standard_DLL" />
-					<Add option="-D__StdFail_DLL" />
-					<Add option="-D__Storage_DLL" />
-					<Add option="-D__TColStd_DLL" />
-					<Add option="-D__TCollection_DLL" />
-					<Add option="-D__TShort_DLL" />
-					<Add option="-D__Units_DLL" />
-					<Add option="-D__UnitsAPI_DLL" />
-					<Add option="-D__Dico_DLL" />
-					<Add option="-D__NCollection_DLL" />
-					<Add option="-D__Message_DLL" />
 				</Compiler>
 				<Linker>
 					<Add option="@TKernel_objd.link" />
@@ -96,7 +62,6 @@
 			<Add library="user32" />
 			<Add library="comdlg32" />
 			<Add library="wsock32" />
-			<Add library="Winspool" />
 			<Add library="Psapi" />
 		</Linker>
 		<Unit filename="../../../src/FSD/FSD_BinaryFile.cxx" />
@@ -104,9 +69,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/FSD/FSD_File.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/MMgt/MMgt_TShared.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OSD/OSD.cxx">
@@ -154,13 +116,16 @@
 		<Unit filename="../../../src/OSD/OSD_Parallel.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/OSD/OSD_Parallel_TBB.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/OSD/OSD_Parallel_Threads.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/OSD/OSD_Path.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OSD/OSD_PerfMeter.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/OSD/OSD_Printer.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/OSD/OSD_Process.cxx">
@@ -184,16 +149,10 @@
 		<Unit filename="../../../src/OSD/OSD_signal.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/OSD/OSD_signal_WNT.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/Plugin/Plugin.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Quantity/Quantity_Color.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Quantity/Quantity_Convert.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Quantity/Quantity_Date.cxx">
@@ -217,6 +176,9 @@
 		<Unit filename="../../../src/Standard/Standard.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/Standard/Standard_ArrayStreamBuffer.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/Standard/Standard_CLocaleSentry.cxx">
 			<Option link="0" />
 		</Unit>
@@ -224,9 +186,6 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Standard/Standard_ErrorHandler.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Standard/Standard_ErrorHandlerCallback.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Standard/Standard_ExtString.cxx">
@@ -262,19 +221,16 @@
 		<Unit filename="../../../src/Standard/Standard_Real.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Standard/Standard_SStream.cxx">
+		<Unit filename="../../../src/Standard/Standard_ShortReal.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Standard/Standard_ShortReal.cxx">
+		<Unit filename="../../../src/Standard/Standard_Strtod.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Standard/Standard_Transient.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Standard/Standard_Type.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Standard/Standard_UUID.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Standard/Standard_math.cxx">
@@ -316,13 +272,7 @@
 		<Unit filename="../../../src/Storage/Storage_TypedCallBack.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Storage/Storage_stCONSTclCOM.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/TColStd/TColStd_HPackedMapOfInteger.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/TColStd/TColStd_MapIteratorOfPackedMapOfInteger.cxx">
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/TColStd/TColStd_PackedMapOfInteger.cxx">
@@ -409,24 +359,6 @@
 		<Unit filename="../../../src/UnitsAPI/UnitsAPI.cxx">
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../../../src/Dico/Dico_DictionaryOfInteger_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Dico/Dico_DictionaryOfTransient_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Dico/Dico_IteratorOfDictionaryOfInteger_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Dico/Dico_IteratorOfDictionaryOfTransient_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Dico/Dico_StackItemOfDictionaryOfInteger_0.cxx">
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../../../src/Dico/Dico_StackItemOfDictionaryOfTransient_0.cxx">
-			<Option link="0" />
-		</Unit>
 		<Unit filename="../../../src/NCollection/NCollection_AccAllocator.cxx">
 			<Option link="0" />
 		</Unit>
@@ -466,6 +398,9 @@
 		<Unit filename="../../../src/Message/Message.cxx">
 			<Option link="0" />
 		</Unit>
+		<Unit filename="../../../src/Message/Message_Alert.cxx">
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../../../src/Message/Message_Algorithm.cxx">
 			<Option link="0" />
 		</Unit>
@@ -491,6 +426,9 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="../../../src/Message/Message_ProgressSentry.cxx">
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../../src/Message/Message_Report.cxx">
 			<Option link="0" />
 		</Unit>
 	</Project>

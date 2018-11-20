@@ -2,22 +2,22 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{28DE4501-17A9-11A5-0924-88224B8383D8}</UniqueIdentifier>
+      <UniqueIdentifier>{BED3EA64-1159-062C-011C-263257B32D6E}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TDF">
-      <UniqueIdentifier>{44DDC293-03B8-1788-09B0-BA1C99AB8BF3}</UniqueIdentifier>
+      <UniqueIdentifier>{6BA93933-0204-0483-17C7-B0E9CDC5D12C}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TDataStd">
-      <UniqueIdentifier>{7136C53C-0064-14C3-0271-E7A9F346ACAE}</UniqueIdentifier>
+      <UniqueIdentifier>{27ADF2B0-10C3-02B8-050A-C7A4DF195FA6}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TFunction">
-      <UniqueIdentifier>{F2E599EB-189F-16C7-0AE7-106D51790F08}</UniqueIdentifier>
+      <UniqueIdentifier>{D6B044FC-1758-0216-0B57-F37F081919FF}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TDocStd">
-      <UniqueIdentifier>{CA0DDAF5-0A21-18D8-0DD7-50D89EBD813C}</UniqueIdentifier>
+      <UniqueIdentifier>{F9CBFDEB-15F9-13B9-11D3-D16ADFBF8ECC}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\AppStdL">
-      <UniqueIdentifier>{6FA1169B-041B-024F-17E4-4DE87FDB2603}</UniqueIdentifier>
+      <UniqueIdentifier>{381BFB5B-0A4B-17CB-16A5-7F73E692154C}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

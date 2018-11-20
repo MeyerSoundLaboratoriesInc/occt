@@ -224,22 +224,56 @@ static Standard_Integer wire(Draw_Interpretor& di, Standard_Integer n, const cha
   if (n < 3) return 1;
   Standard_Integer i;
   BRepBuilderAPI_MakeWire MW;
-  for (i = 2; i < n; i ++) {
-    TopoDS_Shape S = DBRep::Get(a[i]);
-    if (S.IsNull()) continue;
-    if (S.ShapeType() == TopAbs_EDGE)
-      MW.Add(TopoDS::Edge(S));
-    else if (S.ShapeType() == TopAbs_WIRE)
-      MW.Add(TopoDS::Wire(S));
-    else
-      continue;
+  Standard_Boolean IsUnsorted = !strcmp(a[2], "-unsorted");
+
+  if (!IsUnsorted)
+    for (i = 2; i < n; i ++) {
+      TopoDS_Shape S = DBRep::Get(a[i]);
+      if (S.IsNull()) continue;
+      if (S.ShapeType() == TopAbs_EDGE)
+        MW.Add(TopoDS::Edge(S));
+      else if (S.ShapeType() == TopAbs_WIRE)
+        MW.Add(TopoDS::Wire(S));
+      else
+        continue;
+    }
+  else
+  {
+    TopTools_ListOfShape aLE;
+    for (i = 3; i < n; i ++) 
+    {
+      TopoDS_Shape S = DBRep::Get(a[i]);
+      TopExp_Explorer Exp(S, TopAbs_EDGE);
+      for (;Exp.More();Exp.Next())
+      {
+        const TopoDS_Edge& anE = TopoDS::Edge(Exp.Current()); 
+        if (!anE.IsNull())
+          aLE.Append(anE);
+      }
+    }
+    MW.Add(aLE);
   }
+
   if (!MW.IsDone()) {
     //cout << "Wire not done" << endl;
-    di << "Wire not done\n";
-    return 0;
+    di << "Wire not done with an error:\n";
+    switch (MW.Error()) 
+    {
+    case BRepBuilderAPI_EmptyWire:
+      di << "BRepBuilderAPI_EmptyWire\n";
+      break;
+    case BRepBuilderAPI_DisconnectedWire:
+      di << "BRepBuilderAPI_DisconnectedWire\n";
+      break;
+    case BRepBuilderAPI_NonManifoldWire:
+      di << "BRepBuilderAPI_NonManifoldWire\n";
+      break;
+    default:
+      break;
+    }
   }
-  DBRep::Set(a[1],MW);
+  else   
+    DBRep::Set(a[1],MW);
   return 0;
 }
 
@@ -965,8 +999,8 @@ static Standard_Integer bsplineprof(Draw_Interpretor& di,
     0.0e0) ;
   gp_Pnt2d first_point(0.0e0,
     0.0e0) ;
-  Standard_Integer i = 2,
-    wait = 1 ;
+  Standard_Integer i = 2;
+  Standard_Boolean wait = Standard_True;
 //  Standard_Real x0 = 0, y0 = 0, x = 0, y = 0, dx = 1, dy = 0;
   Standard_Real x = 0, y = 0, dx = 1, dy = 0;
   BRepBuilderAPI_MakeWire MW;
@@ -1792,7 +1826,7 @@ Standard_Integer  build3d(Draw_Interpretor& di,
   }
 
   Standard_Boolean Ok;
-  TopoDS_Shape S = DBRep::Get(a[1],TopAbs_FACE);
+  TopoDS_Shape S = DBRep::Get(a[1]);
   if (S.IsNull()) return 1;
 
   if (n==2) { Ok = BRepLib::BuildCurves3d(S); }
@@ -1864,7 +1898,7 @@ void  BRepTest::CurveCommands(Draw_Interpretor& theCommands)
     polyvertex,g);
 
   theCommands.Add("wire",
-    "wire wirename e1/w1 [e2/w2 ...]",__FILE__,
+    "wire wirename [-unsorted] e1/w1 [e2/w2 ...]",__FILE__,
     wire,g);
 
   theCommands.Add("profile",

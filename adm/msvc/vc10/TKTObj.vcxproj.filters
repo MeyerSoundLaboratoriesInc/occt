@@ -2,10 +2,10 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source files">
-      <UniqueIdentifier>{75800112-0C65-197A-01E9-9924A73562B6}</UniqueIdentifier>
+      <UniqueIdentifier>{012180C3-0DEE-007C-053F-3C2DBCDEAAE4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source files\TObj">
-      <UniqueIdentifier>{E3BCAF77-11F3-0B06-13FA-875372779E29}</UniqueIdentifier>
+      <UniqueIdentifier>{A592FBF5-0D49-0BF0-03C0-21D410E984C4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -49,9 +49,6 @@
       <Filter>Source files\TObj</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TObj\TObj_SequenceIterator.cxx">
-      <Filter>Source files\TObj</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\src\TObj\TObj_SequenceOfObject.cxx">
       <Filter>Source files\TObj</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\src\TObj\TObj_TIntSparseArray.cxx">

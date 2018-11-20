@@ -23,11 +23,7 @@
 #include <Standard_Type.hxx>
 
 #include <algorithm>
-IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
-
-#ifdef _MSC_VER
-#pragma warning ( disable : 4291 )
-#endif
+IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,Standard_Transient)
 
 //=======================================================================
 //function : 
@@ -42,6 +38,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
   myOriginalEdge=-1;
   myTS1=-99.;
   myTS2=myTS1;
+  myIsSplittable=Standard_False;
 }
 //=======================================================================
 //function : 
@@ -57,6 +54,7 @@ IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
   myOriginalEdge=-1;
   myTS1=-99.;
   myTS2=myTS1;
+  myIsSplittable=Standard_False;
 }
 
 //=======================================================================
@@ -210,6 +208,25 @@ IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
   myExtPaves.Append(thePave);
 }
 //=======================================================================
+//function : RemoveExtPave
+//purpose  : 
+//=======================================================================
+void BOPDS_PaveBlock::RemoveExtPave(const Standard_Integer theVertNum)
+{
+  if (myMFence.Contains(theVertNum))
+  {
+    BOPDS_ListOfPave::Iterator itPaves(myExtPaves);
+    while (itPaves.More())
+    {
+      if (itPaves.Value().Index() == theVertNum)
+        myExtPaves.Remove(itPaves);
+      else
+        itPaves.Next();
+    }
+    myMFence.Remove(theVertNum);
+  }
+}
+//=======================================================================
 //function : ExtPaves
 //purpose  : 
 //=======================================================================
@@ -333,11 +350,13 @@ IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
 //=======================================================================
   void BOPDS_PaveBlock::SetShrunkData(const Standard_Real theT1,
                                       const Standard_Real theT2,
-                                      const Bnd_Box& theBox)
+                                      const Bnd_Box& theBox,
+                                      const Standard_Boolean theIsSplittable)
 {
   myTS1=theT1;
   myTS2=theT2;
   myShrunkBox=theBox;
+  myIsSplittable=theIsSplittable;
 }
 //=======================================================================
 //function : ShrunkData
@@ -345,11 +364,13 @@ IMPLEMENT_STANDARD_RTTIEXT(BOPDS_PaveBlock,MMgt_TShared)
 //=======================================================================
   void BOPDS_PaveBlock::ShrunkData(Standard_Real& theT1,
                                    Standard_Real& theT2,
-                                   Bnd_Box& theBox)const
+                                   Bnd_Box& theBox,
+                                   Standard_Boolean& theIsSplittable) const
 {
   theT1=myTS1;
   theT2=myTS2;
   theBox=myShrunkBox;
+  theIsSplittable=myIsSplittable;
 }
 //=======================================================================
 //function : Dump
